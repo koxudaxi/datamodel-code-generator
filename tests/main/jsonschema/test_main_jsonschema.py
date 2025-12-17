@@ -433,14 +433,18 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
     input_schema="jsonschema/null_and_array.json",
     cli_args=["--output-model-type", "pydantic.BaseModel"],
     model_outputs={
-        "pydantic_v1": "jsonschema/null_and_array.py",
-        "pydantic_v2": "jsonschema/null_and_array_v2.py",
+        "pydantic_v1": "main/jsonschema/null_and_array.py",
+        "pydantic_v2": "main/jsonschema/null_and_array_v2.py",
     },
+    primary=True,
 )
 def test_main_null_and_array(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Specify the output model type (pydantic, dataclass, typeddict, msgspec).
+    """Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
 
-    The `--output-model-type` flag configures the code generation behavior.
+    The `--output-model-type` flag specifies which Python data model framework to use
+    for the generated code. Supported values include `pydantic.BaseModel`,
+    `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+    `msgspec.Struct`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
@@ -2013,8 +2017,8 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     input_schema="jsonschema/extras.json",
     cli_args=["--field-extra-keys", "key2", "--field-extra-keys-without-x-prefix", "x-repr"],
     model_outputs={
-        "pydantic_v1": "jsonschema/field_extras_field_extra_keys.py",
-        "pydantic_v2": "jsonschema/field_extras_field_extra_keys_v2.py",
+        "pydantic_v1": "main/jsonschema/field_extras_field_extra_keys.py",
+        "pydantic_v2": "main/jsonschema/field_extras_field_extra_keys_v2.py",
     },
 )
 def test_main_jsonschema_field_extras_field_extra_keys(
@@ -4109,9 +4113,9 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
     input_schema="jsonschema/reserved_field_name_schema.json",
     cli_args=["--target-python-version", "3.11"],
     model_outputs={
-        "typeddict": "jsonschema/reserved_field_name_schema_typed_dict.py",
-        "dataclass": "jsonschema/reserved_field_name_schema_dataclass.py",
-        "pydantic_v2": "jsonschema/reserved_field_name_schema_pydantic.py",
+        "typeddict": "main/jsonschema/reserved_field_name_schema_typed_dict.py",
+        "dataclass": "main/jsonschema/reserved_field_name_schema_dataclass.py",
+        "pydantic_v2": "main/jsonschema/reserved_field_name_schema_pydantic.py",
     },
 )
 @pytest.mark.benchmark
@@ -4208,9 +4212,9 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     input_schema="jsonschema/use_frozen_field.json",
     cli_args=["--use-frozen-field"],
     model_outputs={
-        "pydantic_v1": "jsonschema/use_frozen_field_v1.py",
-        "pydantic_v2": "jsonschema/use_frozen_field_v2.py",
-        "dataclass": "jsonschema/use_frozen_field_dataclass.py",
+        "pydantic_v1": "main/jsonschema/use_frozen_field_v1.py",
+        "pydantic_v2": "main/jsonschema/use_frozen_field_v2.py",
+        "dataclass": "main/jsonschema/use_frozen_field_dataclass.py",
     },
 )
 @pytest.mark.benchmark

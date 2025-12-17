@@ -15,7 +15,7 @@
 | [`--frozen-dataclasses`](#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only field... |
 | [`--keep-model-order`](#keep-model-order) | Keep model definition order as specified in schema. |
 | [`--keyword-only`](#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+)... |
-| [`--output-model-type`](#output-model-type) | Generate data models from GraphQL schema definitions. |
+| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, T... |
 | [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
 | [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
 | [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -2947,10 +2947,12 @@ argument errors.
 
 ## `--output-model-type` {#output-model-type}
 
-Generate data models from GraphQL schema definitions.
+Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
 
-The `--output-model-type` flag allows you to choose between Pydantic models
-and dataclasses for the generated code from GraphQL schemas.
+The `--output-model-type` flag specifies which Python data model framework to use
+for the generated code. Supported values include `pydantic.BaseModel`,
+`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+`msgspec.Struct`.
 
 !!! tip "Usage"
 
@@ -2962,148 +2964,32 @@ and dataclasses for the generated code from GraphQL schemas.
 
 ??? example "Input Schema"
 
-    ```graphql
-    type Person {
-        id: ID!
-        name: String!
-        height: Int
-        mass: Int
-        hair_color: String
-        skin_color: String
-        eye_color: String
-        birth_year: String
-        gender: String
-    
-        # Relationships
-        homeworld_id: ID
-        homeworld: Planet
-        species: [Species!]!
-        species_ids: [ID!]!
-        films: [Film!]!
-        films_ids: [ID!]!
-        starships: [Starship!]!
-        starships_ids: [ID!]!
-        vehicles: [Vehicle!]!
-        vehicles_ids: [ID!]!
-    }
-    
-    type Planet {
-        id: ID!
-        name: String!
-        rotation_period: String
-        orbital_period: String
-        diameter: String
-        climate: String
-        gravity: String
-        terrain: String
-        surface_water: String
-        population: String
-    
-        # Relationships
-        residents: [Person!]!
-        residents_ids: [ID!]!
-        films: [Film!]!
-        films_ids: [ID!]!
-    }
-    
-    type Species {
-        id: ID!
-        name: String!
-        classification: String
-        designation: String
-        average_height: String
-        skin_colors: String
-        hair_colors: String
-        eye_colors: String
-        average_lifespan: String
-        language: String
-    
-        # Relationships
-        people: [Person!]!
-        people_ids: [ID!]!
-        films: [Film!]!
-        films_ids: [ID!]!
-    }
-    
-    type Vehicle {
-        id: ID!
-        name: String!
-        model: String
-        manufacturer: String
-        cost_in_credits: String
-        length: String
-        max_atmosphering_speed: String
-        crew: String
-        passengers: String
-        cargo_capacity: String
-        consumables: String
-        vehicle_class: String
-    
-        # Relationships
-        pilots: [Person!]!
-        pilots_ids: [ID!]!
-        films: [Film!]!
-        films_ids: [ID!]!
-    }
-    
-    type Starship {
-        id: ID!
-        name: String!
-        model: String
-        manufacturer: String
-        cost_in_credits: String
-        length: String
-        max_atmosphering_speed: String
-        crew: String
-        passengers: String
-        cargo_capacity: String
-        consumables: String
-        hyperdrive_rating: String
-        MGLT: String
-        starship_class: String
-    
-        # Relationships
-        pilots: [Person!]!
-        pilots_ids: [ID!]!
-        films: [Film!]!
-        films_ids: [ID!]!
-    }
-    
-    type Film {
-      id: ID!
-      title: String!
-      episode_id: Int!
-      opening_crawl: String!
-      director: String!
-      producer: String
-      release_date: String!
-    
-      # Relationships
-      characters: [Person!]!
-      characters_ids: [ID!]!
-      planets: [Planet!]!
-      planets_ids: [ID!]!
-      starships: [Starship!]!
-      starships_ids: [ID!]!
-      vehicles: [Vehicle!]!
-      vehicles_ids: [ID!]!
-      species: [Species!]!
-      species_ids: [ID!]!
-    }
-    
-    type Query {
-      planet(id: ID!): Planet
-      listPlanets(page: Int): [Planet!]!
-      person(id: ID!): Person
-      listPeople(page: Int): [Person!]!
-      species(id: ID!): Species
-      listSpecies(page: Int): [Species!]!
-      film(id: ID!): Film
-      listFilms(page: Int): [Film!]!
-      starship(id: ID!): Starship
-      listStarships(page: Int): [Starship!]!
-      vehicle(id: ID!): Vehicle
-      listVehicles(page: Int): [Vehicle!]!
+    ```json
+    {
+        "$schema": "http://json-schema.org/schema#",
+        "type": "object",
+        "properties": {
+            "my_obj": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": [
+                                "array",
+                                "null"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "items"
+                    ]
+                }
+            }
+        },
+        "required": [
+            "my_obj"
+        ]
     }
     ```
 
@@ -3113,330 +2999,44 @@ and dataclasses for the generated code from GraphQL schemas.
 
         ```python
         # generated by datamodel-codegen:
-        #   filename:  simple-star-wars.graphql
+        #   filename:  null_and_array.json
         #   timestamp: 2019-07-26T00:00:00+00:00
         
         from __future__ import annotations
         
-        from typing import List, Literal, Optional
+        from typing import Any, List, Optional
         
-        from pydantic import BaseModel, Field
-        from typing_extensions import TypeAlias
-        
-        Boolean: TypeAlias = bool
-        """
-        The `Boolean` scalar type represents `true` or `false`.
-        """
+        from pydantic import BaseModel
         
         
-        ID: TypeAlias = str
-        """
-        The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
-        """
+        class MyObjItem(BaseModel):
+            items: Optional[List[Any]]
         
         
-        Int: TypeAlias = int
-        """
-        The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
-        """
-        
-        
-        String: TypeAlias = str
-        """
-        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
-        """
-        
-        
-        class Film(BaseModel):
-            characters: List[Person]
-            characters_ids: List[ID]
-            director: String
-            episode_id: Int
-            id: ID
-            opening_crawl: String
-            planets: List[Planet]
-            planets_ids: List[ID]
-            producer: Optional[String] = None
-            release_date: String
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
-            title: String
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
-            typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
-        
-        
-        class Person(BaseModel):
-            birth_year: Optional[String] = None
-            eye_color: Optional[String] = None
-            films: List[Film]
-            films_ids: List[ID]
-            gender: Optional[String] = None
-            hair_color: Optional[String] = None
-            height: Optional[Int] = None
-            homeworld: Optional[Planet] = None
-            homeworld_id: Optional[ID] = None
-            id: ID
-            mass: Optional[Int] = None
-            name: String
-            skin_color: Optional[String] = None
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
-            typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
-        
-        
-        class Planet(BaseModel):
-            climate: Optional[String] = None
-            diameter: Optional[String] = None
-            films: List[Film]
-            films_ids: List[ID]
-            gravity: Optional[String] = None
-            id: ID
-            name: String
-            orbital_period: Optional[String] = None
-            population: Optional[String] = None
-            residents: List[Person]
-            residents_ids: List[ID]
-            rotation_period: Optional[String] = None
-            surface_water: Optional[String] = None
-            terrain: Optional[String] = None
-            typename__: Optional[Literal['Planet']] = Field('Planet', alias='__typename')
-        
-        
-        class Species(BaseModel):
-            average_height: Optional[String] = None
-            average_lifespan: Optional[String] = None
-            classification: Optional[String] = None
-            designation: Optional[String] = None
-            eye_colors: Optional[String] = None
-            films: List[Film]
-            films_ids: List[ID]
-            hair_colors: Optional[String] = None
-            id: ID
-            language: Optional[String] = None
-            name: String
-            people: List[Person]
-            people_ids: List[ID]
-            skin_colors: Optional[String] = None
-            typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
-        
-        
-        class Starship(BaseModel):
-            MGLT: Optional[String] = None
-            cargo_capacity: Optional[String] = None
-            consumables: Optional[String] = None
-            cost_in_credits: Optional[String] = None
-            crew: Optional[String] = None
-            films: List[Film]
-            films_ids: List[ID]
-            hyperdrive_rating: Optional[String] = None
-            id: ID
-            length: Optional[String] = None
-            manufacturer: Optional[String] = None
-            max_atmosphering_speed: Optional[String] = None
-            model: Optional[String] = None
-            name: String
-            passengers: Optional[String] = None
-            pilots: List[Person]
-            pilots_ids: List[ID]
-            starship_class: Optional[String] = None
-            typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
-        
-        
-        class Vehicle(BaseModel):
-            cargo_capacity: Optional[String] = None
-            consumables: Optional[String] = None
-            cost_in_credits: Optional[String] = None
-            crew: Optional[String] = None
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            length: Optional[String] = None
-            manufacturer: Optional[String] = None
-            max_atmosphering_speed: Optional[String] = None
-            model: Optional[String] = None
-            name: String
-            passengers: Optional[String] = None
-            pilots: List[Person]
-            pilots_ids: List[ID]
-            vehicle_class: Optional[String] = None
-            typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
-        
-        
-        Film.update_forward_refs()
-        Person.update_forward_refs()
+        class Model(BaseModel):
+            my_obj: List[MyObjItem]
         ```
 
-    === "dataclass"
+    === "Pydantic v2"
 
         ```python
         # generated by datamodel-codegen:
-        #   filename:  simple-star-wars.graphql
+        #   filename:  null_and_array.json
         #   timestamp: 2019-07-26T00:00:00+00:00
         
         from __future__ import annotations
         
-        from dataclasses import dataclass
-        from typing import List, Literal, Optional
+        from typing import Any, List, Optional
         
-        from typing_extensions import TypeAlias
-        
-        Boolean: TypeAlias = bool
-        """
-        The `Boolean` scalar type represents `true` or `false`.
-        """
+        from pydantic import BaseModel
         
         
-        ID: TypeAlias = str
-        """
-        The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
-        """
+        class MyObjItem(BaseModel):
+            items: Optional[List[Any]] = None
         
         
-        Int: TypeAlias = int
-        """
-        The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
-        """
-        
-        
-        String: TypeAlias = str
-        """
-        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
-        """
-        
-        
-        @dataclass
-        class Film:
-            characters: List[Person]
-            characters_ids: List[ID]
-            director: String
-            episode_id: Int
-            id: ID
-            opening_crawl: String
-            planets: List[Planet]
-            planets_ids: List[ID]
-            release_date: String
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
-            title: String
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
-            producer: Optional[String] = None
-            typename__: Optional[Literal['Film']] = 'Film'
-        
-        
-        @dataclass
-        class Person:
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            name: String
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
-            birth_year: Optional[String] = None
-            eye_color: Optional[String] = None
-            gender: Optional[String] = None
-            hair_color: Optional[String] = None
-            height: Optional[Int] = None
-            homeworld: Optional[Planet] = None
-            homeworld_id: Optional[ID] = None
-            mass: Optional[Int] = None
-            skin_color: Optional[String] = None
-            typename__: Optional[Literal['Person']] = 'Person'
-        
-        
-        @dataclass
-        class Planet:
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            name: String
-            residents: List[Person]
-            residents_ids: List[ID]
-            climate: Optional[String] = None
-            diameter: Optional[String] = None
-            gravity: Optional[String] = None
-            orbital_period: Optional[String] = None
-            population: Optional[String] = None
-            rotation_period: Optional[String] = None
-            surface_water: Optional[String] = None
-            terrain: Optional[String] = None
-            typename__: Optional[Literal['Planet']] = 'Planet'
-        
-        
-        @dataclass
-        class Species:
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            name: String
-            people: List[Person]
-            people_ids: List[ID]
-            average_height: Optional[String] = None
-            average_lifespan: Optional[String] = None
-            classification: Optional[String] = None
-            designation: Optional[String] = None
-            eye_colors: Optional[String] = None
-            hair_colors: Optional[String] = None
-            language: Optional[String] = None
-            skin_colors: Optional[String] = None
-            typename__: Optional[Literal['Species']] = 'Species'
-        
-        
-        @dataclass
-        class Starship:
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            name: String
-            pilots: List[Person]
-            pilots_ids: List[ID]
-            MGLT: Optional[String] = None
-            cargo_capacity: Optional[String] = None
-            consumables: Optional[String] = None
-            cost_in_credits: Optional[String] = None
-            crew: Optional[String] = None
-            hyperdrive_rating: Optional[String] = None
-            length: Optional[String] = None
-            manufacturer: Optional[String] = None
-            max_atmosphering_speed: Optional[String] = None
-            model: Optional[String] = None
-            passengers: Optional[String] = None
-            starship_class: Optional[String] = None
-            typename__: Optional[Literal['Starship']] = 'Starship'
-        
-        
-        @dataclass
-        class Vehicle:
-            films: List[Film]
-            films_ids: List[ID]
-            id: ID
-            name: String
-            pilots: List[Person]
-            pilots_ids: List[ID]
-            cargo_capacity: Optional[String] = None
-            consumables: Optional[String] = None
-            cost_in_credits: Optional[String] = None
-            crew: Optional[String] = None
-            length: Optional[String] = None
-            manufacturer: Optional[String] = None
-            max_atmosphering_speed: Optional[String] = None
-            model: Optional[String] = None
-            passengers: Optional[String] = None
-            vehicle_class: Optional[String] = None
-            typename__: Optional[Literal['Vehicle']] = 'Vehicle'
+        class Model(BaseModel):
+            my_obj: List[MyObjItem]
         ```
 
 ---

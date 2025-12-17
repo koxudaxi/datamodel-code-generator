@@ -41,10 +41,10 @@ if TYPE_CHECKING:
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Generate data models from GraphQL schema definitions.
+    """Generate models from GraphQL with different output model types.
 
-    The `--output-model-type` flag allows you to choose between Pydantic models
-    and dataclasses for the generated code from GraphQL schemas.
+    This example demonstrates using `--output-model-type` with GraphQL schemas
+    to generate either Pydantic models or dataclasses.
     """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
