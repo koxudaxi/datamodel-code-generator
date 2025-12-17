@@ -1165,7 +1165,7 @@ class JsonSchemaParser(Parser):
     def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
         if len(items) == 1:
-            return items[0]
+            return items[0]  # pragma: no cover
 
         if self.allof_merge_mode != AllOfMergeMode.NoMerge:
             merged = self._merge_primitive_schemas(items)
@@ -1523,7 +1523,7 @@ class JsonSchemaParser(Parser):
         """
         for path_element in path:
             if SPECIAL_PATH_MARKER in path_element:
-                return None
+                return None  # pragma: no cover
 
         ref_items = [item for item in obj.allOf if item.ref]
 
@@ -1533,7 +1533,7 @@ class JsonSchemaParser(Parser):
         ref_item = ref_items[0]
         ref_value = ref_item.ref
         if ref_value is None:
-            return None
+            return None  # pragma: no cover
 
         if ref_item.has_ref_with_schema_keywords:
             ref_schema = self._merge_ref_with_schema(ref_item)

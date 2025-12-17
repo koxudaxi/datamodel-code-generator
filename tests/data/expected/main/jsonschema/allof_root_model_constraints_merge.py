@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, EmailStr, Field, conint, constr
 
@@ -73,6 +73,64 @@ class NumberIntegerCompatible(BaseModel):
     )
 
 
+class RefWithSchemaKeywords(BaseModel):
+    __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+        ..., description='Ref with additional schema keywords.'
+    )
+
+
+class ArrayDatatype(BaseModel):
+    __root__: List[str]
+
+
+class RefToArrayAllOf(BaseModel):
+    pass
+
+
+class ObjectNoPropsDatatype(BaseModel):
+    pass
+
+
+class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
+    pass
+
+
+class PatternPropsDatatype(BaseModel):
+    __root__: Dict[constr(regex=r'^S_'), str]
+
+
+class RefToPatternPropsAllOf(BaseModel):
+    pass
+
+
+class NestedAllOfDatatype(BaseModel):
+    pass
+
+
+class RefToNestedAllOfAllOf(NestedAllOfDatatype):
+    pass
+
+
+class ConstraintsOnlyDatatype(BaseModel):
+    __root__: Any = Field(..., description='Constraints only, no type.')
+
+
+class RefToConstraintsOnlyAllOf(BaseModel):
+    __root__: Any = Field(..., description='Ref to constraints-only schema.')
+
+
+class NoDescriptionAllOf(BaseModel):
+    __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+        ..., description='A base string type.'
+    )
+
+
+class EmptyConstraintItemAllOf(BaseModel):
+    __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+        ..., description='AllOf with empty constraint item.'
+    )
+
+
 class Model(BaseModel):
     name: Optional[ConstrainedStringDatatype] = None
     count: Optional[NonNegativeIntegerDatatype] = None
@@ -85,3 +143,11 @@ class Model(BaseModel):
     withprops: Optional[ConstraintWithProperties] = None
     withitems: Optional[ConstraintWithItems] = None
     numint: Optional[NumberIntegerCompatible] = None
+    refwithkw: Optional[RefWithSchemaKeywords] = None
+    refarr: Optional[RefToArrayAllOf] = None
+    refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
+    refpatternprops: Optional[RefToPatternPropsAllOf] = None
+    refnestedallof: Optional[RefToNestedAllOfAllOf] = None
+    refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
+    nodescription: Optional[NoDescriptionAllOf] = None
+    emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
