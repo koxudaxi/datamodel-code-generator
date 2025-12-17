@@ -27,12 +27,25 @@ if TYPE_CHECKING:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="graphql/simple-star-wars.graphql",
+    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    model_outputs={
+        "pydantic_v1": "graphql/simple_star_wars.py",
+        "dataclass": "graphql/simple_star_wars_dataclass.py",
+    },
+)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test GraphQL code generation for simple Star Wars schema."""
+    """Generate data models from GraphQL schema definitions.
+
+    The `--output-model-type` flag allows you to choose between Pydantic models
+    and dataclasses for the generated code from GraphQL schemas.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
         output_path=output_file,
