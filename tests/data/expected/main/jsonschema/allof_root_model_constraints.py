@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, conint, constr
+from pydantic import BaseModel, EmailStr, Field, conint, constr
 
 
 class StringDatatype(BaseModel):
@@ -35,7 +35,53 @@ class BoundedIntegerDatatype(BaseModel):
     )
 
 
+class EmailDatatype(BaseModel):
+    __root__: EmailStr = Field(..., description='Email with format.')
+
+
+class ObjectBase(BaseModel):
+    id: Optional[int] = None
+
+
+class ObjectWithAllOf(ObjectBase):
+    name: Optional[str] = None
+
+
+class MultiRefAllOf(BaseModel):
+    pass
+
+
+class NoConstraintAllOf(BaseModel):
+    pass
+
+
+class IncompatibleTypeAllOf(BaseModel):
+    pass
+
+
+class ConstraintWithProperties(BaseModel):
+    extra: Optional[str] = None
+
+
+class ConstraintWithItems(BaseModel):
+    pass
+
+
+class NumberIntegerCompatible(BaseModel):
+    __root__: conint(ge=0) = Field(
+        ..., description='Number and integer are compatible.'
+    )
+
+
 class Model(BaseModel):
     name: Optional[ConstrainedStringDatatype] = None
     count: Optional[NonNegativeIntegerDatatype] = None
     percentage: Optional[BoundedIntegerDatatype] = None
+    email: Optional[EmailDatatype] = None
+    obj: Optional[ObjectWithAllOf] = None
+    multi: Optional[MultiRefAllOf] = None
+    noconstraint: Optional[NoConstraintAllOf] = None
+    incompatible: Optional[IncompatibleTypeAllOf] = None
+    withprops: Optional[ConstraintWithProperties] = None
+    withitems: Optional[ConstraintWithItems] = None
+    numint: Optional[NumberIntegerCompatible] = None

@@ -30,12 +30,81 @@
         { "$ref": "#/definitions/IntegerDatatype" },
         { "minimum": 0, "maximum": 100 }
       ]
+    },
+    "EmailDatatype": {
+      "description": "Email with format.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "format": "email" }
+      ]
+    },
+    "ObjectBase": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "integer" }
+      }
+    },
+    "ObjectWithAllOf": {
+      "description": "Object inheritance - not a root model.",
+      "allOf": [
+        { "$ref": "#/definitions/ObjectBase" },
+        { "type": "object", "properties": { "name": { "type": "string" } } }
+      ]
+    },
+    "MultiRefAllOf": {
+      "description": "Multiple refs - not handled by new code.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "$ref": "#/definitions/IntegerDatatype" }
+      ]
+    },
+    "NoConstraintAllOf": {
+      "description": "No constraints added.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" }
+      ]
+    },
+    "IncompatibleTypeAllOf": {
+      "description": "Incompatible types.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "type": "boolean" }
+      ]
+    },
+    "ConstraintWithProperties": {
+      "description": "Constraint item has properties.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "properties": { "extra": { "type": "string" } } }
+      ]
+    },
+    "ConstraintWithItems": {
+      "description": "Constraint item has items.",
+      "allOf": [
+        { "$ref": "#/definitions/StringDatatype" },
+        { "items": { "type": "string" } }
+      ]
+    },
+    "NumberIntegerCompatible": {
+      "description": "Number and integer are compatible.",
+      "allOf": [
+        { "$ref": "#/definitions/IntegerDatatype" },
+        { "type": "number", "minimum": 0 }
+      ]
     }
   },
   "type": "object",
   "properties": {
     "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
     "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
-    "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" }
+    "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" },
+    "email": { "$ref": "#/definitions/EmailDatatype" },
+    "obj": { "$ref": "#/definitions/ObjectWithAllOf" },
+    "multi": { "$ref": "#/definitions/MultiRefAllOf" },
+    "noconstraint": { "$ref": "#/definitions/NoConstraintAllOf" },
+    "incompatible": { "$ref": "#/definitions/IncompatibleTypeAllOf" },
+    "withprops": { "$ref": "#/definitions/ConstraintWithProperties" },
+    "withitems": { "$ref": "#/definitions/ConstraintWithItems" },
+    "numint": { "$ref": "#/definitions/NumberIntegerCompatible" }
   }
 }

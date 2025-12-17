@@ -60,7 +60,7 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
-from datamodel_code_generator.reference import ModelType, Reference, SPECIAL_PATH_MARKER, is_url
+from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
     DataType,
@@ -1491,7 +1491,7 @@ class JsonSchemaParser(Parser):
             return prop_schema
         return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
-    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:
+    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR6301
         """Check if schema represents a root model (primitive type with constraints).
 
         Based on parse_raw_obj() else branch conditions. Returns True when
@@ -1509,7 +1509,7 @@ class JsonSchemaParser(Parser):
             return False
         return not obj.enum
 
-    def _handle_allof_root_model_with_constraints(
+    def _handle_allof_root_model_with_constraints(  # noqa: PLR0911, PLR0912
         self,
         name: str,
         obj: JsonSchemaObject,
