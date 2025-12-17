@@ -2567,6 +2567,46 @@ class JsonSchemaParser(Parser):
                 )
             )
 
+        if not enum_fields:
+            if not nullable:
+                return self.data_type_manager.get_data_type(Types.null)
+            name = self._apply_title_as_name(name, obj)
+            reference = self.model_resolver.add(
+                path,
+                name,
+                class_name=True,
+                singular_name=singular_name,
+                singular_name_suffix="Enum",
+                loaded=True,
+            )
+            data_model_root_type = self.data_model_root_type(
+                reference=reference,
+                fields=[
+                    self.data_model_field_type(
+                        data_type=self.data_type_manager.get_data_type(Types.null),
+                        default=obj.default,
+                        required=False,
+                        nullable=True,
+                        strip_default_none=self.strip_default_none,
+                        extras=self.get_field_extras(obj),
+                        use_annotated=self.use_annotated,
+                        has_default=obj.has_default,
+                        use_field_description=self.use_field_description,
+                        use_inline_field_description=self.use_inline_field_description,
+                        original_name=None,
+                    )
+                ],
+                custom_base_class=obj.custom_base_path or self.base_class,
+                custom_template_dir=self.custom_template_dir,
+                extra_template_data=self.extra_template_data,
+                path=self.current_source_path,
+                default=obj.default if obj.has_default else UNDEFINED,
+                nullable=obj.type_has_null,
+                treat_dot_as_module=self.treat_dot_as_module,
+            )
+            self.results.append(data_model_root_type)
+            return self.data_type(reference=reference)
+
         def create_enum(reference_: Reference) -> DataType:
             type_: Types | None = (
                 self._get_type_with_mappings(obj.type, obj.format) if isinstance(obj.type, str) else None
