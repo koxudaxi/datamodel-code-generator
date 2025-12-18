@@ -11,17 +11,21 @@ from pydantic import BaseModel, Field, RootModel
 
 class Bird(BaseModel):
     name: Literal['bird'] = Field('bird', title='chirp')
-    friends: Optional[List[Friends]] = Field([], title='Friends')
+    friends: Optional[List[Friends]] = Field(default_factory=list, title='Friends')
 
 
 class Cat(BaseModel):
     name: Literal['cat'] = Field('cat', title='meow')
-    friends: Optional[List[Friends]] = Field([], title='Friends')
+    friends: Optional[List[Friends]] = Field(default_factory=list, title='Friends')
 
 
 class Dog(BaseModel):
     name: Literal['dog'] = Field('dog', title='woof')
-    friends: Optional[List[Friends]] = Field([], title='Friends')
+    friends: Optional[List[Friends]] = Field(default_factory=list, title='Friends')
+
+
+class Animals(RootModel[Union[Dog, Cat, Bird]]):
+    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
 
 
 class Friends(RootModel[Union[Dog, Cat, Bird]]):
@@ -29,14 +33,9 @@ class Friends(RootModel[Union[Dog, Cat, Bird]]):
 
 
 class Zoo(BaseModel):
-    animals: Optional[List[Animals]] = Field([], title='Animals')
-
-
-class Animals(RootModel[Union[Dog, Cat, Bird]]):
-    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
+    animals: Optional[List[Animals]] = Field(default_factory=list, title='Animals')
 
 
 Bird.model_rebuild()
 Cat.model_rebuild()
 Dog.model_rebuild()
-Zoo.model_rebuild()

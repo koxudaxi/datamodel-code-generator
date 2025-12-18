@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
 from pydantic import BaseModel, constr
 
@@ -15,6 +15,6 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    type: Optional[Any] = 'playground:Person'
-    name: Optional[Any] = None
+    type: Optional[str] = 'playground:Person'
+    name: Optional[constr(min_length=1)] = None
     age: Optional[int] = None

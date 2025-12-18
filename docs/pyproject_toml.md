@@ -1,8 +1,10 @@
-# pyproject.toml Configuration
+<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile -->
+
+# ⚙️ pyproject.toml Configuration
 
 datamodel-code-generator can be configured using `pyproject.toml`. The tool automatically searches for `pyproject.toml` in the current directory and parent directories (stopping at the git repository root).
 
-## Basic Usage
+## 🚀 Basic Usage
 
 ```toml
 [tool.datamodel-codegen]
@@ -15,7 +17,7 @@ field-constraints = true
 
 All CLI options can be used in `pyproject.toml` by converting them to kebab-case (e.g., `--snake-case-field` becomes `snake-case-field`).
 
-## Named Profiles
+## 📋 Named Profiles
 
 You can define multiple named profiles for different use cases within a single project:
 
@@ -44,16 +46,16 @@ datamodel-codegen --profile api
 datamodel-codegen --profile database
 ```
 
-## Configuration Priority
+## 🎯 Configuration Priority
 
 Settings are applied in the following priority order (highest to lowest):
 
-1. **CLI arguments** - Always take precedence
-2. **Profile settings** - From `[tool.datamodel-codegen.profiles.<name>]`
-3. **Base settings** - From `[tool.datamodel-codegen]`
-4. **Default values** - Built-in defaults
+1. **🖥️ CLI arguments** - Always take precedence
+2. **📋 Profile settings** - From `[tool.datamodel-codegen.profiles.<name>]`
+3. **⚙️ Base settings** - From `[tool.datamodel-codegen]`
+4. **🔧 Default values** - Built-in defaults
 
-## Merge Rules
+## 🔀 Merge Rules
 
 When using profiles, settings are merged using **shallow merge**:
 
@@ -61,7 +63,7 @@ When using profiles, settings are merged using **shallow merge**:
 - Settings not specified in the profile are inherited from the base configuration
 - Lists and dictionaries are replaced entirely, not merged
 
-### Example
+### 📝 Example
 
 ```toml
 [tool.datamodel-codegen]
@@ -77,7 +79,7 @@ When using `--profile api`:
 - `strict-types` becomes `["bytes"]` (completely replaces base, not merged)
 - `http-headers` is inherited from base as `["Authorization: Bearer token"]`
 
-## Ignoring pyproject.toml
+## 🚫 Ignoring pyproject.toml
 
 To ignore all `pyproject.toml` configuration and use only CLI arguments:
 
@@ -85,7 +87,7 @@ To ignore all `pyproject.toml` configuration and use only CLI arguments:
 datamodel-codegen --ignore-pyproject --input schema.yaml --output models.py
 ```
 
-## Generating Configuration
+## 🔧 Generating Configuration
 
 Generate a `pyproject.toml` configuration section from CLI arguments:
 
@@ -93,7 +95,7 @@ Generate a `pyproject.toml` configuration section from CLI arguments:
 datamodel-codegen --input schema.yaml --output models.py --snake-case-field --generate-pyproject-config
 ```
 
-Output:
+**✨ Output:**
 
 ```toml
 [tool.datamodel-codegen]
@@ -113,3 +115,11 @@ With a specific profile:
 ```bash
 datamodel-codegen --profile api --generate-cli-command
 ```
+
+---
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference: `--ignore-pyproject`](cli-reference/general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration
+- 🔧 [CLI Reference: `--generate-pyproject-config`](cli-reference/general-options.md#generate-pyproject-config) - Generate pyproject.toml from CLI arguments
+- 🖥️ [CLI Reference: `--generate-cli-command`](cli-reference/general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml

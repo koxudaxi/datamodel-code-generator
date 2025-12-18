@@ -1,0 +1,26 @@
+openapi: "3.0.0"
+info:
+  title: Test materialize allOf defaults
+  version: "1.0.0"
+components:
+  schemas:
+    Parent:
+      type: object
+      properties:
+        name:
+          type: string
+          default: "parent_default"
+          minLength: 1
+        count:
+          type: integer
+          default: 10
+          minimum: 0
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Parent"
+        - type: object
+          properties:
+            name:
+              maxLength: 100
+            count:
+              maximum: 1000

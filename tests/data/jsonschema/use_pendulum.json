@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Event",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "event_date": {
+      "type": "string",
+      "format": "date"
+    },
+    "duration": {
+      "type": "string",
+      "format": "duration"
+    }
+  },
+  "required": ["name", "created_at"]
+}

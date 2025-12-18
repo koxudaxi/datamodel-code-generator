@@ -1,7 +1,0 @@
-enum lowercase {
-  foo
-}
-
-type EnumRef {
-  bar: lowercase!
-}

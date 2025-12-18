@@ -23,7 +23,7 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_EXTRA,
     IMPORT_FIELD,
 )
-from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.types import STANDARD_LIST, UnionIntFloat, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -134,6 +134,8 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(data_type_child.reference.source, BaseModelBase)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
+                    if not self.default:
+                        return STANDARD_LIST
                     return (
                         f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
                         f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
@@ -197,7 +199,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.required:
             default_factory = None
-        elif self.default and "default_factory" not in data:
+        elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
         else:
             default_factory = data.pop("default_factory", None)
@@ -219,7 +221,10 @@ class DataModelField(DataModelFieldBase):
         elif self.required:
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
-            field_arguments = [f"{self.default!r}", *field_arguments]
+            from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+            default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            field_arguments = [default_repr, *field_arguments]
 
         return f"Field({', '.join(field_arguments)})"
 

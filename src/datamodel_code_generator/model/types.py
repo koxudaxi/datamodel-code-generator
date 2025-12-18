@@ -73,6 +73,7 @@ class DataTypeManager(_DataTypeManager):
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
@@ -86,6 +87,7 @@ class DataTypeManager(_DataTypeManager):
             use_generic_container_types,
             strict_types,
             use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of,
             use_union_operator,
             use_pendulum,
             target_datetime_class,

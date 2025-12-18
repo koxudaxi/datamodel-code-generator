@@ -1,0 +1,21 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        name:
+          type: string
+          default: default_name
+        count:
+          type: integer
+          default: 0
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/Thing"
+        - type: object
+          properties:
+            name:
+              title: Person name
+            count:
+              description: Count value

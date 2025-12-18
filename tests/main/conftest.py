@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import importlib.util
 import inspect
 import shutil
 import sys
+import time
 from argparse import Namespace
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
@@ -14,8 +16,17 @@ import black
 import pytest
 from packaging import version
 
+from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit, main
-from tests.conftest import AssertFileContent, assert_directory_content, assert_output, freeze_time
+from datamodel_code_generator.util import PYDANTIC_V2
+from tests.conftest import (
+    AssertFileContent,
+    _validation_stats,
+    assert_directory_content,
+    assert_output,
+    freeze_time,
+    validate_generated_code,
+)
 
 InputFileTypeLiteral = Literal["auto", "openapi", "jsonschema", "json", "yaml", "dict", "csv", "graphql"]
 CopyFilesMapping = Sequence[tuple[Path, Path]]
@@ -28,6 +39,18 @@ MSGSPEC_LEGACY_BLACK_SKIP = pytest.mark.skipif(
 LEGACY_BLACK_SKIP = pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("24.0.0"),
     reason="Type annotation formatting differs with black < 24",
+)
+
+from datamodel_code_generator.format import PythonVersion, is_supported_in_black  # noqa: E402
+
+BLACK_PY313_SKIP = pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_313),
+    reason=f"Installed black ({black.__version__}) doesn't support Python 3.13",
+)
+
+BLACK_PY314_SKIP = pytest.mark.skipif(
+    not is_supported_in_black(PythonVersion.PY_314),
+    reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
 )
 
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
@@ -198,6 +221,8 @@ def run_main_and_assert(  # noqa: PLR0912
     # stdin options
     stdin_path: Path | None = None,
     monkeypatch: pytest.MonkeyPatch | None = None,
+    # Code validation options
+    skip_code_validation: bool = False,
 ) -> None:
     """Execute main() and assert output.
 
@@ -323,6 +348,119 @@ def run_main_and_assert(  # noqa: PLR0912
             expected_file = f"{func_name}.py"
         assert_func(output_path, expected_file, transform=transform)
 
+    if output_path is not None and not skip_code_validation:
+        _validate_output_files(output_path, extra_args)
+
+
+def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
+    """Extract argument value from arguments."""
+    if arguments is None:
+        return None
+    argument_list = list(arguments)
+    for index, argument in enumerate(argument_list):
+        if argument == argument_name and index + 1 < len(argument_list):
+            return argument_list[index + 1]
+    return None
+
+
+def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, int] | None:
+    """Parse target Python version from arguments."""
+    if (target_version := _get_argument_value(extra_arguments, "--target-python-version")) is None:
+        return None
+    try:
+        return tuple(int(part) for part in target_version.split("."))  # type: ignore[return-value]
+    except ValueError:  # pragma: no cover
+        return None
+
+
+def _should_skip_compile(extra_arguments: Sequence[str] | None) -> bool:
+    """Check if compile should be skipped when target version > runtime version."""
+    if (target_version := _parse_target_version(extra_arguments)) is None:
+        return False
+    return target_version > sys.version_info[:2]
+
+
+def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
+    """Check if exec should be skipped based on model type, pydantic version, and Python version."""
+    output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
+    is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
+    if (is_pydantic_v1 and PYDANTIC_V2) or (
+        output_model_type == DataModelType.PydanticV2BaseModel.value and not PYDANTIC_V2
+    ):
+        return True
+    if (target_version := _parse_target_version(extra_arguments)) is None:
+        return True
+    if target_version != sys.version_info[:2]:
+        return True
+    return _get_argument_value(extra_arguments, "--base-class") is not None
+
+
+def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:
+    """Validate generated Python files by compiling/executing them."""
+    if _should_skip_compile(extra_arguments):
+        return
+    should_exec = not _should_skip_exec(extra_arguments)
+    if output_path.is_file() and output_path.suffix == ".py":
+        validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
+    elif output_path.is_dir():  # pragma: no cover
+        for python_file in output_path.rglob("*.py"):
+            validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
+        if should_exec:  # pragma: no cover
+            _import_package(output_path)
+
+
+def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR0912
+    """Import generated packages to validate they can be loaded."""
+    if (output_path / "__init__.py").exists():
+        packages = [(output_path.parent, output_path.name)]
+    else:
+        packages = [
+            (output_path, directory.name)
+            for directory in output_path.iterdir()
+            if directory.is_dir() and (directory / "__init__.py").exists()
+        ]
+    if not packages:
+        return
+
+    imported_modules: list[str] = []
+    start_time = time.perf_counter()
+    try:
+        for parent_directory, package_name in packages:
+            package_path = parent_directory / package_name
+            sys.path.insert(0, str(parent_directory))
+            spec = importlib.util.spec_from_file_location(
+                package_name, package_path / "__init__.py", submodule_search_locations=[str(package_path)]
+            )
+            if spec is None or spec.loader is None:
+                continue
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[package_name] = module
+            imported_modules.append(package_name)
+            spec.loader.exec_module(module)
+
+            for python_file in package_path.rglob("*.py"):
+                if python_file.name == "__init__.py":
+                    continue
+                relative_path = python_file.relative_to(package_path)
+                module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
+                submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
+                if submodule_spec is None or submodule_spec.loader is None:
+                    continue
+                submodule = importlib.util.module_from_spec(submodule_spec)
+                sys.modules[module_name] = submodule
+                imported_modules.append(module_name)
+                submodule_spec.loader.exec_module(submodule)
+        _validation_stats.record_exec(time.perf_counter() - start_time)
+    except Exception as exception:
+        _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
+        raise
+    finally:
+        for parent_directory, _ in packages:
+            if str(parent_directory) in sys.path:
+                sys.path.remove(str(parent_directory))
+        for module_name in imported_modules:
+            sys.modules.pop(module_name, None)
+
 
 def run_main_url_and_assert(
     *,
@@ -349,3 +487,5 @@ def run_main_url_and_assert(
     return_code = _run_main_url(url, output_path, input_file_type, extra_args=extra_args)
     _assert_exit_code(return_code, Exit.OK, f"URL: {url}")
     assert_func(output_path, expected_file, transform=transform)
+
+    _validate_output_files(output_path, extra_args)

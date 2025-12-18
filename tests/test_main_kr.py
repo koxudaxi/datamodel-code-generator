@@ -4,18 +4,26 @@ from __future__ import annotations
 
 from argparse import Namespace
 from pathlib import Path
+from typing import TYPE_CHECKING
+from unittest.mock import Mock, patch
 
 import black
+import pydantic
 import pytest
 from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_with_args
 
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
+
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
+JSON_SCHEMA_DATA_PATH: Path = DATA_PATH / "jsonschema"
 EXPECTED_MAIN_KR_PATH = DATA_PATH / "expected" / "main_kr"
 
 assert_file_content = create_assert_file_content(EXPECTED_MAIN_KR_PATH)
@@ -245,9 +253,21 @@ strict-types = ["str"]
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-schema-description"],
+    input_schema="openapi/api_multiline_docstrings.yaml",
+    cli_args=["--use-schema-description"],
+    golden_output="main_kr/main_use_schema_description/output.py",
+    related_options=["--use-field-description", "--use-inline-field-description"],
+)
 @freeze_time("2019-07-26")
 def test_main_use_schema_description(output_file: Path) -> None:
-    """Test --use-schema-description option."""
+    """Use schema description as class docstring.
+
+    The `--use-schema-description` flag extracts the `description` property from
+    schema definitions and adds it as a docstring to the generated class. This is
+    useful for preserving documentation from your schema in the generated code.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
         output_path=output_file,
@@ -258,9 +278,21 @@ def test_main_use_schema_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-field-description"],
+    input_schema="openapi/api_multiline_docstrings.yaml",
+    cli_args=["--use-field-description"],
+    golden_output="main_kr/main_use_field_description/output.py",
+    related_options=["--use-schema-description", "--use-inline-field-description"],
+)
 @freeze_time("2022-11-11")
 def test_main_use_field_description(output_file: Path) -> None:
-    """Test --use-field-description option."""
+    """Add field descriptions using Pydantic Field().
+
+    The `--use-field-description` flag adds the `description` property from
+    schema fields as the `description` parameter in Pydantic Field(). This
+    provides documentation that is accessible via model schema and OpenAPI docs.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
         output_path=output_file,
@@ -271,9 +303,21 @@ def test_main_use_field_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-inline-field-description"],
+    input_schema="openapi/api_multiline_docstrings.yaml",
+    cli_args=["--use-inline-field-description"],
+    golden_output="main_kr/main_use_inline_field_description/output.py",
+    related_options=["--use-field-description", "--use-schema-description"],
+)
 @freeze_time("2022-11-11")
 def test_main_use_inline_field_description(output_file: Path) -> None:
-    """Test --use-inline-field-description option."""
+    """Add field descriptions as inline comments.
+
+    The `--use-inline-field-description` flag adds the `description` property from
+    schema fields as inline comments after each field definition. This provides
+    documentation without using Field() wrappers.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
         output_path=output_file,
@@ -390,8 +434,18 @@ class EnumSystems(str, Enum):
 EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH = EXPECTED_MAIN_KR_PATH / "generate_pyproject_config"
 
 
+@pytest.mark.cli_doc(
+    options=["--generate-pyproject-config"],
+    cli_args=["--generate-pyproject-config", "--input", "schema.yaml", "--output", "model.py"],
+    expected_stdout="main_kr/generate_pyproject_config/basic.txt",
+)
 def test_generate_pyproject_config_basic(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --generate-pyproject-config with basic options."""
+    """Generate pyproject.toml configuration from CLI arguments.
+
+    The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
+    snippet based on the provided CLI arguments. This is useful for converting
+    a working CLI command into a reusable configuration file.
+    """
     run_main_with_args(
         [
             "--generate-pyproject-config",
@@ -487,8 +541,22 @@ def test_generate_pyproject_config_with_enum_option(capsys: pytest.CaptureFixtur
 EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_command"
 
 
+@pytest.mark.cli_doc(
+    options=["--generate-cli-command"],
+    cli_args=["--generate-cli-command"],
+    config_content="""[tool.datamodel-codegen]
+input = "schema.yaml"
+output = "model.py"
+""",
+    expected_stdout="main_kr/generate_cli_command/basic.txt",
+)
 def test_generate_cli_command_basic(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Test --generate-cli-command with basic options."""
+    """Generate CLI command from pyproject.toml configuration.
+
+    The `--generate-cli-command` flag reads your pyproject.toml configuration
+    and outputs the equivalent CLI command. This is useful for debugging
+    configuration issues or sharing commands with others.
+    """
     pyproject_toml = """
 [tool.datamodel-codegen]
 input = "schema.yaml"
@@ -806,8 +874,6 @@ target-python-version = "3.11"
 
 def test_help_shows_new_options() -> None:
     """Test that --profile and --ignore-pyproject appear in help."""
-    from datamodel_code_generator.arguments import arg_parser  # noqa: PLC0415
-
     help_text = arg_parser.format_help()
     assert "--profile" in help_text
     assert "--ignore-pyproject" in help_text
@@ -971,4 +1037,522 @@ def test_allof_with_description_generates_class_not_alias(output_file: Path) -> 
             "pydantic_v2.BaseModel",
             "--use-schema-description",
         ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-decimal-for-multiple-of"],
+    input_schema="jsonschema/use_decimal_for_multiple_of.json",
+    cli_args=["--use-decimal-for-multiple-of"],
+    golden_output="main_kr/use_decimal_for_multiple_of/output.py",
+)
+@freeze_time("2019-07-26")
+def test_use_decimal_for_multiple_of(output_file: Path) -> None:
+    """Generate Decimal types for fields with multipleOf constraint.
+
+    The `--use-decimal-for-multiple-of` flag generates `condecimal` or `Decimal`
+    types for numeric fields that have a `multipleOf` constraint. This ensures
+    precise decimal arithmetic when validating values against the constraint.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_decimal_for_multiple_of.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_decimal_for_multiple_of" / "output.py",
+        extra_args=["--use-decimal-for-multiple-of"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-pendulum"],
+    input_schema="jsonschema/use_pendulum.json",
+    cli_args=["--use-pendulum"],
+    golden_output="main_kr/use_pendulum/output.py",
+)
+@freeze_time("2019-07-26")
+def test_use_pendulum(output_file: Path) -> None:
+    """Use pendulum types for date/time fields instead of datetime module.
+
+    The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
+    Time, Duration) instead of standard datetime types. This is useful when
+    working with the pendulum library for enhanced timezone and date handling.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_pendulum.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_pendulum" / "output.py",
+        extra_args=["--use-pendulum"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-non-positive-negative-number-constrained-types"],
+    input_schema="jsonschema/use_non_positive_negative.json",
+    cli_args=["--use-non-positive-negative-number-constrained-types"],
+    golden_output="main_kr/use_non_positive_negative/output.py",
+)
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="Require Pydantic version 2.0.0 or later")
+@freeze_time("2019-07-26")
+def test_use_non_positive_negative_number_constrained_types(output_file: Path) -> None:
+    """Use NonPositive/NonNegative types for number constraints.
+
+    The `--use-non-positive-negative-number-constrained-types` flag generates
+    Pydantic's NonPositiveInt, NonNegativeInt, NonPositiveFloat, and NonNegativeFloat
+    types for fields with minimum: 0 or maximum: 0 constraints, instead of using
+    conint/confloat with ge/le parameters.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_non_positive_negative.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_non_positive_negative" / "output.py",
+        extra_args=["--use-non-positive-negative-number-constrained-types"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--include-path-parameters"],
+    input_schema="openapi/include_path_parameters.yaml",
+    cli_args=["--include-path-parameters", "--openapi-scopes", "schemas", "paths", "parameters"],
+    golden_output="main_kr/include_path_parameters/output.py",
+)
+@freeze_time("2019-07-26")
+def test_include_path_parameters(output_file: Path) -> None:
+    """Include OpenAPI path parameters in generated parameter models.
+
+    The `--include-path-parameters` flag adds path parameters (like /users/{userId})
+    to the generated request parameter models. By default, only query parameters
+    are included. Use this with `--openapi-scopes parameters` to generate parameter
+    models that include both path and query parameters.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "include_path_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "include_path_parameters" / "output.py",
+        extra_args=["--include-path-parameters", "--openapi-scopes", "schemas", "paths", "parameters"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--no-alias"],
+    input_schema="jsonschema/no_alias.json",
+    cli_args=["--no-alias"],
+    golden_output="main_kr/no_alias/with_option.py",
+    comparison_output="main_kr/no_alias/without_option.py",
+)
+@freeze_time("2019-07-26")
+def test_no_alias(output_file: Path) -> None:
+    """Disable Field alias generation for non-Python-safe property names.
+
+    The `--no-alias` flag disables automatic alias generation when JSON property
+    names contain characters invalid in Python (like hyphens). Without this flag,
+    fields are renamed to Python-safe names with `Field(alias='original-name')`.
+    With this flag, only Python-safe names are used without aliases.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "no_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "no_alias" / "with_option.py",
+        extra_args=["--no-alias"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--custom-file-header"],
+    input_schema="jsonschema/no_alias.json",
+    cli_args=["--custom-file-header", "# Copyright 2024 MyCompany"],
+    golden_output="main_kr/custom_file_header/with_option.py",
+    comparison_output="main_kr/custom_file_header/without_option.py",
+)
+@freeze_time("2019-07-26")
+def test_custom_file_header(output_file: Path) -> None:
+    """Add custom header text to the generated file.
+
+    The `--custom-file-header` flag replaces the default "generated by datamodel-codegen"
+    header with custom text. This is useful for adding copyright notices, license
+    headers, or other metadata to generated files.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "no_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "custom_file_header" / "with_option.py",
+        extra_args=["--custom-file-header", "# Copyright 2024 MyCompany"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--url", "--http-headers"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "https://api.example.com/schema.json", "--http-headers", "Authorization:Bearer token"],
+    golden_output="main_kr/url_with_headers/output.py",
+)
+@freeze_time("2019-07-26")
+def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None:
+    """Fetch schema from URL with custom HTTP headers.
+
+    The `--url` flag specifies a remote URL to fetch the schema from instead of
+    a local file. The `--http-headers` flag adds custom HTTP headers to the request,
+    useful for authentication (e.g., Bearer tokens) or custom API requirements.
+    Format: `HeaderName:HeaderValue`.
+    """
+    mock_response = Mock()
+    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+
+    mocker.patch("httpx.get", return_value=mock_response)
+
+    return_code = main([
+        "--url",
+        "https://api.example.com/schema.json",
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--http-headers",
+        "Authorization:Bearer token",
+    ])
+    assert return_code == 0
+    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py")
+
+
+@pytest.mark.cli_doc(
+    options=["--input"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--input", "pet_simple.json", "--output", "output.py"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_input_option(output_file: Path) -> None:
+    """Specify the input schema file path.
+
+    The `--input` flag specifies the path to the schema file (JSON Schema,
+    OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+    schemas. Required unless using `--url` to fetch schema from a URL.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--output"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--input", "pet_simple.json", "--output", "output.py"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_output_option(output_file: Path) -> None:
+    """Specify the destination path for generated Python code.
+
+    The `--output` flag specifies where to write the generated Python code.
+    It can be either a file path (single-file output) or a directory path
+    (multi-file output for modular schemas). If omitted, the generated code
+    is written to stdout.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--encoding"],
+    input_schema="jsonschema/encoding_test.json",
+    cli_args=["--encoding", "utf-8"],
+    golden_output="main_kr/encoding/output.py",
+)
+@freeze_time("2019-07-26")
+def test_encoding_option(output_file: Path) -> None:
+    """Specify character encoding for input and output files.
+
+    The `--encoding` flag sets the character encoding used when reading
+    the schema file and writing the generated Python code. This is useful
+    for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
+    Default is utf-8.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "encoding_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "encoding" / "output.py",
+        extra_args=["--encoding", "utf-8"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--formatters"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--formatters", "isort"],
+    golden_output="main_kr/formatters/output.py",
+)
+@freeze_time("2019-07-26")
+def test_formatters_option(output_file: Path) -> None:
+    """Specify code formatters to apply to generated output.
+
+    The `--formatters` flag specifies which code formatters to apply to
+    the generated Python code. Available formatters are: black, isort,
+    ruff, yapf, autopep8, autoflake. Default is [black, isort].
+    Use this to customize formatting or disable formatters entirely.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "formatters" / "output.py",
+        extra_args=["--formatters", "isort"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--custom-formatters-kwargs"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--custom-formatters-kwargs", "formatter_kwargs.json"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_custom_formatters_kwargs_option(output_file: Path) -> None:
+    """Pass custom arguments to custom formatters via JSON file.
+
+    The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+    custom configuration for custom formatters (used with --custom-formatters).
+    The file should contain a JSON object mapping formatter names to their kwargs.
+
+    Note: This option is primarily used with --custom-formatters to pass
+    configuration to user-defined formatter modules.
+    """
+    # Simple test - the option is accepted. Full usage requires custom formatter module.
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=["--custom-formatters-kwargs", str(DATA_PATH / "config" / "formatter_kwargs.json")],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--http-ignore-tls"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "https://api.example.com/schema.json", "--http-ignore-tls"],
+    golden_output="main_kr/url_with_headers/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_ignore_tls(output_file: Path) -> None:
+    """Disable TLS certificate verification for HTTPS requests.
+
+    The `--http-ignore-tls` flag disables SSL/TLS certificate verification
+    when fetching schemas from HTTPS URLs. This is useful for development
+    environments with self-signed certificates. Not recommended for production.
+    """
+    mock_response = Mock()
+    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+
+    with patch("httpx.get", return_value=mock_response) as mock_get:
+        return_code = main([
+            "--url",
+            "https://api.example.com/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--http-ignore-tls",
+        ])
+        assert return_code == 0
+        # Verify that verify=False was passed to httpx.get
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args[1]
+        assert call_kwargs.get("verify") is False
+
+
+@pytest.mark.cli_doc(
+    options=["--http-query-parameters"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "https://api.example.com/schema.json", "--http-query-parameters", "version=v2", "format=json"],
+    golden_output="main_kr/url_with_headers/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_query_parameters(output_file: Path) -> None:
+    """Add query parameters to HTTP requests for remote schemas.
+
+    The `--http-query-parameters` flag adds query parameters to HTTP requests
+    when fetching schemas from URLs. Useful for APIs that require version
+    or format parameters. Format: `key=value`. Multiple parameters can be
+    specified: `--http-query-parameters version=v2 format=json`.
+    """
+    mock_response = Mock()
+    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+
+    with patch("httpx.get", return_value=mock_response) as mock_get:
+        return_code = main([
+            "--url",
+            "https://api.example.com/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--http-query-parameters",
+            "version=v2",
+            "format=json",
+        ])
+        assert return_code == 0
+        # Verify query parameters were passed as list of tuples
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args[1]
+        assert "params" in call_kwargs
+        # params is a list of tuples: [("version", "v2"), ("format", "json")]
+        params = call_kwargs["params"]
+        assert ("version", "v2") in params
+        assert ("format", "json") in params
+
+
+@pytest.mark.cli_doc(
+    options=["--ignore-pyproject"],
+    input_schema="jsonschema/ignore_pyproject_example.json",
+    cli_args=["--ignore-pyproject"],
+    golden_output="main_kr/ignore_pyproject/output.py",
+    comparison_output="main_kr/ignore_pyproject/without_option.py",
+)
+@freeze_time("2019-07-26")
+def test_ignore_pyproject_cli_doc(output_file: Path, tmp_path: Path) -> None:
+    """Ignore pyproject.toml configuration file.
+
+    The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
+    [tool.datamodel-codegen] configuration in pyproject.toml. This is useful
+    when you want to override project defaults with CLI arguments, or when
+    testing without project configuration.
+    """
+    # Create a pyproject.toml with snake-case-field to demonstrate ignoring
+    pyproject_toml = """
+[tool.datamodel-codegen]
+snake-case-field = true
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = """
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "firstName": {"type": "string"},
+    "lastName": {"type": "string"}
+  }
+}
+"""
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_MAIN_KR_PATH / "ignore_pyproject" / "output.py",
+            extra_args=["--ignore-pyproject", "--disable-timestamp"],
+        )
+
+
+@pytest.mark.cli_doc(
+    options=["--shared-module-name"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--shared-module-name", "my_shared"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_shared_module_name(output_file: Path) -> None:
+    """Customize the name of the shared module for deduplicated models.
+
+    The `--shared-module-name` flag sets the name of the shared module created
+    when using `--reuse-model` with `--reuse-scope=tree`. This module contains
+    deduplicated models that are referenced from multiple files. Default is
+    `shared`. Use this if your schema already has a file named `shared`.
+
+    Note: This option only affects modular output with tree-level model reuse.
+    """
+    # Simple test - the option is accepted but only affects modular output with reuse
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=["--shared-module-name", "my_shared"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-exact-imports"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--use-exact-imports"],
+    golden_output="main_kr/input_output/output.py",
+)
+@freeze_time("2019-07-26")
+def test_use_exact_imports(output_file: Path) -> None:
+    """Import exact types instead of modules.
+
+    The `--use-exact-imports` flag changes import style from module imports
+    to exact type imports. For example, instead of `from . import foo` then
+    `foo.Bar`, it generates `from .foo import Bar`. This can make the generated
+    code more explicit and easier to read.
+
+    Note: This option primarily affects modular output where imports between
+    modules are generated. For single-file output, the difference is minimal.
+    """
+    # Simple test - the option is accepted and works for single file output
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "input_output" / "output.py",
+        extra_args=["--use-exact-imports"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--target-python-version"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--target-python-version", "3.9", "--use-standard-collections"],
+    version_outputs={
+        "3.9": "main_kr/target_python_version/py39.py",
+        "3.10": "main_kr/target_python_version/py310.py",
+    },
+    primary=True,
+)
+@freeze_time("2019-07-26")
+def test_target_python_version_outputs(output_file: Path) -> None:
+    """Target Python version for generated code syntax and imports.
+
+    The `--target-python-version` flag controls Python version-specific syntax:
+
+    - **Python 3.9**: Uses `Optional[X]` for optional types, `typing.Dict/List`
+    - **Python 3.10+**: Can use `X | None` union operator, built-in `dict/list`
+
+    This affects import statements and type annotation syntax in generated code.
+    """
+    # Test with Python 3.9 style
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "target_python_version" / "py39.py",
+        extra_args=["--target-python-version", "3.9", "--use-standard-collections"],
     )

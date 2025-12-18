@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "Base": {
+      "title": "Base",
+      "type": "object",
+      "properties": {
+        "next": {
+          "$ref": "#/$defs/Base"
+        }
+      }
+    },
+    "Derived": {
+      "title": "Derived",
+      "allOf": [
+        {
+          "$ref": "#/$defs/Base"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "$ref": "#/$defs/Derived"
+}

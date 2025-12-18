@@ -80,6 +80,7 @@ dev = [
 test = [
   "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
+  "msgspec>=0.18",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -101,8 +102,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "mkdocs>=1.6",
-  "mkdocs-material>=9.5.31",
+  "zensical>=0.0.11; python_version>='3.10'",
 ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
@@ -144,6 +144,7 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
+    { group = "dev" },
   ],
 ]
 
@@ -170,6 +171,14 @@ lint.ignore = [
   "TD003",  # missing to do link
   "TD004",  # missing colon in to do
 ]
+lint.per-file-ignores."scripts/*.py" = [
+  "INP001",  # no implicit namespace
+  "PLR0912", # too many branches
+  "PLR0914", # too many local variables
+  "PLR0915", # too many statements
+  "S",       # subprocess security is fine for build scripts
+  "T201",    # print is fine for CLI scripts
+]
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
   "INP001",  # no implicit namespace
@@ -192,7 +201,7 @@ lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests'
+skip = '.git,*.lock,tests,docs/cli-reference'
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -209,6 +218,7 @@ filterwarnings = [
   "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
   "ignore:^.*No schemas found in components/schemas.*",
+  "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
 ]
 norecursedirs = "tests/data/*"
 verbosity_assertions = 2

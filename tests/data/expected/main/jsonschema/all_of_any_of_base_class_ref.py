@@ -16,7 +16,7 @@ class MapState1(BaseModel):
 class MapState2(BaseModel):
     latitude: Latitude
     longitude: Longitude
-    zoom: Optional[Zoom] = 0
+    zoom: Optional[Zoom] = Field(default_factory=lambda: Zoom.parse_obj(0))
     bearing: Optional[Bearing] = None
     pitch: Pitch
     drag_rotate: Optional[DragRotate] = Field(None, alias="dragRotate")

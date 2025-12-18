@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfMergeMode,
     DataclassArguments,
     DataModelType,
     Error,
@@ -421,11 +422,13 @@ class Config(BaseModel):
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
+    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     use_annotated: bool = False
     use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
+    use_decimal_for_multiple_of: bool = False
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
@@ -866,11 +869,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             use_title_as_name=config.use_title_as_name,
             use_operation_id_as_name=config.use_operation_id_as_name,
             use_unique_items_as_set=config.use_unique_items_as_set,
+            allof_merge_mode=config.allof_merge_mode,
             http_headers=config.http_headers,
             http_ignore_tls=config.http_ignore_tls,
             use_annotated=config.use_annotated,
             use_serialize_as_any=config.use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
             original_field_name_delimiter=config.original_field_name_delimiter,
             use_double_quotes=config.use_double_quotes,
             collapse_root_models=config.collapse_root_models,

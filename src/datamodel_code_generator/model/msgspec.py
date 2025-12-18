@@ -22,7 +22,6 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
-    IMPORT_CLASSVAR,
     IMPORT_MSGSPEC_CONVERT,
     IMPORT_MSGSPEC_FIELD,
     IMPORT_MSGSPEC_META,
@@ -82,6 +81,8 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
 
     @wraps(original_imports.fget)  # pyright: ignore[reportArgumentType]
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
+        if self.extras.get("is_classvar"):
+            return ()
         extra_imports = []
         field = self.field
         # TODO: Improve field detection
@@ -91,8 +92,6 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_CONVERT)
         if isinstance(self, DataModelField) and self.needs_meta_import:
             extra_imports.append(IMPORT_MSGSPEC_META)
-        if self.extras.get("is_classvar"):
-            extra_imports.append(IMPORT_CLASSVAR)
         if not self.required and not self.nullable:
             extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
             if not self.data_type.use_union_operator:
@@ -275,6 +274,16 @@ class DataModelField(DataModelFieldBase):
                 data.pop("default")
                 data["default_factory"] = default_factory
 
+        if "default" in data and isinstance(data["default"], (list, dict, set)) and "default_factory" not in data:
+            default_value = data.pop("default")
+            if default_value:
+                from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+                default_repr = repr_set_sorted(default_value) if isinstance(default_value, set) else repr(default_value)
+                data["default_factory"] = f"lambda: {default_repr}"
+            else:
+                data["default_factory"] = type(default_value).__name__
+
         if not data:
             return ""
 
@@ -414,6 +423,7 @@ class DataTypeManager(_DataTypeManager):
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
@@ -427,6 +437,7 @@ class DataTypeManager(_DataTypeManager):
             use_generic_container_types,
             strict_types,
             use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of,
             use_union_operator,
             use_pendulum,
             target_datetime_class,

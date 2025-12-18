@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Union
+from typing import Annotated, Union
 
-from msgspec import Meta, Struct, UnsetType
+from msgspec import Meta, Struct
 
 from .. import type_4
 from ..subfolder import type_5
@@ -15,9 +15,7 @@ from .artificial_folder import type_1
 
 
 class Type3(Struct, tag_field='type_', tag='c'):
-    type_: ClassVar[Annotated[Union[Literal['c'], UnsetType], Meta(title='Type ')]] = (
-        'c'
-    )
+    pass
 
 
 class Response(Struct):
