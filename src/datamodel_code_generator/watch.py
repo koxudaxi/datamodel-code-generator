@@ -53,6 +53,7 @@ def watch_and_regenerate(
                     output=config.output,
                     extra_template_data=extra_template_data,
                     aliases=aliases,
+                    command_line=None,
                     custom_formatters_kwargs=custom_formatters_kwargs,
                 )
                 print("Done.")  # noqa: T201
