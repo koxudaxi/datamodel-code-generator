@@ -2,8 +2,8 @@
 
 These tests verify that:
 1. All options in CLI_OPTION_META exist in argparse
-2. All options in EXCLUDED_FROM_DOCS exist in argparse
-3. There's no overlap between CLI_OPTION_META and EXCLUDED_FROM_DOCS
+2. All options in MANUAL_DOCS exist in argparse
+3. There's no overlap between CLI_OPTION_META and MANUAL_DOCS
 """
 
 from __future__ import annotations

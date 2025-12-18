@@ -88,14 +88,14 @@ datamodel-codegen --input schemas/ --output models/ --reuse-model --reuse-scope 
 ```
 
 **Input files:**
-```
+```text
 schemas/
 ├── user.json      # defines SharedModel
 └── order.json     # also defines identical SharedModel
 ```
 
 **Output with `--reuse-scope tree`:**
-```
+```text
 models/
 ├── __init__.py
 ├── user.py        # imports from shared
@@ -128,7 +128,7 @@ datamodel-codegen --input schemas/ --output models/ \
 ```
 
 **Output:**
-```
+```text
 models/
 ├── __init__.py
 ├── user.py
@@ -223,7 +223,7 @@ For large schemas with many models:
 
 ### Without deduplication
 
-```
+```text
 models/
 ├── user.py         # UserStatus enum
 ├── order.py        # OrderStatus enum (duplicate of UserStatus!)
@@ -232,7 +232,7 @@ models/
 
 ### With `--reuse-model --reuse-scope tree`
 
-```
+```text
 models/
 ├── __init__.py
 ├── user.py         # imports Status from shared
