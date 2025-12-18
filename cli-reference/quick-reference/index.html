@@ -1379,7 +1379,7 @@
 <tbody>
 <tr>
 <td><a href="../typing-customization/#allof-merge-mode"><code>--allof-merge-mode</code></a></td>
-<td>Merge all properties from parent schemas in allOf.</td>
+<td>Merge constraints from root model references in allOf schemas.</td>
 </tr>
 <tr>
 <td><a href="../typing-customization/#disable-future-imports"><code>--disable-future-imports</code></a></td>
@@ -1387,7 +1387,7 @@
 </tr>
 <tr>
 <td><a href="../typing-customization/#enum-field-as-literal"><code>--enum-field-as-literal</code></a></td>
-<td>Generate Literal types instead of Enums for fields with enumerated values.</td>
+<td>Convert all enum fields to Literal types instead of Enum classes.</td>
 </tr>
 <tr>
 <td><a href="../typing-customization/#no-use-specialized-enum"><code>--no-use-specialized-enum</code></a></td>
@@ -1589,7 +1589,7 @@
 </tr>
 <tr>
 <td><a href="../model-customization/#output-model-type"><code>--output-model-type</code></a></td>
-<td>Specify the output model type (pydantic, dataclass, typeddict, msgspec).</td>
+<td>Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).</td>
 </tr>
 <tr>
 <td><a href="../model-customization/#parent-scoped-naming"><code>--parent-scoped-naming</code></a></td>
@@ -1633,7 +1633,7 @@
 </tr>
 <tr>
 <td><a href="../model-customization/#use-frozen-field"><code>--use-frozen-field</code></a></td>
-<td>Generate frozen (immutable) field definitions.</td>
+<td>Generate frozen (immutable) field definitions for readOnly properties.</td>
 </tr>
 <tr>
 <td><a href="../model-customization/#use-one-literal-as-default"><code>--use-one-literal-as-default</code></a></td>
@@ -1814,7 +1814,7 @@
 <li><a href="../field-customization/#aliases"><code>--aliases</code></a> - Apply custom field and class name aliases from JSON file.</li>
 <li><a href="../general-options/#all-exports-collision-strategy"><code>--all-exports-collision-strategy</code></a> - Handle name collisions when exporting recursive module hiera...</li>
 <li><a href="../general-options/#all-exports-scope"><code>--all-exports-scope</code></a> - Generate <strong>all</strong> exports for child modules in <strong>init</strong>.py fi...</li>
-<li><a href="../typing-customization/#allof-merge-mode"><code>--allof-merge-mode</code></a> - Merge all properties from parent schemas in allOf.</li>
+<li><a href="../typing-customization/#allof-merge-mode"><code>--allof-merge-mode</code></a> - Merge constraints from root model references in allOf schema...</li>
 <li><a href="../model-customization/#allow-extra-fields"><code>--allow-extra-fields</code></a> - Allow extra fields in generated Pydantic models (extra='allo...</li>
 <li><a href="../model-customization/#allow-population-by-field-name"><code>--allow-population-by-field-name</code></a> - Allow Pydantic model population by field name (not just alia...</li>
 <li><a href="../model-customization/#base-class"><code>--base-class</code></a> - Specify a custom base class for generated models.</li>
@@ -1836,7 +1836,7 @@
 <li><a href="../model-customization/#enable-faux-immutability"><code>--enable-faux-immutability</code></a> - Enable faux immutability in Pydantic v1 models (allow_mutati...</li>
 <li><a href="../template-customization/#enable-version-header"><code>--enable-version-header</code></a> - Include tool version information in file header.</li>
 <li><a href="../base-options/#encoding"><code>--encoding</code></a> - Specify character encoding for input and output files.</li>
-<li><a href="../typing-customization/#enum-field-as-literal"><code>--enum-field-as-literal</code></a> - Generate Literal types instead of Enums for fields with enum...</li>
+<li><a href="../typing-customization/#enum-field-as-literal"><code>--enum-field-as-literal</code></a> - Convert all enum fields to Literal types instead of Enum cla...</li>
 <li><a href="../field-customization/#extra-fields"><code>--extra-fields</code></a> - Configure how generated models handle extra fields not defin...</li>
 <li><a href="../template-customization/#extra-template-data"><code>--extra-template-data</code></a> - Pass custom template variables from JSON file for code gener...</li>
 <li><a href="../field-customization/#field-constraints"><code>--field-constraints</code></a> - Generate Field() with validation constraints from schema.</li>
@@ -1863,7 +1863,7 @@
 <li><a href="../field-customization/#original-field-name-delimiter"><code>--original-field-name-delimiter</code></a> - Specify delimiter for original field names when using snake-...</li>
 <li><a href="../base-options/#output"><code>--output</code></a> - Specify the destination path for generated Python code.</li>
 <li><a href="../typing-customization/#output-datetime-class"><code>--output-datetime-class</code></a> - Specify datetime class type for date-time schema fields.</li>
-<li><a href="../model-customization/#output-model-type"><code>--output-model-type</code></a> - Specify the output model type (pydantic, dataclass, typeddic...</li>
+<li><a href="../model-customization/#output-model-type"><code>--output-model-type</code></a> - Select the output model type (Pydantic v1/v2, dataclasses, T...</li>
 <li><a href="../model-customization/#parent-scoped-naming"><code>--parent-scoped-naming</code></a> - Namespace models by their parent scope to avoid naming confl...</li>
 <li><a href="../openapi-only-options/#read-only-write-only-model-type"><code>--read-only-write-only-model-type</code></a> - Generate separate request and response models for readOnly/w...</li>
 <li><a href="../field-customization/#remove-special-field-name-prefix"><code>--remove-special-field-name-prefix</code></a> - Remove the special prefix from field names.</li>
@@ -1891,7 +1891,7 @@
 <li><a href="../field-customization/#use-enum-values-in-discriminator"><code>--use-enum-values-in-discriminator</code></a> - Use enum values in discriminator mappings for union types.</li>
 <li><a href="../template-customization/#use-exact-imports"><code>--use-exact-imports</code></a> - Import exact types instead of modules.</li>
 <li><a href="../field-customization/#use-field-description"><code>--use-field-description</code></a> - Include schema descriptions as Field docstrings.</li>
-<li><a href="../model-customization/#use-frozen-field"><code>--use-frozen-field</code></a> - Generate frozen (immutable) field definitions.</li>
+<li><a href="../model-customization/#use-frozen-field"><code>--use-frozen-field</code></a> - Generate frozen (immutable) field definitions for readOnly p...</li>
 <li><a href="../typing-customization/#use-generic-container-types"><code>--use-generic-container-types</code></a> - Use typing.Dict/List instead of dict/list for container type...</li>
 <li><a href="../field-customization/#use-inline-field-description"><code>--use-inline-field-description</code></a> - Add field descriptions as inline comments.</li>
 <li><a href="../typing-customization/#use-non-positive-negative-number-constrained-types"><code>--use-non-positive-negative-number-constrained-types</code></a> - Use NonPositive/NonNegative types for number constraints.</li>
