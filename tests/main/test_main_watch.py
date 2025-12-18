@@ -14,8 +14,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.mark.cli_doc(
+    options=["--watch"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--watch", "--check"],
+    expected_stdout="Error: --watch and --check cannot be used together",
+)
 def test_watch_with_check_error(output_file: Path) -> None:
-    """Test that --watch and --check cannot be used together."""
+    """Watch mode cannot be used with --check mode.
+
+    The `--watch` flag enables file watching for automatic regeneration.
+    It cannot be combined with `--check` since check mode requires a single
+    comparison, not continuous watching.
+    """
     return_code = run_main_with_args(
         [
             "--watch",
@@ -30,8 +41,17 @@ def test_watch_with_check_error(output_file: Path) -> None:
     assert return_code == Exit.ERROR
 
 
+@pytest.mark.cli_doc(
+    options=["--watch"],
+    cli_args=["--watch", "--url", "https://example.com/schema.json"],
+    expected_stdout="Error: --watch requires --input file path",
+)
 def test_watch_with_url_error() -> None:
-    """Test that --watch requires --input file path, not URL."""
+    """Watch mode requires a file path input, not a URL.
+
+    The `--watch` flag monitors local files for changes. It cannot be used
+    with `--url` since remote URLs cannot be watched for changes.
+    """
     return_code = run_main_with_args(
         [
             "--watch",
@@ -44,7 +64,7 @@ def test_watch_with_url_error() -> None:
 
 
 def test_watch_without_input_error(mocker: pytest.MockerFixture) -> None:
-    """Test that --watch requires --input file path."""
+    """Watch mode requires --input file path."""
     mocker.patch("sys.stdin.isatty", return_value=False)
     mocker.patch("sys.stdin.read", return_value='{"type": "object"}')
     return_code = run_main_with_args(
@@ -91,24 +111,20 @@ def test_get_watchfiles_success() -> None:
     assert hasattr(result, "watch")
 
 
-def test_watch_and_regenerate_without_input() -> None:
-    """Test watch_and_regenerate returns error when input is None."""
-    from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
-
-    mock_watchfiles = MagicMock()
-    config = Config(input=None)
-
-    with patch(
-        "datamodel_code_generator.watch._get_watchfiles",
-        return_value=mock_watchfiles,
-    ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.ERROR
-
-
+@pytest.mark.cli_doc(
+    options=["--watch", "--watch-delay"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--watch", "--watch-delay", "1.5"],
+    expected_stdout="Watching",
+)
 def test_watch_and_regenerate_starts_and_stops() -> None:
-    """Test that watch_and_regenerate starts watching and exits cleanly."""
+    """Watch mode starts file watcher and handles clean exit.
+
+    The `--watch` flag starts a file watcher that monitors the input file
+    or directory for changes. The `--watch-delay` option sets the debounce
+    delay in seconds (default: 0.5) to prevent multiple regenerations for
+    rapid file changes. Press Ctrl+C to stop watching.
+    """
     from datamodel_code_generator.__main__ import Config
     from datamodel_code_generator.watch import watch_and_regenerate
 
@@ -128,8 +144,24 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
         assert call_kwargs.get("recursive") is False
 
 
+def test_watch_and_regenerate_without_input() -> None:
+    """Test watch_and_regenerate returns error when input is None."""
+    from datamodel_code_generator.__main__ import Config
+    from datamodel_code_generator.watch import watch_and_regenerate
+
+    mock_watchfiles = MagicMock()
+    config = Config(input=None)
+
+    with patch(
+        "datamodel_code_generator.watch._get_watchfiles",
+        return_value=mock_watchfiles,
+    ):
+        result = watch_and_regenerate(config, None, None, None)
+        assert result == Exit.ERROR
+
+
 def test_watch_and_regenerate_with_directory() -> None:
-    """Test that watch_and_regenerate handles directory input."""
+    """Test that watch_and_regenerate handles directory input with recursive watching."""
     from datamodel_code_generator.__main__ import Config
     from datamodel_code_generator.watch import watch_and_regenerate
 
@@ -165,7 +197,7 @@ def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
 
 
 def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
-    """Test that watch_and_regenerate calls generate on change."""
+    """Test that watch_and_regenerate calls generate on file change."""
     from datamodel_code_generator.__main__ import Config
     from datamodel_code_generator.watch import watch_and_regenerate
 
@@ -196,7 +228,7 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
 
 
 def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFixture[str]) -> None:
-    """Test that watch_and_regenerate handles generation errors."""
+    """Test that watch_and_regenerate continues after generation error."""
     from datamodel_code_generator.__main__ import Config
     from datamodel_code_generator.watch import watch_and_regenerate
 

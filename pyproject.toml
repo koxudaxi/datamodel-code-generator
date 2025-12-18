@@ -226,7 +226,7 @@ filterwarnings = [
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
 ]
-norecursedirs = "tests/data/*"
+norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
 
 [tool.coverage]
