@@ -89,6 +89,7 @@ datamodel-code-generator emits precise tuple annotations.
       "required": ["value"]
     }
   },
+  "title": "defaults",
   "type": "object",
   "properties": {
     "a": {
@@ -115,7 +116,7 @@ class Span(BaseModel):
     value: int
 
 
-class Model(BaseModel):
+class Defaults(BaseModel):
     a: Tuple[Span, str]
 ```
 
