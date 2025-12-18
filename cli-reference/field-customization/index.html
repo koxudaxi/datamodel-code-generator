@@ -1680,6 +1680,10 @@
 <p>The <code>--aliases</code> option allows renaming fields and classes via a JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.</p>
 <div class="admonition tip">
+<p class="admonition-title">See Also</p>
+<p>For detailed explanation and examples, see <a href="../../aliases/">Field Aliases</a>.</p>
+</div>
+<div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--aliases<span class="w"> </span>openapi/aliases.json<span class="w"> </span>--target-python<span class="w"> </span><span class="m">3</span>.9<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
@@ -2475,6 +2479,10 @@ store fields not defined in the schema. Options: allow, ignore, forbid.</p>
 <p>The <code>--field-constraints</code> flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
 Output differs between Pydantic v1 and v2 due to API changes.</p>
+<div class="admonition tip">
+<p class="admonition-title">See Also</p>
+<p>For detailed explanation and mypy compatibility, see <a href="../../field-constraints/">Field Constraints</a>.</p>
+</div>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--field-constraints<span class="w"> </span><span class="c1"># (1)!</span>

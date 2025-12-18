@@ -1976,6 +1976,10 @@ as a module path (e.g., "mymodule.formatter_function"). This is useful for
 adding custom comments, modifying code structure, or applying project-specific
 formatting rules beyond what black/isort provide.</p>
 <div class="admonition tip">
+<p class="admonition-title">See Also</p>
+<p>For detailed explanation and examples, see <a href="../../custom-formatters/">Custom Code Formatters</a>.</p>
+</div>
+<div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--custom-formatters<span class="w"> </span>tests.data.python.custom_formatters.add_comment<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
@@ -2096,6 +2100,10 @@ configuration to user-defined formatter modules.</p>
 to override the default templates used for generating data models. This enables full customization of
 the generated code structure and formatting. Use with <code>--extra-template-data</code> to pass additional data
 to the templates.</p>
+<div class="admonition tip">
+<p class="admonition-title">See Also</p>
+<p>For detailed explanation and examples, see <a href="../../custom_template/">Custom Templates</a>.</p>
+</div>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--custom-template-dir<span class="w"> </span>templates<span class="w"> </span>--extra-template-data<span class="w"> </span>openapi/extra_data.json<span class="w"> </span><span class="c1"># (1)!</span>
@@ -3384,6 +3392,10 @@ model settings like Config classes, enabling customization beyond standard optio
 the generated Python code. Available formatters are: black, isort,
 ruff, yapf, autopep8, autoflake. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.</p>
+<div class="admonition tip">
+<p class="admonition-title">See Also</p>
+<p>For built-in formatting configuration, see <a href="../../formatting/">Formatting</a>.</p>
+</div>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-32-1"><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--formatters<span class="w"> </span>isort<span class="w"> </span><span class="c1"># (1)!</span>
