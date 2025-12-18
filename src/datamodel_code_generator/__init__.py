@@ -768,7 +768,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     if enable_version_header:
         header += f"\n#   version:   {get_version()}"
     if enable_command_header and command_line:
-        header += f"\n#   command:   {command_line}"
+        safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
+        header += f"\n#   command:   {safe_command_line}"
 
     file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
