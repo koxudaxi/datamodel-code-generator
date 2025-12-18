@@ -1356,7 +1356,7 @@ dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": tru
 This overrides individual flags like --frozen-dataclasses and provides fine-grained
 control over dataclass generation.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
+**Related:** `--frozen`, [`--keyword-only`](model-customization.md#keyword-only)
 
 **See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
@@ -2628,14 +2628,14 @@ Python 3.10+. When combined with `--frozen`, it creates immutable dataclasses
 with keyword-only arguments, improving code clarity and preventing positional
 argument errors.
 
-**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** `--frozen`, [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
 
 **See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen-dataclasses --keyword-only --target-python-version 3.10 # (1)!
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen --keyword-only --target-python-version 3.10 # (1)!
     ```
 
     1. :material-arrow-left: `--keyword-only` - the option documented here
@@ -4008,7 +4008,7 @@ The `--target-python-version` flag controls Python version-specific syntax:
 
 This affects import statements and type annotation syntax in generated code.
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md), [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md)
+**See also:** [Python Version Compatibility](../python-version-compatibility.md), [CI/CD Integration](../ci-cd.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 

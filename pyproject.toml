@@ -182,6 +182,14 @@ lint.per-file-ignores."tests/**/*.py" = [
   "S",       # no safety concerns
   "SLF001",  # can test private methods
 ]
+lint.per-file-ignores."scripts/*.py" = [
+  "INP001",  # no implicit namespace
+  "PLR0912", # too many branches
+  "PLR0914", # too many local variables
+  "PLR0915", # too many statements
+  "S",       # subprocess security is fine for build scripts
+  "T201",    # print is fine for CLI scripts
+]
 lint.isort = { known-first-party = [
   "datamodel_code_generator",
   "tests",

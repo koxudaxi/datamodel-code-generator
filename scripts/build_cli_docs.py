@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess  # noqa: S404
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -228,7 +228,7 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
     return formatted
 
 
-def generate_option_section(  # noqa: PLR0912, PLR0914, PLR0915
+def generate_option_section(
     option: str,
     primary: dict[str, Any],
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
@@ -433,7 +433,7 @@ def generate_category_page(
     return md
 
 
-def generate_quick_reference(  # noqa: PLR0912, PLR0915
+def generate_quick_reference(
     categories: dict[OptionCategory, dict[str, Any]],
     manual_docs: dict[str, str] | None = None,
 ) -> str:
@@ -623,7 +623,7 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
 def collect_cli_docs() -> int:
     """Run pytest to collect CLI doc metadata."""
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-m", "pytest", "--collect-cli-docs", "-p", "no:xdist", "-q"],
         check=False,
         capture_output=True,
@@ -635,7 +635,7 @@ def collect_cli_docs() -> int:
     return 0
 
 
-def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
+def build_docs(*, check: bool = False) -> int:
     """Build CLI documentation from collection data.
 
     Args:
@@ -715,7 +715,7 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
             output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
         except (OSError, ValueError, KeyError) as e:
-            print(f"Error generating {category.value}: {e}", file=sys.stderr)  # noqa: T201
+            print(f"Error generating {category.value}: {e}", file=sys.stderr)
             errors += 1
 
     if manual_docs:
@@ -739,20 +739,20 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
         total_options = sum(len(opts) for opts in categories.values()) + len(manual_docs)
         write_or_check(output_path, md, f"quick-reference.md ({total_options} options)")
     except (OSError, ValueError, KeyError) as e:
-        print(f"Error generating quick-reference.md: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error generating quick-reference.md: {e}", file=sys.stderr)
         errors += 1
 
     if check:
         if errors:
-            print(f"Generation errors occurred: {errors}", file=sys.stderr)  # noqa: T201
+            print(f"Generation errors occurred: {errors}", file=sys.stderr)
             return 1
         if mismatches:
             for m in mismatches:
-                print(f"Mismatch: {m}", file=sys.stderr)  # noqa: T201
+                print(f"Mismatch: {m}", file=sys.stderr)
             return 1
         return 0
     if errors:
-        print(f"Errors occurred: {errors}", file=sys.stderr)  # noqa: T201
+        print(f"Errors occurred: {errors}", file=sys.stderr)
     return 1 if errors else 0
 
 
