@@ -144,6 +144,8 @@ datamodel-codegen [OPTIONS]
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
+| [`--watch`](general-options.md#watch) | Watch mode cannot be used with --check mode. |
+| [`--watch-delay`](general-options.md#watch-delay) | Watch mode starts file watcher and handles clean exit. |
 
 ### 📝 Utility Options
 
@@ -263,4 +265,6 @@ All options sorted alphabetically:
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...
 - [`--version`](utility-options.md#version) - Show program version and exit
+- [`--watch`](general-options.md#watch) - Watch mode cannot be used with --check mode.
+- [`--watch-delay`](general-options.md#watch-delay) - Watch mode starts file watcher and handles clean exit.
 - [`--wrap-string-literal`](template-customization.md#wrap-string-literal) - Wrap long string literals across multiple lines.

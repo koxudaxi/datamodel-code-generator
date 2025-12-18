@@ -301,7 +301,7 @@ def _get_tox_env() -> str:  # pragma: no cover
 
     Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
     """
-    import os  # noqa: PLC0415
+    import os
 
     env = os.environ.get("TOX_ENV_NAME", "<version>")
     # Remove -parallel suffix since inline-snapshot needs single process mode
@@ -310,10 +310,10 @@ def _get_tox_env() -> str:  # pragma: no cover
 
 def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
     """Format a hint message for inline-snapshot commands with rich formatting."""
-    from io import StringIO  # noqa: PLC0415
+    from io import StringIO
 
-    from rich.console import Console  # noqa: PLC0415
-    from rich.text import Text  # noqa: PLC0415
+    from rich.console import Console
+    from rich.text import Text
 
     tox_env = _get_tox_env()
     command = f"  tox run -e {tox_env} -- --inline-snapshot={action}"
@@ -331,10 +331,10 @@ def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
 
 def _format_new_content(content: str) -> str:  # pragma: no cover
     """Format new content (for create mode) with green color."""
-    from io import StringIO  # noqa: PLC0415
+    from io import StringIO
 
-    from rich.console import Console  # noqa: PLC0415
-    from rich.text import Text  # noqa: PLC0415
+    from rich.console import Console
+    from rich.text import Text
 
     output = StringIO()
     console = Console(file=output, force_terminal=True, width=200, soft_wrap=False)
@@ -347,10 +347,10 @@ def _format_new_content(content: str) -> str:  # pragma: no cover
 
 def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
     """Format a unified diff between expected and actual content with colors."""
-    from io import StringIO  # noqa: PLC0415
+    from io import StringIO
 
-    from rich.console import Console  # noqa: PLC0415
-    from rich.text import Text  # noqa: PLC0415
+    from rich.console import Console
+    from rich.text import Text
 
     expected_lines = expected.splitlines(keepends=True)
     actual_lines = actual.splitlines(keepends=True)
@@ -596,11 +596,11 @@ def _preload_heavy_modules() -> None:
     This reduces per-test overhead when running with pytest-xdist,
     as each worker only pays the import cost once at session start.
     """
-    import black  # noqa: PLC0415, F401
-    import inflect  # noqa: PLC0415, F401
-    import isort  # noqa: PLC0415, F401
+    import black  # noqa: F401
+    import inflect  # noqa: F401
+    import isort  # noqa: F401
 
-    import datamodel_code_generator  # noqa: PLC0415, F401
+    import datamodel_code_generator  # noqa: F401
 
 
 def validate_generated_code(
