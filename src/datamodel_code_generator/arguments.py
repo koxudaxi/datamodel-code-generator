@@ -198,6 +198,12 @@ model_options.add_argument(
     action="store_true",
     default=None,
 )
+model_options.add_argument(
+    "--enable-command-header",
+    help="Enable command-line options on file headers for reproducibility",
+    action="store_true",
+    default=None,
+)
 extra_fields_model_options.add_argument(
     "--extra-fields",
     help="Set the generated models to allow, forbid, or ignore extra fields.",
