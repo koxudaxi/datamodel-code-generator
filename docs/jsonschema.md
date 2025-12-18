@@ -66,24 +66,57 @@ class Person(BaseModel):
 
 ## Tuple validation
 
-JSON Schema's [`prefixItems`](https://json-schema.org/understanding-json-schema/reference/array.html#tuple-validation) syntax lets you describe heterogeneous arrays. When `prefixItems` is present, `items` is empty, and `minItems`/`maxItems` match the number of prefix entries, datamodel-code-generator now emits precise tuple annotations:
+JSON Schema's [`prefixItems`](https://json-schema.org/understanding-json-schema/reference/array.html#tuple-validation) syntax lets you describe heterogeneous arrays.
+
+When:
+
+- `prefixItems` is present
+- no `items` are specified
+- `minItems`/`maxItems` match the number of prefix entries
+
+datamodel-code-generator emits precise tuple annotations.
+
+### Example
 
 ```json
 {
-  "type": "array",
-  "prefixItems": [
-    { "$ref": "#/$defs/Span" },
-    { "type": "string" }
-  ],
-  "minItems": 2,
-  "maxItems": 2
+  "$defs": {
+    "Span": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "integer" }
+      },
+      "required": ["value"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/Span" },
+        { "type": "string" }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    }
+  },
+  "required": ["a"]
 }
 ```
 
 ```py
 from typing import Tuple
 
-Tuple[Span, str]
+from pydantic import BaseModel
+
+
+class Span(BaseModel):
+    value: int
+
+
+class Model(BaseModel):
+    a: Tuple[Span, str]
 ```
 
 ---

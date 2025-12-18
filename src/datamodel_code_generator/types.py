@@ -76,10 +76,10 @@ MAPPING = "Mapping"
 DICT = "Dict"
 SET = "Set"
 LIST = "List"
+TUPLE = "Tuple"
 STANDARD_DICT = "dict"
 STANDARD_LIST = "list"
 STANDARD_SET = "set"
-TUPLE = "Tuple"
 STANDARD_TUPLE = "tuple"
 STR = "str"
 
@@ -475,6 +475,7 @@ class DataType(_BaseModel):
                     (self.is_list, IMPORT_SEQUENCE),
                     (self.is_set, IMPORT_FROZEN_SET),
                     (self.is_dict, IMPORT_MAPPING),
+                    (self.is_tuple, IMPORT_TUPLE),
                 )
         elif not self.use_standard_collections:
             imports = (
@@ -482,9 +483,8 @@ class DataType(_BaseModel):
                 (self.is_list, IMPORT_LIST),
                 (self.is_set, IMPORT_SET),
                 (self.is_dict, IMPORT_DICT),
+                (self.is_tuple, IMPORT_TUPLE),
             )
-        if self.is_tuple and not self.use_standard_collections:
-            imports = (*imports, (True, IMPORT_TUPLE))
 
         # Yield imports based on conditions
         for field, import_ in imports:

@@ -2911,7 +2911,24 @@ def test_main_jsonschema_prefix_items(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
+    )
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+def test_main_jsonschema_prefix_items_no_tuple(min_version: str, output_file: Path) -> None:
+    """Test prefix items with minItems != maxItems falls back to list."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_no_tuple.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="prefix_items_no_tuple.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python-version", min_version],
     )
 
 
