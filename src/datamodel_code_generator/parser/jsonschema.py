@@ -1162,17 +1162,22 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
 
-    def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
+    def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
         """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
         if len(items) == 1:
             return items[0]  # pragma: no cover
 
+        formats = {item.format for item in items if item.format}
+        if len(formats) > 1:
+            return None
+
+        merged_format = formats.pop() if formats else None
+
         if self.allof_merge_mode != AllOfMergeMode.NoMerge:
             merged = self._merge_primitive_schemas(items)
             merged_dict = merged.dict(exclude_unset=True, by_alias=True)
-            for item in items:
-                if item.format:
-                    merged_dict["format"] = item.format
+            if merged_format:
+                merged_dict["format"] = merged_format
             return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
 
         base_dict: dict[str, Any] = {}
@@ -1188,8 +1193,9 @@ class JsonSchemaParser(Parser):
                     value = item.extras.get(constraint_field)
                 if value is not None:
                     base_dict[constraint_field] = value
-            if item.format:
-                base_dict["format"] = item.format
+
+        if merged_format:
+            base_dict["format"] = merged_format
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
 
@@ -1564,6 +1570,8 @@ class JsonSchemaParser(Parser):
 
         all_items = [ref_schema, *constraint_items]
         merged_schema = self._merge_primitive_schemas_for_allof(all_items)
+        if merged_schema is None:
+            return None
 
         if obj.description:
             merged_dict = merged_schema.dict(exclude_unset=True, by_alias=True)

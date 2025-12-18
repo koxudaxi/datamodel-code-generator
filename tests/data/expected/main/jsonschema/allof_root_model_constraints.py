@@ -39,6 +39,10 @@ class EmailDatatype(BaseModel):
     __root__: EmailStr = Field(..., description='Email with format.')
 
 
+class FormattedStringDatatype(BaseModel):
+    __root__: EmailStr = Field(..., description='A string with email format.')
+
+
 class ObjectBase(BaseModel):
     id: Optional[int] = None
 
@@ -131,6 +135,10 @@ class EmptyConstraintItemAllOf(BaseModel):
     )
 
 
+class ConflictingFormatAllOf(BaseModel):
+    pass
+
+
 class Model(BaseModel):
     name: Optional[ConstrainedStringDatatype] = None
     count: Optional[NonNegativeIntegerDatatype] = None
@@ -151,3 +159,4 @@ class Model(BaseModel):
     refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
     nodescription: Optional[NoDescriptionAllOf] = None
     emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
+    conflictingformat: Optional[ConflictingFormatAllOf] = None
