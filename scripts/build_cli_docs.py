@@ -102,8 +102,8 @@ def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
         title_match = re.search(r"^#\s+(.+?)$", content, re.MULTILINE)
         if title_match:
             page_title = title_match.group(1).strip()
-            # Remove emojis and clean up
-            page_title = re.sub(r"[^\w\s\-/]", "", page_title).strip()
+            # Remove emojis and clean up (preserve dots for filenames like pyproject.toml)
+            page_title = re.sub(r"[^\w\s\-/.]", "", page_title).strip()
         else:
             page_title = md_file.stem.replace("-", " ").replace("_", " ").title()
 
