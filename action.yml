@@ -63,26 +63,21 @@ runs:
     - run: |
         PROFILE_ARG=""
         if [ -n "${{ inputs.profile }}" ]; then
-          PROFILE_ARG="--profile ${{ inputs.profile }}"
+          PROFILE_ARG="--profile \"${{ inputs.profile }}\""
         fi
 
+        CHECK_ARG=""
         if [ "${{ inputs.check }}" = "true" ]; then
-          datamodel-codegen \
-            --input ${{ inputs.input }} \
-            --output ${{ inputs.output }} \
-            --input-file-type ${{ inputs.input-file-type }} \
-            --output-model-type ${{ inputs.output-model-type }} \
-            --check \
-            $PROFILE_ARG \
-            ${{ inputs.extra-args }}
-        else
-          datamodel-codegen \
-            --input ${{ inputs.input }} \
-            --output ${{ inputs.output }} \
-            --input-file-type ${{ inputs.input-file-type }} \
-            --output-model-type ${{ inputs.output-model-type }} \
-            $PROFILE_ARG \
-            ${{ inputs.extra-args }}
+          CHECK_ARG="--check"
         fi
+
+        datamodel-codegen \
+          --input "${{ inputs.input }}" \
+          --output "${{ inputs.output }}" \
+          --input-file-type "${{ inputs.input-file-type }}" \
+          --output-model-type "${{ inputs.output-model-type }}" \
+          $CHECK_ARG \
+          $PROFILE_ARG \
+          ${{ inputs.extra-args }}
       shell: bash
       working-directory: ${{ inputs.working-directory }}
