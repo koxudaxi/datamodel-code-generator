@@ -205,6 +205,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--all-exports-collision-strategy": CLIOptionMeta(
         name="--all-exports-collision-strategy", category=OptionCategory.GENERAL
     ),
+    "--module-split-mode": CLIOptionMeta(name="--module-split-mode", category=OptionCategory.GENERAL),
     "--disable-warnings": CLIOptionMeta(name="--disable-warnings", category=OptionCategory.GENERAL),
 }
 

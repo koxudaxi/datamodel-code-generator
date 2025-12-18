@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     AllExportsScope,
     AllOfMergeMode,
     Error,
+    ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
 )
@@ -66,7 +67,7 @@ from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStateme
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
-from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
+from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, camel_to_snake
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
 
 if TYPE_CHECKING:
@@ -1069,43 +1070,53 @@ class Parser(ABC):
         *,
         init: bool,
         internal_modules: set[tuple[str, ...]] | None = None,
+        model_path_to_module_name: dict[str, str] | None = None,
     ) -> None:
         model_paths = {model.path for model in models}
         internal_modules = internal_modules or set()
+        model_path_to_module_name = model_path_to_module_name or {}
 
         for model in models:
             scoped_model_resolver.add([model.path], model.class_name)
         for model in models:
             before_import = model.imports
             imports.append(before_import)
+            current_module_name = model_path_to_module_name.get(model.path, model.module_name)
             for data_type in model.all_data_types:
-                # To change from/import
-
                 if not data_type.reference or data_type.reference.path in model_paths:
-                    # No need to import non-reference model.
-                    # Or, Referenced model is in the same file. we don't need to import the model
                     continue
 
+                ref_module_name = model_path_to_module_name.get(
+                    data_type.reference.path,
+                    data_type.full_name.rsplit(".", 1)[0] if "." in data_type.full_name else "",
+                )
+                target_full_name = (
+                    f"{ref_module_name}.{data_type.reference.short_name}"
+                    if ref_module_name
+                    else data_type.reference.short_name
+                )
+
                 if isinstance(data_type, BaseClassDataType):
-                    left, right = relative(model.module_name, data_type.full_name)
-                    is_ancestor = is_ancestor_package_reference(model.module_name, data_type.full_name)
+                    left, right = relative(current_module_name, target_full_name)
+                    is_ancestor = is_ancestor_package_reference(current_module_name, target_full_name)
                     from_ = left if is_ancestor else (f"{left}{right}" if left.endswith(".") else f"{left}.{right}")
                     import_ = data_type.reference.short_name
                     full_path = from_, import_
                 else:
-                    from_, import_ = full_path = relative(model.module_name, data_type.full_name)
-                    if imports.use_exact:  # pragma: no cover
+                    from_, import_ = full_path = relative(current_module_name, target_full_name)
+                    if imports.use_exact:
                         from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
                     import_ = import_.replace("-", "_")
-                    if (  # pragma: no cover
-                        len(model.module_path) > 1
-                        and model.module_path[-1].count(".") > 0
+                    current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
+                    if (
+                        len(current_module_path) > 1
+                        and current_module_path[-1].count(".") > 0
                         and not self.treat_dot_as_module
                     ):
-                        rel_path_depth = model.module_path[-1].count(".")
+                        rel_path_depth = current_module_path[-1].count(".")
                         from_ = from_[rel_path_depth:]
 
-                    ref_module = tuple(data_type.full_name.split(".")[:-1])
+                    ref_module = tuple(target_full_name.split(".")[:-1])
 
                     is_module_class_collision = (
                         ref_module and import_ == data_type.reference.short_name and ref_module[-1] == import_
@@ -1122,7 +1133,7 @@ class Parser(ABC):
                 if from_ and import_ and alias != name:
                     data_type.alias = alias if data_type.reference.short_name == import_ else f"{alias}.{name}"
 
-                if init and not data_type.full_name.startswith(model.module_name + "."):
+                if init and not target_full_name.startswith(current_module_name + "."):
                     from_ = "." + from_
                 imports.append(
                     Import(
@@ -2404,6 +2415,7 @@ class Parser(ABC):
         disable_future_imports: bool = False,  # noqa: FBT001, FBT002
         all_exports_scope: AllExportsScope | None = None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+        module_split_mode: ModuleSplitMode | None = None,
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
         self.parse_raw()
@@ -2439,10 +2451,14 @@ class Parser(ABC):
         results: dict[tuple[str, ...], Result] = {}
 
         def module_key(data_model: DataModel) -> tuple[str, ...]:
+            if module_split_mode == ModuleSplitMode.Single:
+                file_name = camel_to_snake(data_model.class_name)
+                return (*data_model.module_path, file_name)
             return tuple(data_model.module_path)
 
         def sort_key(data_model: DataModel) -> tuple[int, tuple[str, ...]]:
-            return (len(data_model.module_path), tuple(data_model.module_path))
+            key = module_key(data_model)
+            return (len(key), key)
 
         # process in reverse order to correctly establish module levels
         grouped_models = groupby(
@@ -2454,11 +2470,14 @@ class Parser(ABC):
         unused_models: list[DataModel] = []
         model_to_module_models: dict[DataModel, tuple[tuple[str, ...], list[DataModel]]] = {}
         module_to_import: dict[tuple[str, ...], Imports] = {}
+        model_path_to_module_name: dict[str, str] = {}
 
         previous_module: tuple[str, ...] = ()
         for module, models in ((k, [*v]) for k, v in grouped_models):
             for model in models:
                 model_to_module_models[model] = module, models
+                if module_split_mode == ModuleSplitMode.Single:
+                    model_path_to_module_name[model.path] = ".".join(module)
             self.__delete_duplicate_models(models)
             self.__replace_duplicate_name_in_module(models)
             if len(previous_module) - len(module) > 1:
@@ -2524,7 +2543,12 @@ class Parser(ABC):
             self.__override_required_field(models)
             self.__replace_unique_list_to_set(models)
             self.__change_from_import(
-                models, imports, scoped_model_resolver, init=init, internal_modules=internal_modules
+                models,
+                imports,
+                scoped_model_resolver,
+                init=init,
+                internal_modules=internal_modules,
+                model_path_to_module_name=model_path_to_module_name,
             )
             self.__extract_inherited_enum(models)
             self.__set_reference_default_value_to_field(models)
