@@ -14,7 +14,7 @@ This documentation is auto-generated from test cases.
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
-| ⚙️ [General Options](general-options.md) | 11 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 13 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
 ## All Options
@@ -180,4 +180,6 @@ This documentation is auto-generated from test cases.
 
 ### W {#w}
 
+- [`--watch`](general-options.md#watch)
+- [`--watch-delay`](general-options.md#watch-delay)
 - [`--wrap-string-literal`](template-customization.md#wrap-string-literal)

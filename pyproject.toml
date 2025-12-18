@@ -47,6 +47,7 @@ optional-dependencies.all = [
   "datamodel-code-generator[http]",
   "datamodel-code-generator[ruff]",
   "datamodel-code-generator[validation]",
+  "datamodel-code-generator[watch]",
 ]
 optional-dependencies.debug = [
   "pysnooper>=0.4.1,<2",
@@ -63,6 +64,9 @@ optional-dependencies.ruff = [
 optional-dependencies.validation = [
   "openapi-spec-validator>=0.2.8,<0.8",
   "prance>=0.18.2",
+]
+optional-dependencies.watch = [
+  "watchfiles>=1.1",
 ]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
@@ -89,8 +93,9 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.10'",         # PyCharm debugger needs it
+  "setuptools; python_version<'3.10'",
   "time-machine>=3.1; python_version>='3.10'",
+  "watchfiles>=1.1",
   { include-group = "coverage" },
 ]
 type = [
@@ -182,6 +187,7 @@ lint.per-file-ignores."scripts/*.py" = [
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
   "INP001",  # no implicit namespace
+  "PLC0415", # local imports in tests are fine
   "PLC2701", # private import is fine
   "PLR0913", # as many arguments as want
   "PLR0915", # can have longer test methods
@@ -220,7 +226,7 @@ filterwarnings = [
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
 ]
-norecursedirs = "tests/data/*"
+norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
 
 [tool.coverage]
