@@ -207,6 +207,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--module-split-mode": CLIOptionMeta(name="--module-split-mode", category=OptionCategory.GENERAL),
     "--disable-warnings": CLIOptionMeta(name="--disable-warnings", category=OptionCategory.GENERAL),
+    "--watch": CLIOptionMeta(name="--watch", category=OptionCategory.GENERAL),
+    "--watch-delay": CLIOptionMeta(name="--watch-delay", category=OptionCategory.GENERAL),
 }
 
 

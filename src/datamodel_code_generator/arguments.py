@@ -768,6 +768,18 @@ general_options.add_argument(
     default=None,
 )
 general_options.add_argument(
+    "--watch",
+    action="store_true",
+    default=None,
+    help="Watch input file(s) for changes and regenerate output automatically",
+)
+general_options.add_argument(
+    "--watch-delay",
+    type=float,
+    default=None,
+    help="Debounce delay in seconds for watch mode (default: 0.5)",
+)
+general_options.add_argument(
     "--version",
     action="store_true",
     help="show version",
