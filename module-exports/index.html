@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/what_is_the_difference_between_v1_and_v2/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/module-exports/">
       
       
-        <link rel="prev" href="../graphql/">
+        <link rel="prev" href="../model-reuse/">
       
       
-        <link rel="next" href="../model-reuse/">
+        <link rel="next" href="../type-mappings/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Output Model Types - datamodel-code-generator</title>
+        <title>Module Structure and Exports - datamodel-code-generator</title>
       
     
     
@@ -118,7 +118,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-model-types" class="md-skip">
+        <a href="#module-structure-and-exports" class="md-skip">
           Skip to content
         </a>
       
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Model Types
+              Module Structure and Exports
             
           </span>
         </div>
@@ -941,37 +941,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Output Model Types
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../what_is_the_difference_between_v1_and_v2/" class="md-nav__link">
         
   
   
@@ -987,228 +960,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#quick-comparison" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Quick Comparison
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pydantic-v2-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pydantic v2 (Recommended)
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pydantic v2 (Recommended)">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pydantic-v1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Pydantic v1
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Pydantic v1">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#migration-from-v1-to-v2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration from v1 to v2
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dataclasses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        dataclasses
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="dataclasses">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#options-for-dataclasses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options for dataclasses
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#typeddict" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        TypedDict
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="TypedDict">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#msgspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        msgspec
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="msgspec">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#choosing-the-right-type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Choosing the Right Type
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Choosing the Right Type">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#decision-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision Guide
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1246,10 +997,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../module-exports/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Module Structure and Exports
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1265,6 +1043,288 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-all-exports-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --all-exports-scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--all-exports-scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-none-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: none (default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: local
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-recursive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: recursive
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-all-exports-collision-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --all-exports-collision-strategy
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--all-exports-collision-strategy">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-problem" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-minimal-prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: minimal-prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-full-prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: full-prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-treat-dot-as-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --treat-dot-as-module
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--treat-dot-as-module">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-treat-dot-as-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without --treat-dot-as-module
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-treat-dot-as-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With --treat-dot-as-module
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pattern-1-flat-output-with-local-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 1: Flat output with local exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-hierarchical-with-recursive-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2: Hierarchical with recursive exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-openapi-with-module-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3: OpenAPI with module structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#import-errors-after-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Import errors after generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#name-collisions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Name collisions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#circular-imports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Circular imports
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1849,10 +1909,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-comparison" class="md-nav__link">
+  <a href="#quick-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Comparison
+        Quick Overview
       
     </span>
   </a>
@@ -1860,22 +1920,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v2-recommended" class="md-nav__link">
+  <a href="#-all-exports-scope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v2 (Recommended)
+        --all-exports-scope
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v2 (Recommended)">
+    <nav class="md-nav" aria-label="--all-exports-scope">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use" class="md-nav__link">
+  <a href="#example-none-default" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        Example: none (default)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-local" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: local
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-recursive" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example: recursive
       
     </span>
   </a>
@@ -1888,22 +1970,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v1" class="md-nav__link">
+  <a href="#-all-exports-collision-strategy" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1
+        --all-exports-collision-strategy
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v1">
+    <nav class="md-nav" aria-label="--all-exports-collision-strategy">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#migration-from-v1-to-v2" class="md-nav__link">
+  <a href="#the-problem" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from v1 to v2
+        The Problem
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-minimal-prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: minimal-prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#solution-full-prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Solution: full-prefix
       
     </span>
   </a>
@@ -1916,22 +2020,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dataclasses" class="md-nav__link">
+  <a href="#-treat-dot-as-module" class="md-nav__link">
     <span class="md-ellipsis">
       
-        dataclasses
+        --treat-dot-as-module
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="dataclasses">
+    <nav class="md-nav" aria-label="--treat-dot-as-module">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#options-for-dataclasses" class="md-nav__link">
+  <a href="#without-treat-dot-as-module" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options for dataclasses
+        Without --treat-dot-as-module
       
     </span>
   </a>
@@ -1939,10 +2043,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#when-to-use_1" class="md-nav__link">
+  <a href="#with-treat-dot-as-module" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        With --treat-dot-as-module
       
     </span>
   </a>
@@ -1955,22 +2059,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#typeddict" class="md-nav__link">
+  <a href="#common-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TypedDict
+        Common Patterns
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="TypedDict">
+    <nav class="md-nav" aria-label="Common Patterns">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_2" class="md-nav__link">
+  <a href="#pattern-1-flat-output-with-local-exports" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        Pattern 1: Flat output with local exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-2-hierarchical-with-recursive-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 2: Hierarchical with recursive exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pattern-3-openapi-with-module-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pattern 3: OpenAPI with module structure
       
     </span>
   </a>
@@ -1983,50 +2109,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#msgspec" class="md-nav__link">
+  <a href="#troubleshooting" class="md-nav__link">
     <span class="md-ellipsis">
       
-        msgspec
+        Troubleshooting
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="msgspec">
+    <nav class="md-nav" aria-label="Troubleshooting">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_3" class="md-nav__link">
+  <a href="#import-errors-after-generation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        Import errors after generation
       
     </span>
   </a>
   
 </li>
         
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#choosing-the-right-type" class="md-nav__link">
+          <li class="md-nav__item">
+  <a href="#name-collisions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Choosing the Right Type
+        Name collisions
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Choosing the Right Type">
-      <ul class="md-nav__list">
+</li>
         
           <li class="md-nav__item">
-  <a href="#decision-guide" class="md-nav__link">
+  <a href="#circular-imports" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Decision Guide
+        Circular imports
       
     </span>
   </a>
@@ -2064,167 +2184,11 @@
                 
                   
 
-<!-- related-cli-options: --output-model-type, --frozen-dataclasses, --keyword-only, --dataclass-arguments, --target-python-version -->
+<!-- related-cli-options: --all-exports-scope, --all-exports-collision-strategy, --treat-dot-as-module -->
 
-<h1 id="output-model-types">Output Model Types<a class="headerlink" href="#output-model-types" title="Permanent link">&para;</a></h1>
-<p>datamodel-code-generator supports multiple output model types. This page compares them to help you choose the right one for your project.</p>
-<h2 id="quick-comparison">Quick Comparison<a class="headerlink" href="#quick-comparison" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Model Type</th>
-<th>Validation</th>
-<th>Serialization</th>
-<th>Performance</th>
-<th>Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Pydantic v2</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Fast</td>
-<td>New projects, APIs, data validation</td>
-</tr>
-<tr>
-<td><strong>Pydantic v1</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Moderate</td>
-<td>Legacy compatibility</td>
-</tr>
-<tr>
-<td><strong>dataclasses</strong></td>
-<td>None</td>
-<td>Manual</td>
-<td>Fastest</td>
-<td>Simple data containers, no validation needed</td>
-</tr>
-<tr>
-<td><strong>TypedDict</strong></td>
-<td>Static only</td>
-<td>Dict-compatible</td>
-<td>N/A</td>
-<td>Type hints for dicts, JSON APIs</td>
-</tr>
-<tr>
-<td><strong>msgspec</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Fastest</td>
-<td>High-performance serialization</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="pydantic-v2-recommended">Pydantic v2 (Recommended)<a class="headerlink" href="#pydantic-v2-recommended" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type pydantic_v2.BaseModel</code></strong></p>
-<p>Pydantic v2 is recommended for new projects. It offers better performance and a modern API.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">RootModel</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pets</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Pet</span><span class="p">]]):</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">root</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-</span></code></pre></div>
-<h3 id="when-to-use">When to use<a class="headerlink" href="#when-to-use" title="Permanent link">&para;</a></h3>
-<ul>
-<li>New projects without Pydantic v1 dependencies</li>
-<li>APIs requiring data validation</li>
-<li>Projects needing JSON Schema generation from models</li>
-</ul>
-<hr />
-<h2 id="pydantic-v1">Pydantic v1<a class="headerlink" href="#pydantic-v1" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type pydantic.BaseModel</code></strong> (default)</p>
-<p>Pydantic v1 is the default for backward compatibility with existing codebases.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pets</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">__root__</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-</span></code></pre></div>
-<h3 id="migration-from-v1-to-v2">Migration from v1 to v2<a class="headerlink" href="#migration-from-v1-to-v2" title="Permanent link">&para;</a></h3>
-<p>Key differences when migrating:</p>
-<table>
-<thead>
-<tr>
-<th>v1</th>
-<th>v2</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>__root__</code></td>
-<td><code>RootModel</code></td>
-<td>Custom root types now use <code>RootModel</code> class</td>
-</tr>
-<tr>
-<td><code>const</code></td>
-<td>Removed</td>
-<td>Use <code>Literal</code> types instead</td>
-</tr>
-<tr>
-<td><code>min_items</code></td>
-<td><code>min_length</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>max_items</code></td>
-<td><code>max_length</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>unique_items</code></td>
-<td>Removed</td>
-<td>List replaced by <code>set</code> type</td>
-</tr>
-<tr>
-<td><code>allow_mutation</code></td>
-<td><code>frozen</code></td>
-<td>Inverse value</td>
-</tr>
-<tr>
-<td><code>regex</code></td>
-<td><code>pattern</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>pydantic.Config</code></td>
-<td><code>pydantic.ConfigDict</code></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="https://docs.pydantic.dev/2.0/migration/">Pydantic v2 Migration Guide</a> for details.</p>
-<hr />
-<h2 id="dataclasses">dataclasses<a class="headerlink" href="#dataclasses" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type dataclasses.dataclass</code></strong></p>
-<p>Python's built-in dataclasses for simple data containers without runtime validation.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nd">@dataclass</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">:</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div>
-<h3 id="options-for-dataclasses">Options for dataclasses<a class="headerlink" href="#options-for-dataclasses" title="Permanent link">&para;</a></h3>
+<h1 id="module-structure-and-exports">Module Structure and Exports<a class="headerlink" href="#module-structure-and-exports" title="Permanent link">&para;</a></h1>
+<p>When generating models to a directory structure, datamodel-code-generator can automatically create <code>__init__.py</code> files with <code>__all__</code> exports. This page explains how to control this behavior.</p>
+<h2 id="quick-overview">Quick Overview<a class="headerlink" href="#quick-overview" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2234,97 +2198,197 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--frozen-dataclasses</code></td>
-<td>Generate immutable dataclasses (<code>frozen=True</code>)</td>
+<td><code>--all-exports-scope</code></td>
+<td>Control which modules get <code>__all__</code> exports</td>
 </tr>
 <tr>
-<td><code>--keyword-only</code></td>
-<td>Require keyword arguments (<code>kw_only=True</code>, Python 3.10+)</td>
+<td><code>--all-exports-collision-strategy</code></td>
+<td>Handle name collisions in recursive exports</td>
 </tr>
 <tr>
-<td><code>--dataclass-arguments</code></td>
-<td>Custom decorator arguments as JSON</td>
+<td><code>--treat-dot-as-module</code></td>
+<td>Convert dots in names to nested modules</td>
 </tr>
 </tbody>
 </table>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Frozen, keyword-only dataclasses</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--frozen-dataclasses<span class="w"> </span>--keyword-only<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.10
-</span></code></pre></div>
-<h3 id="when-to-use_1">When to use<a class="headerlink" href="#when-to-use_1" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Simple data structures without validation needs</li>
-<li>Performance-critical code where validation overhead matters</li>
-<li>Interoperability with code expecting dataclasses</li>
-</ul>
 <hr />
-<h2 id="typeddict">TypedDict<a class="headerlink" href="#typeddict" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type typing.TypedDict</code></strong></p>
-<p>TypedDict provides static type checking for dictionary structures.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>typing.TypedDict<span class="w"> </span>--output<span class="w"> </span>model.py
+<h2 id="-all-exports-scope"><code>--all-exports-scope</code><a class="headerlink" href="#-all-exports-scope" title="Permanent link">&para;</a></h2>
+<p>Controls the scope of <code>__all__</code> generation in <code>__init__.py</code> files.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>none</code></td>
+<td>No <code>__all__</code> generation (default)</td>
+</tr>
+<tr>
+<td><code>local</code></td>
+<td>Export only the module's own definitions</td>
+</tr>
+<tr>
+<td><code>recursive</code></td>
+<td>Export all definitions from child modules</td>
+</tr>
+</tbody>
+</table>
+<h3 id="example-none-default">Example: <code>none</code> (default)<a class="headerlink" href="#example-none-default" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypedDict</span><span class="p">,</span> <span class="n">NotRequired</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># models/__init__.py</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="c1"># (empty or minimal imports)</span>
 </span></code></pre></div>
-<h3 id="when-to-use_2">When to use<a class="headerlink" href="#when-to-use_2" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Working with JSON APIs where data remains as dicts</li>
-<li>Static type checking without runtime overhead</li>
-<li>Gradual typing of existing dict-based code</li>
-</ul>
+<h3 id="example-local">Example: <code>local</code><a class="headerlink" href="#example-local" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span>--all-exports-scope<span class="w"> </span><span class="nb">local</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># models/__init__.py</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.user</span><span class="w"> </span><span class="kn">import</span> <span class="n">User</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.order</span><span class="w"> </span><span class="kn">import</span> <span class="n">Order</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;User&quot;</span><span class="p">,</span> <span class="s2">&quot;Order&quot;</span><span class="p">]</span>
+</span></code></pre></div>
+<h3 id="example-recursive">Example: <code>recursive</code><a class="headerlink" href="#example-recursive" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span>--all-exports-scope<span class="w"> </span>recursive
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># models/__init__.py</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.user</span><span class="w"> </span><span class="kn">import</span> <span class="n">User</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.order</span><span class="w"> </span><span class="kn">import</span> <span class="n">Order</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.common.status</span><span class="w"> </span><span class="kn">import</span> <span class="n">Status</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.common.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ID</span><span class="p">,</span> <span class="n">Timestamp</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;User&quot;</span><span class="p">,</span> <span class="s2">&quot;Order&quot;</span><span class="p">,</span> <span class="s2">&quot;Status&quot;</span><span class="p">,</span> <span class="s2">&quot;ID&quot;</span><span class="p">,</span> <span class="s2">&quot;Timestamp&quot;</span><span class="p">]</span>
+</span></code></pre></div>
 <hr />
-<h2 id="msgspec">msgspec<a class="headerlink" href="#msgspec" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type msgspec.Struct</code></strong></p>
-<p><a href="https://github.com/jcrist/msgspec">msgspec</a> offers high-performance serialization with validation.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[msgspec]&#39;</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>msgspec.Struct<span class="w"> </span>--output<span class="w"> </span>model.py
+<h2 id="-all-exports-collision-strategy"><code>--all-exports-collision-strategy</code><a class="headerlink" href="#-all-exports-collision-strategy" title="Permanent link">&para;</a></h2>
+<p>When using <code>--all-exports-scope recursive</code>, name collisions can occur if multiple modules define the same class name. This option controls how to handle them.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minimal-prefix</code></td>
+<td>Add minimum module path prefix to disambiguate</td>
+</tr>
+<tr>
+<td><code>full-prefix</code></td>
+<td>Use complete module path for all exports</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-problem">The Problem<a class="headerlink" href="#the-problem" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>models/
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── user/
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>│   └── types.py      # defines `ID`
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>└── order/
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    └── types.py      # also defines `ID`
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">msgspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">Struct</span><span class="p">,</span> <span class="n">field</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">UnsetType</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">msgspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">UNSET</span>
+<p>Both modules define <code>ID</code>, causing a collision when exporting recursively.</p>
+<h3 id="solution-minimal-prefix">Solution: <code>minimal-prefix</code><a class="headerlink" href="#solution-minimal-prefix" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--all-exports-scope<span class="w"> </span>recursive<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span>--all-exports-collision-strategy<span class="w"> </span>minimal-prefix
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># models/__init__.py</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.user.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ID</span> <span class="k">as</span> <span class="n">user_ID</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.order.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ID</span> <span class="k">as</span> <span class="n">order_ID</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;user_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;order_ID&quot;</span><span class="p">]</span>
+</span></code></pre></div>
+<p>Only colliding names get prefixed.</p>
+<h3 id="solution-full-prefix">Solution: <code>full-prefix</code><a class="headerlink" href="#solution-full-prefix" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--all-exports-scope<span class="w"> </span>recursive<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--all-exports-collision-strategy<span class="w"> </span>full-prefix
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># models/__init__.py</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.user.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ID</span> <span class="k">as</span> <span class="n">user_types_ID</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.order.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">ID</span> <span class="k">as</span> <span class="n">order_types_ID</span>
 </span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">Struct</span><span class="p">):</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">UnsetType</span><span class="p">]</span> <span class="o">=</span> <span class="n">UNSET</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;user_types_ID&quot;</span><span class="p">,</span> <span class="s2">&quot;order_types_ID&quot;</span><span class="p">]</span>
 </span></code></pre></div>
-<h3 id="when-to-use_3">When to use<a class="headerlink" href="#when-to-use_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li>High-performance JSON/MessagePack serialization</li>
-<li>Memory-efficient data structures</li>
-<li>APIs with strict performance requirements</li>
-</ul>
+<p>All names use the full module path prefix.</p>
 <hr />
-<h2 id="choosing-the-right-type">Choosing the Right Type<a class="headerlink" href="#choosing-the-right-type" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>graph TD
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    A[Need runtime validation?] --&gt;|Yes| B[Need best performance?]
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    A --&gt;|No| C[Need type hints for dicts?]
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    B --&gt;|Yes| D[msgspec.Struct]
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    B --&gt;|No| E[Pydantic v1 dependency?]
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    E --&gt;|Yes| F[pydantic.BaseModel]
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    E --&gt;|No| G[pydantic_v2.BaseModel]
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    C --&gt;|Yes| H[typing.TypedDict]
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    C --&gt;|No| I[dataclasses.dataclass]
+<h2 id="-treat-dot-as-module"><code>--treat-dot-as-module</code><a class="headerlink" href="#-treat-dot-as-module" title="Permanent link">&para;</a></h2>
+<p>Converts dots in schema names to nested module directories.</p>
+<h3 id="without-treat-dot-as-module">Without <code>--treat-dot-as-module</code><a class="headerlink" href="#without-treat-dot-as-module" title="Permanent link">&para;</a></h3>
+<p>Schema with <code>title: "api.v1.User"</code> generates:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># models.py</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ApiV1User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    <span class="o">...</span>
 </span></code></pre></div>
-<h3 id="decision-guide">Decision Guide<a class="headerlink" href="#decision-guide" title="Permanent link">&para;</a></h3>
+<h3 id="with-treat-dot-as-module">With <code>--treat-dot-as-module</code><a class="headerlink" href="#with-treat-dot-as-module" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span>--treat-dot-as-module
+</span></code></pre></div>
+<p>Schema with <code>title: "api.v1.User"</code> generates:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>models/
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>├── __init__.py
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>└── api/
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>    ├── __init__.py
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>    └── v1/
+</span><span id="__span-13-6"><a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>        ├── __init__.py
+</span><span id="__span-13-7"><a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a>        └── user.py      # contains class User
+</span></code></pre></div>
+<p>This is useful for:
+- Organizing large schemas by namespace
+- Mirroring API versioning structure
+- Keeping related models together</p>
+<hr />
+<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="pattern-1-flat-output-with-local-exports">Pattern 1: Flat output with local exports<a class="headerlink" href="#pattern-1-flat-output-with-local-exports" title="Permanent link">&para;</a></h3>
+<p>Best for small to medium projects with a single output file or simple structure.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span>--all-exports-scope<span class="w"> </span><span class="nb">local</span>
+</span></code></pre></div>
+<h3 id="pattern-2-hierarchical-with-recursive-exports">Pattern 2: Hierarchical with recursive exports<a class="headerlink" href="#pattern-2-hierarchical-with-recursive-exports" title="Permanent link">&para;</a></h3>
+<p>Best for large projects with many schemas organized by domain.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">  </span>--all-exports-scope<span class="w"> </span>recursive<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>--all-exports-collision-strategy<span class="w"> </span>minimal-prefix<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>--treat-dot-as-module
+</span></code></pre></div>
+<h3 id="pattern-3-openapi-with-module-structure">Pattern 3: OpenAPI with module structure<a class="headerlink" href="#pattern-3-openapi-with-module-structure" title="Permanent link">&para;</a></h3>
+<p>Best for OpenAPI schemas with versioned endpoints.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>openapi.yaml<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="w">  </span>--treat-dot-as-module<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">  </span>--all-exports-scope<span class="w"> </span>recursive
+</span></code></pre></div>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="import-errors-after-generation">Import errors after generation<a class="headerlink" href="#import-errors-after-generation" title="Permanent link">&para;</a></h3>
+<p>If you see <code>ImportError: cannot import name 'X'</code>:</p>
 <ol>
-<li><strong>API with validation</strong> → Pydantic v2</li>
-<li><strong>Legacy Pydantic v1 project</strong> → Pydantic v1</li>
-<li><strong>High-performance serialization</strong> → msgspec</li>
-<li><strong>Simple data containers</strong> → dataclasses</li>
-<li><strong>Dict-based JSON handling</strong> → TypedDict</li>
+<li>Check if <code>__all__</code> is generated correctly</li>
+<li>Verify the module structure matches your imports</li>
+<li>Try <code>--all-exports-scope local</code> first, then <code>recursive</code></li>
+</ol>
+<h3 id="name-collisions">Name collisions<a class="headerlink" href="#name-collisions" title="Permanent link">&para;</a></h3>
+<p>If you see duplicate class names:</p>
+<ol>
+<li>Use <code>--all-exports-collision-strategy minimal-prefix</code></li>
+<li>Or use <code>--all-exports-collision-strategy full-prefix</code> for maximum clarity</li>
+<li>Consider restructuring your schemas to avoid collisions</li>
+</ol>
+<h3 id="circular-imports">Circular imports<a class="headerlink" href="#circular-imports" title="Permanent link">&para;</a></h3>
+<p>If you encounter circular import errors:</p>
+<ol>
+<li>Check the generated <code>__init__.py</code> files</li>
+<li>Consider using <code>--all-exports-scope local</code> instead of <code>recursive</code></li>
+<li>Use lazy imports in your application code</li>
 </ol>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../cli-reference/model-customization/#output-model-type">CLI Reference: <code>--output-model-type</code></a></li>
-<li><a href="../cli-reference/model-customization/">CLI Reference: Model Customization</a></li>
-<li><a href="https://docs.pydantic.dev/">Pydantic Documentation</a></li>
-<li><a href="https://jcristharif.com/msgspec/">msgspec Documentation</a></li>
+<li><a href="../cli-reference/general-options/#all-exports-scope">CLI Reference: <code>--all-exports-scope</code></a></li>
+<li><a href="../cli-reference/general-options/#all-exports-collision-strategy">CLI Reference: <code>--all-exports-collision-strategy</code></a></li>
+<li><a href="../cli-reference/template-customization/#treat-dot-as-module">CLI Reference: <code>--treat-dot-as-module</code></a></li>
+<li><a href="../model-reuse/">Model Reuse and Deduplication</a></li>
 </ul>
 
 

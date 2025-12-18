@@ -10,36 +10,36 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/formatting/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/cli-reference/utility-options/">
       
       
-        <link rel="prev" href="../custom-formatters/">
+        <link rel="prev" href="../general-options/">
       
       
-        <link rel="next" href="../oneliner/">
+        <link rel="next" href="../quick-reference/">
       
       
         
       
       
-      <link rel="icon" href="../assets/images/favicon.png">
+      <link rel="icon" href="../../assets/images/favicon.png">
       <meta name="generator" content="zensical-0.0.11">
     
     
       
-        <title>🖌️ Code Formatting - datamodel-code-generator</title>
+        <title>📝 Utility Options - datamodel-code-generator</title>
       
     
     
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.bd6182e7.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/modern/main.bd6182e7.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.dfe2e883.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/modern/palette.dfe2e883.min.css">
       
       
   
@@ -93,7 +93,7 @@
       
     
     
-    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,a=__md_scope)=>JSON.parse(t.getItem(a.pathname+"."+e)),__md_set=(e,t,a=localStorage,_=__md_scope)=>{try{a.setItem(_.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
     
       
 
@@ -118,7 +118,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#code-formatting" class="md-skip">
+        <a href="#utility-options" class="md-skip">
           Skip to content
         </a>
       
@@ -134,7 +134,7 @@
 
 <header class="md-header md-header--shadow" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="datamodel-code-generator" class="md-header__button md-logo" aria-label="datamodel-code-generator" data-md-component="logo">
+    <a href="../.." title="datamodel-code-generator" class="md-header__button md-logo" aria-label="datamodel-code-generator" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              🖌️ Code Formatting
+              📝 Utility Options
             
           </span>
         </div>
@@ -243,7 +243,7 @@
 
 <nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="datamodel-code-generator" class="md-nav__button md-logo" aria-label="datamodel-code-generator" data-md-component="logo">
+    <a href="../.." title="datamodel-code-generator" class="md-nav__button md-logo" aria-label="datamodel-code-generator" data-md-component="logo">
       
   
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-book-open" viewBox="0 0 24 24"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>
@@ -273,7 +273,7 @@
   
   
     <li class="md-nav__item">
-      <a href=".." class="md-nav__link">
+      <a href="../.." class="md-nav__link">
         
   
   
@@ -281,374 +281,6 @@
     
   
     Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
-        
-          
-          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    CLI Reference
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    CLI Reference
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/base-options/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Base Options
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/model-customization/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Model Customization
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/field-customization/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Field Customization
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/typing-customization/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Typing Customization
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/template-customization/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Template Customization
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/openapi-only-options/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    OpenAPI Options
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/general-options/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    General Options
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/utility-options/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Utility Options
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../cli-reference/quick-reference/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Quick Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../supported-data-types/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Support data types
   
 
     
@@ -683,7 +315,489 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../base-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Base Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model-customization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Model Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../field-customization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Field Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../typing-customization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Typing Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../template-customization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template Customization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../openapi-only-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenAPI Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../general-options/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utility Options
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Utility Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📋 Options
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debug" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --debug
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --help
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#no-color" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --no-color
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --profile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --version
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quick-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../supported-data-types/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support data types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -704,7 +818,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -773,7 +887,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../openapi/" class="md-nav__link">
+      <a href="../../openapi/" class="md-nav__link">
         
   
   
@@ -801,7 +915,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../jsonschema/" class="md-nav__link">
+      <a href="../../jsonschema/" class="md-nav__link">
         
   
   
@@ -829,7 +943,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../jsondata/" class="md-nav__link">
+      <a href="../../jsondata/" class="md-nav__link">
         
   
   
@@ -857,7 +971,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../graphql/" class="md-nav__link">
+      <a href="../../graphql/" class="md-nav__link">
         
   
   
@@ -944,7 +1058,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../what_is_the_difference_between_v1_and_v2/" class="md-nav__link">
+      <a href="../../what_is_the_difference_between_v1_and_v2/" class="md-nav__link">
         
   
   
@@ -972,7 +1086,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../model-reuse/" class="md-nav__link">
+      <a href="../../model-reuse/" class="md-nav__link">
         
   
   
@@ -1000,7 +1114,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../module-exports/" class="md-nav__link">
+      <a href="../../module-exports/" class="md-nav__link">
         
   
   
@@ -1028,7 +1142,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../type-mappings/" class="md-nav__link">
+      <a href="../../type-mappings/" class="md-nav__link">
         
   
   
@@ -1056,7 +1170,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../python-version-compatibility/" class="md-nav__link">
+      <a href="../../python-version-compatibility/" class="md-nav__link">
         
   
   
@@ -1084,7 +1198,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../root-model-and-type-alias/" class="md-nav__link">
+      <a href="../../root-model-and-type-alias/" class="md-nav__link">
         
   
   
@@ -1112,7 +1226,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../field-constraints/" class="md-nav__link">
+      <a href="../../field-constraints/" class="md-nav__link">
         
   
   
@@ -1140,7 +1254,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../aliases/" class="md-nav__link">
+      <a href="../../aliases/" class="md-nav__link">
         
   
   
@@ -1168,7 +1282,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../openapi-options/" class="md-nav__link">
+      <a href="../../openapi-options/" class="md-nav__link">
         
   
   
@@ -1201,8 +1315,6 @@
                 
   
   
-    
-  
   
   
     
@@ -1212,11 +1324,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4_3" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4_3" >
         
           
           <label class="md-nav__link" for="__nav_4_3" id="__nav_4_3_label" tabindex="0">
@@ -1237,7 +1351,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_4_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4_3">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1255,7 +1369,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom_template/" class="md-nav__link">
+      <a href="../../custom_template/" class="md-nav__link">
         
   
   
@@ -1283,7 +1397,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../custom-formatters/" class="md-nav__link">
+      <a href="../../custom-formatters/" class="md-nav__link">
         
   
   
@@ -1308,37 +1422,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Code Formatting
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../../formatting/" class="md-nav__link">
         
   
   
@@ -1354,138 +1441,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#default-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🎯 Default Behavior
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#available-formatters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🛠️ Available Formatters
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="🛠️ Available Formatters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-ruff-instead-of-black" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚡ Using ruff instead of black
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#disable-formatting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🚫 Disable formatting
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-via-pyprojecttoml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚙️ Configuration via pyproject.toml
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="⚙️ Configuration via pyproject.toml">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📝 Example Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#string-quotes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        💬 String Quotes
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#custom-formatters" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🎨 Custom Formatters
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📖 See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1557,7 +1512,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../oneliner/" class="md-nav__link">
+      <a href="../../oneliner/" class="md-nav__link">
         
   
   
@@ -1585,7 +1540,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../using_as_module/" class="md-nav__link">
+      <a href="../../using_as_module/" class="md-nav__link">
         
   
   
@@ -1613,7 +1568,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../pyproject_toml/" class="md-nav__link">
+      <a href="../../pyproject_toml/" class="md-nav__link">
         
   
   
@@ -1641,7 +1596,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../ci-cd/" class="md-nav__link">
+      <a href="../../ci-cd/" class="md-nav__link">
         
   
   
@@ -1684,7 +1639,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../faq/" class="md-nav__link">
+      <a href="../../faq/" class="md-nav__link">
         
   
   
@@ -1711,7 +1666,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../development-contributing/" class="md-nav__link">
+      <a href="../../development-contributing/" class="md-nav__link">
         
   
   
@@ -1759,10 +1714,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#default-behavior" class="md-nav__link">
+  <a href="#options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎯 Default Behavior
+        📋 Options
       
     </span>
   </a>
@@ -1770,77 +1725,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#available-formatters" class="md-nav__link">
+  <a href="#debug" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🛠️ Available Formatters
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="🛠️ Available Formatters">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-ruff-instead-of-black" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚡ Using ruff instead of black
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#disable-formatting" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🚫 Disable formatting
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-via-pyprojecttoml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        ⚙️ Configuration via pyproject.toml
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="⚙️ Configuration via pyproject.toml">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📝 Example Configuration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#string-quotes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        💬 String Quotes
+        --debug
       
     </span>
   </a>
@@ -1848,10 +1736,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#custom-formatters" class="md-nav__link">
+  <a href="#help" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🎨 Custom Formatters
+        --help
       
     </span>
   </a>
@@ -1859,10 +1747,32 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+  <a href="#no-color" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📖 See Also
+        --no-color
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#profile" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --profile
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --version
       
     </span>
   </a>
@@ -1884,95 +1794,157 @@
                 
                   
 
-<!-- related-cli-options: --formatters -->
-
-<h1 id="code-formatting">🖌️ Code Formatting<a class="headerlink" href="#code-formatting" title="Permanent link">&para;</a></h1>
-<p>Generated code is automatically formatted using code formatters. By default, <code>black</code> and <code>isort</code> are used to produce consistent, well-formatted output.</p>
-<h2 id="default-behavior">🎯 Default Behavior<a class="headerlink" href="#default-behavior" title="Permanent link">&para;</a></h2>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<p>This runs the following formatters in order:</p>
-<ol>
-<li><strong>isort</strong> - Sorts and organizes imports</li>
-<li><strong>black</strong> - Formats code style</li>
-</ol>
-<h2 id="available-formatters">🛠️ Available Formatters<a class="headerlink" href="#available-formatters" title="Permanent link">&para;</a></h2>
+<h1 id="utility-options">📝 Utility Options<a class="headerlink" href="#utility-options" title="Permanent link">&para;</a></h1>
+<h2 id="options">📋 Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Formatter</th>
+<th>Option</th>
 <th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>black</code></td>
-<td>Code formatting (PEP 8 style)</td>
+<td><a href="#debug"><code>--debug</code></a></td>
+<td>Show debug messages during code generation</td>
 </tr>
 <tr>
-<td><code>isort</code></td>
-<td>Import sorting</td>
+<td><a href="#help"><code>--help</code></a></td>
+<td>Show help message and exit</td>
 </tr>
 <tr>
-<td><code>ruff-check</code></td>
-<td>Linting with auto-fix</td>
+<td><a href="#no-color"><code>--no-color</code></a></td>
+<td>Disable colorized output</td>
 </tr>
 <tr>
-<td><code>ruff-format</code></td>
-<td>Fast code formatting (black alternative)</td>
+<td><a href="#profile"><code>--profile</code></a></td>
+<td>Use a named profile from pyproject.toml</td>
+</tr>
+<tr>
+<td><a href="#version"><code>--version</code></a></td>
+<td>Show program version and exit</td>
 </tr>
 </tbody>
 </table>
-<h3 id="using-ruff-instead-of-black">⚡ Using ruff instead of black<a class="headerlink" href="#using-ruff-instead-of-black" title="Permanent link">&para;</a></h3>
-<p><a href="https://github.com/astral-sh/ruff">Ruff</a> is a fast Python linter and formatter. To use it:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Use ruff for both linting and formatting</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>ruff-check<span class="w"> </span>ruff-format<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Use ruff-format as a black replacement</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>isort<span class="w"> </span>ruff-format<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<h3 id="disable-formatting">🚫 Disable formatting<a class="headerlink" href="#disable-formatting" title="Permanent link">&para;</a></h3>
-<p><code>datamodel-codegen</code> requires at least one formatter when using the CLI <code>--formatters</code> option.</p>
-<p>To disable built-in formatting entirely, configure it via <code>pyproject.toml</code>:</p>
-<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">formatters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[]</span>
-</span></code></pre></div>
-<h2 id="configuration-via-pyprojecttoml">⚙️ Configuration via pyproject.toml<a class="headerlink" href="#configuration-via-pyprojecttoml" title="Permanent link">&para;</a></h2>
-<p>Formatters read their configuration from <code>pyproject.toml</code>. The tool searches for <code>pyproject.toml</code> in:</p>
-<ol>
-<li>The output file's directory</li>
-<li>Parent directories (up to the git repository root)</li>
-</ol>
-<h3 id="example-configuration">📝 Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h3>
-<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[tool.black]</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">line-length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">skip-string-normalization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[tool.isort]</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;black&quot;</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">line_length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">[tool.ruff]</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">line-length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">[tool.ruff.format]</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">quote-style</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;single&quot;</span>
-</span></code></pre></div>
-<h2 id="string-quotes">💬 String Quotes<a class="headerlink" href="#string-quotes" title="Permanent link">&para;</a></h2>
-<p>By default, string quote style is determined by your formatter configuration. To force double quotes regardless of configuration:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--use-double-quotes<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<p>This overrides <code>skip_string_normalization</code> in black config.</p>
-<h2 id="custom-formatters">🎨 Custom Formatters<a class="headerlink" href="#custom-formatters" title="Permanent link">&para;</a></h2>
-<p>You can create custom formatters for specialized formatting needs. See <a href="../custom-formatters/">Custom Formatters</a> for details.</p>
 <hr />
-<h2 id="see-also">📖 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
-<ul>
-<li>🖥️ <a href="../cli-reference/template-customization/#formatters">CLI Reference: <code>--formatters</code></a> - Specify code formatters</li>
-<li>💬 <a href="../cli-reference/template-customization/#use-double-quotes">CLI Reference: <code>--use-double-quotes</code></a> - Force double quotes</li>
-<li>🎨 <a href="../custom-formatters/">Custom Formatters</a> - Create your own formatters</li>
-<li>⚙️ <a href="../pyproject_toml/">pyproject.toml Configuration</a> - Configure datamodel-codegen options</li>
-</ul>
+<h2 id="debug"><code>--debug</code><a class="headerlink" href="#debug" title="Permanent link">&para;</a></h2>
+<p>Show debug messages during code generation.</p>
+<p>Enables verbose debug output to help troubleshoot issues with schema parsing
+or code generation. Requires the <code>debug</code> extra to be installed.</p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--debug<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--debug</code> - the option documented here</li>
+</ol>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Requires extra dependency</p>
+<p>The debug feature requires the <code>debug</code> extra:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[debug]&#39;</span>
+</span></code></pre></div>
+</div>
+<hr />
+<h2 id="help"><code>--help</code><a class="headerlink" href="#help" title="Permanent link">&para;</a></h2>
+<p>Show help message and exit.</p>
+<p>Displays all available command-line options with their descriptions and default values.</p>
+<p><strong>Aliases:</strong> <code>-h</code></p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--help<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--help</code> - the option documented here</li>
+</ol>
+</div>
+<details class="example">
+<summary>Output</summary>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>usage: datamodel-codegen [-h] [--input INPUT] [--url URL] ...
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Generate Python data models from schema files.
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>options:
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  -h, --help            show this help message and exit
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  --input INPUT         Input file path (default: stdin)
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  ...
+</span></code></pre></div>
+</details>
+<hr />
+<h2 id="no-color"><code>--no-color</code><a class="headerlink" href="#no-color" title="Permanent link">&para;</a></h2>
+<p>Disable colorized output.</p>
+<p>By default, datamodel-codegen uses colored output for better readability.
+Use this option to disable colors, which is useful for CI/CD pipelines
+or when redirecting output to files.</p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--no-color<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--no-color</code> - the option documented here</li>
+</ol>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Environment variable</p>
+<p>You can also disable colors by setting the <code>NO_COLOR</code> environment variable:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">NO_COLOR</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json
+</span></code></pre></div>
+</div>
+<hr />
+<h2 id="profile"><code>--profile</code><a class="headerlink" href="#profile" title="Permanent link">&para;</a></h2>
+<p>Use a named profile from pyproject.toml configuration.</p>
+<p>Profiles allow you to define multiple named configurations in your pyproject.toml
+file. Each profile can override the default settings with its own set of options.</p>
+<p><strong>Related:</strong> <a href="../../../pyproject_toml/">pyproject.toml Configuration</a></p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--profile</code> - the option documented here</li>
+</ol>
+</div>
+<details class="example">
+<summary>Configuration (pyproject.toml)</summary>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Default configuration</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">[tool.datamodel-codegen.profiles.strict]</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Strict profile with additional options</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;str&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;int&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bool&quot;</span><span class="p">]</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">strict-nullable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="k">[tool.datamodel-codegen.profiles.legacy]</span>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># Legacy profile for Pydantic v1</span>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic.BaseModel&quot;</span>
+</span></code></pre></div>
+<p>Use profiles:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Use the strict profile</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Use the legacy profile</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>legacy
+</span></code></pre></div>
+</details>
+<hr />
+<h2 id="version"><code>--version</code><a class="headerlink" href="#version" title="Permanent link">&para;</a></h2>
+<p>Show program version and exit.</p>
+<p>Displays the installed version of datamodel-code-generator.</p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>datamodel-codegen<span class="w"> </span>--version<span class="w"> </span><span class="c1"># (1)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--version</code> - the option documented here</li>
+</ol>
+</div>
+<details class="example">
+<summary>Output</summary>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>datamodel-codegen version: 0.x.x
+</span></code></pre></div>
+</details>
+<hr />
 
 
 
@@ -2027,10 +1999,10 @@
       
       
       
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["content.code.copy","content.code.annotate","content.tabs.link","navigation.instant","navigation.tracking","navigation.sections","navigation.expand","search.highlight","search.share","toc.follow"],"search":"../assets/javascripts/workers/search.5df7522c.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"../..","features":["content.code.copy","content.code.annotate","content.tabs.link","navigation.instant","navigation.tracking","navigation.sections","navigation.expand","search.highlight","search.share","toc.follow"],"search":"../../assets/javascripts/workers/search.5df7522c.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.21aa498e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.21aa498e.min.js"></script>
       
     
   </body>

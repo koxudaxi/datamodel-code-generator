@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/oneliner/">
       
       
-        <link rel="prev" href="../using_as_module/">
+        <link rel="prev" href="../formatting/">
       
       
-        <link rel="next" href="../ci-cd/">
+        <link rel="next" href="../using_as_module/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>⚙️ pyproject.toml Configuration - datamodel-code-generator</title>
+        <title>One-liner Usage - datamodel-code-generator</title>
       
     
     
@@ -118,7 +118,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#pyprojecttoml-configuration" class="md-skip">
+        <a href="#one-liner-usage" class="md-skip">
           Skip to content
         </a>
       
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              ⚙️ pyproject.toml Configuration
+              One-liner Usage
             
           </span>
         </div>
@@ -1395,10 +1395,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../oneliner/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    One-liner Usage
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1414,6 +1441,199 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#one-liner-execution-with-uvxpipx" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        One-liner Execution with uvx/pipx
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="One-liner Execution with uvx&#x2f;pipx">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-uvx-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using uvx (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-pipx-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using pipx run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reading-from-stdin" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reading from stdin
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clipboard-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Clipboard Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Clipboard Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#macos-pbpastepbcopy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS (pbpaste/pbcopy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#linux-xclipxsel" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Linux (xclip/xsel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-clippowershell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows (clip/PowerShell)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Practical Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Practical Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-model-generation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick model generation workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-from-api-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating from API documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-from-github-raw-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating from GitHub raw URLs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-with-jq-for-json-manipulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using with jq for JSON manipulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-installation-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Installation Methods
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1451,37 +1671,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    pyproject.toml
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../pyproject_toml/" class="md-nav__link">
         
   
   
@@ -1497,121 +1690,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🚀 Basic Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#named-profiles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📋 Named Profiles
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-priority" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🎯 Configuration Priority
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#merge-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🔀 Merge Rules
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="🔀 Merge Rules">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📝 Example
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#ignoring-pyprojecttoml" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🚫 Ignoring pyproject.toml
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#generating-configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🔧 Generating Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📖 See Also
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1742,55 +1820,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#basic-usage" class="md-nav__link">
+  <a href="#one-liner-execution-with-uvxpipx" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🚀 Basic Usage
+        One-liner Execution with uvx/pipx
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#named-profiles" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📋 Named Profiles
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration-priority" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🎯 Configuration Priority
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#merge-rules" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🔀 Merge Rules
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="🔀 Merge Rules">
+    <nav class="md-nav" aria-label="One-liner Execution with uvx&#x2f;pipx">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#using-uvx-recommended" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📝 Example
+        Using uvx (Recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-pipx-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using pipx run
       
     </span>
   </a>
@@ -1803,10 +1859,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ignoring-pyprojecttoml" class="md-nav__link">
+  <a href="#reading-from-stdin" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🚫 Ignoring pyproject.toml
+        Reading from stdin
       
     </span>
   </a>
@@ -1814,21 +1870,121 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generating-configuration" class="md-nav__link">
+  <a href="#clipboard-integration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        🔧 Generating Configuration
+        Clipboard Integration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Clipboard Integration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#macos-pbpastepbcopy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        macOS (pbpaste/pbcopy)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#see-also" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#linux-xclipxsel" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📖 See Also
+        Linux (xclip/xsel)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows-clippowershell" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows (clip/PowerShell)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#practical-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Practical Examples
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Practical Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-model-generation-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick model generation workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-from-api-documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating from API documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generating-from-github-raw-urls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Generating from GitHub raw URLs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-with-jq-for-json-manipulation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using with jq for JSON manipulation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comparison-installation-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comparison: Installation Methods
       
     </span>
   </a>
@@ -1850,95 +2006,202 @@
                 
                   
 
-<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile -->
-
-<h1 id="pyprojecttoml-configuration">⚙️ pyproject.toml Configuration<a class="headerlink" href="#pyprojecttoml-configuration" title="Permanent link">&para;</a></h1>
-<p>datamodel-code-generator can be configured using <code>pyproject.toml</code>. The tool automatically searches for <code>pyproject.toml</code> in the current directory and parent directories (stopping at the git repository root).</p>
-<h2 id="basic-usage">🚀 Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models.py&quot;</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.11&quot;</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">field-constraints</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<h1 id="one-liner-usage">One-liner Usage<a class="headerlink" href="#one-liner-usage" title="Permanent link">&para;</a></h1>
+<p>This guide covers how to use datamodel-code-generator with pipes and clipboard tools for quick, one-time code generation without permanent installation.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The package name is <code>datamodel-code-generator</code>, and the CLI command is <code>datamodel-codegen</code>.</p>
+</div>
+<hr />
+<h2 id="one-liner-execution-with-uvxpipx">One-liner Execution with uvx/pipx<a class="headerlink" href="#one-liner-execution-with-uvxpipx" title="Permanent link">&para;</a></h2>
+<p>You don't need to install datamodel-code-generator permanently. Use <code>uvx</code> or <code>pipx run</code> to execute it directly.</p>
+<h3 id="using-uvx-recommended">Using uvx (Recommended)<a class="headerlink" href="#using-uvx-recommended" title="Permanent link">&para;</a></h3>
+<p><a href="https://docs.astral.sh/uv/guides/tools/">uvx</a> runs Python tools without installation:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Basic usage</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># With extras (e.g., HTTP support)</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>uvx<span class="w"> </span>--from<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span><span class="w"> </span>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://example.com/api.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># With GraphQL support</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>uvx<span class="w"> </span>--from<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[graphql]&#39;</span><span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.graphql<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<p>All CLI options can be used in <code>pyproject.toml</code> by converting them to kebab-case (e.g., <code>--snake-case-field</code> becomes <code>snake-case-field</code>).</p>
-<h2 id="named-profiles">📋 Named Profiles<a class="headerlink" href="#named-profiles" title="Permanent link">&para;</a></h2>
-<p>You can define multiple named profiles for different use cases within a single project:</p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.9&quot;</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">[tool.datamodel-codegen.profiles.api]</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schemas/api.yaml&quot;</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models/api.py&quot;</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="n">target-python-version</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;3.11&quot;</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">[tool.datamodel-codegen.profiles.database]</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schemas/db.json&quot;</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models/db.py&quot;</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="n">input-file-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;jsonschema&quot;</span>
-</span></code></pre></div>
-<p>Base settings in <code>[tool.datamodel-codegen]</code> are used when no profile is specified, and also serve as defaults for profiles.</p>
-<p>Use a profile with the <code>--profile</code> option:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>api
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>database
-</span></code></pre></div>
-<h2 id="configuration-priority">🎯 Configuration Priority<a class="headerlink" href="#configuration-priority" title="Permanent link">&para;</a></h2>
-<p>Settings are applied in the following priority order (highest to lowest):</p>
-<ol>
-<li><strong>🖥️ CLI arguments</strong> - Always take precedence</li>
-<li><strong>📋 Profile settings</strong> - From <code>[tool.datamodel-codegen.profiles.&lt;name&gt;]</code></li>
-<li><strong>⚙️ Base settings</strong> - From <code>[tool.datamodel-codegen]</code></li>
-<li><strong>🔧 Default values</strong> - Built-in defaults</li>
-</ol>
-<h2 id="merge-rules">🔀 Merge Rules<a class="headerlink" href="#merge-rules" title="Permanent link">&para;</a></h2>
-<p>When using profiles, settings are merged using <strong>shallow merge</strong>:</p>
-<ul>
-<li>Profile values <strong>completely replace</strong> base values (no deep merging)</li>
-<li>Settings not specified in the profile are inherited from the base configuration</li>
-<li>Lists and dictionaries are replaced entirely, not merged</li>
-</ul>
-<h3 id="example">📝 Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h3>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;str&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;int&quot;</span><span class="p">]</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">http-headers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;Authorization: Bearer token&quot;</span><span class="p">]</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[tool.datamodel-codegen.profiles.api]</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;bytes&quot;</span><span class="p">]</span>
-</span></code></pre></div>
-<p>When using <code>--profile api</code>:</p>
-<ul>
-<li><code>strict-types</code> becomes <code>["bytes"]</code> (completely replaces base, not merged)</li>
-<li><code>http-headers</code> is inherited from base as <code>["Authorization: Bearer token"]</code></li>
-</ul>
-<h2 id="ignoring-pyprojecttoml">🚫 Ignoring pyproject.toml<a class="headerlink" href="#ignoring-pyprojecttoml" title="Permanent link">&para;</a></h2>
-<p>To ignore all <code>pyproject.toml</code> configuration and use only CLI arguments:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--ignore-pyproject<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py
-</span></code></pre></div>
-<h2 id="generating-configuration">🔧 Generating Configuration<a class="headerlink" href="#generating-configuration" title="Permanent link">&para;</a></h2>
-<p>Generate a <code>pyproject.toml</code> configuration section from CLI arguments:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span>--snake-case-field<span class="w"> </span>--generate-pyproject-config
-</span></code></pre></div>
-<p><strong>✨ Output:</strong></p>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;models.py&quot;</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span></code></pre></div>
-<p>Generate CLI command from existing <code>pyproject.toml</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--generate-cli-command
-</span></code></pre></div>
-<p>With a specific profile:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>datamodel-codegen<span class="w"> </span>--profile<span class="w"> </span>api<span class="w"> </span>--generate-cli-command
+<h3 id="using-pipx-run">Using pipx run<a class="headerlink" href="#using-pipx-run" title="Permanent link">&para;</a></h3>
+<p><a href="https://pipx.pypa.io/">pipx</a> also supports one-shot execution:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>pipx<span class="w"> </span>run<span class="w"> </span>datamodel-code-generator<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
 <hr />
-<h2 id="see-also">📖 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<h2 id="reading-from-stdin">Reading from stdin<a class="headerlink" href="#reading-from-stdin" title="Permanent link">&para;</a></h2>
+<p>datamodel-code-generator can read schema input from stdin, enabling powerful pipeline workflows:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Pipe JSON directly</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">&#39;{&quot;type&quot;: &quot;object&quot;, &quot;properties&quot;: {&quot;name&quot;: {&quot;type&quot;: &quot;string&quot;}}}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="c1"># Pipe from another command</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://example.com/schema.json<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<hr />
+<h2 id="clipboard-integration">Clipboard Integration<a class="headerlink" href="#clipboard-integration" title="Permanent link">&para;</a></h2>
+<p>Combine stdin support with clipboard tools to quickly generate models from copied schema definitions.</p>
+<h3 id="macos-pbpastepbcopy">macOS (pbpaste/pbcopy)<a class="headerlink" href="#macos-pbpastepbcopy" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Generate from clipboard and print to stdout</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>pbpaste<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Generate from clipboard and save to file</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>pbpaste<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output<span class="w"> </span>model.py
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Generate from clipboard and copy result back to clipboard</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>pbpaste<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span><span class="p">|</span><span class="w"> </span>pbcopy
+</span></code></pre></div>
+<h3 id="linux-xclipxsel">Linux (xclip/xsel)<a class="headerlink" href="#linux-xclipxsel" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">xclip</label><label for="__tabbed_1_2">xsel</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Generate from clipboard and print to stdout</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>xclip<span class="w"> </span>-selection<span class="w"> </span>clipboard<span class="w"> </span>-o<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Generate and copy result to clipboard</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>xclip<span class="w"> </span>-selection<span class="w"> </span>clipboard<span class="w"> </span>-o<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span><span class="p">|</span><span class="w"> </span>xclip<span class="w"> </span>-selection<span class="w"> </span>clipboard
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Generate from clipboard and print to stdout</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>xsel<span class="w"> </span>--clipboard<span class="w"> </span>--output<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Generate and copy result to clipboard</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>xsel<span class="w"> </span>--clipboard<span class="w"> </span>--output<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span><span class="p">|</span><span class="w"> </span>xsel<span class="w"> </span>--clipboard<span class="w"> </span>--input
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<div class="admonition tip">
+<p class="admonition-title">Installing clipboard tools on Linux</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Debian/Ubuntu</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># or</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>xsel
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c1"># Fedora</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>xclip
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># or</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>xsel
+</span></code></pre></div>
+</div>
+<h3 id="windows-clippowershell">Windows (clip/PowerShell)<a class="headerlink" href="#windows-clippowershell" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:2"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">PowerShell</label><label for="__tabbed_2_2">Command Prompt</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-powershell highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c"># Generate from clipboard and print to stdout</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">Get-Clipboard</span> <span class="p">|</span> <span class="n">uvx</span> <span class="n">datamodel-codegen</span> <span class="p">-</span><span class="n">-input</span><span class="o">-file</span><span class="n">-type</span> <span class="n">jsonschema</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c"># Generate and copy result to clipboard</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="nb">Get-Clipboard</span> <span class="p">|</span> <span class="n">uvx</span> <span class="n">datamodel-codegen</span> <span class="p">-</span><span class="n">-input</span><span class="o">-file</span><span class="n">-type</span> <span class="n">jsonschema</span> <span class="p">|</span> <span class="nb">Set-Clipboard</span>
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-batch highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1">REM Windows Command Prompt doesn&#39;t have a built-in paste command</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">REM Use PowerShell from cmd:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>powershell -command <span class="s2">&quot;Get-Clipboard&quot;</span> <span class="p">|</span> uvx datamodel-codegen --input-file-type jsonschema
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Windows clip command</p>
+<p>The <code>clip</code> command on Windows only supports copying <strong>to</strong> the clipboard, not reading from it. Use PowerShell's <code>Get-Clipboard</code> and <code>Set-Clipboard</code> for full clipboard integration.</p>
+</div>
+<hr />
+<h2 id="practical-examples">Practical Examples<a class="headerlink" href="#practical-examples" title="Permanent link">&para;</a></h2>
+<h3 id="quick-model-generation-workflow">Quick model generation workflow<a class="headerlink" href="#quick-model-generation-workflow" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Copy a JSON Schema from documentation or an API response</li>
+<li>Run the generator from clipboard:</li>
+</ol>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># macOS</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>pbpaste<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># Linux</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>xclip<span class="w"> </span>-selection<span class="w"> </span>clipboard<span class="w"> </span>-o<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="c1"># Windows PowerShell</span>
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>Get-Clipboard<span class="w"> </span><span class="p">|</span><span class="w"> </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel
+</span></code></pre></div>
+<h3 id="generating-from-api-documentation">Generating from API documentation<a class="headerlink" href="#generating-from-api-documentation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Fetch OpenAPI spec and generate models</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://petstore3.swagger.io/api/v3/openapi.json<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>openapi<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>petstore.py
+</span></code></pre></div>
+<h3 id="generating-from-github-raw-urls">Generating from GitHub raw URLs<a class="headerlink" href="#generating-from-github-raw-urls" title="Permanent link">&para;</a></h3>
+<p>You can directly fetch schemas from GitHub repositories using raw URLs:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Fetch JSON Schema from GitHub and generate models</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/schemas/v3.0/schema.json<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="c1"># Fetch OpenAPI spec from a GitHub repository</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>curl<span class="w"> </span>-s<span class="w"> </span>https://raw.githubusercontent.com/github/rest-api-description/main/descriptions/api.github.com/api.github.com.json<span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>openapi<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>github_api.py
+</span></code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">Using the --url option</p>
+<p>If you have the <code>http</code> extra installed, you can use <code>--url</code> directly without curl:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span><span class="w"> </span>datamodel-codegen<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--url<span class="w"> </span>https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/schemas/v3.0/schema.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel
+</span></code></pre></div>
+</div>
+<h3 id="using-with-jq-for-json-manipulation">Using with jq for JSON manipulation<a class="headerlink" href="#using-with-jq-for-json-manipulation" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Extract a specific schema definition and generate a model</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>cat<span class="w"> </span>openapi.yaml<span class="w"> </span><span class="p">|</span><span class="w"> </span>yq<span class="w"> </span><span class="s1">&#39;.components.schemas.User&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema
+</span></code></pre></div>
+<hr />
+<h2 id="comparison-installation-methods">Comparison: Installation Methods<a class="headerlink" href="#comparison-installation-methods" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Command</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>uvx</strong></td>
+<td><code>uvx datamodel-codegen</code></td>
+<td>One-liner usage, no installation</td>
+</tr>
+<tr>
+<td><strong>pipx run</strong></td>
+<td><code>pipx run datamodel-code-generator</code></td>
+<td>One-liner usage, alternative to uvx</td>
+</tr>
+<tr>
+<td><strong>pipx install</strong></td>
+<td><code>pipx install datamodel-code-generator</code></td>
+<td>Global installation, frequent usage</td>
+</tr>
+<tr>
+<td><strong>uv add</strong></td>
+<td><code>uv add datamodel-code-generator</code></td>
+<td>Project dependency</td>
+</tr>
+<tr>
+<td><strong>pip install</strong></td>
+<td><code>pip install datamodel-code-generator</code></td>
+<td>Traditional installation</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">When to use each method</p>
 <ul>
-<li>🖥️ <a href="../cli-reference/general-options/#ignore-pyproject">CLI Reference: <code>--ignore-pyproject</code></a> - Ignore pyproject.toml configuration</li>
-<li>🔧 <a href="../cli-reference/general-options/#generate-pyproject-config">CLI Reference: <code>--generate-pyproject-config</code></a> - Generate pyproject.toml from CLI arguments</li>
-<li>🖥️ <a href="../cli-reference/general-options/#generate-cli-command">CLI Reference: <code>--generate-cli-command</code></a> - Generate CLI command from pyproject.toml</li>
+<li><strong>uvx/pipx run</strong>: Quick one-liner generation, testing different versions</li>
+<li><strong>pipx install</strong>: Frequent CLI usage across multiple projects</li>
+<li><strong>uv add/pip install</strong>: Project dependency, CI/CD pipelines, programmatic usage</li>
 </ul>
+</div>
 
 
 

@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/what_is_the_difference_between_v1_and_v2/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/model-reuse/">
       
       
-        <link rel="prev" href="../graphql/">
+        <link rel="prev" href="../what_is_the_difference_between_v1_and_v2/">
       
       
-        <link rel="next" href="../model-reuse/">
+        <link rel="next" href="../module-exports/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Output Model Types - datamodel-code-generator</title>
+        <title>Model Reuse and Deduplication - datamodel-code-generator</title>
       
     
     
@@ -118,7 +118,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#output-model-types" class="md-skip">
+        <a href="#model-reuse-and-deduplication" class="md-skip">
           Skip to content
         </a>
       
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Output Model Types
+              Model Reuse and Deduplication
             
           </span>
         </div>
@@ -941,6 +941,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../what_is_the_difference_between_v1_and_v2/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output Model Types
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -960,7 +988,7 @@
   <span class="md-ellipsis">
     
   
-    Output Model Types
+    Model Reuse and Deduplication
   
 
     
@@ -978,7 +1006,7 @@
   <span class="md-ellipsis">
     
   
-    Output Model Types
+    Model Reuse and Deduplication
   
 
     
@@ -1005,10 +1033,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-comparison" class="md-nav__link">
+  <a href="#quick-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Comparison
+        Quick Overview
       
     </span>
   </a>
@@ -1016,16 +1044,138 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v2-recommended" class="md-nav__link">
+  <a href="#-reuse-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v2 (Recommended)
+        --reuse-model
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v2 (Recommended)">
+    <nav class="md-nav" aria-label="--reuse-model">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-reuse-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without --reuse-model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-reuse-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With --reuse-model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-reuse-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --reuse-scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--reuse-scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-file-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-file input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-file-input-with-tree-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-file input with tree scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-shared-module-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --shared-module-name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --collapse-root-models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--collapse-root-models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without --collapse-root-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With --collapse-root-models
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#when-to-use" class="md-nav__link">
@@ -1044,22 +1194,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v1" class="md-nav__link">
+  <a href="#combining-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1
+        Combining Options
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v1">
+    <nav class="md-nav" aria-label="Combining Options">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#migration-from-v1-to-v2" class="md-nav__link">
+  <a href="#recommended-for-large-multi-file-projects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from v1 to v2
+        Recommended for large multi-file projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-for-single-file-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended for single-file projects
       
     </span>
   </a>
@@ -1072,117 +1233,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dataclasses" class="md-nav__link">
+  <a href="#performance-impact" class="md-nav__link">
     <span class="md-ellipsis">
       
-        dataclasses
+        Performance Impact
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="dataclasses">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#options-for-dataclasses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options for dataclasses
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#typeddict" class="md-nav__link">
+  <a href="#output-structure-comparison" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TypedDict
+        Output Structure Comparison
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="TypedDict">
+    <nav class="md-nav" aria-label="Output Structure Comparison">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_2" class="md-nav__link">
+  <a href="#without-deduplication" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        Without deduplication
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#msgspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        msgspec
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="msgspec">
-      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_3" class="md-nav__link">
+  <a href="#with-reuse-model-reuse-scope-tree" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#choosing-the-right-type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Choosing the Right Type
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Choosing the Right Type">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#decision-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision Guide
+        With --reuse-model --reuse-scope tree
       
     </span>
   </a>
@@ -1209,34 +1297,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../model-reuse/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Model Reuse and Deduplication
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1849,10 +1909,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-comparison" class="md-nav__link">
+  <a href="#quick-overview" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Comparison
+        Quick Overview
       
     </span>
   </a>
@@ -1860,16 +1920,138 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v2-recommended" class="md-nav__link">
+  <a href="#-reuse-model" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v2 (Recommended)
+        --reuse-model
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v2 (Recommended)">
+    <nav class="md-nav" aria-label="--reuse-model">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-reuse-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without --reuse-model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-reuse-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With --reuse-model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#benefits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Benefits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-reuse-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --reuse-scope
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--reuse-scope">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-file-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-file input
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-file-input-with-tree-scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-file input with tree scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-shared-module-name" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --shared-module-name
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --collapse-root-models
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="--collapse-root-models">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#without-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Without --collapse-root-models
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-collapse-root-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With --collapse-root-models
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#when-to-use" class="md-nav__link">
@@ -1888,22 +2070,33 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#pydantic-v1" class="md-nav__link">
+  <a href="#combining-options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1
+        Combining Options
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v1">
+    <nav class="md-nav" aria-label="Combining Options">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#migration-from-v1-to-v2" class="md-nav__link">
+  <a href="#recommended-for-large-multi-file-projects" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from v1 to v2
+        Recommended for large multi-file projects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-for-single-file-projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended for single-file projects
       
     </span>
   </a>
@@ -1916,117 +2109,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dataclasses" class="md-nav__link">
+  <a href="#performance-impact" class="md-nav__link">
     <span class="md-ellipsis">
       
-        dataclasses
+        Performance Impact
       
     </span>
   </a>
-  
-    <nav class="md-nav" aria-label="dataclasses">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#options-for-dataclasses" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Options for dataclasses
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#when-to-use_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#typeddict" class="md-nav__link">
+  <a href="#output-structure-comparison" class="md-nav__link">
     <span class="md-ellipsis">
       
-        TypedDict
+        Output Structure Comparison
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="TypedDict">
+    <nav class="md-nav" aria-label="Output Structure Comparison">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_2" class="md-nav__link">
+  <a href="#without-deduplication" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
+        Without deduplication
       
     </span>
   </a>
   
 </li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#msgspec" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        msgspec
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="msgspec">
-      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#when-to-use_3" class="md-nav__link">
+  <a href="#with-reuse-model-reuse-scope-tree" class="md-nav__link">
     <span class="md-ellipsis">
       
-        When to use
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#choosing-the-right-type" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Choosing the Right Type
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Choosing the Right Type">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#decision-guide" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Decision Guide
+        With --reuse-model --reuse-scope tree
       
     </span>
   </a>
@@ -2064,167 +2184,11 @@
                 
                   
 
-<!-- related-cli-options: --output-model-type, --frozen-dataclasses, --keyword-only, --dataclass-arguments, --target-python-version -->
+<!-- related-cli-options: --reuse-model, --reuse-scope, --shared-module-name, --collapse-root-models, --disable-warnings -->
 
-<h1 id="output-model-types">Output Model Types<a class="headerlink" href="#output-model-types" title="Permanent link">&para;</a></h1>
-<p>datamodel-code-generator supports multiple output model types. This page compares them to help you choose the right one for your project.</p>
-<h2 id="quick-comparison">Quick Comparison<a class="headerlink" href="#quick-comparison" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Model Type</th>
-<th>Validation</th>
-<th>Serialization</th>
-<th>Performance</th>
-<th>Use Case</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><strong>Pydantic v2</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Fast</td>
-<td>New projects, APIs, data validation</td>
-</tr>
-<tr>
-<td><strong>Pydantic v1</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Moderate</td>
-<td>Legacy compatibility</td>
-</tr>
-<tr>
-<td><strong>dataclasses</strong></td>
-<td>None</td>
-<td>Manual</td>
-<td>Fastest</td>
-<td>Simple data containers, no validation needed</td>
-</tr>
-<tr>
-<td><strong>TypedDict</strong></td>
-<td>Static only</td>
-<td>Dict-compatible</td>
-<td>N/A</td>
-<td>Type hints for dicts, JSON APIs</td>
-</tr>
-<tr>
-<td><strong>msgspec</strong></td>
-<td>Runtime</td>
-<td>Built-in</td>
-<td>Fastest</td>
-<td>High-performance serialization</td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="pydantic-v2-recommended">Pydantic v2 (Recommended)<a class="headerlink" href="#pydantic-v2-recommended" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type pydantic_v2.BaseModel</code></strong></p>
-<p>Pydantic v2 is recommended for new projects. It offers better performance and a modern API.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span><span class="p">,</span> <span class="n">RootModel</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pets</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="nb">list</span><span class="p">[</span><span class="n">Pet</span><span class="p">]]):</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">root</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-</span></code></pre></div>
-<h3 id="when-to-use">When to use<a class="headerlink" href="#when-to-use" title="Permanent link">&para;</a></h3>
-<ul>
-<li>New projects without Pydantic v1 dependencies</li>
-<li>APIs requiring data validation</li>
-<li>Projects needing JSON Schema generation from models</li>
-</ul>
-<hr />
-<h2 id="pydantic-v1">Pydantic v1<a class="headerlink" href="#pydantic-v1" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type pydantic.BaseModel</code></strong> (default)</p>
-<p>Pydantic v1 is the default for backward compatibility with existing codebases.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pets</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">__root__</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-</span></code></pre></div>
-<h3 id="migration-from-v1-to-v2">Migration from v1 to v2<a class="headerlink" href="#migration-from-v1-to-v2" title="Permanent link">&para;</a></h3>
-<p>Key differences when migrating:</p>
-<table>
-<thead>
-<tr>
-<th>v1</th>
-<th>v2</th>
-<th>Notes</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>__root__</code></td>
-<td><code>RootModel</code></td>
-<td>Custom root types now use <code>RootModel</code> class</td>
-</tr>
-<tr>
-<td><code>const</code></td>
-<td>Removed</td>
-<td>Use <code>Literal</code> types instead</td>
-</tr>
-<tr>
-<td><code>min_items</code></td>
-<td><code>min_length</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>max_items</code></td>
-<td><code>max_length</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>unique_items</code></td>
-<td>Removed</td>
-<td>List replaced by <code>set</code> type</td>
-</tr>
-<tr>
-<td><code>allow_mutation</code></td>
-<td><code>frozen</code></td>
-<td>Inverse value</td>
-</tr>
-<tr>
-<td><code>regex</code></td>
-<td><code>pattern</code></td>
-<td></td>
-</tr>
-<tr>
-<td><code>pydantic.Config</code></td>
-<td><code>pydantic.ConfigDict</code></td>
-<td></td>
-</tr>
-</tbody>
-</table>
-<p>See <a href="https://docs.pydantic.dev/2.0/migration/">Pydantic v2 Migration Guide</a> for details.</p>
-<hr />
-<h2 id="dataclasses">dataclasses<a class="headerlink" href="#dataclasses" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type dataclasses.dataclass</code></strong></p>
-<p>Python's built-in dataclasses for simple data containers without runtime validation.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="nd">@dataclass</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">:</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div>
-<h3 id="options-for-dataclasses">Options for dataclasses<a class="headerlink" href="#options-for-dataclasses" title="Permanent link">&para;</a></h3>
+<h1 id="model-reuse-and-deduplication">Model Reuse and Deduplication<a class="headerlink" href="#model-reuse-and-deduplication" title="Permanent link">&para;</a></h1>
+<p>When generating models from schemas, you may encounter duplicate model definitions. datamodel-code-generator provides options to deduplicate models and share them across multiple files, improving output structure, reducing diff sizes, and enhancing performance.</p>
+<h2 id="quick-overview">Quick Overview<a class="headerlink" href="#quick-overview" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -2234,97 +2198,231 @@
 </thead>
 <tbody>
 <tr>
-<td><code>--frozen-dataclasses</code></td>
-<td>Generate immutable dataclasses (<code>frozen=True</code>)</td>
+<td><code>--reuse-model</code></td>
+<td>Deduplicate identical model/enum definitions</td>
 </tr>
 <tr>
-<td><code>--keyword-only</code></td>
-<td>Require keyword arguments (<code>kw_only=True</code>, Python 3.10+)</td>
+<td><code>--reuse-scope</code></td>
+<td>Control scope of deduplication (<code>root</code> or <code>tree</code>)</td>
 </tr>
 <tr>
-<td><code>--dataclass-arguments</code></td>
-<td>Custom decorator arguments as JSON</td>
+<td><code>--shared-module-name</code></td>
+<td>Name for shared module in multi-file output</td>
+</tr>
+<tr>
+<td><code>--collapse-root-models</code></td>
+<td>Inline root models instead of creating wrappers</td>
 </tr>
 </tbody>
 </table>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Frozen, keyword-only dataclasses</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--frozen-dataclasses<span class="w"> </span>--keyword-only<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.10
+<hr />
+<h2 id="-reuse-model"><code>--reuse-model</code><a class="headerlink" href="#-reuse-model" title="Permanent link">&para;</a></h2>
+<p>The <code>--reuse-model</code> flag detects identical enum or model definitions and generates a single shared definition instead of duplicates.</p>
+<h3 id="without-reuse-model">Without <code>--reuse-model</code><a class="headerlink" href="#without-reuse-model" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<h3 id="when-to-use_1">When to use<a class="headerlink" href="#when-to-use_1" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Duplicate enums for animal and pet fields</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">Animal</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">dog</span> <span class="o">=</span> <span class="s1">&#39;dog&#39;</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">cat</span> <span class="o">=</span> <span class="s1">&#39;cat&#39;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>  <span class="c1"># Duplicate!</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">dog</span> <span class="o">=</span> <span class="s1">&#39;dog&#39;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">cat</span> <span class="o">=</span> <span class="s1">&#39;cat&#39;</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">animal</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Animal</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">pet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div>
+<h3 id="with-reuse-model">With <code>--reuse-model</code><a class="headerlink" href="#with-reuse-model" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py<span class="w"> </span>--reuse-model
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Single shared enum</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">Animal</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">dog</span> <span class="o">=</span> <span class="s1">&#39;dog&#39;</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">cat</span> <span class="o">=</span> <span class="s1">&#39;cat&#39;</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">animal</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Animal</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">pet</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Animal</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># Reuses Animal</span>
+</span></code></pre></div>
+<h3 id="benefits">Benefits<a class="headerlink" href="#benefits" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Simple data structures without validation needs</li>
-<li>Performance-critical code where validation overhead matters</li>
-<li>Interoperability with code expecting dataclasses</li>
+<li><strong>Smaller output</strong> - Less generated code</li>
+<li><strong>Cleaner diffs</strong> - Changes to shared types only appear once</li>
+<li><strong>Better performance</strong> - Faster generation for large schemas</li>
+<li><strong>Type consistency</strong> - Same types are truly the same</li>
 </ul>
 <hr />
-<h2 id="typeddict">TypedDict<a class="headerlink" href="#typeddict" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type typing.TypedDict</code></strong></p>
-<p>TypedDict provides static type checking for dictionary structures.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>typing.TypedDict<span class="w"> </span>--output<span class="w"> </span>model.py
+<h2 id="-reuse-scope"><code>--reuse-scope</code><a class="headerlink" href="#-reuse-scope" title="Permanent link">&para;</a></h2>
+<p>Controls the scope for model reuse detection when processing multiple input files.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>root</code></td>
+<td>Detect duplicates only within each input file (default)</td>
+</tr>
+<tr>
+<td><code>tree</code></td>
+<td>Detect duplicates across all input files</td>
+</tr>
+</tbody>
+</table>
+<h3 id="single-file-input">Single-file input<a class="headerlink" href="#single-file-input" title="Permanent link">&para;</a></h3>
+<p>For single-file input, <code>--reuse-scope</code> has no effect. Use <code>--reuse-model</code> alone.</p>
+<h3 id="multi-file-input-with-tree-scope">Multi-file input with <code>tree</code> scope<a class="headerlink" href="#multi-file-input-with-tree-scope" title="Permanent link">&para;</a></h3>
+<p>When generating from multiple schema files to a directory:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span>--reuse-model<span class="w"> </span>--reuse-scope<span class="w"> </span>tree
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypedDict</span><span class="p">,</span> <span class="n">NotRequired</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">TypedDict</span><span class="p">):</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">NotRequired</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+<p><strong>Input files:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>schemas/
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>├── user.json      # defines SharedModel
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>└── order.json     # also defines identical SharedModel
+</span></code></pre></div></p>
+<p><strong>Output with <code>--reuse-scope tree</code>:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>models/
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>├── __init__.py
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>├── user.py        # imports from shared
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>├── order.py       # imports from shared
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>└── shared.py      # SharedModel defined once
+</span></code></pre></div></p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># models/user.py</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">.shared</span><span class="w"> </span><span class="kn">import</span> <span class="n">SharedModel</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="n">data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">SharedModel</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># models/shared.py</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="k">class</span><span class="w"> </span><span class="nc">SharedModel</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>    <span class="n">name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </span></code></pre></div>
-<h3 id="when-to-use_2">When to use<a class="headerlink" href="#when-to-use_2" title="Permanent link">&para;</a></h3>
+<hr />
+<h2 id="-shared-module-name"><code>--shared-module-name</code><a class="headerlink" href="#-shared-module-name" title="Permanent link">&para;</a></h2>
+<p>Customize the name of the shared module when using <code>--reuse-scope tree</code>.</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schemas/<span class="w"> </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--reuse-model<span class="w"> </span>--reuse-scope<span class="w"> </span>tree<span class="w"> </span>--shared-module-name<span class="w"> </span>common
+</span></code></pre></div>
+<p><strong>Output:</strong>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>models/
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>├── __init__.py
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>├── user.py
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>├── order.py
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>└── common.py      # Instead of shared.py
+</span></code></pre></div></p>
+<hr />
+<h2 id="-collapse-root-models"><code>--collapse-root-models</code><a class="headerlink" href="#-collapse-root-models" title="Permanent link">&para;</a></h2>
+<p>Inline root model definitions instead of creating separate wrapper classes.</p>
+<h3 id="without-collapse-root-models">Without <code>--collapse-root-models</code><a class="headerlink" href="#without-collapse-root-models" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserId</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">__root__</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">UserId</span>
+</span></code></pre></div>
+<h3 id="with-collapse-root-models">With <code>--collapse-root-models</code><a class="headerlink" href="#with-collapse-root-models" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">str</span>  <span class="c1"># Inlined</span>
+</span></code></pre></div>
+<h3 id="when-to-use">When to use<a class="headerlink" href="#when-to-use" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Working with JSON APIs where data remains as dicts</li>
-<li>Static type checking without runtime overhead</li>
-<li>Gradual typing of existing dict-based code</li>
+<li>Simpler output when wrapper classes aren't needed</li>
+<li>Reducing the number of generated classes</li>
+<li>When root models are just type aliases</li>
 </ul>
 <hr />
-<h2 id="msgspec">msgspec<a class="headerlink" href="#msgspec" title="Permanent link">&para;</a></h2>
-<p><strong>Use <code>--output-model-type msgspec.Struct</code></strong></p>
-<p><a href="https://github.com/jcrist/msgspec">msgspec</a> offers high-performance serialization with validation.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[msgspec]&#39;</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>msgspec.Struct<span class="w"> </span>--output<span class="w"> </span>model.py
+<h2 id="combining-options">Combining Options<a class="headerlink" href="#combining-options" title="Permanent link">&para;</a></h2>
+<h3 id="recommended-for-large-multi-file-projects">Recommended for large multi-file projects<a class="headerlink" href="#recommended-for-large-multi-file-projects" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>datamodel-codegen<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">  </span>--input<span class="w"> </span>schemas/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--output<span class="w"> </span>models/<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>--reuse-model<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span>--reuse-scope<span class="w"> </span>tree<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-6"><a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span>--shared-module-name<span class="w"> </span>common<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-12-7"><a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">  </span>--collapse-root-models
 </span></code></pre></div>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">msgspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">Struct</span><span class="p">,</span> <span class="n">field</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Union</span><span class="p">,</span> <span class="n">UnsetType</span>
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">msgspec</span><span class="w"> </span><span class="kn">import</span> <span class="n">UNSET</span>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">Struct</span><span class="p">):</span>
-</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">UnsetType</span><span class="p">]</span> <span class="o">=</span> <span class="n">UNSET</span>
+<p>This produces:
+- Deduplicated models across all files
+- Shared types in a <code>common.py</code> module
+- Inlined simple root models
+- Minimal, clean output</p>
+<h3 id="recommended-for-single-file-projects">Recommended for single-file projects<a class="headerlink" href="#recommended-for-single-file-projects" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span>--input<span class="w"> </span>schema.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--output<span class="w"> </span>model.py<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>--reuse-model<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--collapse-root-models
 </span></code></pre></div>
-<h3 id="when-to-use_3">When to use<a class="headerlink" href="#when-to-use_3" title="Permanent link">&para;</a></h3>
-<ul>
-<li>High-performance JSON/MessagePack serialization</li>
-<li>Memory-efficient data structures</li>
-<li>APIs with strict performance requirements</li>
-</ul>
 <hr />
-<h2 id="choosing-the-right-type">Choosing the Right Type<a class="headerlink" href="#choosing-the-right-type" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>graph TD
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>    A[Need runtime validation?] --&gt;|Yes| B[Need best performance?]
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>    A --&gt;|No| C[Need type hints for dicts?]
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>    B --&gt;|Yes| D[msgspec.Struct]
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>    B --&gt;|No| E[Pydantic v1 dependency?]
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>    E --&gt;|Yes| F[pydantic.BaseModel]
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>    E --&gt;|No| G[pydantic_v2.BaseModel]
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>    C --&gt;|Yes| H[typing.TypedDict]
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>    C --&gt;|No| I[dataclasses.dataclass]
+<h2 id="performance-impact">Performance Impact<a class="headerlink" href="#performance-impact" title="Permanent link">&para;</a></h2>
+<p>For large schemas with many models:</p>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Without reuse</th>
+<th>With reuse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>100 schemas, 50% duplicates</td>
+<td>100 models</td>
+<td>~50 models</td>
+</tr>
+<tr>
+<td>Generation time</td>
+<td>Baseline</td>
+<td>Faster (less to generate)</td>
+</tr>
+<tr>
+<td>Output size</td>
+<td>Large</td>
+<td>Smaller</td>
+</tr>
+<tr>
+<td>Git diff on type change</td>
+<td>Multiple files</td>
+<td>Single location</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition tip">
+<p class="admonition-title">Performance tip</p>
+<p>For very large schemas, combine <code>--reuse-model</code> with <code>--disable-warnings</code> to speed up generation:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>datamodel-codegen<span class="w"> </span>--reuse-model<span class="w"> </span>--disable-warnings<span class="w"> </span>--input<span class="w"> </span>large-schema.json
 </span></code></pre></div>
-<h3 id="decision-guide">Decision Guide<a class="headerlink" href="#decision-guide" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>API with validation</strong> → Pydantic v2</li>
-<li><strong>Legacy Pydantic v1 project</strong> → Pydantic v1</li>
-<li><strong>High-performance serialization</strong> → msgspec</li>
-<li><strong>Simple data containers</strong> → dataclasses</li>
-<li><strong>Dict-based JSON handling</strong> → TypedDict</li>
-</ol>
+</div>
+<hr />
+<h2 id="output-structure-comparison">Output Structure Comparison<a class="headerlink" href="#output-structure-comparison" title="Permanent link">&para;</a></h2>
+<h3 id="without-deduplication">Without deduplication<a class="headerlink" href="#without-deduplication" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>models/
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>├── user.py         # UserStatus enum
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>├── order.py        # OrderStatus enum (duplicate of UserStatus!)
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>└── product.py      # ProductStatus enum (duplicate!)
+</span></code></pre></div>
+<h3 id="with-reuse-model-reuse-scope-tree">With <code>--reuse-model --reuse-scope tree</code><a class="headerlink" href="#with-reuse-model-reuse-scope-tree" title="Permanent link">&para;</a></h3>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>models/
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>├── __init__.py
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>├── user.py         # imports Status from shared
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>├── order.py        # imports Status from shared
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>├── product.py      # imports Status from shared
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>└── shared.py       # Status enum defined once
+</span></code></pre></div>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../cli-reference/model-customization/#output-model-type">CLI Reference: <code>--output-model-type</code></a></li>
-<li><a href="../cli-reference/model-customization/">CLI Reference: Model Customization</a></li>
-<li><a href="https://docs.pydantic.dev/">Pydantic Documentation</a></li>
-<li><a href="https://jcristharif.com/msgspec/">msgspec Documentation</a></li>
+<li><a href="../cli-reference/model-customization/#reuse-model">CLI Reference: <code>--reuse-model</code></a></li>
+<li><a href="../cli-reference/model-customization/#reuse-scope">CLI Reference: <code>--reuse-scope</code></a></li>
+<li><a href="../cli-reference/model-customization/#collapse-root-models">CLI Reference: <code>--collapse-root-models</code></a></li>
+<li><a href="../root-model-and-type-alias/">Root Models and Type Aliases</a></li>
+<li><a href="../faq/#-performance">FAQ: Performance</a></li>
 </ul>
 
 
