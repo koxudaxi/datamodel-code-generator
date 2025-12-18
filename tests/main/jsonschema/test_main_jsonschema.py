@@ -4266,22 +4266,22 @@ def test_main_field_name_shadows_class_name(output_file: Path) -> None:
     )
 
 
-@pytest.mark.benchmark
-def test_main_allof_root_model_constraints(output_file: Path) -> None:
-    """Test allOf with root model reference and constraints (issue #1901)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="allof_root_model_constraints.py",
-        extra_args=["--allof-merge-mode", "none"],
-    )
-
-
+@pytest.mark.cli_doc(
+    options=["--allof-merge-mode"],
+    input_schema="jsonschema/allof_root_model_constraints.json",
+    cli_args=["--allof-merge-mode", "constraints"],
+    golden_output="main/jsonschema/allof_root_model_constraints_merge.py",
+    comparison_output="main/jsonschema/allof_root_model_constraints.py",
+)
 @pytest.mark.benchmark
 def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
-    """Test allOf with root model reference and constraints with merge mode (issue #1901)."""
+    """Merge constraints from root model references in allOf schemas.
+
+    The `--allof-merge-mode constraints` merges only constraint properties
+    (minLength, maximum, etc.) from parent schemas referenced in allOf.
+    This ensures child schemas inherit validation constraints while keeping
+    other properties separate.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
         output_path=output_file,
@@ -4289,4 +4289,17 @@ def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="allof_root_model_constraints_merge.py",
         extra_args=["--allof-merge-mode", "constraints"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
+    """Test allOf with root model reference without merging (issue #1901)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints.py",
+        extra_args=["--allof-merge-mode", "none"],
     )
