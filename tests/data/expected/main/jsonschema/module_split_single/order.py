@@ -7,9 +7,9 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from . import user as user_1
+from .user import User
 
 
 class Order(BaseModel):
     id: Optional[int] = None
-    user: Optional[user_1.User] = None
+    user: Optional[User] = None

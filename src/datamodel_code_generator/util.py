@@ -9,7 +9,6 @@ from __future__ import annotations
 import copy
 import re
 from functools import lru_cache
-from re import Pattern
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
 import pydantic
@@ -145,8 +144,8 @@ class BaseModel(_BaseModel):
         model_config = ConfigDict(strict=False)  # pyright: ignore[reportAssignmentType]
 
 
-_UNDER_SCORE_1: Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
-_UNDER_SCORE_2: Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
+_UNDER_SCORE_1: re.Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
+_UNDER_SCORE_2: re.Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
 
 
 @lru_cache
