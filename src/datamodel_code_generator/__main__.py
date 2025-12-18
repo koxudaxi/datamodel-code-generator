@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import shlex
 import signal
 import sys
 import tempfile
@@ -383,6 +384,7 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase] = None  # noqa: UP045
     disable_timestamp: bool = False
     enable_version_header: bool = False
+    enable_command_header: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     extra_fields: Optional[str] = None  # noqa: UP045
@@ -832,6 +834,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             aliases=aliases,
             disable_timestamp=config.disable_timestamp,
             enable_version_header=config.enable_version_header,
+            enable_command_header=config.enable_command_header,
+            command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             allow_population_by_field_name=config.allow_population_by_field_name,
             allow_extra_fields=config.allow_extra_fields,
             extra_fields=config.extra_fields,
