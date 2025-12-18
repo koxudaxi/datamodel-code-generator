@@ -12,7 +12,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 16 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 11 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
@@ -60,6 +60,7 @@ This documentation is auto-generated from test cases.
 ### E {#e}
 
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name)
+- [`--enable-command-header`](template-customization.md#enable-command-header)
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability)
 - [`--enable-version-header`](template-customization.md#enable-version-header)
 - [`--encoding`](base-options.md#encoding)
