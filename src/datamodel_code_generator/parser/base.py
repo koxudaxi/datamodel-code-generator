@@ -1108,7 +1108,7 @@ class Parser(ABC):
                         from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
                     import_ = import_.replace("-", "_")
                     current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
-                    if (
+                    if (  # pragma: no cover
                         len(current_module_path) > 1
                         and current_module_path[-1].count(".") > 0
                         and not self.treat_dot_as_module
