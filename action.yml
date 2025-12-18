@@ -37,6 +37,10 @@ inputs:
     description: 'Specific version to install (defaults to action tag version if tag looks like a version, otherwise latest)'
     required: false
     default: ''
+  extras:
+    description: 'Optional extras to install (comma-separated: graphql, http, validation, ruff, all)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -51,12 +55,17 @@ runs:
         key: datamodel-codegen-${{ runner.os }}
 
     - run: |
+        EXTRAS=""
+        if [ -n "${{ inputs.extras }}" ]; then
+          EXTRAS="[${{ inputs.extras }}]"
+        fi
+
         if [ -n "${{ inputs.version }}" ]; then
-          pip install "datamodel-code-generator==${{ inputs.version }}"
+          pip install "datamodel-code-generator${EXTRAS}==${{ inputs.version }}"
         elif [[ "${{ github.action_ref }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-          pip install "datamodel-code-generator==${{ github.action_ref }}"
+          pip install "datamodel-code-generator${EXTRAS}==${{ github.action_ref }}"
         else
-          pip install datamodel-code-generator
+          pip install "datamodel-code-generator${EXTRAS}"
         fi
       shell: bash
 

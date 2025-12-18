@@ -39,6 +39,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 | `profile` | No | - | Named profile from `pyproject.toml` |
 | `extra-args` | No | - | Additional CLI arguments |
 | `version` | No | - | Specific version to install (defaults to action's tag version) |
+| `extras` | No | - | Optional extras to install (comma-separated: `graphql`, `http`, `validation`, `ruff`, `all`) |
 
 ### Example: Validate on Pull Request
 
@@ -118,6 +119,34 @@ Set `check: 'false'` to actually generate the models:
     input-file-type: openapi
     output-model-type: pydantic_v2.BaseModel
     check: 'false'
+```
+
+### Example: GraphQL Schema
+
+For GraphQL schemas, use the `extras` input to install the required dependency:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.graphql
+    output: src/models.py
+    input-file-type: graphql
+    output-model-type: pydantic_v2.BaseModel
+    extras: 'graphql'
+```
+
+### Example: Multiple Extras
+
+You can install multiple extras with comma-separated values:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+    extras: 'http,validation,ruff'
 ```
 
 ### Example: Additional CLI Options
