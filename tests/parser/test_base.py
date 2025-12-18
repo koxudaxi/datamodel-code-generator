@@ -363,10 +363,10 @@ def test_postprocess_result_modules(input_data: Any, expected: Any) -> None:
 
 def test_find_member_with_integer_enum() -> None:
     """Test find_member method with integer enum values."""
-    from datamodel_code_generator.model.enum import Enum  # noqa: PLC0415
-    from datamodel_code_generator.model.pydantic.base_model import DataModelField  # noqa: PLC0415
-    from datamodel_code_generator.reference import Reference  # noqa: PLC0415
-    from datamodel_code_generator.types import DataType  # noqa: PLC0415
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic.base_model import DataModelField
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
 
     # Create test Enum with integer values
     enum = Enum(
@@ -410,10 +410,10 @@ def test_find_member_with_integer_enum() -> None:
 
 def test_find_member_with_string_enum() -> None:
     """Test find_member method with string enum values."""
-    from datamodel_code_generator.model.enum import Enum  # noqa: PLC0415
-    from datamodel_code_generator.model.pydantic.base_model import DataModelField  # noqa: PLC0415
-    from datamodel_code_generator.reference import Reference  # noqa: PLC0415
-    from datamodel_code_generator.types import DataType  # noqa: PLC0415
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic.base_model import DataModelField
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
 
     enum = Enum(
         reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),
@@ -448,10 +448,10 @@ def test_find_member_with_string_enum() -> None:
 
 def test_find_member_with_mixed_enum() -> None:
     """Test find_member method with mixed type enum values."""
-    from datamodel_code_generator.model.enum import Enum  # noqa: PLC0415
-    from datamodel_code_generator.model.pydantic.base_model import DataModelField  # noqa: PLC0415
-    from datamodel_code_generator.reference import Reference  # noqa: PLC0415
-    from datamodel_code_generator.types import DataType  # noqa: PLC0415
+    from datamodel_code_generator.model.enum import Enum
+    from datamodel_code_generator.model.pydantic.base_model import DataModelField
+    from datamodel_code_generator.reference import Reference
+    from datamodel_code_generator.types import DataType
 
     enum = Enum(
         reference=Reference(path="test_path", original_name="TestEnum", name="TestEnum"),

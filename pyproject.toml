@@ -187,6 +187,7 @@ lint.per-file-ignores."scripts/*.py" = [
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
   "INP001",  # no implicit namespace
+  "PLC0415", # local imports in tests are fine
   "PLC2701", # private import is fine
   "PLR0913", # as many arguments as want
   "PLR0915", # can have longer test methods
