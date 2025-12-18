@@ -9,6 +9,165 @@ This guide covers how to use datamodel-code-generator in CI/CD pipelines and dev
 
 ---
 
+## Official GitHub Action
+
+The official GitHub Action provides a simple way to validate generated models in your CI pipeline.
+
+### Basic Usage
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+```
+
+By default, the action runs in **check mode** (`--check`), which validates that the existing output file matches what would be generated. If they differ, the action fails.
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `input` | Yes | - | Input schema file or directory |
+| `output` | Yes | - | Output file or directory |
+| `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `json`, `yaml`, `csv`, `graphql`) |
+| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
+| `check` | No | `true` | Validate that existing output is up to date (no generation) |
+| `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
+| `profile` | No | - | Named profile from `pyproject.toml` |
+| `extra-args` | No | - | Additional CLI arguments |
+| `version` | No | - | Specific version to install (defaults to action's tag version) |
+| `extras` | No | - | Optional extras to install (comma-separated: `graphql`, `http`, `validation`, `ruff`, `all`) |
+
+### Example: Validate on Pull Request
+
+```yaml title=".github/workflows/validate-models.yml"
+name: Validate Generated Models
+
+on:
+  pull_request:
+    paths:
+      - 'schemas/**'
+      - 'src/models/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: koxudaxi/datamodel-code-generator@0.44.0
+        with:
+          input: schemas/api.yaml
+          output: src/models/api.py
+          input-file-type: openapi
+          output-model-type: pydantic_v2.BaseModel
+```
+
+### Example: Monorepo with Multiple Schemas
+
+```yaml title=".github/workflows/validate-models.yml"
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - working-directory: packages/api
+            input: schemas/openapi.yaml
+            output: src/models.py
+            input-file-type: openapi
+          - working-directory: packages/admin
+            input: schemas/schema.json
+            output: src/models.py
+            input-file-type: jsonschema
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: koxudaxi/datamodel-code-generator@0.44.0
+        with:
+          input: ${{ matrix.input }}
+          output: ${{ matrix.output }}
+          input-file-type: ${{ matrix.input-file-type }}
+          output-model-type: pydantic_v2.BaseModel
+          working-directory: ${{ matrix.working-directory }}
+```
+
+### Example: Using Profiles
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schemas/api.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+    profile: api
+```
+
+### Example: Generate Models (Instead of Validation)
+
+Set `check: 'false'` to actually generate the models:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+    check: 'false'
+```
+
+### Example: GraphQL Schema
+
+For GraphQL schemas, use the `extras` input to install the required dependency:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.graphql
+    output: src/models.py
+    input-file-type: graphql
+    output-model-type: pydantic_v2.BaseModel
+    extras: 'graphql'
+```
+
+### Example: Multiple Extras
+
+You can install multiple extras with comma-separated values:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+    extras: 'http,validation,ruff'
+```
+
+### Example: Additional CLI Options
+
+Use `extra-args` for CLI options not covered by the inputs:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schema.yaml
+    output: src/models.py
+    input-file-type: openapi
+    output-model-type: pydantic_v2.BaseModel
+    extra-args: '--snake-case-field --field-constraints'
+```
+
+!!! tip "Version Pinning"
+    Always pin the action to a specific version tag (e.g., `@0.44.0`) to ensure reproducible builds. The action installs the same version of `datamodel-code-generator` as the tag.
+
+---
+
 ## The `--check` Flag
 
 The `--check` flag verifies that generated code matches existing files without modifying them. If the output would differ, it exits with a non-zero status code.
@@ -86,7 +245,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.14"
 
