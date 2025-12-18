@@ -21,3 +21,9 @@ and run the following command
 ```sh
 $ datamodel-codegen --input {your_input_file} --output {your_output_file} --custom-formatters "{path_to_your_module}.your_module"
 ```
+
+## See Also
+
+- [CLI Reference: `--custom-formatters`](cli-reference/template-customization.md#custom-formatters) - Detailed CLI option documentation
+- [CLI Reference: `--custom-formatters-kwargs`](cli-reference/template-customization.md#custom-formatters-kwargs) - Pass arguments to custom formatters
+- [Formatting](formatting.md) - Built-in code formatting with black and isort

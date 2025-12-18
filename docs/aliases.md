@@ -107,3 +107,7 @@ class Root(BaseModel):
 - The `ClassName` in scoped format must match the generated Python class name (after title conversion)
 - When using `--use-title-as-name`, the class name is derived from the `title` property in the schema
 - Aliases are applied during code generation, so the original field names are preserved as Pydantic `alias` values for proper serialization/deserialization
+
+## See Also
+
+- [CLI Reference: `--aliases`](cli-reference/field-customization.md#aliases) - Detailed CLI option documentation with examples

@@ -262,3 +262,8 @@ class User(BaseModel):
     id: Optional[UserId] = None
     status: Optional[Status] = None
 ```
+
+## See Also
+
+- [CLI Reference: `--use-type-alias`](cli-reference/typing-customization.md#use-type-alias) - Detailed CLI option documentation
+- [CLI Reference: `--target-python-version`](cli-reference/model-customization.md#target-python-version) - Control Python version-specific syntax
