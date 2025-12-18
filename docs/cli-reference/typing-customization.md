@@ -602,6 +602,8 @@ The --disable-future-imports option stops the generator from adding
 you need compatibility with tools or environments that don't support
 postponed evaluation of annotations (PEP 563).
 
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -882,6 +884,8 @@ The `--output-datetime-class` flag controls which datetime type to use for field
 with date-time format. Options include 'AwareDatetime' for timezone-aware datetimes
 or 'datetime' for standard Python datetime objects.
 
+**See also:** [Type Mappings and Custom Types](../type-mappings.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -942,6 +946,8 @@ The --strict-types option enforces stricter type checking by preventing implicit
 type coercion for the specified types (str, bytes, int, float, bool). This
 generates StrictStr, StrictBytes, StrictInt, StrictFloat, and StrictBool types
 in Pydantic models, ensuring values match exactly without automatic conversion.
+
+**See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
 !!! tip "Usage"
 
@@ -1054,6 +1060,8 @@ Override default type mappings for schema formats.
 
 The `--type-mappings` flag configures the code generation behavior.
 
+**See also:** [Type Mappings and Custom Types](../type-mappings.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1116,6 +1124,8 @@ The `--type-mappings` flag configures the code generation behavior.
 Test GraphQL annotated types with standard collections and union operator.
 
 **Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -1185,6 +1195,8 @@ Generate Decimal types for fields with multipleOf constraint.
 The `--use-decimal-for-multiple-of` flag generates `condecimal` or `Decimal`
 types for numeric fields that have a `multipleOf` constraint. This ensures
 precise decimal arithmetic when validating values against the constraint.
+
+**See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
 !!! tip "Usage"
 
@@ -1257,6 +1269,8 @@ containers (Dict, List, etc.) instead of built-in types. This is useful for
 Python 3.8 compatibility or when explicit typing imports are preferred.
 
 **Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -1549,6 +1563,8 @@ The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
 Time, Duration) instead of standard datetime types. This is useful when
 working with the pendulum library for enhanced timezone and date handling.
 
+**See also:** [Type Mappings and Custom Types](../type-mappings.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1618,6 +1634,8 @@ The `--use-standard-collections` flag generates built-in container types
 code for Python 3.9+ where built-in types support subscripting.
 
 **Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -1927,6 +1945,8 @@ syntax. This feature is experimental.
 Test GraphQL annotated types with standard collections and union operator.
 
 **Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 

@@ -1,3 +1,5 @@
+<!-- related-cli-options: --ignore-pyproject, --generate-pyproject-config, --generate-cli-command, --profile -->
+
 # ⚙️ pyproject.toml Configuration
 
 datamodel-code-generator can be configured using `pyproject.toml`. The tool automatically searches for `pyproject.toml` in the current directory and parent directories (stopping at the git repository root).

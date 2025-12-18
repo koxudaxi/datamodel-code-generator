@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess  # noqa: S404
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -31,10 +31,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 import operator
 
 from datamodel_code_generator.cli_options import (
+    MANUAL_DOCS,
     OptionCategory,
     get_canonical_option,
     get_option_meta,
-    is_excluded_from_docs,
+    is_manual_doc,
 )
 
 COLLECTION_PATH = Path(__file__).parent.parent / "tests" / "cli_doc" / ".cli_doc_collection.json"
@@ -42,9 +43,15 @@ DATA_PATH = Path(__file__).parent.parent / "tests" / "data"
 EXPECTED_BASE_PATH = DATA_PATH / "expected"
 EXPECTED_PATH = EXPECTED_BASE_PATH / "main"
 DOCS_OUTPUT = Path(__file__).parent.parent / "docs" / "cli-reference"
+MANUAL_DOCS_DIR = DOCS_OUTPUT / "manual"
+DOCS_ROOT = Path(__file__).parent.parent / "docs"
 
 DESC_LENGTH_SHORT = 60
 DESC_LENGTH_LONG = 80
+
+# Regex pattern for extracting CLI options from markdown files
+# Format: <!-- related-cli-options: --option1, --option2, ... -->
+CLI_OPTIONS_TAG_PATTERN = re.compile(r"<!--\s*related-cli-options:\s*([^>]+?)\s*-->", re.IGNORECASE)
 
 # Emoji mapping for categories
 CATEGORY_EMOJIS = {
@@ -56,6 +63,62 @@ CATEGORY_EMOJIS = {
     OptionCategory.OPENAPI: "📘",
     OptionCategory.GENERAL: "⚙️",
 }
+
+# Manual option descriptions for utility options
+MANUAL_OPTION_DESCRIPTIONS = {
+    "--help": "Show help message and exit",
+    "--version": "Show program version and exit",
+    "--debug": "Show debug messages during code generation",
+    "--profile": "Use a named profile from pyproject.toml",
+    "--no-color": "Disable colorized output",
+}
+
+
+def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
+    """Scan markdown files in docs/ for related-cli-options tags.
+
+    Returns:
+        Dictionary mapping CLI option name to list of (page_path, page_title) tuples.
+        page_path is relative to docs/ directory.
+    """
+    option_to_pages: dict[str, list[tuple[str, str]]] = defaultdict(list)
+
+    # Scan all markdown files in docs/ (excluding cli-reference/)
+    for md_file in DOCS_ROOT.glob("**/*.md"):
+        # Skip cli-reference directory (auto-generated)
+        try:
+            md_file.relative_to(DOCS_OUTPUT)
+            continue
+        except ValueError:
+            pass  # Not in cli-reference, continue processing
+
+        content = md_file.read_text(encoding="utf-8")
+        matches = CLI_OPTIONS_TAG_PATTERN.findall(content)
+
+        if not matches:
+            continue
+
+        # Get page title from first H1 heading
+        title_match = re.search(r"^#\s+(.+?)$", content, re.MULTILINE)
+        if title_match:
+            page_title = title_match.group(1).strip()
+            # Remove emojis and clean up (preserve dots for filenames like pyproject.toml)
+            page_title = re.sub(r"[^\w\s\-/.]", "", page_title).strip()
+        else:
+            page_title = md_file.stem.replace("-", " ").replace("_", " ").title()
+
+        # Get relative path from docs/
+        page_path = str(md_file.relative_to(DOCS_ROOT))
+
+        # Parse all matched tags
+        for match in matches:
+            options = [opt.strip() for opt in match.split(",")]
+            for option in options:
+                if option.startswith("--"):
+                    canonical = get_canonical_option(option)
+                    option_to_pages[canonical].append((page_path, page_title))
+
+    return dict(option_to_pages)
 
 
 def slugify(text: str) -> str:
@@ -165,7 +228,11 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
     return formatted
 
 
-def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noqa: PLR0912, PLR0914, PLR0915
+def generate_option_section(
+    option: str,
+    primary: dict[str, Any],
+    option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+) -> str:
     """Generate Markdown section for a single CLI option."""
     kwargs = primary["marker_kwargs"]
     meta = get_option_meta(option)
@@ -176,6 +243,9 @@ def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noq
         md += f"{primary['docstring'].strip()}\n\n"
 
     meta_parts = []
+    if kwargs.get("aliases"):
+        aliases_str = ", ".join(f"`{a}`" for a in kwargs["aliases"])
+        meta_parts.append(f"**Aliases:** {aliases_str}")
     if meta and meta.since_version:
         meta_parts.append(f"**Since:** {meta.since_version}")
     if meta and meta.deprecated:
@@ -195,6 +265,12 @@ def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noq
 
     if meta_parts:
         md += " | ".join(meta_parts) + "\n\n"
+
+    if option_related_pages and option in option_related_pages:
+        related_page_links = []
+        for page_path, page_title in option_related_pages[option]:
+            related_page_links.append(f"[{page_title}](../{page_path})")
+        md += f"**See also:** {', '.join(related_page_links)}\n\n"
 
     md += '!!! tip "Usage"\n\n'
     md += "    ```bash\n"
@@ -331,7 +407,11 @@ def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noq
     return md
 
 
-def generate_category_page(category: OptionCategory, options: dict[str, dict[str, Any]]) -> str:
+def generate_category_page(
+    category: OptionCategory,
+    options: dict[str, dict[str, Any]],
+    option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
+) -> str:
     """Generate a category page with all options."""
     emoji = CATEGORY_EMOJIS.get(category, "📋")
     md = f"# {emoji} {category.value}\n\n"
@@ -348,23 +428,30 @@ def generate_category_page(category: OptionCategory, options: dict[str, dict[str
 
     for option in sorted(options.keys()):
         primary = options[option]
-        md += generate_option_section(option, primary)
+        md += generate_option_section(option, primary, option_related_pages)
 
     return md
 
 
-def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -> str:
+def generate_quick_reference(
+    categories: dict[OptionCategory, dict[str, Any]],
+    manual_docs: dict[str, str] | None = None,
+) -> str:
     """Generate a quick reference page with all options in CLI format for easy searching."""
     md = "# 🔍 Quick Reference\n\n"
     md += "All CLI options in one page for easy **Ctrl+F** searching.\n\n"
     md += "👆 Click any option to see detailed documentation with examples.\n\n"
 
     # Collect all options with their descriptions
-    all_options: list[tuple[str, str, OptionCategory]] = []
+    all_options: list[tuple[str, str, OptionCategory | None]] = []
     for category, options in categories.items():
         for option, primary in options.items():
             desc = primary["docstring"].split("\n")[0] if primary["docstring"] else ""
             all_options.append((option, desc, category))
+    if manual_docs:
+        for option in manual_docs:
+            desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
+            all_options.append((option, desc, None))
 
     # Sort alphabetically by option name
     all_options.sort(key=operator.itemgetter(0))
@@ -400,21 +487,37 @@ def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -
 
         md += "\n"
 
+    if manual_docs:
+        md += "### 📝 Utility Options\n\n"
+        md += "| Option | Description |\n"
+        md += "|--------|-------------|\n"
+        for option in sorted(manual_docs.keys()):
+            desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
+            slug_opt = slugify(option)
+            md += f"| [`{option}`](utility-options.md#{slug_opt}) | {desc} |\n"
+        md += "\n"
+
     # Alphabetical list for Ctrl+F
     md += "---\n\n"
     md += "## 🔤 Alphabetical Index\n\n"
     md += "All options sorted alphabetically:\n\n"
 
     for option, desc, category in all_options:
-        slug_cat = slugify(category.value)
-        slug_opt = slugify(option)
-        short_desc = desc[:DESC_LENGTH_SHORT] + "..." if len(desc) > DESC_LENGTH_SHORT else desc
-        md += f"- [`{option}`]({slug_cat}.md#{slug_opt}) - {short_desc}\n"
+        if category is None:
+            md += f"- [`{option}`](utility-options.md#{slugify(option)}) - {desc}\n"
+        else:
+            slug_cat = slugify(category.value)
+            slug_opt = slugify(option)
+            short_desc = desc[:DESC_LENGTH_SHORT] + "..." if len(desc) > DESC_LENGTH_SHORT else desc
+            md += f"- [`{option}`]({slug_cat}.md#{slug_opt}) - {short_desc}\n"
 
     return md
 
 
-def generate_index_page(categories: dict[OptionCategory, dict[str, Any]]) -> str:
+def generate_index_page(
+    categories: dict[OptionCategory, dict[str, Any]],
+    manual_docs: dict[str, str] | None = None,
+) -> str:
     """Generate the index page with overview of all categories."""
     md = "# 🖥️ CLI Reference\n\n"
     md += "This documentation is auto-generated from test cases.\n\n"
@@ -442,11 +545,16 @@ def generate_index_page(categories: dict[OptionCategory, dict[str, Any]]) -> str
             emoji = CATEGORY_EMOJIS.get(category, "📋")
             md += f"| {emoji} [{category.value}]({slug}.md) | {count} | {desc} |\n"
 
+    if manual_docs:
+        md += f"| 📝 [Utility Options](utility-options.md) | {len(manual_docs)} | Help, version, debug options |\n"
+
     md += "\n"
     md += "## All Options\n\n"
-    all_options = []
+    all_options: list[tuple[str, OptionCategory | None]] = []
     for category, options in categories.items():
         all_options.extend((option, category) for option in options)
+    if manual_docs:
+        all_options.extend((option, None) for option in manual_docs)
 
     sorted_options = sorted(all_options)
     letters_with_options = sorted({opt.lstrip("-")[0].upper() for opt, _ in sorted_options})
@@ -460,16 +568,62 @@ def generate_index_page(categories: dict[OptionCategory, dict[str, Any]]) -> str
         if first_letter != current_letter:
             current_letter = first_letter
             md += f"\n### {current_letter} {{#{current_letter.lower()}}}\n\n"
-        slug_cat = slugify(category.value)
-        slug_opt = slugify(option)
-        md += f"- [`{option}`]({slug_cat}.md#{slug_opt})\n"
+        if category is None:
+            md += f"- [`{option}`](utility-options.md#{slugify(option)})\n"
+        else:
+            slug_cat = slugify(category.value)
+            slug_opt = slugify(option)
+            md += f"- [`{option}`]({slug_cat}.md#{slug_opt})\n"
+
+    return md
+
+
+def read_manual_docs() -> dict[str, str]:
+    """Read manual documentation files from MANUAL_DOCS_DIR.
+
+    Returns:
+        Dictionary mapping option name to markdown content.
+    """
+    manual_docs: dict[str, str] = {}
+    if not MANUAL_DOCS_DIR.exists():
+        return manual_docs
+
+    for md_file in MANUAL_DOCS_DIR.glob("*.md"):
+        option_name = f"--{md_file.stem}"
+        if option_name in MANUAL_DOCS:
+            manual_docs[option_name] = md_file.read_text(encoding="utf-8")
+    return manual_docs
+
+
+def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
+    """Generate markdown page for manual documentation options."""
+    if not manual_docs:
+        return ""
+
+    md = "# 📝 Utility Options\n\n"
+    md += "## 📋 Options\n\n"
+    md += "| Option | Description |\n"
+    md += "|--------|-------------|\n"
+
+    for option in sorted(manual_docs.keys()):
+        desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
+        md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
+
+    md += "\n---\n\n"
+
+    for option in sorted(manual_docs.keys()):
+        content = manual_docs[option]
+        md += content
+        if not content.endswith("\n"):
+            md += "\n"
+        md += "\n---\n\n"
 
     return md
 
 
 def collect_cli_docs() -> int:
     """Run pytest to collect CLI doc metadata."""
-    result = subprocess.run(  # noqa: S603
+    result = subprocess.run(
         [sys.executable, "-m", "pytest", "--collect-cli-docs", "-p", "no:xdist", "-q"],
         check=False,
         capture_output=True,
@@ -481,25 +635,26 @@ def collect_cli_docs() -> int:
     return 0
 
 
-def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
+def build_docs(*, check: bool = False) -> int:
     """Build CLI documentation from collection data.
 
     Args:
         check: If True, validate that existing docs match generated content.
                Returns error if any differences found.
     """
-    if not COLLECTION_PATH.exists():
-        return 1
+    items: list[dict[str, Any]] = []
+    if COLLECTION_PATH.exists():
+        with Path(COLLECTION_PATH).open(encoding="utf-8") as f:
+            collection = json.load(f)
 
-    with Path(COLLECTION_PATH).open(encoding="utf-8") as f:
-        collection = json.load(f)
+        schema_version = collection.get("schema_version", 0)
+        if schema_version != 1:
+            pass
 
-    schema_version = collection.get("schema_version", 0)
-    if schema_version != 1:
-        print(f"Warning: Unexpected schema version {schema_version}, expected 1", file=sys.stderr)  # noqa: T201
+        items = collection.get("items", [])
 
-    items = collection.get("items", [])
-    if not items:
+    manual_docs = read_manual_docs()
+    if not items and not manual_docs:
         return 0
 
     # Group by canonical option
@@ -507,7 +662,7 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
     for item in items:
         for opt in item["marker_kwargs"].get("options", []):
             canonical = get_canonical_option(opt)
-            if is_excluded_from_docs(canonical):
+            if is_manual_doc(canonical):
                 continue
             if canonical not in options_map:
                 options_map[canonical] = select_primary_test([item])
@@ -523,6 +678,9 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
             categories[meta.category][option] = primary
         else:
             categories[OptionCategory.GENERAL][option] = primary
+
+    # Scan markdown files for CLI option tags
+    option_related_pages = scan_docs_for_cli_option_tags()
 
     if not check:
         DOCS_OUTPUT.mkdir(parents=True, exist_ok=True)
@@ -553,41 +711,50 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
         if not options:
             continue
         try:
-            md = generate_category_page(category, options)
+            md = generate_category_page(category, options, option_related_pages)
             output_path = DOCS_OUTPUT / f"{slugify(category.value)}.md"
             write_or_check(output_path, md, f"{output_path.name} ({len(options)} options)")
         except (OSError, ValueError, KeyError) as e:
-            print(f"Error generating {category.value}: {e}", file=sys.stderr)  # noqa: T201
+            print(f"Error generating {category.value}: {e}", file=sys.stderr)
+            errors += 1
+
+    if manual_docs:
+        try:
+            md = generate_manual_docs_section(manual_docs)
+            output_path = DOCS_OUTPUT / "utility-options.md"
+            write_or_check(output_path, md, f"utility-options.md ({len(manual_docs)} options)")
+        except (OSError, ValueError, KeyError) as e:
+            print(f"Error generating utility-options.md: {e}", file=sys.stderr)
             errors += 1
 
     try:
-        md = generate_index_page(categories)
+        md = generate_index_page(categories, manual_docs)
         output_path = DOCS_OUTPUT / "index.md"
         write_or_check(output_path, md, "index.md")
     except (OSError, ValueError, KeyError) as e:
-        print(f"Error generating index.md: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error generating index.md: {e}", file=sys.stderr)
         errors += 1
 
     try:
-        md = generate_quick_reference(categories)
+        md = generate_quick_reference(categories, manual_docs)
         output_path = DOCS_OUTPUT / "quick-reference.md"
-        total_options = sum(len(opts) for opts in categories.values())
+        total_options = sum(len(opts) for opts in categories.values()) + len(manual_docs)
         write_or_check(output_path, md, f"quick-reference.md ({total_options} options)")
     except (OSError, ValueError, KeyError) as e:
-        print(f"Error generating quick-reference.md: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Error generating quick-reference.md: {e}", file=sys.stderr)
         errors += 1
 
     if check:
         if errors:
-            print(f"Generation errors occurred: {errors}", file=sys.stderr)  # noqa: T201
+            print(f"Generation errors occurred: {errors}", file=sys.stderr)
             return 1
         if mismatches:
             for m in mismatches:
-                print(f"Mismatch: {m}", file=sys.stderr)  # noqa: T201
+                print(f"Mismatch: {m}", file=sys.stderr)
             return 1
         return 0
     if errors:
-        print(f"Errors occurred: {errors}", file=sys.stderr)  # noqa: T201
+        print(f"Errors occurred: {errors}", file=sys.stderr)
     return 1 if errors else 0
 
 

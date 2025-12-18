@@ -1,3 +1,5 @@
+<!-- related-cli-options: --custom-formatters, --custom-formatters-kwargs -->
+
 # 🎨 Custom Code Formatters
 
 Create your own custom code formatters for specialized formatting needs.

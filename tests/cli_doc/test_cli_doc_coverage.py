@@ -18,7 +18,7 @@ import pytest
 
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
-    EXCLUDED_FROM_DOCS,
+    MANUAL_DOCS,
     get_all_canonical_options,
     get_canonical_option,
 )
@@ -79,12 +79,12 @@ class TestCLIDocCoverage:  # pragma: no cover
                 + "\n\nAdd entries to CLI_OPTION_META in cli_options.py."
             )
 
-    def test_documented_options_not_excluded(self) -> None:  # noqa: PLR6301
-        """Verify that DOCUMENTED_OPTIONS are not in EXCLUDED_FROM_DOCS."""
-        overlap = DOCUMENTED_OPTIONS & EXCLUDED_FROM_DOCS
+    def test_documented_options_not_manual(self) -> None:  # noqa: PLR6301
+        """Verify that DOCUMENTED_OPTIONS are not in MANUAL_DOCS."""
+        overlap = DOCUMENTED_OPTIONS & MANUAL_DOCS
         if overlap:
             pytest.fail(
-                "Options in both DOCUMENTED_OPTIONS and EXCLUDED_FROM_DOCS:\n"
+                "Options in both DOCUMENTED_OPTIONS and MANUAL_DOCS:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
             )
 
@@ -101,12 +101,10 @@ class TestCoverageStats:  # pragma: no cover
     """Informational tests for coverage statistics."""
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_coverage_stats(  # noqa: PLR6301
-        self, collected_options: set[str]
-    ) -> None:
+    def test_show_coverage_stats(self, collected_options: set[str]) -> None:  # noqa: PLR6301
         """Display documentation coverage statistics."""
         all_options = get_all_canonical_options()
-        documentable = all_options - EXCLUDED_FROM_DOCS
+        documentable = all_options - MANUAL_DOCS
         undocumented = documentable - collected_options
 
         print(f"\nUndocumented options ({len(undocumented)}):")  # noqa: T201

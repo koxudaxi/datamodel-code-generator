@@ -1208,6 +1208,8 @@ The `--collapse-root-models` option generates simpler output by inlining root mo
 directly instead of creating separate wrapper types. This shows how different output
 model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1354,7 +1356,9 @@ dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": tru
 This overrides individual flags like --frozen-dataclasses and provides fine-grained
 control over dataclass generation.
 
-**Related:** `--frozen`, [`--keyword-only`](model-customization.md#keyword-only)
+**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
@@ -2379,6 +2383,8 @@ keyword-only arguments.
 
 **Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
 
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -2622,12 +2628,14 @@ Python 3.10+. When combined with `--frozen`, it creates immutable dataclasses
 with keyword-only arguments, improving code clarity and preventing positional
 argument errors.
 
-**Related:** `--frozen`, [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
+**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen --keyword-only --target-python-version 3.10 # (1)!
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen-dataclasses --keyword-only --target-python-version 3.10 # (1)!
     ```
 
     1. :material-arrow-left: `--keyword-only` - the option documented here
@@ -2954,6 +2962,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
 `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
 `msgspec.Struct`.
 
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -3197,6 +3207,8 @@ code duplication in the output.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -3307,6 +3319,8 @@ code duplication in the output.
 Scope for model reuse detection (root or tree).
 
 The `--reuse-scope` flag configures the code generation behavior.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
 !!! tip "Usage"
 
@@ -3993,6 +4007,8 @@ The `--target-python-version` flag controls Python version-specific syntax:
 - **Python 3.10+**: Can use `X | None` union operator, built-in `dict/list`
 
 This affects import statements and type annotation syntax in generated code.
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md), [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 

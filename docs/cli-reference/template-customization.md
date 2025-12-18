@@ -471,6 +471,8 @@ as a module path (e.g., "mymodule.formatter_function"). This is useful for
 adding custom comments, modifying code structure, or applying project-specific
 formatting rules beyond what black/isort provide.
 
+**See also:** [Custom Code Formatters](../custom-formatters.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -545,6 +547,8 @@ The file should contain a JSON object mapping formatter names to their kwargs.
 Note: This option is primarily used with --custom-formatters to pass
 configuration to user-defined formatter modules.
 
+**See also:** [Custom Code Formatters](../custom-formatters.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -604,6 +608,8 @@ The `--custom-template-dir` option allows you to specify a directory containing 
 to override the default templates used for generating data models. This enables full customization of
 the generated code structure and formatting. Use with `--extra-template-data` to pass additional data
 to the templates.
+
+**See also:** [Custom Templates](../custom_template.md)
 
 !!! tip "Usage"
 
@@ -1214,6 +1220,8 @@ Disable timestamp in generated file header for reproducible output.
 
 The `--disable-timestamp` flag configures the code generation behavior.
 
+**See also:** [CI/CD Integration](../ci-cd.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1560,6 +1568,8 @@ Pass custom template variables from JSON file for code generation.
 The `--extra-template-data` flag allows you to provide additional variables
 (from a JSON file) that can be used in custom templates to configure generated
 model settings like Config classes, enabling customization beyond standard options.
+
+**See also:** [Custom Templates](../custom_template.md)
 
 !!! tip "Usage"
 
@@ -1921,6 +1931,8 @@ the generated Python code. Available formatters are: black, isort,
 ruff, yapf, autopep8, autoflake. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.
 
+**See also:** [CI/CD Integration](../ci-cd.md), [Code Formatting](../formatting.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1977,6 +1989,8 @@ Use this to customize formatting or disable formatters entirely.
 Treat dots in schema names as module separators.
 
 The `--treat-dot-as-module` flag configures the code generation behavior.
+
+**See also:** [Module Structure and Exports](../module-exports.md)
 
 !!! tip "Usage"
 

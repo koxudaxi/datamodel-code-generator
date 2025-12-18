@@ -1,3 +1,5 @@
+<!-- related-cli-options: --aliases, --no-alias -->
+
 # 🏷️ Field Aliases
 
 The `--aliases` option allows you to rename fields in the generated models. This is useful when you want to use different Python field names than those defined in the schema while preserving the original names as serialization aliases.

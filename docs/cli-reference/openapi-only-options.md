@@ -21,6 +21,8 @@ to the generated request parameter models. By default, only query parameters
 are included. Use this with `--openapi-scopes parameters` to generate parameter
 models that include both path and query parameters.
 
+**See also:** [OpenAPI-Specific Options](../openapi-options.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -110,6 +112,8 @@ models that include both path and query parameters.
 Specify OpenAPI scopes to generate (schemas, paths, parameters).
 
 The `--openapi-scopes` flag configures the code generation behavior.
+
+**See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
 !!! tip "Usage"
 
@@ -570,6 +574,8 @@ properties are generated. The 'request-response' mode creates separate Request a
 variants for each schema that contains readOnly or writeOnly fields, allowing proper type
 validation for API requests and responses without a shared base model.
 
+**See also:** [OpenAPI-Specific Options](../openapi-options.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -645,6 +651,8 @@ validation for API requests and responses without a shared base model.
 Use OpenAPI operationId as the generated function/class name.
 
 The `--use-operation-id-as-name` flag configures the code generation behavior.
+
+**See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
 !!! tip "Usage"
 
@@ -925,6 +933,8 @@ Enable validation constraints (deprecated, use --field-constraints).
 The `--validation` flag configures the code generation behavior.
 
 **Deprecated:** Use --field-constraints instead
+
+**See also:** [OpenAPI-Specific Options](../openapi-options.md), [Field Constraints](../field-constraints.md)
 
 !!! tip "Usage"
 
