@@ -656,12 +656,9 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
 
         schema_version = collection.get("schema_version", 0)
         if schema_version != 1:
-            print(f"Warning: Unexpected schema version {schema_version}, expected 1", file=sys.stderr)
+            pass
 
         items = collection.get("items", [])
-    else:
-        print(f"Warning: Collection file not found: {COLLECTION_PATH}", file=sys.stderr)
-        print("Run 'pytest --collect-cli-docs -p no:xdist' to generate it.", file=sys.stderr)
 
     manual_docs = read_manual_docs()
     if not items and not manual_docs:
@@ -733,16 +730,14 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
             md = generate_manual_docs_section(manual_docs)
             output_path = DOCS_OUTPUT / "utility-options.md"
             write_or_check(output_path, md, f"utility-options.md ({len(manual_docs)} options)")
-        except (OSError, ValueError, KeyError) as e:
-            print(f"Error generating utility-options.md: {e}", file=sys.stderr)
+        except (OSError, ValueError, KeyError):
             errors += 1
 
     try:
         md = generate_index_page(categories, manual_docs)
         output_path = DOCS_OUTPUT / "index.md"
         write_or_check(output_path, md, "index.md")
-    except (OSError, ValueError, KeyError) as e:
-        print(f"Error generating index.md: {e}", file=sys.stderr)
+    except (OSError, ValueError, KeyError):
         errors += 1
 
     try:
