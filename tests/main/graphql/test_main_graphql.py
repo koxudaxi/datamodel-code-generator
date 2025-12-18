@@ -182,8 +182,8 @@ def test_main_graphql_specialized_enums(output_file: Path) -> None:
     options=["--enum-field-as-literal"],
     input_schema="graphql/enums.graphql",
     cli_args=["--enum-field-as-literal", "all"],
-    golden_output="main/graphql/enum_literals_all.py",
-    comparison_output="main/graphql/enums.py",
+    golden_output="graphql/enum_literals_all.py",
+    comparison_output="graphql/enums.py",
 )
 def test_main_graphql_enums_as_literals_all(output_file: Path) -> None:
     """Convert all enum fields to Literal types instead of Enum classes.
@@ -206,7 +206,7 @@ def test_main_graphql_enums_as_literals_all(output_file: Path) -> None:
     options=["--enum-field-as-literal"],
     input_schema="graphql/enums.graphql",
     cli_args=["--enum-field-as-literal", "one"],
-    golden_output="main/graphql/enum_literals_one.py",
+    golden_output="graphql/enum_literals_one.py",
 )
 def test_main_graphql_enums_as_literals_one(output_file: Path) -> None:
     """Convert single-member enums to Literal types.
