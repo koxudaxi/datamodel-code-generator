@@ -1365,7 +1365,7 @@ The `--generate-cli-command` flag reads your pyproject.toml configuration
 and outputs the equivalent CLI command. This is useful for debugging
 configuration issues or sharing commands with others.
 
-**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
@@ -1399,7 +1399,7 @@ The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
 snippet based on the provided CLI arguments. This is useful for converting
 a working CLI command into a reusable configuration file.
 
-**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
@@ -1607,7 +1607,7 @@ The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
 when you want to override project defaults with CLI arguments, or when
 testing without project configuration.
 
-**See also:** [pyproject.toml Configuration](../pyproject_toml.md)
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
