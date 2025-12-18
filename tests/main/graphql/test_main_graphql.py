@@ -178,6 +178,42 @@ def test_main_graphql_specialized_enums(output_file: Path) -> None:
     )
 
 
+def test_main_graphql_enums_as_literals_all(output_file: Path) -> None:
+    """Test GraphQL code generation with all enum fields as literals."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enum_literals_all.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_graphql_enums_as_literals_one(output_file: Path) -> None:
+    """Test GraphQL code generation with single-field enums as literals."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enum_literals_one.py",
+        extra_args=["--enum-field-as-literal", "one"],
+    )
+
+
+def test_main_graphql_enums_to_typed_dict(output_file: Path) -> None:
+    """Test GraphQL code generation paired with typing.TypedDict output which forces enums as literals."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_typed_dict.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",

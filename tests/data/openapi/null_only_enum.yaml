@@ -1,0 +1,12 @@
+openapi: 3.0.1
+info:
+  title: Null Only Enum Test
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    NullEnum:
+      type: string
+      enum:
+        - null
+      nullable: true

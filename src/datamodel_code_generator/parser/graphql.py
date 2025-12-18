@@ -404,8 +404,40 @@ class GraphQLParser(Parser):
             )
         )
 
+    def should_parse_enum_as_literal(self, obj: graphql.GraphQLEnumType) -> bool:
+        """Determine if an enum should be parsed as a literal type."""
+        return self.enum_field_as_literal == LiteralType.All or (
+            self.enum_field_as_literal == LiteralType.One and len(obj.values) == 1
+        )
+
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse a GraphQL enum type and add it to results."""
+        if self.should_parse_enum_as_literal(enum_object):
+            return self.parse_enum_as_literal(enum_object)
+        return self.parse_enum_as_enum_class(enum_object)
+
+    def parse_enum_as_literal(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum values as a Literal type."""
+        data_type = self.data_type(literals=list(enum_object.values.keys()))
+        data_model_type = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=self.references[enum_object.name],
+            fields=[
+                self.data_model_field_type(
+                    required=True,
+                    data_type=data_type,
+                )
+            ],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=enum_object.description,
+        )
+        self.results.append(data_model_type)
+
+    def parse_enum_as_enum_class(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum values as an Enum class."""
         enum_fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
 
