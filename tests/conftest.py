@@ -47,7 +47,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config._cli_doc_items: list[dict[str, Any]] = []
 
 
-def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912  # pragma: no cover
+def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
     """Validate marker required fields and types."""
     errors: list[str] = []
 
