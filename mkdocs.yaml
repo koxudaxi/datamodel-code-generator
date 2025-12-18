@@ -17,8 +17,18 @@ theme:
     - search.share
     - toc.follow
   palette:
-    primary: light blue
-    accent: light blue
+    - scheme: slate
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
   analytics:
     gtag: 275257853
 
@@ -28,7 +38,8 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: .
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
@@ -72,6 +83,8 @@ nav:
     - Field Constraints: field-constraints.md
     - Root Models and Type Aliases: root-model-and-type-alias.md
     - pyproject.toml: pyproject_toml.md
+    - Field Aliases: aliases.md
+  - FAQ: faq.md
   - Development-Contributing: development-contributing.md
 
 plugins:

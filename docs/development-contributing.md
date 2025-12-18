@@ -1,4 +1,4 @@
-# Development
+# 🛠️ Development
 
 Install the package in editable mode:
 
@@ -7,11 +7,11 @@ $ git clone git@github.com:koxudaxi/datamodel-code-generator.git
 $ pip install -e datamodel-code-generator
 ```
 
-# Contribute
+# 🤝 Contribute
 
 We are waiting for your contributions to `datamodel-code-generator`.
 
-## How to contribute
+## 📝 How to contribute
 
 ```bash
 ## 1. Clone your fork repository
@@ -47,7 +47,7 @@ $ tox run -e cli-docs
 ## 10. Commit and Push...
 ```
 
-## Adding a New CLI Option
+## ➕ Adding a New CLI Option
 
 When adding a new CLI option to `datamodel-code-generator`, follow these steps:
 
@@ -113,7 +113,7 @@ $ python scripts/build_cli_docs.py
 $ tox run -e cli-docs
 ```
 
-### Troubleshooting
+### 🔧 Troubleshooting
 
 If `tox run -e cli-docs` fails:
 
@@ -121,7 +121,7 @@ If `tox run -e cli-docs` fails:
 - **"File not found: ..."**: Check that `input_schema` and `golden_output` paths are correct
 - **"CLI docs are OUT OF DATE"**: Run `python scripts/build_cli_docs.py` to regenerate
 
-## CLI Documentation Marker Reference
+## 📖 CLI Documentation Marker Reference
 
 The `cli_doc` marker supports:
 

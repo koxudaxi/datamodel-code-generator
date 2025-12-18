@@ -1,8 +1,8 @@
-# Quick Reference
+# 🔍 Quick Reference
 
 All CLI options in one page for easy **Ctrl+F** searching.
 
-Click any option to see detailed documentation with examples.
+👆 Click any option to see detailed documentation with examples.
 
 ---
 
@@ -10,9 +10,9 @@ Click any option to see detailed documentation with examples.
 datamodel-codegen [OPTIONS]
 ```
 
-## All Options by Category
+## 📂 All Options by Category
 
-### Base Options
+### 📁 Base Options
 
 | Option | Description |
 |--------|-------------|
@@ -22,7 +22,7 @@ datamodel-codegen [OPTIONS]
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
-### Typing Customization
+### 🔧 Typing Customization
 
 | Option | Description |
 |--------|-------------|
@@ -43,7 +43,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-union-operator`](typing-customization.md#use-union-operator) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
-### Field Customization
+### 🏷️ Field Customization
 
 | Option | Description |
 |--------|-------------|
@@ -68,7 +68,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-schema-description`](field-customization.md#use-schema-description) | Use schema description as class docstring. |
 | [`--use-title-as-name`](field-customization.md#use-title-as-name) | Use schema title as the generated class name. |
 
-### Model Customization
+### 🏗️ Model Customization
 
 | Option | Description |
 |--------|-------------|
@@ -99,7 +99,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) | Wrap fields with subtypes in Pydantic's SerializeAsAny. |
 | [`--use-subclass-enum`](model-customization.md#use-subclass-enum) | Generate typed Enum subclasses for enums with specific field types. |
 
-### Template Customization
+### 🎨 Template Customization
 
 | Option | Description |
 |--------|-------------|
@@ -119,7 +119,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-exact-imports`](template-customization.md#use-exact-imports) | Import exact types instead of modules. |
 | [`--wrap-string-literal`](template-customization.md#wrap-string-literal) | Wrap long string literals across multiple lines. |
 
-### OpenAPI-only Options
+### 📘 OpenAPI-only Options
 
 | Option | Description |
 |--------|-------------|
@@ -129,7 +129,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name. |
 | [`--validation`](openapi-only-options.md#validation) | Enable validation constraints (deprecated, use --field-constraints). |
 
-### General Options
+### ⚙️ General Options
 
 | Option | Description |
 |--------|-------------|
@@ -147,7 +147,7 @@ datamodel-codegen [OPTIONS]
 
 ---
 
-## Alphabetical Index
+## 🔤 Alphabetical Index
 
 All options sorted alphabetically:
 

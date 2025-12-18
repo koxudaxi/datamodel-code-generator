@@ -1,29 +1,52 @@
-# Custom Code Formatters
+# 🎨 Custom Code Formatters
 
-New features of the `datamodel-code-generator` it is custom code formatters.
+Create your own custom code formatters for specialized formatting needs.
 
-## Usage
-To use the `--custom-formatters` option, you'll need to pass the module with your formatter. For example
+## 🚀 Usage
 
-**your_module.py**
+Pass the module path containing your formatter class:
+
+```bash
+datamodel-codegen --input {your_input_file} --output {your_output_file} --custom-formatters "{path_to_your_module}.your_module"
+```
+
+## 📝 Example
+
+### 1️⃣ Create your formatter
+
+### your_module.py
+
 ```python
 from datamodel_code_generator.format import CustomCodeFormatter
 
 class CodeFormatter(CustomCodeFormatter):
     def apply(self, code: str) -> str:
-        # processed code
-        return ...       
-
+        # Apply your custom formatting here
+        # For example, add a custom header comment:
+        header = "# This code was formatted by custom formatter\n"
+        return header + code
 ```
 
-and run the following command
+### 2️⃣ Use your formatter
 
-```sh
-$ datamodel-codegen --input {your_input_file} --output {your_output_file} --custom-formatters "{path_to_your_module}.your_module"
+```bash
+datamodel-codegen --input schema.json --output model.py --custom-formatters "mypackage.your_module"
 ```
 
-## See Also
+## 🔧 Passing Arguments
 
-- [CLI Reference: `--custom-formatters`](cli-reference/template-customization.md#custom-formatters) - Detailed CLI option documentation
-- [CLI Reference: `--custom-formatters-kwargs`](cli-reference/template-customization.md#custom-formatters-kwargs) - Pass arguments to custom formatters
-- [Formatting](formatting.md) - Built-in code formatting with black and isort
+You can pass keyword arguments to your custom formatter using `--custom-formatters-kwargs`:
+
+```bash
+datamodel-codegen --input schema.json --output model.py \
+    --custom-formatters "mypackage.your_module" \
+    --custom-formatters-kwargs '{"line_length": 100}'
+```
+
+---
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference: `--custom-formatters`](cli-reference/template-customization.md#custom-formatters) - Detailed CLI option documentation
+- 🔧 [CLI Reference: `--custom-formatters-kwargs`](cli-reference/template-customization.md#custom-formatters-kwargs) - Pass arguments to custom formatters
+- 🖌️ [Formatting](formatting.md) - Built-in code formatting with black and isort
