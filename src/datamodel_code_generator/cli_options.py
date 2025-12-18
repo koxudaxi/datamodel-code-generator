@@ -172,6 +172,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--treat-dot-as-module": CLIOptionMeta(name="--treat-dot-as-module", category=OptionCategory.TEMPLATE),
     "--disable-timestamp": CLIOptionMeta(name="--disable-timestamp", category=OptionCategory.TEMPLATE),
     "--enable-version-header": CLIOptionMeta(name="--enable-version-header", category=OptionCategory.TEMPLATE),
+    "--enable-command-header": CLIOptionMeta(name="--enable-command-header", category=OptionCategory.TEMPLATE),
     "--formatters": CLIOptionMeta(name="--formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters": CLIOptionMeta(name="--custom-formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters-kwargs": CLIOptionMeta(name="--custom-formatters-kwargs", category=OptionCategory.TEMPLATE),
@@ -205,7 +206,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--all-exports-collision-strategy": CLIOptionMeta(
         name="--all-exports-collision-strategy", category=OptionCategory.GENERAL
     ),
+    "--module-split-mode": CLIOptionMeta(name="--module-split-mode", category=OptionCategory.GENERAL),
     "--disable-warnings": CLIOptionMeta(name="--disable-warnings", category=OptionCategory.GENERAL),
+    "--watch": CLIOptionMeta(name="--watch", category=OptionCategory.GENERAL),
+    "--watch-delay": CLIOptionMeta(name="--watch-delay", category=OptionCategory.GENERAL),
 }
 
 

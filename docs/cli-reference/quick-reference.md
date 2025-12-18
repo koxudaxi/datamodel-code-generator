@@ -111,6 +111,7 @@ datamodel-codegen [OPTIONS]
 | [`--custom-template-dir`](template-customization.md#custom-template-dir) | Use custom Jinja2 templates for model generation. |
 | [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) | Disable appending 'Item' suffix to array item types. |
 | [`--disable-timestamp`](template-customization.md#disable-timestamp) | Disable timestamp in generated file header for reproducible output. |
+| [`--enable-command-header`](template-customization.md#enable-command-header) | Include command-line options in file header for reproducibility. |
 | [`--enable-version-header`](template-customization.md#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](template-customization.md#extra-template-data) | Pass custom template variables from JSON file for code generation. |
 | [`--formatters`](template-customization.md#formatters) | Specify code formatters to apply to generated output. |
@@ -143,7 +144,10 @@ datamodel-codegen [OPTIONS]
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
+| [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
+| [`--watch`](general-options.md#watch) | Watch mode cannot be used with --check mode. |
+| [`--watch-delay`](general-options.md#watch-delay) | Watch mode starts file watcher and handles clean exit. |
 
 ### 📝 Utility Options
 
@@ -185,6 +189,7 @@ All options sorted alphabetically:
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
 - [`--disable-warnings`](general-options.md#disable-warnings) - Suppress warning messages during code generation.
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
+- [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
 - [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic v1 models (allow_mutati...
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
@@ -210,6 +215,7 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
+- [`--module-split-mode`](general-options.md#module-split-mode) - Split generated models into separate files, one per model cl...
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
 - [`--no-color`](utility-options.md#no-color) - Disable colorized output
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
@@ -263,4 +269,6 @@ All options sorted alphabetically:
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...
 - [`--version`](utility-options.md#version) - Show program version and exit
+- [`--watch`](general-options.md#watch) - Watch mode cannot be used with --check mode.
+- [`--watch-delay`](general-options.md#watch-delay) - Watch mode starts file watcher and handles clean exit.
 - [`--wrap-string-literal`](template-customization.md#wrap-string-literal) - Wrap long string literals across multiple lines.

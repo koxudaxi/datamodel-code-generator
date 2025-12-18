@@ -22,6 +22,7 @@ from datamodel_code_generator import (
     DataclassArguments,
     DataModelType,
     InputFileType,
+    ModuleSplitMode,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -198,6 +199,12 @@ model_options.add_argument(
     action="store_true",
     default=None,
 )
+model_options.add_argument(
+    "--enable-command-header",
+    help="Enable command-line options on file headers for reproducibility",
+    action="store_true",
+    default=None,
+)
 extra_fields_model_options.add_argument(
     "--extra-fields",
     help="Set the generated models to allow, forbid, or ignore extra fields.",
@@ -315,6 +322,12 @@ model_options.add_argument(
     "'minimal-prefix': add module prefix only to colliding names. "
     "'full-prefix': add full module path prefix to colliding names.",
     choices=[s.value for s in AllExportsCollisionStrategy],
+    default=None,
+)
+model_options.add_argument(
+    "--module-split-mode",
+    help="Split generated models into separate files. 'single': generate one file per model class.",
+    choices=[m.value for m in ModuleSplitMode],
     default=None,
 )
 
@@ -759,6 +772,18 @@ general_options.add_argument(
     "--profile",
     help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
     default=None,
+)
+general_options.add_argument(
+    "--watch",
+    action="store_true",
+    default=None,
+    help="Watch input file(s) for changes and regenerate output automatically",
+)
+general_options.add_argument(
+    "--watch-delay",
+    type=float,
+    default=None,
+    help="Debounce delay in seconds for watch mode (default: 0.5)",
 )
 general_options.add_argument(
     "--version",

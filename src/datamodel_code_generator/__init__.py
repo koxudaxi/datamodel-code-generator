@@ -300,6 +300,15 @@ class ReadOnlyWriteOnlyModelType(Enum):
     All = "all"
 
 
+class ModuleSplitMode(Enum):
+    """Mode for splitting generated models into separate files.
+
+    Single: Generate one file per model class.
+    """
+
+    Single = "single"
+
+
 class Error(Exception):
     """Base exception for datamodel-code-generator errors."""
 
@@ -389,6 +398,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     aliases: Mapping[str, str] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
+    enable_command_header: bool = False,
+    command_line: str | None = None,
     allow_population_by_field_name: bool = False,
     allow_extra_fields: bool = False,
     extra_fields: str | None = None,
@@ -468,6 +479,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     all_exports_scope: AllExportsScope | None = None,
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+    module_split_mode: ModuleSplitMode | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -716,6 +728,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             disable_future_imports=disable_future_imports,
             all_exports_scope=all_exports_scope,
             all_exports_collision_strategy=all_exports_collision_strategy,
+            module_split_mode=module_split_mode,
         )
     if not input_filename:  # pragma: no cover
         if isinstance(input_, str):
@@ -765,6 +778,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         header += f"\n#   timestamp: {timestamp}"
     if enable_version_header:
         header += f"\n#   version:   {get_version()}"
+    if enable_command_header and command_line:
+        safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
+        header += f"\n#   command:   {safe_command_line}"
 
     file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
@@ -852,6 +868,7 @@ __all__ = [
     "InputFileType",
     "InvalidClassNameError",
     "LiteralType",
+    "ModuleSplitMode",
     "PythonVersion",
     "ReadOnlyWriteOnlyModelType",
     "generate",

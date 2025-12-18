@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import difflib
 import json
+import shlex
 import signal
 import sys
 import tempfile
@@ -30,6 +31,7 @@ from datamodel_code_generator import (
     Error,
     InputFileType,
     InvalidClassNameError,
+    ModuleSplitMode,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -75,6 +77,8 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "debug",
     "no_color",
     "disable_warnings",
+    "watch",
+    "watch_delay",
 })
 
 BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
@@ -383,6 +387,7 @@ class Config(BaseModel):
     aliases: Optional[TextIOBase] = None  # noqa: UP045
     disable_timestamp: bool = False
     enable_version_header: bool = False
+    enable_command_header: bool = False
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     extra_fields: Optional[str] = None  # noqa: UP045
@@ -460,6 +465,9 @@ class Config(BaseModel):
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
     all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
+    module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
+    watch: bool = False
+    watch_delay: float = 0.5
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -652,6 +660,117 @@ def generate_cli_command(config: dict[str, TomlValue]) -> str:
     return " ".join(parts) + "\n"
 
 
+def run_generate_from_config(  # noqa: PLR0913, PLR0917
+    config: Config,
+    input_: Path | str | ParseResult,
+    output: Path | None,
+    extra_template_data: dict[str, Any] | None,
+    aliases: dict[str, str] | None,
+    command_line: str | None,
+    custom_formatters_kwargs: dict[str, str] | None,
+    settings_path: Path | None = None,
+) -> None:
+    """Run code generation with the given config and parameters."""
+    generate(
+        input_=input_,
+        input_file_type=config.input_file_type,
+        output=output,
+        output_model_type=config.output_model_type,
+        target_python_version=config.target_python_version,
+        base_class=config.base_class,
+        additional_imports=config.additional_imports,
+        custom_template_dir=config.custom_template_dir,
+        validation=config.validation,
+        field_constraints=config.field_constraints,
+        snake_case_field=config.snake_case_field,
+        strip_default_none=config.strip_default_none,
+        extra_template_data=extra_template_data,  # pyright: ignore[reportArgumentType]
+        aliases=aliases,
+        disable_timestamp=config.disable_timestamp,
+        enable_version_header=config.enable_version_header,
+        enable_command_header=config.enable_command_header,
+        command_line=command_line,
+        allow_population_by_field_name=config.allow_population_by_field_name,
+        allow_extra_fields=config.allow_extra_fields,
+        extra_fields=config.extra_fields,
+        apply_default_values_for_required_fields=config.use_default,
+        force_optional_for_required_fields=config.force_optional,
+        class_name=config.class_name,
+        use_standard_collections=config.use_standard_collections,
+        use_schema_description=config.use_schema_description,
+        use_field_description=config.use_field_description,
+        use_attribute_docstrings=config.use_attribute_docstrings,
+        use_inline_field_description=config.use_inline_field_description,
+        use_default_kwarg=config.use_default_kwarg,
+        reuse_model=config.reuse_model,
+        reuse_scope=config.reuse_scope,
+        shared_module_name=config.shared_module_name,
+        encoding=config.encoding,
+        enum_field_as_literal=config.enum_field_as_literal,
+        use_one_literal_as_default=config.use_one_literal_as_default,
+        use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
+        set_default_enum_member=config.set_default_enum_member,
+        use_subclass_enum=config.use_subclass_enum,
+        use_specialized_enum=config.use_specialized_enum,
+        strict_nullable=config.strict_nullable,
+        use_generic_container_types=config.use_generic_container_types,
+        enable_faux_immutability=config.enable_faux_immutability,
+        disable_appending_item_suffix=config.disable_appending_item_suffix,
+        strict_types=config.strict_types,
+        empty_enum_field_name=config.empty_enum_field_name,
+        field_extra_keys=config.field_extra_keys,
+        field_include_all_keys=config.field_include_all_keys,
+        field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
+        openapi_scopes=config.openapi_scopes,
+        include_path_parameters=config.include_path_parameters,
+        wrap_string_literal=config.wrap_string_literal,
+        use_title_as_name=config.use_title_as_name,
+        use_operation_id_as_name=config.use_operation_id_as_name,
+        use_unique_items_as_set=config.use_unique_items_as_set,
+        allof_merge_mode=config.allof_merge_mode,
+        http_headers=config.http_headers,
+        http_ignore_tls=config.http_ignore_tls,
+        use_annotated=config.use_annotated,
+        use_serialize_as_any=config.use_serialize_as_any,
+        use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+        use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
+        original_field_name_delimiter=config.original_field_name_delimiter,
+        use_double_quotes=config.use_double_quotes,
+        collapse_root_models=config.collapse_root_models,
+        skip_root_model=config.skip_root_model,
+        use_type_alias=config.use_type_alias,
+        use_union_operator=config.use_union_operator,
+        special_field_name_prefix=config.special_field_name_prefix,
+        remove_special_field_name_prefix=config.remove_special_field_name_prefix,
+        capitalise_enum_members=config.capitalise_enum_members,
+        keep_model_order=config.keep_model_order,
+        custom_file_header=config.custom_file_header,
+        custom_file_header_path=config.custom_file_header_path,
+        custom_formatters=config.custom_formatters,
+        custom_formatters_kwargs=custom_formatters_kwargs,
+        use_pendulum=config.use_pendulum,
+        http_query_parameters=config.http_query_parameters,
+        treat_dot_as_module=config.treat_dot_as_module,
+        use_exact_imports=config.use_exact_imports,
+        union_mode=config.union_mode,
+        output_datetime_class=config.output_datetime_class,
+        keyword_only=config.keyword_only,
+        frozen_dataclasses=config.frozen_dataclasses,
+        no_alias=config.no_alias,
+        use_frozen_field=config.use_frozen_field,
+        formatters=config.formatters,
+        settings_path=settings_path,
+        parent_scoped_naming=config.parent_scoped_naming,
+        dataclass_arguments=config.dataclass_arguments,
+        disable_future_imports=config.disable_future_imports,
+        type_mappings=config.type_mappings,
+        read_only_write_only_model_type=config.read_only_write_only_model_type,
+        all_exports_scope=config.all_exports_scope,
+        all_exports_collision_strategy=config.all_exports_collision_strategy,
+        module_split_mode=config.module_split_mode,
+    )
+
+
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
     argcomplete.autocomplete(arg_parser)
@@ -711,6 +830,20 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.check and config.output is None:
         print(  # noqa: T201
             "Error: --check cannot be used with stdout output (no --output specified)",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and config.check:
+        print(  # noqa: T201
+            "Error: --watch and --check cannot be used together",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and (config.input is None or is_url(str(config.input))):
+        print(  # noqa: T201
+            "Error: --watch requires --input file path (not URL or stdin)",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -815,100 +948,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         is_directory_output = False
 
     try:
-        generate(
+        run_generate_from_config(
+            config=config,
             input_=config.url or config.input or sys.stdin.read(),
-            input_file_type=config.input_file_type,
             output=generate_output,
-            output_model_type=config.output_model_type,
-            target_python_version=config.target_python_version,
-            base_class=config.base_class,
-            additional_imports=config.additional_imports,
-            custom_template_dir=config.custom_template_dir,
-            validation=config.validation,
-            field_constraints=config.field_constraints,
-            snake_case_field=config.snake_case_field,
-            strip_default_none=config.strip_default_none,
             extra_template_data=extra_template_data,
             aliases=aliases,
-            disable_timestamp=config.disable_timestamp,
-            enable_version_header=config.enable_version_header,
-            allow_population_by_field_name=config.allow_population_by_field_name,
-            allow_extra_fields=config.allow_extra_fields,
-            extra_fields=config.extra_fields,
-            apply_default_values_for_required_fields=config.use_default,
-            force_optional_for_required_fields=config.force_optional,
-            class_name=config.class_name,
-            use_standard_collections=config.use_standard_collections,
-            use_schema_description=config.use_schema_description,
-            use_field_description=config.use_field_description,
-            use_attribute_docstrings=config.use_attribute_docstrings,
-            use_inline_field_description=config.use_inline_field_description,
-            use_default_kwarg=config.use_default_kwarg,
-            reuse_model=config.reuse_model,
-            reuse_scope=config.reuse_scope,
-            shared_module_name=config.shared_module_name,
-            encoding=config.encoding,
-            enum_field_as_literal=config.enum_field_as_literal,
-            use_one_literal_as_default=config.use_one_literal_as_default,
-            use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
-            set_default_enum_member=config.set_default_enum_member,
-            use_subclass_enum=config.use_subclass_enum,
-            use_specialized_enum=config.use_specialized_enum,
-            strict_nullable=config.strict_nullable,
-            use_generic_container_types=config.use_generic_container_types,
-            enable_faux_immutability=config.enable_faux_immutability,
-            disable_appending_item_suffix=config.disable_appending_item_suffix,
-            strict_types=config.strict_types,
-            empty_enum_field_name=config.empty_enum_field_name,
-            field_extra_keys=config.field_extra_keys,
-            field_include_all_keys=config.field_include_all_keys,
-            field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
-            openapi_scopes=config.openapi_scopes,
-            include_path_parameters=config.include_path_parameters,
-            wrap_string_literal=config.wrap_string_literal,
-            use_title_as_name=config.use_title_as_name,
-            use_operation_id_as_name=config.use_operation_id_as_name,
-            use_unique_items_as_set=config.use_unique_items_as_set,
-            allof_merge_mode=config.allof_merge_mode,
-            http_headers=config.http_headers,
-            http_ignore_tls=config.http_ignore_tls,
-            use_annotated=config.use_annotated,
-            use_serialize_as_any=config.use_serialize_as_any,
-            use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
-            original_field_name_delimiter=config.original_field_name_delimiter,
-            use_double_quotes=config.use_double_quotes,
-            collapse_root_models=config.collapse_root_models,
-            skip_root_model=config.skip_root_model,
-            use_type_alias=config.use_type_alias,
-            use_union_operator=config.use_union_operator,
-            special_field_name_prefix=config.special_field_name_prefix,
-            remove_special_field_name_prefix=config.remove_special_field_name_prefix,
-            capitalise_enum_members=config.capitalise_enum_members,
-            keep_model_order=config.keep_model_order,
-            custom_file_header=config.custom_file_header,
-            custom_file_header_path=config.custom_file_header_path,
-            custom_formatters=config.custom_formatters,
+            command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
-            use_pendulum=config.use_pendulum,
-            http_query_parameters=config.http_query_parameters,
-            treat_dot_as_module=config.treat_dot_as_module,
-            use_exact_imports=config.use_exact_imports,
-            union_mode=config.union_mode,
-            output_datetime_class=config.output_datetime_class,
-            keyword_only=config.keyword_only,
-            frozen_dataclasses=config.frozen_dataclasses,
-            no_alias=config.no_alias,
-            use_frozen_field=config.use_frozen_field,
-            formatters=config.formatters,
             settings_path=config.output if config.check else None,
-            parent_scoped_naming=config.parent_scoped_naming,
-            dataclass_arguments=config.dataclass_arguments,
-            disable_future_imports=config.disable_future_imports,
-            type_mappings=config.type_mappings,
-            read_only_write_only_model_type=config.read_only_write_only_model_type,
-            all_exports_scope=config.all_exports_scope,
-            all_exports_collision_strategy=config.all_exports_collision_strategy,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
@@ -952,6 +1000,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             temp_context.cleanup()
 
         return Exit.DIFF if has_differences else Exit.OK
+
+    if config.watch:
+        try:
+            from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
+
+            return watch_and_regenerate(config, extra_template_data, aliases, custom_formatters_kwargs)
+        except Exception as e:  # noqa: BLE001
+            print(str(e), file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     return Exit.OK
 
