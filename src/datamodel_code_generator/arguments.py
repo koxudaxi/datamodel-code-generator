@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -62,8 +62,8 @@ def _dataclass_arguments(value: str) -> DataclassArguments:
     return cast("DataclassArguments", result)
 
 
-class SortingHelpFormatter(HelpFormatter):
-    """Help formatter that sorts arguments and adds color to section headers."""
+class SortingHelpFormatter(RawDescriptionHelpFormatter):
+    """Help formatter that sorts arguments, adds color to section headers, and preserves epilog formatting."""
 
     def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
         """Wrap text in ANSI bold cyan escape codes."""
@@ -81,7 +81,10 @@ class SortingHelpFormatter(HelpFormatter):
 
 arg_parser = ArgumentParser(
     usage="\n  datamodel-codegen [options]",
-    description="Generate Python data models from schema definitions or structured data",
+    description="Generate Python data models from schema definitions or structured data\n\n"
+    "For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator",
+    epilog="Documentation: https://koxudaxi.github.io/datamodel-code-generator\n"
+    "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
 )
