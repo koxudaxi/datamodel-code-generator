@@ -46,6 +46,17 @@ DOCS_OUTPUT = Path(__file__).parent.parent / "docs" / "cli-reference"
 DESC_LENGTH_SHORT = 60
 DESC_LENGTH_LONG = 80
 
+# Emoji mapping for categories
+CATEGORY_EMOJIS = {
+    OptionCategory.BASE: "📁",
+    OptionCategory.TYPING: "🔧",
+    OptionCategory.FIELD: "🏷️",
+    OptionCategory.MODEL: "🏗️",
+    OptionCategory.TEMPLATE: "🎨",
+    OptionCategory.OPENAPI: "📘",
+    OptionCategory.GENERAL: "⚙️",
+}
+
 
 def slugify(text: str) -> str:
     """Convert text to safe slug for filenames and anchors.
@@ -322,8 +333,9 @@ def generate_option_section(option: str, primary: dict[str, Any]) -> str:  # noq
 
 def generate_category_page(category: OptionCategory, options: dict[str, dict[str, Any]]) -> str:
     """Generate a category page with all options."""
-    md = f"# {category.value}\n\n"
-    md += "## Options\n\n"
+    emoji = CATEGORY_EMOJIS.get(category, "📋")
+    md = f"# {emoji} {category.value}\n\n"
+    md += "## 📋 Options\n\n"
     md += "| Option | Description |\n"
     md += "|--------|-------------|\n"
     for option in sorted(options.keys()):
@@ -343,9 +355,9 @@ def generate_category_page(category: OptionCategory, options: dict[str, dict[str
 
 def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -> str:
     """Generate a quick reference page with all options in CLI format for easy searching."""
-    md = "# Quick Reference\n\n"
+    md = "# 🔍 Quick Reference\n\n"
     md += "All CLI options in one page for easy **Ctrl+F** searching.\n\n"
-    md += "Click any option to see detailed documentation with examples.\n\n"
+    md += "👆 Click any option to see detailed documentation with examples.\n\n"
 
     # Collect all options with their descriptions
     all_options: list[tuple[str, str, OptionCategory]] = []
@@ -363,7 +375,7 @@ def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -
     md += "```\n\n"
 
     # Group by category for organized display
-    md += "## All Options by Category\n\n"
+    md += "## 📂 All Options by Category\n\n"
 
     for category in OptionCategory:
         if category not in categories:
@@ -373,7 +385,8 @@ def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -
             continue
 
         slug_cat = slugify(category.value)
-        md += f"### {category.value}\n\n"
+        emoji = CATEGORY_EMOJIS.get(category, "📋")
+        md += f"### {emoji} {category.value}\n\n"
         md += "| Option | Description |\n"
         md += "|--------|-------------|\n"
 
@@ -389,7 +402,7 @@ def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -
 
     # Alphabetical list for Ctrl+F
     md += "---\n\n"
-    md += "## Alphabetical Index\n\n"
+    md += "## 🔤 Alphabetical Index\n\n"
     md += "All options sorted alphabetically:\n\n"
 
     for option, desc, category in all_options:
@@ -403,11 +416,11 @@ def generate_quick_reference(categories: dict[OptionCategory, dict[str, Any]]) -
 
 def generate_index_page(categories: dict[OptionCategory, dict[str, Any]]) -> str:
     """Generate the index page with overview of all categories."""
-    md = "# CLI Reference\n\n"
+    md = "# 🖥️ CLI Reference\n\n"
     md += "This documentation is auto-generated from test cases.\n\n"
-    md += "**[Quick Reference](quick-reference.md)** - All options on one page for Ctrl+F search\n\n"
+    md += "🔍 **[Quick Reference](quick-reference.md)** - All options on one page for Ctrl+F search\n\n"
 
-    md += "## Categories\n\n"
+    md += "## 📂 Categories\n\n"
     md += "| Category | Options | Description |\n"
     md += "|----------|---------|-------------|\n"
 
@@ -426,7 +439,8 @@ def generate_index_page(categories: dict[OptionCategory, dict[str, Any]]) -> str
             count = len(categories[category])
             desc = category_descriptions.get(category, "")
             slug = slugify(category.value)
-            md += f"| [{category.value}]({slug}.md) | {count} | {desc} |\n"
+            emoji = CATEGORY_EMOJIS.get(category, "📋")
+            md += f"| {emoji} [{category.value}]({slug}.md) | {count} | {desc} |\n"
 
     md += "\n"
     md += "## All Options\n\n"

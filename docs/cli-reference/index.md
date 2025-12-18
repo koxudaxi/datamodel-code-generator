@@ -1,32 +1,20 @@
-# CLI Reference
+# 🖥️ CLI Reference
 
 This documentation is auto-generated from test cases.
 
-**[Quick Reference](quick-reference.md)** - All options on one page for Ctrl+F search
+🔍 **[Quick Reference](quick-reference.md)** - All options on one page for Ctrl+F search
 
-## Related Documentation
-
-| Topic | Description |
-|-------|-------------|
-| [Generate from OpenAPI](../openapi.md) | OpenAPI schema generation guide |
-| [Generate from JSON Schema](../jsonschema.md) | JSON Schema generation guide |
-| [Generate from GraphQL](../graphql.md) | GraphQL schema generation guide |
-| [pyproject.toml Configuration](../pyproject_toml.md) | File-based configuration |
-| [Custom Templates](../custom_template.md) | Jinja2 template customization |
-| [Field Aliases](../aliases.md) | Field renaming with aliases |
-| [Root Models and Type Aliases](../root-model-and-type-alias.md) | Type alias generation |
-
-## Categories
+## 📂 Categories
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| [Base Options](base-options.md) | 5 | Input/output configuration |
-| [Typing Customization](typing-customization.md) | 16 | Type annotation and import behavior |
-| [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
-| [Model Customization](model-customization.md) | 26 | Model generation behavior |
-| [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
-| [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
-| [General Options](general-options.md) | 11 | Utilities and meta options |
+| 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
+| 🔧 [Typing Customization](typing-customization.md) | 16 | Type annotation and import behavior |
+| 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
+| 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
+| 🎨 [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
+| 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
+| ⚙️ [General Options](general-options.md) | 11 | Utilities and meta options |
 
 ## All Options
 

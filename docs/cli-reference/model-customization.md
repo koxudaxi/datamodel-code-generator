@@ -1,6 +1,6 @@
-# Model Customization
+# 🏗️ Model Customization
 
-## Options
+## 📋 Options
 
 | Option | Description |
 |--------|-------------|

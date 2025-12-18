@@ -1,6 +1,6 @@
-# Base Options
+# 📁 Base Options
 
-## Options
+## 📋 Options
 
 | Option | Description |
 |--------|-------------|

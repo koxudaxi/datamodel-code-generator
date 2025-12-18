@@ -1,6 +1,6 @@
-# Field Customization
+# 🏷️ Field Customization
 
-## Options
+## 📋 Options
 
 | Option | Description |
 |--------|-------------|
@@ -33,9 +33,6 @@ Apply custom field and class name aliases from JSON file.
 
 The `--aliases` option allows renaming fields and classes via a JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
-
-!!! tip "See Also"
-    For detailed explanation and examples, see [Field Aliases](../aliases.md).
 
 !!! tip "Usage"
 
@@ -855,9 +852,6 @@ Generate Field() with validation constraints from schema.
 The `--field-constraints` flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
 Output differs between Pydantic v1 and v2 due to API changes.
-
-!!! tip "See Also"
-    For detailed explanation and mypy compatibility, see [Field Constraints](../field-constraints.md).
 
 !!! tip "Usage"
 

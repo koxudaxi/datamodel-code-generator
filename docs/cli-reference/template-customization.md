@@ -1,6 +1,6 @@
-# Template Customization
+# 🎨 Template Customization
 
-## Options
+## 📋 Options
 
 | Option | Description |
 |--------|-------------|
@@ -471,9 +471,6 @@ as a module path (e.g., "mymodule.formatter_function"). This is useful for
 adding custom comments, modifying code structure, or applying project-specific
 formatting rules beyond what black/isort provide.
 
-!!! tip "See Also"
-    For detailed explanation and examples, see [Custom Code Formatters](../custom-formatters.md).
-
 !!! tip "Usage"
 
     ```bash
@@ -607,9 +604,6 @@ The `--custom-template-dir` option allows you to specify a directory containing 
 to override the default templates used for generating data models. This enables full customization of
 the generated code structure and formatting. Use with `--extra-template-data` to pass additional data
 to the templates.
-
-!!! tip "See Also"
-    For detailed explanation and examples, see [Custom Templates](../custom_template.md).
 
 !!! tip "Usage"
 
@@ -1926,9 +1920,6 @@ The `--formatters` flag specifies which code formatters to apply to
 the generated Python code. Available formatters are: black, isort,
 ruff, yapf, autopep8, autoflake. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.
-
-!!! tip "See Also"
-    For built-in formatting configuration, see [Formatting](../formatting.md).
 
 !!! tip "Usage"
 

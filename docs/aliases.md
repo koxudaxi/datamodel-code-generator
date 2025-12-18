@@ -1,18 +1,18 @@
-# Field Aliases
+# 🏷️ Field Aliases
 
 The `--aliases` option allows you to rename fields in the generated models. This is useful when you want to use different Python field names than those defined in the schema while preserving the original names as serialization aliases.
 
-## Basic Usage
+## 🚀 Basic Usage
 
 ```bash
 datamodel-codegen --input schema.json --output model.py --aliases aliases.json
 ```
 
-## Alias File Format
+## 📋 Alias File Format
 
 The alias file is a JSON file that maps original field names to their Python aliases.
 
-### Flat Format (Traditional)
+### 📝 Flat Format (Traditional)
 
 The simplest format applies aliases to all fields with the matching name, regardless of which class they belong to:
 
@@ -26,7 +26,7 @@ The simplest format applies aliases to all fields with the matching name, regard
 
 This will rename all fields named `id` to `id_`, all fields named `type` to `type_`, etc.
 
-### Scoped Format (Class-Specific)
+### 🎯 Scoped Format (Class-Specific)
 
 When you have the same field name in multiple classes but want different aliases for each, use the scoped format with `ClassName.field`:
 
@@ -38,14 +38,15 @@ When you have the same field name in multiple classes but want different aliases
 }
 ```
 
-**Priority**: Scoped aliases take priority over flat aliases. In the example above:
+**⚡ Priority**: Scoped aliases take priority over flat aliases. In the example above:
+
 - `User.name` will be renamed to `user_name`
 - `Address.name` will be renamed to `address_name`
 - Any other class with a `name` field will use `default_name`
 
-## Example
+## 📝 Example
 
-### Input Schema
+### 📥 Input Schema
 
 ```json
 {
@@ -73,7 +74,7 @@ When you have the same field name in multiple classes but want different aliases
 }
 ```
 
-### Alias File
+### 🏷️ Alias File
 
 ```json
 {
@@ -83,7 +84,7 @@ When you have the same field name in multiple classes but want different aliases
 }
 ```
 
-### Generated Output
+### ✨ Generated Output
 
 ```python
 from pydantic import BaseModel, Field
@@ -102,12 +103,14 @@ class Root(BaseModel):
     address: Address | None = None
 ```
 
-## Notes
+## 📌 Notes
 
 - The `ClassName` in scoped format must match the generated Python class name (after title conversion)
 - When using `--use-title-as-name`, the class name is derived from the `title` property in the schema
 - Aliases are applied during code generation, so the original field names are preserved as Pydantic `alias` values for proper serialization/deserialization
 
-## See Also
+---
 
-- [CLI Reference: `--aliases`](cli-reference/field-customization.md#aliases) - Detailed CLI option documentation with examples
+## 📖 See Also
+
+- 🖥️ [CLI Reference: `--aliases`](cli-reference/field-customization.md#aliases) - Detailed CLI option documentation with examples

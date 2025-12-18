@@ -1,9 +1,6 @@
-# OpenAPI-only Options
+# 📘 OpenAPI-only Options
 
-!!! info "Related Documentation"
-    For OpenAPI usage guide and examples, see [Generate from OpenAPI](../openapi.md).
-
-## Options
+## 📋 Options
 
 | Option | Description |
 |--------|-------------|
