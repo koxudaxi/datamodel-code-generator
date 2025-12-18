@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import platform
+import re
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -910,6 +911,34 @@ def test_enable_version_header(output_file: Path) -> None:
         expected_file="enable_version_header.py",
         extra_args=["--enable-version-header"],
         transform=lambda s: s.replace(f"#   version:   {get_version()}", "#   version:   0.0.0"),
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--enable-command-header"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--enable-command-header"],
+    golden_output="openapi/enable_command_header.py",
+)
+def test_enable_command_header(output_file: Path) -> None:
+    """Include command-line options in file header for reproducibility.
+
+    The `--enable-command-header` flag adds the full command-line used to generate
+    the file to the header, making it easy to reproduce the generation.
+    """
+
+    def normalize_command(s: str) -> str:
+        # Replace the actual command line with a placeholder for consistent testing
+        return re.sub(r"#   command:   datamodel-codegen .*", "#   command:   datamodel-codegen [COMMAND]", s)
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enable_command_header.py",
+        extra_args=["--enable-command-header"],
+        transform=normalize_command,
     )
 
 

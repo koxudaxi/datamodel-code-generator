@@ -398,6 +398,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     aliases: Mapping[str, str] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
+    enable_command_header: bool = False,
+    command_line: str | None = None,
     allow_population_by_field_name: bool = False,
     allow_extra_fields: bool = False,
     extra_fields: str | None = None,
@@ -776,6 +778,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         header += f"\n#   timestamp: {timestamp}"
     if enable_version_header:
         header += f"\n#   version:   {get_version()}"
+    if enable_command_header and command_line:
+        safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
+        header += f"\n#   command:   {safe_command_line}"
 
     file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
