@@ -4292,3 +4292,29 @@ def test_main_field_name_shadows_class_name(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints(output_file: Path) -> None:
+    """Test allOf with root model reference and constraints (issue #1901)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints.py",
+        extra_args=["--allof-merge-mode", "none"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
+    """Test allOf with root model reference and constraints with merge mode (issue #1901)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints_merge.py",
+        extra_args=["--allof-merge-mode", "constraints"],
+    )
