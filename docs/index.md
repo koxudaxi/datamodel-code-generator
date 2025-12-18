@@ -171,12 +171,21 @@ datamodel-codegen --snake-case-field --input schema.json --output model.py
 
 ## 🏢 Used by
 
-These open-source projects use datamodel-code-generator:
+These projects use datamodel-code-generator. See the linked examples for real-world usage.
 
-[Apache Iceberg](https://github.com/apache/iceberg) ·
-[Netflix](https://github.com/Netflix/consoleme) ·
-[DataDog](https://github.com/DataDog/integrations-core) ·
-[PostHog](https://github.com/PostHog/posthog) ·
-[Airbyte](https://github.com/airbytehq/airbyte) ·
-[AWS Lambda Powertools](https://github.com/awslabs/aws-lambda-powertools-python)
-· [and more...](https://github.com/koxudaxi/datamodel-code-generator#projects-that-use-datamodel-code-generator)
+- [PostHog/posthog](https://github.com/PostHog/posthog) - *[Generate models via npm run](https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41)*
+- [airbytehq/airbyte](https://github.com/airbytehq/airbyte) - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
+- [apache/iceberg](https://github.com/apache/iceberg) - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)*
+- [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata) - *[datamodel_generation.py](https://github.com/open-metadata/OpenMetadata/blob/main/scripts/datamodel_generation.py)*
+- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python) - *[Recommended for advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases)*
+- [Netflix/consoleme](https://github.com/Netflix/consoleme) - *[Generate models from Swagger](https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification)*
+- [DataDog/integrations-core](https://github.com/DataDog/integrations-core) - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
+- [argoproj-labs/hera](https://github.com/argoproj-labs/hera) - *[Makefile](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
+- [SeldonIO/MLServer](https://github.com/SeldonIO/MLServer) - *[generate-types.sh](https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh)*
+- [geojupyter/jupytergis](https://github.com/geojupyter/jupytergis) - *[Python type generation from JSONSchema](https://jupytergis.readthedocs.io/en/latest/contributor_guide/explanation/code-generation.html)*
+- [Nike-Inc/brickflow](https://github.com/Nike-Inc/brickflow) - *[Code generate tools](https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8)*
+- [cloudcoil/cloudcoil](https://github.com/cloudcoil/cloudcoil) - *[Model generation](https://github.com/cloudcoil/cloudcoil#%EF%B8%8F-model-generation)*
+- [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle) - *[Building models from OSCAL schemas](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
+- [hashintel/hash](https://github.com/hashintel/hash) - *[codegen.sh](https://github.com/hashintel/hash/blob/9762b1a1937e14f6b387677e4c7fe4a5f3d4a1e1/libs/%40local/hash-graph-client/python/scripts/codegen.sh#L21-L39)*
+
+[See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
