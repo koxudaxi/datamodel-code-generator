@@ -4,9 +4,9 @@
 
 | Option | Description |
 |--------|-------------|
-| [`--allof-merge-mode`](#allof-merge-mode) | Merge all properties from parent schemas in allOf. |
+| [`--allof-merge-mode`](#allof-merge-mode) | Merge constraints from root model references in allOf schema... |
 | [`--disable-future-imports`](#disable-future-imports) | Prevent automatic addition of __future__ imports in generate... |
-| [`--enum-field-as-literal`](#enum-field-as-literal) | Generate Literal types instead of Enums for fields with enum... |
+| [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
 | [`--output-datetime-class`](#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](#strict-types) | Enable strict type validation for specified Python types. |
@@ -25,75 +25,571 @@
 
 ## `--allof-merge-mode` {#allof-merge-mode}
 
-Merge all properties from parent schemas in allOf.
+Merge constraints from root model references in allOf schemas.
 
-The `--allof-merge-mode` flag controls how parent schema properties are merged
-in allOf compositions. With `all` mode, constraints plus annotations (default,
-examples) are merged from parent properties. This ensures child schemas inherit
-all metadata from parents.
+The `--allof-merge-mode constraints` merges only constraint properties
+(minLength, maximum, etc.) from parent schemas referenced in allOf.
+This ensures child schemas inherit validation constraints while keeping
+other properties separate.
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --allof-merge-mode all # (1)!
+    datamodel-codegen --input schema.json --allof-merge-mode constraints # (1)!
     ```
 
     1. :material-arrow-left: `--allof-merge-mode` - the option documented here
 
 ??? example "Input Schema"
 
-    ```yaml
-    openapi: "3.0.0"
-    info:
-      title: Test materialize allOf defaults
-      version: "1.0.0"
-    components:
-      schemas:
-        Parent:
-          type: object
-          properties:
-            name:
-              type: string
-              default: "parent_default"
-              minLength: 1
-            count:
-              type: integer
-              default: 10
-              minimum: 0
-        Child:
-          allOf:
-            - $ref: "#/components/schemas/Parent"
-            - type: object
-              properties:
-                name:
-                  maxLength: 100
-                count:
-                  maximum: 1000
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "StringDatatype": {
+          "description": "A base string type.",
+          "type": "string",
+          "pattern": "^\\S(.*\\S)?$"
+        },
+        "ConstrainedStringDatatype": {
+          "description": "A constrained string.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "type": "string", "minLength": 1, "pattern": "^[A-Z].*" }
+          ]
+        },
+        "IntegerDatatype": {
+          "description": "A whole number.",
+          "type": "integer"
+        },
+        "NonNegativeIntegerDatatype": {
+          "description": "Non-negative integer.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "minimum": 0 }
+          ]
+        },
+        "BoundedIntegerDatatype": {
+          "description": "Integer between 0 and 100.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "minimum": 0, "maximum": 100 }
+          ]
+        },
+        "EmailDatatype": {
+          "description": "Email with format.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "format": "email" }
+          ]
+        },
+        "FormattedStringDatatype": {
+          "description": "A string with email format.",
+          "type": "string",
+          "format": "email"
+        },
+        "ObjectBase": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" }
+          }
+        },
+        "ObjectWithAllOf": {
+          "description": "Object inheritance - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ObjectBase" },
+            { "type": "object", "properties": { "name": { "type": "string" } } }
+          ]
+        },
+        "MultiRefAllOf": {
+          "description": "Multiple refs - not handled by new code.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "$ref": "#/definitions/IntegerDatatype" }
+          ]
+        },
+        "NoConstraintAllOf": {
+          "description": "No constraints added.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" }
+          ]
+        },
+        "IncompatibleTypeAllOf": {
+          "description": "Incompatible types.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "type": "boolean" }
+          ]
+        },
+        "ConstraintWithProperties": {
+          "description": "Constraint item has properties.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "properties": { "extra": { "type": "string" } } }
+          ]
+        },
+        "ConstraintWithItems": {
+          "description": "Constraint item has items.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "items": { "type": "string" } }
+          ]
+        },
+        "NumberIntegerCompatible": {
+          "description": "Number and integer are compatible.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "type": "number", "minimum": 0 }
+          ]
+        },
+        "RefWithSchemaKeywords": {
+          "description": "Ref with additional schema keywords.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype", "minLength": 5 },
+            { "maxLength": 100 }
+          ]
+        },
+        "ArrayDatatype": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "RefToArrayAllOf": {
+          "description": "Ref to array - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ArrayDatatype" },
+            { "minItems": 1 }
+          ]
+        },
+        "ObjectNoPropsDatatype": {
+          "type": "object"
+        },
+        "RefToObjectNoPropsAllOf": {
+          "description": "Ref to object without properties - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ObjectNoPropsDatatype" },
+            { "minProperties": 1 }
+          ]
+        },
+        "PatternPropsDatatype": {
+          "patternProperties": {
+            "^S_": { "type": "string" }
+          }
+        },
+        "RefToPatternPropsAllOf": {
+          "description": "Ref to patternProperties - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/PatternPropsDatatype" },
+            { "minProperties": 1 }
+          ]
+        },
+        "NestedAllOfDatatype": {
+          "allOf": [
+            { "type": "string" },
+            { "minLength": 1 }
+          ]
+        },
+        "RefToNestedAllOfAllOf": {
+          "description": "Ref to nested allOf - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/NestedAllOfDatatype" },
+            { "maxLength": 100 }
+          ]
+        },
+        "ConstraintsOnlyDatatype": {
+          "description": "Constraints only, no type.",
+          "minLength": 1,
+          "pattern": "^[A-Z]"
+        },
+        "RefToConstraintsOnlyAllOf": {
+          "description": "Ref to constraints-only schema.",
+          "allOf": [
+            { "$ref": "#/definitions/ConstraintsOnlyDatatype" },
+            { "maxLength": 100 }
+          ]
+        },
+        "NoDescriptionAllOf": {
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "minLength": 5 }
+          ]
+        },
+        "EmptyConstraintItemAllOf": {
+          "description": "AllOf with empty constraint item.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            {},
+            { "maxLength": 50 }
+          ]
+        },
+        "ConflictingFormatAllOf": {
+          "description": "Conflicting formats - falls back to existing behavior.",
+          "allOf": [
+            { "$ref": "#/definitions/FormattedStringDatatype" },
+            { "format": "date-time" }
+          ]
+        }
+      },
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
+        "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
+        "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" },
+        "email": { "$ref": "#/definitions/EmailDatatype" },
+        "obj": { "$ref": "#/definitions/ObjectWithAllOf" },
+        "multi": { "$ref": "#/definitions/MultiRefAllOf" },
+        "noconstraint": { "$ref": "#/definitions/NoConstraintAllOf" },
+        "incompatible": { "$ref": "#/definitions/IncompatibleTypeAllOf" },
+        "withprops": { "$ref": "#/definitions/ConstraintWithProperties" },
+        "withitems": { "$ref": "#/definitions/ConstraintWithItems" },
+        "numint": { "$ref": "#/definitions/NumberIntegerCompatible" },
+        "refwithkw": { "$ref": "#/definitions/RefWithSchemaKeywords" },
+        "refarr": { "$ref": "#/definitions/RefToArrayAllOf" },
+        "refobjnoprops": { "$ref": "#/definitions/RefToObjectNoPropsAllOf" },
+        "refpatternprops": { "$ref": "#/definitions/RefToPatternPropsAllOf" },
+        "refnestedallof": { "$ref": "#/definitions/RefToNestedAllOfAllOf" },
+        "refconstraintsonly": { "$ref": "#/definitions/RefToConstraintsOnlyAllOf" },
+        "nodescription": { "$ref": "#/definitions/NoDescriptionAllOf" },
+        "emptyconstraint": { "$ref": "#/definitions/EmptyConstraintItemAllOf" },
+        "conflictingformat": { "$ref": "#/definitions/ConflictingFormatAllOf" }
+      }
+    }
     ```
 
 ??? example "Output"
 
-    ```python
-    # generated by datamodel-codegen:
-    #   filename:  allof_materialize_defaults.yaml
-    #   timestamp: 2019-07-26T00:00:00+00:00
-    
-    from __future__ import annotations
-    
-    from typing import Optional
-    
-    from pydantic import BaseModel, conint, constr
-    
-    
-    class Parent(BaseModel):
-        name: Optional[constr(min_length=1)] = 'parent_default'
-        count: Optional[conint(ge=0)] = 10
-    
-    
-    class Child(Parent):
-        name: Optional[constr(min_length=1, max_length=100)] = 'parent_default'
-        count: Optional[conint(ge=0, le=1000)] = 10
-    ```
+    === "With Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  allof_root_model_constraints.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any, Dict, List, Optional
+        
+        from pydantic import BaseModel, EmailStr, Field, conint, constr
+        
+        
+        class StringDatatype(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$') = Field(
+                ..., description='A base string type.'
+            )
+        
+        
+        class ConstrainedStringDatatype(BaseModel):
+            __root__: constr(regex=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
+                ..., description='A constrained string.'
+            )
+        
+        
+        class IntegerDatatype(BaseModel):
+            __root__: int = Field(..., description='A whole number.')
+        
+        
+        class NonNegativeIntegerDatatype(BaseModel):
+            __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+        
+        
+        class BoundedIntegerDatatype(BaseModel):
+            __root__: conint(ge=0, le=100) = Field(
+                ..., description='Integer between 0 and 100.'
+            )
+        
+        
+        class EmailDatatype(BaseModel):
+            __root__: EmailStr = Field(..., description='Email with format.')
+        
+        
+        class FormattedStringDatatype(BaseModel):
+            __root__: EmailStr = Field(..., description='A string with email format.')
+        
+        
+        class ObjectBase(BaseModel):
+            id: Optional[int] = None
+        
+        
+        class ObjectWithAllOf(ObjectBase):
+            name: Optional[str] = None
+        
+        
+        class MultiRefAllOf(BaseModel):
+            pass
+        
+        
+        class NoConstraintAllOf(BaseModel):
+            pass
+        
+        
+        class IncompatibleTypeAllOf(BaseModel):
+            pass
+        
+        
+        class ConstraintWithProperties(BaseModel):
+            extra: Optional[str] = None
+        
+        
+        class ConstraintWithItems(BaseModel):
+            pass
+        
+        
+        class NumberIntegerCompatible(BaseModel):
+            __root__: conint(ge=0) = Field(
+                ..., description='Number and integer are compatible.'
+            )
+        
+        
+        class RefWithSchemaKeywords(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+                ..., description='Ref with additional schema keywords.'
+            )
+        
+        
+        class ArrayDatatype(BaseModel):
+            __root__: List[str]
+        
+        
+        class RefToArrayAllOf(BaseModel):
+            pass
+        
+        
+        class ObjectNoPropsDatatype(BaseModel):
+            pass
+        
+        
+        class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
+            pass
+        
+        
+        class PatternPropsDatatype(BaseModel):
+            __root__: Dict[constr(regex=r'^S_'), str]
+        
+        
+        class RefToPatternPropsAllOf(BaseModel):
+            pass
+        
+        
+        class NestedAllOfDatatype(BaseModel):
+            pass
+        
+        
+        class RefToNestedAllOfAllOf(NestedAllOfDatatype):
+            pass
+        
+        
+        class ConstraintsOnlyDatatype(BaseModel):
+            __root__: Any = Field(..., description='Constraints only, no type.')
+        
+        
+        class RefToConstraintsOnlyAllOf(BaseModel):
+            __root__: Any = Field(..., description='Ref to constraints-only schema.')
+        
+        
+        class NoDescriptionAllOf(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+                ..., description='A base string type.'
+            )
+        
+        
+        class EmptyConstraintItemAllOf(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+                ..., description='AllOf with empty constraint item.'
+            )
+        
+        
+        class ConflictingFormatAllOf(BaseModel):
+            pass
+        
+        
+        class Model(BaseModel):
+            name: Optional[ConstrainedStringDatatype] = None
+            count: Optional[NonNegativeIntegerDatatype] = None
+            percentage: Optional[BoundedIntegerDatatype] = None
+            email: Optional[EmailDatatype] = None
+            obj: Optional[ObjectWithAllOf] = None
+            multi: Optional[MultiRefAllOf] = None
+            noconstraint: Optional[NoConstraintAllOf] = None
+            incompatible: Optional[IncompatibleTypeAllOf] = None
+            withprops: Optional[ConstraintWithProperties] = None
+            withitems: Optional[ConstraintWithItems] = None
+            numint: Optional[NumberIntegerCompatible] = None
+            refwithkw: Optional[RefWithSchemaKeywords] = None
+            refarr: Optional[RefToArrayAllOf] = None
+            refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
+            refpatternprops: Optional[RefToPatternPropsAllOf] = None
+            refnestedallof: Optional[RefToNestedAllOfAllOf] = None
+            refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
+            nodescription: Optional[NoDescriptionAllOf] = None
+            emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
+            conflictingformat: Optional[ConflictingFormatAllOf] = None
+        ```
+
+    === "Without Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  allof_root_model_constraints.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any, Dict, List, Optional
+        
+        from pydantic import BaseModel, EmailStr, Field, conint, constr
+        
+        
+        class StringDatatype(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$') = Field(
+                ..., description='A base string type.'
+            )
+        
+        
+        class ConstrainedStringDatatype(BaseModel):
+            __root__: constr(regex=r'^[A-Z].*', min_length=1) = Field(
+                ..., description='A constrained string.'
+            )
+        
+        
+        class IntegerDatatype(BaseModel):
+            __root__: int = Field(..., description='A whole number.')
+        
+        
+        class NonNegativeIntegerDatatype(BaseModel):
+            __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+        
+        
+        class BoundedIntegerDatatype(BaseModel):
+            __root__: conint(ge=0, le=100) = Field(
+                ..., description='Integer between 0 and 100.'
+            )
+        
+        
+        class EmailDatatype(BaseModel):
+            __root__: EmailStr = Field(..., description='Email with format.')
+        
+        
+        class FormattedStringDatatype(BaseModel):
+            __root__: EmailStr = Field(..., description='A string with email format.')
+        
+        
+        class ObjectBase(BaseModel):
+            id: Optional[int] = None
+        
+        
+        class ObjectWithAllOf(ObjectBase):
+            name: Optional[str] = None
+        
+        
+        class MultiRefAllOf(BaseModel):
+            pass
+        
+        
+        class NoConstraintAllOf(BaseModel):
+            pass
+        
+        
+        class IncompatibleTypeAllOf(BaseModel):
+            pass
+        
+        
+        class ConstraintWithProperties(BaseModel):
+            extra: Optional[str] = None
+        
+        
+        class ConstraintWithItems(BaseModel):
+            pass
+        
+        
+        class NumberIntegerCompatible(BaseModel):
+            __root__: conint(ge=0) = Field(
+                ..., description='Number and integer are compatible.'
+            )
+        
+        
+        class RefWithSchemaKeywords(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+                ..., description='Ref with additional schema keywords.'
+            )
+        
+        
+        class ArrayDatatype(BaseModel):
+            __root__: List[str]
+        
+        
+        class RefToArrayAllOf(BaseModel):
+            pass
+        
+        
+        class ObjectNoPropsDatatype(BaseModel):
+            pass
+        
+        
+        class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
+            pass
+        
+        
+        class PatternPropsDatatype(BaseModel):
+            __root__: Dict[constr(regex=r'^S_'), str]
+        
+        
+        class RefToPatternPropsAllOf(BaseModel):
+            pass
+        
+        
+        class NestedAllOfDatatype(BaseModel):
+            pass
+        
+        
+        class RefToNestedAllOfAllOf(NestedAllOfDatatype):
+            pass
+        
+        
+        class ConstraintsOnlyDatatype(BaseModel):
+            __root__: Any = Field(..., description='Constraints only, no type.')
+        
+        
+        class RefToConstraintsOnlyAllOf(BaseModel):
+            __root__: Any = Field(..., description='Ref to constraints-only schema.')
+        
+        
+        class NoDescriptionAllOf(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+                ..., description='A base string type.'
+            )
+        
+        
+        class EmptyConstraintItemAllOf(BaseModel):
+            __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+                ..., description='AllOf with empty constraint item.'
+            )
+        
+        
+        class ConflictingFormatAllOf(BaseModel):
+            pass
+        
+        
+        class Model(BaseModel):
+            name: Optional[ConstrainedStringDatatype] = None
+            count: Optional[NonNegativeIntegerDatatype] = None
+            percentage: Optional[BoundedIntegerDatatype] = None
+            email: Optional[EmailDatatype] = None
+            obj: Optional[ObjectWithAllOf] = None
+            multi: Optional[MultiRefAllOf] = None
+            noconstraint: Optional[NoConstraintAllOf] = None
+            incompatible: Optional[IncompatibleTypeAllOf] = None
+            withprops: Optional[ConstraintWithProperties] = None
+            withitems: Optional[ConstraintWithItems] = None
+            numint: Optional[NumberIntegerCompatible] = None
+            refwithkw: Optional[RefWithSchemaKeywords] = None
+            refarr: Optional[RefToArrayAllOf] = None
+            refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
+            refpatternprops: Optional[RefToPatternPropsAllOf] = None
+            refnestedallof: Optional[RefToNestedAllOfAllOf] = None
+            refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
+            nodescription: Optional[NoDescriptionAllOf] = None
+            emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
+            conflictingformat: Optional[ConflictingFormatAllOf] = None
+        ```
 
 ---
 
@@ -167,12 +663,11 @@ postponed evaluation of annotations (PEP 563).
 
 ## `--enum-field-as-literal` {#enum-field-as-literal}
 
-Generate Literal types instead of Enums for fields with enumerated values.
+Convert all enum fields to Literal types instead of Enum classes.
 
-The --enum-field-as-literal option replaces Enum classes with Literal types for
-fields that have a fixed set of allowed values. Use 'all' to convert all enum
-fields, or 'one' to only convert enums with a single value. This produces more
-concise type hints and avoids creating Enum classes when not needed.
+The `--enum-field-as-literal all` flag converts all enum types to Literal
+type annotations. This is useful when you want string literal types instead
+of Enum classes for all enumerations.
 
 !!! tip "Usage"
 
@@ -184,46 +679,113 @@ concise type hints and avoids creating Enum classes when not needed.
 
 ??? example "Input Schema"
 
-    ```yaml
-    $schema: http://json-schema.org/draft-07/schema#
-    type: object
-    title: Config
-    properties:
-      mode:
-        title: Mode
-        type: string
-        oneOf:
-          - title: fast
-            const: fast
-          - title: slow
-            const: slow
-      modes:
-        type: array
-        items:
-          type: string
-          oneOf:
-            - const: a
-            - const: b
+    ```graphql
+    "Employee shift status"
+    enum EmployeeShiftStatus {
+      "not on shift"
+      NOT_ON_SHIFT
+      "on shift"
+      ON_SHIFT
+    }
+    
+    enum Color {
+      RED
+      GREEN
+      BLUE
+    }
+    
+    enum EnumWithOneField {
+        FIELD
+    }
     ```
 
 ??? example "Output"
 
-    ```python
-    # generated by datamodel-codegen:
-    #   filename:  oneof_const_enum_nested.yaml
-    #   timestamp: 2019-07-26T00:00:00+00:00
-    
-    from __future__ import annotations
-    
-    from typing import List, Literal, Optional
-    
-    from pydantic import BaseModel, Field
-    
-    
-    class Config(BaseModel):
-        mode: Optional[Literal['fast', 'slow']] = Field(None, title='Mode')
-        modes: Optional[List[Literal['a', 'b']]] = None
-    ```
+    === "With Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  enums.graphql
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Literal
+        
+        from pydantic import BaseModel
+        from typing_extensions import TypeAlias
+        
+        Boolean: TypeAlias = bool
+        """
+        The `Boolean` scalar type represents `true` or `false`.
+        """
+        
+        
+        String: TypeAlias = str
+        """
+        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+        """
+        
+        
+        class Color(BaseModel):
+            __root__: Literal['BLUE', 'GREEN', 'RED']
+        
+        
+        class EmployeeShiftStatus(BaseModel):
+            """
+            Employee shift status
+            """
+        
+            __root__: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
+        
+        
+        class EnumWithOneField(BaseModel):
+            __root__: Literal['FIELD']
+        ```
+
+    === "Without Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  enums.graphql
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from enum import Enum
+        
+        from typing_extensions import TypeAlias
+        
+        Boolean: TypeAlias = bool
+        """
+        The `Boolean` scalar type represents `true` or `false`.
+        """
+        
+        
+        String: TypeAlias = str
+        """
+        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+        """
+        
+        
+        class Color(Enum):
+            BLUE = 'BLUE'
+            GREEN = 'GREEN'
+            RED = 'RED'
+        
+        
+        class EmployeeShiftStatus(Enum):
+            """
+            Employee shift status
+            """
+        
+            NOT_ON_SHIFT = 'NOT_ON_SHIFT'
+            ON_SHIFT = 'ON_SHIFT'
+        
+        
+        class EnumWithOneField(Enum):
+            FIELD = 'FIELD'
+        ```
 
 ---
 

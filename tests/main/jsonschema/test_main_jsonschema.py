@@ -432,12 +432,19 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
     options=["--output-model-type"],
     input_schema="jsonschema/null_and_array.json",
     cli_args=["--output-model-type", "pydantic.BaseModel"],
-    golden_output="jsonschema/null_and_array.py",
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/null_and_array.py",
+        "pydantic_v2": "main/jsonschema/null_and_array_v2.py",
+    },
+    primary=True,
 )
 def test_main_null_and_array(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Specify the output model type (pydantic, dataclass, typeddict, msgspec).
+    """Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
 
-    The `--output-model-type` flag configures the code generation behavior.
+    The `--output-model-type` flag specifies which Python data model framework to use
+    for the generated code. Supported values include `pydantic.BaseModel`,
+    `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+    `msgspec.Struct`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
@@ -1944,12 +1951,6 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     )
 
 
-@pytest.mark.cli_doc(
-    options=["--field-extra-keys-without-x-prefix"],
-    input_schema="jsonschema/extras.json",
-    cli_args=["--field-include-all-keys", "--field-extra-keys-without-x-prefix", "x-repr"],
-    golden_output="main/jsonschema/field_extras_field_include_all_keys.py",
-)
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -1962,6 +1963,15 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
             "field_extras_field_include_all_keys_v2.py",
         ),
     ],
+)
+@pytest.mark.cli_doc(
+    options=["--field-extra-keys-without-x-prefix"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--field-include-all-keys", "--field-extra-keys-without-x-prefix", "x-repr"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/field_extras_field_include_all_keys.py",
+        "pydantic_v2": "main/jsonschema/field_extras_field_include_all_keys_v2.py",
+    },
 )
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
@@ -2006,7 +2016,10 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     options=["--field-extra-keys"],
     input_schema="jsonschema/extras.json",
     cli_args=["--field-extra-keys", "key2", "--field-extra-keys-without-x-prefix", "x-repr"],
-    golden_output="jsonschema/field_extras_field_extra_keys.py",
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/field_extras_field_extra_keys.py",
+        "pydantic_v2": "main/jsonschema/field_extras_field_extra_keys_v2.py",
+    },
 )
 def test_main_jsonschema_field_extras_field_extra_keys(
     output_model: str, expected_output: str, output_file: Path
@@ -4087,57 +4100,43 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("typing.TypedDict", "reserved_field_name_schema_typed_dict.py"),
+        ("dataclasses.dataclass", "reserved_field_name_schema_dataclass.py"),
+        ("pydantic_v2.BaseModel", "reserved_field_name_schema_pydantic.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="jsonschema/reserved_field_name_schema.json",
+    cli_args=["--target-python-version", "3.11"],
+    model_outputs={
+        "typeddict": "main/jsonschema/reserved_field_name_schema_typed_dict.py",
+        "dataclass": "main/jsonschema/reserved_field_name_schema_dataclass.py",
+        "pydantic_v2": "main/jsonschema/reserved_field_name_schema_pydantic.py",
+    },
+)
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
-    """Test that 'schema' field is not renamed in TypedDict (Issue #1833)."""
+def test_main_jsonschema_reserved_field_name(output_model: str, expected_file: str, output_file: Path) -> None:
+    """Test reserved field name handling across model types (Issue #1833).
+
+    This demonstrates how 'schema' field is handled:
+    - TypedDict: not renamed (schema is not reserved)
+    - dataclass: not renamed (schema is not reserved)
+    - Pydantic: renamed to 'schema_' with alias (BaseModel.schema conflicts)
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_typed_dict.py",
+        expected_file=expected_file,
         extra_args=[
             "--output-model-type",
-            "typing.TypedDict",
-            "--target-python-version",
-            "3.11",
-        ],
-    )
-
-
-@pytest.mark.benchmark
-@LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> None:
-    """Test that 'schema' field is not renamed in dataclass (Issue #1833)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_dataclass.py",
-        extra_args=[
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--target-python-version",
-            "3.11",
-        ],
-    )
-
-
-@pytest.mark.benchmark
-@LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None:
-    """Test that 'schema' field is renamed to 'schema_' with alias in Pydantic (Issue #1833)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_pydantic.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
+            output_model,
             "--target-python-version",
             "3.11",
         ],
@@ -4200,47 +4199,41 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic.BaseModel", "use_frozen_field_v1.py"),
+        ("pydantic_v2.BaseModel", "use_frozen_field_v2.py"),
+        ("dataclasses.dataclass", "use_frozen_field_dataclass.py"),
+    ],
+)
 @pytest.mark.cli_doc(
     options=["--use-frozen-field"],
     input_schema="jsonschema/use_frozen_field.json",
-    cli_args=["--use-frozen-field", "--output-model-type", "pydantic_v2.BaseModel"],
-    golden_output="jsonschema/use_frozen_field_v2.py",
+    cli_args=["--use-frozen-field"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/use_frozen_field_v1.py",
+        "pydantic_v2": "main/jsonschema/use_frozen_field_v2.py",
+        "dataclass": "main/jsonschema/use_frozen_field_dataclass.py",
+    },
 )
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_use_frozen_field_pydantic_v2(output_file: Path) -> None:
-    """Generate frozen (immutable) field definitions.
+def test_main_use_frozen_field(output_model: str, expected_file: str, output_file: Path) -> None:
+    """Generate frozen (immutable) field definitions for readOnly properties.
 
-    The `--use-frozen-field` flag configures the code generation behavior.
+    The `--use-frozen-field` flag generates frozen field definitions:
+    - Pydantic v1: `Field(allow_mutation=False)`
+    - Pydantic v2: `Field(frozen=True)`
+    - Dataclasses: silently ignored (no frozen fields generated)
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="use_frozen_field_v2.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--use-frozen-field",
-        ],
-    )
-
-
-@pytest.mark.benchmark
-def test_main_use_frozen_field_pydantic_v1(output_file: Path) -> None:
-    """Test --use-frozen-field with Pydantic v1 generates Field(allow_mutation=False) for readOnly fields."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="use_frozen_field_v1.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic.BaseModel",
-            "--use-frozen-field",
-        ],
+        expected_file=expected_file,
+        extra_args=["--output-model-type", output_model, "--use-frozen-field"],
     )
 
 
@@ -4254,28 +4247,7 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="use_frozen_field_no_readonly.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--use-frozen-field",
-        ],
-    )
-
-
-@pytest.mark.benchmark
-def test_main_use_frozen_field_dataclass(output_file: Path) -> None:
-    """Test --use-frozen-field with dataclass silently ignores (no error, no frozen)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="use_frozen_field_dataclass.py",
-        extra_args=[
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--use-frozen-field",
-        ],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-frozen-field"],
     )
 
 
@@ -4294,22 +4266,22 @@ def test_main_field_name_shadows_class_name(output_file: Path) -> None:
     )
 
 
-@pytest.mark.benchmark
-def test_main_allof_root_model_constraints(output_file: Path) -> None:
-    """Test allOf with root model reference and constraints (issue #1901)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="allof_root_model_constraints.py",
-        extra_args=["--allof-merge-mode", "none"],
-    )
-
-
+@pytest.mark.cli_doc(
+    options=["--allof-merge-mode"],
+    input_schema="jsonschema/allof_root_model_constraints.json",
+    cli_args=["--allof-merge-mode", "constraints"],
+    golden_output="main/jsonschema/allof_root_model_constraints_merge.py",
+    comparison_output="main/jsonschema/allof_root_model_constraints.py",
+)
 @pytest.mark.benchmark
 def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
-    """Test allOf with root model reference and constraints with merge mode (issue #1901)."""
+    """Merge constraints from root model references in allOf schemas.
+
+    The `--allof-merge-mode constraints` merges only constraint properties
+    (minLength, maximum, etc.) from parent schemas referenced in allOf.
+    This ensures child schemas inherit validation constraints while keeping
+    other properties separate.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
         output_path=output_file,
@@ -4317,4 +4289,17 @@ def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="allof_root_model_constraints_merge.py",
         extra_args=["--allof-merge-mode", "constraints"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
+    """Test allOf with root model reference without merging (issue #1901)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints.py",
+        extra_args=["--allof-merge-mode", "none"],
     )

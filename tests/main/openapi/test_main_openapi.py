@@ -2861,27 +2861,38 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
     )
 
 
-def test_main_openapi_discriminator_one_literal_as_default(output_file: Path) -> None:
-    """Test OpenAPI generation with discriminator one literal as default."""
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic_v2.BaseModel", "discriminator/enum_one_literal_as_default.py"),
+        ("dataclasses.dataclass", "discriminator/dataclass_enum_one_literal_as_default.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-one-literal-as-default"],
+    input_schema="openapi/discriminator_enum.yaml",
+    cli_args=["--use-one-literal-as-default"],
+    model_outputs={
+        "pydantic_v2": "openapi/discriminator/enum_one_literal_as_default.py",
+        "dataclass": "openapi/discriminator/dataclass_enum_one_literal_as_default.py",
+    },
+)
+def test_main_openapi_discriminator_one_literal_as_default(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
+    """Set default value when only one literal is valid for a discriminator field.
+
+    The `--use-one-literal-as-default` flag sets default values for discriminator
+    fields when only one literal value is valid, reducing boilerplate in model
+    instantiation.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "enum_one_literal_as_default.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-one-literal-as-default"],
-    )
-
-
-def test_main_openapi_discriminator_one_literal_as_default_dataclass(output_file: Path) -> None:
-    """Test OpenAPI generation with discriminator one literal as default for dataclass."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
-        output_path=output_file,
-        input_file_type="openapi",
-        assert_func=assert_file_content,
-        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py",
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--use-one-literal-as-default"],
+        expected_file=EXPECTED_OPENAPI_PATH / expected_file,
+        extra_args=["--output-model-type", output_model, "--use-one-literal-as-default"],
     )
 
 

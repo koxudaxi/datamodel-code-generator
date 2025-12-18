@@ -278,9 +278,21 @@ def test_main_use_schema_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-field-description"],
+    input_schema="openapi/api_multiline_docstrings.yaml",
+    cli_args=["--use-field-description"],
+    golden_output="main_kr/main_use_field_description/output.py",
+    related_options=["--use-schema-description", "--use-inline-field-description"],
+)
 @freeze_time("2022-11-11")
 def test_main_use_field_description(output_file: Path) -> None:
-    """Test --use-field-description option."""
+    """Add field descriptions using Pydantic Field().
+
+    The `--use-field-description` flag adds the `description` property from
+    schema fields as the `description` parameter in Pydantic Field(). This
+    provides documentation that is accessible via model schema and OpenAPI docs.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_multiline_docstrings.yaml",
         output_path=output_file,

@@ -27,12 +27,25 @@ if TYPE_CHECKING:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="graphql/simple-star-wars.graphql",
+    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    model_outputs={
+        "pydantic_v1": "graphql/simple_star_wars.py",
+        "dataclass": "graphql/simple_star_wars_dataclass.py",
+    },
+)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
 def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test GraphQL code generation for simple Star Wars schema."""
+    """Generate models from GraphQL with different output model types.
+
+    This example demonstrates using `--output-model-type` with GraphQL schemas
+    to generate either Pydantic models or dataclasses.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
         output_path=output_file,
@@ -165,8 +178,20 @@ def test_main_graphql_specialized_enums(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="graphql/enums.graphql",
+    cli_args=["--enum-field-as-literal", "all"],
+    golden_output="graphql/enum_literals_all.py",
+    comparison_output="graphql/enums.py",
+)
 def test_main_graphql_enums_as_literals_all(output_file: Path) -> None:
-    """Test GraphQL code generation with all enum fields as literals."""
+    """Convert all enum fields to Literal types instead of Enum classes.
+
+    The `--enum-field-as-literal all` flag converts all enum types to Literal
+    type annotations. This is useful when you want string literal types instead
+    of Enum classes for all enumerations.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "enums.graphql",
         output_path=output_file,
@@ -177,8 +202,18 @@ def test_main_graphql_enums_as_literals_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="graphql/enums.graphql",
+    cli_args=["--enum-field-as-literal", "one"],
+    golden_output="graphql/enum_literals_one.py",
+)
 def test_main_graphql_enums_as_literals_one(output_file: Path) -> None:
-    """Test GraphQL code generation with single-field enums as literals."""
+    """Convert single-member enums to Literal types.
+
+    The `--enum-field-as-literal one` flag only converts enums with a single
+    member to Literal types, keeping multi-member enums as Enum classes.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "enums.graphql",
         output_path=output_file,
