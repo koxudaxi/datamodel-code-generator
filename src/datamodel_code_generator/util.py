@@ -7,6 +7,9 @@ and version-compatible decorators (model_validator, field_validator).
 from __future__ import annotations
 
 import copy
+import re
+from functools import lru_cache
+from re import Pattern
 from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
 
 import pydantic
@@ -140,3 +143,14 @@ class BaseModel(_BaseModel):
 
     if PYDANTIC_V2:
         model_config = ConfigDict(strict=False)  # pyright: ignore[reportAssignmentType]
+
+
+_UNDER_SCORE_1: Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
+_UNDER_SCORE_2: Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
+
+
+@lru_cache
+def camel_to_snake(string: str) -> str:
+    """Convert camelCase or PascalCase to snake_case."""
+    subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
+    return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()

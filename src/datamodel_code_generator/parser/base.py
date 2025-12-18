@@ -67,8 +67,9 @@ from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStateme
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
-from datamodel_code_generator.reference import ModelResolver, ModelType, Reference, camel_to_snake
+from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
+from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
