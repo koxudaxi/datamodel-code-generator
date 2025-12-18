@@ -178,14 +178,21 @@ For very large schemas with many models:
 datamodel-codegen --reuse-model --disable-warnings ...
 ```
 
+See [Model Reuse and Deduplication](model-reuse.md) for details.
+
 ---
 
-## 🔧 Pydantic Versions
+## 🔧 Output Model Types
 
-### 🤷 Which Pydantic version should I use?
+### 🤷 Which output model type should I use?
 
 - **Pydantic v2** (`pydantic_v2.BaseModel`): ✨ Recommended for new projects. Better performance and modern API.
 - **Pydantic v1** (`pydantic.BaseModel`): 🔄 Default for backward compatibility with existing codebases.
+- **dataclasses**: Simple data containers without validation.
+- **TypedDict**: Type hints for dict structures.
+- **msgspec**: High-performance serialization.
+
+See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a detailed comparison.
 
 ```bash
 # For new projects

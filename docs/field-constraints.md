@@ -1,3 +1,5 @@
+<!-- related-cli-options: --field-constraints, --validation -->
+
 # 🔒 Field Constraints
 
 The `--field-constraints` option converts all `con*` annotations (like `conint`, `constr`) to `Field` constraint options.

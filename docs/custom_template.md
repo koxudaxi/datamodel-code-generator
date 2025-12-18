@@ -1,3 +1,5 @@
+<!-- related-cli-options: --custom-template-dir, --extra-template-data -->
+
 # 🎨 Custom Templates
 
 One of the powerful features of datamodel-code-generator is the ability to use custom templates with the `--custom-template-dir` option. This allows you to provide a directory containing Jinja2 templates for customizing the generated code.

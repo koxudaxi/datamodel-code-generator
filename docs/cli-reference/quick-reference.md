@@ -145,6 +145,16 @@ datamodel-codegen [OPTIONS]
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
 
+### 📝 Utility Options
+
+| Option | Description |
+|--------|-------------|
+| [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
+| [`--help`](utility-options.md#help) | Show help message and exit |
+| [`--no-color`](utility-options.md#no-color) | Disable colorized output |
+| [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
+| [`--version`](utility-options.md#version) | Show program version and exit |
+
 ---
 
 ## 🔤 Alphabetical Index
@@ -169,6 +179,7 @@ All options sorted alphabetically:
 - [`--custom-formatters-kwargs`](template-customization.md#custom-formatters-kwargs) - Pass custom arguments to custom formatters via JSON file.
 - [`--custom-template-dir`](template-customization.md#custom-template-dir) - Use custom Jinja2 templates for model generation.
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments) - Customize dataclass decorator arguments via JSON dictionary.
+- [`--debug`](utility-options.md#debug) - Show debug messages during code generation
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix) - Disable appending 'Item' suffix to array item types.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports) - Prevent automatic addition of __future__ imports in generate...
 - [`--disable-timestamp`](template-customization.md#disable-timestamp) - Disable timestamp in generated file header for reproducible ...
@@ -189,6 +200,7 @@ All options sorted alphabetically:
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
 - [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) - Generate pyproject.toml configuration from CLI arguments.
+- [`--help`](utility-options.md#help) - Show help message and exit
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
@@ -199,6 +211,7 @@ All options sorted alphabetically:
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
+- [`--no-color`](utility-options.md#no-color) - Disable colorized output
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes) - Specify OpenAPI scopes to generate (schemas, paths, paramete...
 - [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) - Specify delimiter for original field names when using snake-...
@@ -206,6 +219,7 @@ All options sorted alphabetically:
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
 - [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v1/v2, dataclasses, T...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
+- [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
 - [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) - Generate separate request and response models for readOnly/w...
 - [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) - Remove the special prefix from field names.
 - [`--reuse-model`](model-customization.md#reuse-model) - Reuse identical model definitions instead of generating dupl...
@@ -248,4 +262,5 @@ All options sorted alphabetically:
 - [`--use-union-operator`](typing-customization.md#use-union-operator) - Test GraphQL annotated types with standard collections and u...
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...
+- [`--version`](utility-options.md#version) - Show program version and exit
 - [`--wrap-string-literal`](template-customization.md#wrap-string-literal) - Wrap long string literals across multiple lines.

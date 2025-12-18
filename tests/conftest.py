@@ -39,9 +39,10 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "cli_doc(options, input_schema=None, cli_args=None, golden_output=None, version_outputs=None, "
-        "model_outputs=None, expected_stdout=None, config_content=None, **kwargs): "
+        "model_outputs=None, expected_stdout=None, config_content=None, aliases=None, **kwargs): "
         "Mark test as CLI documentation source. "
-        "Either golden_output, version_outputs, model_outputs, or expected_stdout is required.",
+        "Either golden_output, version_outputs, model_outputs, or expected_stdout is required. "
+        "aliases: list of alternative option names (e.g., ['--capitalise-enum-members']).",
     )
     config._cli_doc_items: list[dict[str, Any]] = []
 
@@ -128,6 +129,14 @@ def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:
             errors.append(f"'related_options' must be a list, got {type(related).__name__}")
         elif not all(isinstance(r, str) for r in related):
             errors.append("'related_options' must be a list of strings")
+
+    if "aliases" in kwargs:
+        aliases = kwargs["aliases"]
+        if aliases is not None:
+            if not isinstance(aliases, list):
+                errors.append(f"'aliases' must be a list, got {type(aliases).__name__}")
+            elif not all(isinstance(a, str) for a in aliases):
+                errors.append("'aliases' must be a list of strings")
 
     return errors
 

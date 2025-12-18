@@ -1,3 +1,5 @@
+<!-- related-cli-options: --formatters -->
+
 # 🖌️ Code Formatting
 
 Generated code is automatically formatted using code formatters. By default, `black` and `isort` are used to produce consistent, well-formatted output.

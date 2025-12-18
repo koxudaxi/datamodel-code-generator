@@ -8,14 +8,12 @@ These tests verify that:
 
 from __future__ import annotations
 
-import warnings
-
 import pytest
 
 from datamodel_code_generator.arguments import arg_parser as argument_parser
 from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
-    EXCLUDED_FROM_DOCS,
+    MANUAL_DOCS,
     _canonical_option_key,
     get_all_canonical_options,
     get_canonical_option,
@@ -46,24 +44,24 @@ class TestCLIOptionMetaSync:  # pragma: no cover
                 + "\n\nRemove them from CLI_OPTION_META or add them to arguments.py."
             )
 
-    def test_excluded_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
-        """Verify that all options in EXCLUDED_FROM_DOCS exist in argparse."""
+    def test_manual_doc_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
+        """Verify that all options in MANUAL_DOCS exist in argparse."""
         argparse_options = get_all_canonical_options()
 
-        orphan = EXCLUDED_FROM_DOCS - argparse_options
+        orphan = MANUAL_DOCS - argparse_options
         if orphan:
             pytest.fail(
-                "Options in EXCLUDED_FROM_DOCS but not in argparse:\n"
+                "Options in MANUAL_DOCS but not in argparse:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(orphan))
-                + "\n\nRemove them from EXCLUDED_FROM_DOCS or add them to arguments.py."
+                + "\n\nRemove them from MANUAL_DOCS or add them to arguments.py."
             )
 
-    def test_no_overlap_between_meta_and_excluded(self) -> None:  # noqa: PLR6301
-        """Verify that CLI_OPTION_META and EXCLUDED_FROM_DOCS don't overlap."""
-        overlap = set(CLI_OPTION_META.keys()) & EXCLUDED_FROM_DOCS
+    def test_no_overlap_between_meta_and_manual(self) -> None:  # noqa: PLR6301
+        """Verify that CLI_OPTION_META and MANUAL_DOCS don't overlap."""
+        overlap = set(CLI_OPTION_META.keys()) & MANUAL_DOCS
         if overlap:
             pytest.fail(
-                "Options in both CLI_OPTION_META and EXCLUDED_FROM_DOCS:\n"
+                "Options in both CLI_OPTION_META and MANUAL_DOCS:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
                 + "\n\nAn option should be in one or the other, not both."
             )
@@ -81,25 +79,21 @@ class TestCLIOptionMetaSync:  # pragma: no cover
     def test_all_argparse_options_are_documented_or_excluded(self) -> None:  # noqa: PLR6301
         """Verify that all argparse options are either documented or explicitly excluded.
 
-        This test warns (not fails) when a new CLI option is added to arguments.py
-        but not added to CLI_OPTION_META. Unregistered options are auto-categorized
-        as "General Options" in the documentation.
+        This test fails when a new CLI option is added to arguments.py
+        but not added to CLI_OPTION_META or MANUAL_DOCS.
         """
         argparse_options = get_all_canonical_options()
         documented = set(CLI_OPTION_META.keys())
-        excluded = EXCLUDED_FROM_DOCS
-        covered = documented | excluded
+        manual = MANUAL_DOCS
+        covered = documented | manual
         missing = argparse_options - covered
 
         if missing:
-            msg = (
-                "CLI options auto-categorized as 'General Options' "
-                "(consider adding to CLI_OPTION_META for proper categorization):\n"
-            )
-            warnings.warn(
-                msg + "\n".join(f"  - {opt}" for opt in sorted(missing)),
-                UserWarning,
-                stacklevel=1,
+            pytest.fail(
+                "CLI options in argparse but not in CLI_OPTION_META or MANUAL_DOCS:\n"
+                + "\n".join(f"  - {opt}" for opt in sorted(missing))
+                + "\n\nAdd entries to CLI_OPTION_META in cli_options.py, "
+                "or add to MANUAL_DOCS if they should have manual documentation."
             )
 
     def test_canonical_option_determination_is_stable(self) -> None:  # noqa: PLR6301

@@ -926,6 +926,8 @@ The `--validation` flag configures the code generation behavior.
 
 **Deprecated:** Use --field-constraints instead
 
+**See also:** [Field Constraints](../field-constraints.md)
+
 !!! tip "Usage"
 
     ```bash

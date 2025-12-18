@@ -1167,6 +1167,8 @@ The `--check` flag compares the generated output with existing files and exits w
 a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
 and generated code stay in sync. Works with both single files and directory outputs.
 
+**See also:** [CI/CD Integration](../ci-cd.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1238,6 +1240,8 @@ Suppress warning messages during code generation.
 The --disable-warnings option silences all warning messages that the generator
 might emit during processing (e.g., about unsupported features, ambiguous schemas,
 or potential issues). Useful for clean output in CI/CD pipelines.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
 !!! tip "Usage"
 
@@ -1357,6 +1361,8 @@ The `--generate-cli-command` flag reads your pyproject.toml configuration
 and outputs the equivalent CLI command. This is useful for debugging
 configuration issues or sharing commands with others.
 
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1388,6 +1394,8 @@ Generate pyproject.toml configuration from CLI arguments.
 The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
 snippet based on the provided CLI arguments. This is useful for converting
 a working CLI command into a reusable configuration file.
+
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
@@ -1595,6 +1603,8 @@ The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
 when you want to override project defaults with CLI arguments, or when
 testing without project configuration.
 
+**See also:** [pyprojecttoml Configuration](../pyproject_toml.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1666,6 +1676,8 @@ deduplicated models that are referenced from multiple files. Default is
 `shared`. Use this if your schema already has a file named `shared`.
 
 Note: This option only affects modular output with tree-level model reuse.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
 !!! tip "Usage"
 

@@ -142,12 +142,24 @@ See [pyproject.toml Configuration](pyproject_toml.md) for more options.
 datamodel-codegen --snake-case-field --input schema.json --output model.py
 ```
 
+### 🔄 CI/CD Integration
+
+Verify generated code stays in sync with schemas using `--check`:
+
+```bash
+datamodel-codegen --input schema.yaml --output models.py --disable-timestamp --check
+```
+
+See [CI/CD Integration](ci-cd.md) for GitHub Actions, pre-commit hooks, and more.
+
 ---
 
 ## 📚 Next Steps
 
 - 🖥️ **[CLI Reference](cli-reference/index.md)** - All command-line options with examples
 - ⚙️ **[pyproject.toml Configuration](pyproject_toml.md)** - Configure via pyproject.toml
+- 🚀 **[One-liner Usage](oneliner.md)** - uvx, pipx, clipboard integration
+- 🔄 **[CI/CD Integration](ci-cd.md)** - GitHub Actions, pre-commit hooks, and CI validation
 - 🎨 **[Custom Templates](custom_template.md)** - Customize generated code with Jinja2
 - 🖌️ **[Code Formatting](formatting.md)** - Configure black, isort, and ruff
 - ❓ **[FAQ](faq.md)** - Common questions and troubleshooting

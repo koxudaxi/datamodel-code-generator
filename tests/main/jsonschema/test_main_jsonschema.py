@@ -894,6 +894,7 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
     cli_args=["--capitalize-enum-members"],
     golden_output="jsonschema/json_capitalise_enum_members.py",
     related_options=["--snake-case-field"],
+    aliases=["--capitalise-enum-members"],
 )
 def test_main_json_capitalise_enum_members(output_file: Path) -> None:
     """Capitalize enum member names to UPPER_CASE format.
@@ -1770,8 +1771,22 @@ def test_main_jsonschema_allof_enum_no_external_ref(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--use-specialized-enum"],
+    input_schema="jsonschema/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--use-specialized-enum"],
+    golden_output="jsonschema/enum_specialized.py",
+    related_options=["--no-use-specialized-enum", "--use-subclass-enum"],
+)
 def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
-    """Test specialized enum generation."""
+    """Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
+
+    The `--use-specialized-enum` flag generates specialized enum types:
+    - `StrEnum` for string enums
+    - `IntEnum` for integer enums
+
+    This is the default behavior for Python 3.11+ targets.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
@@ -1786,8 +1801,19 @@ def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--no-use-specialized-enum"],
+    input_schema="jsonschema/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    golden_output="jsonschema/enum_specialized_disable.py",
+    related_options=["--use-specialized-enum", "--use-subclass-enum"],
+)
 def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
-    """Test with specialized enums disabled."""
+    """Disable specialized enum generation (StrEnum/IntEnum).
+
+    The `--no-use-specialized-enum` flag disables specialized enum types,
+    generating standard `Enum` classes instead of `StrEnum`/`IntEnum`.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "subclass_enum.json",
         output_path=output_file,

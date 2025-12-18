@@ -34,6 +34,8 @@ Apply custom field and class name aliases from JSON file.
 The `--aliases` option allows renaming fields and classes via a JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.
 
+**See also:** [Field Aliases](../aliases.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -386,7 +388,7 @@ The `--capitalize-enum-members` flag converts enum member names to
 UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
 naming conventions for constants.
 
-**Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
+**Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
 
 !!! tip "Usage"
 
@@ -852,6 +854,8 @@ Generate Field() with validation constraints from schema.
 The `--field-constraints` flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
 Output differs between Pydantic v1 and v2 due to API changes.
+
+**See also:** [Field Constraints](../field-constraints.md)
 
 !!! tip "Usage"
 
@@ -1604,6 +1608,8 @@ The `--no-alias` flag disables automatic alias generation when JSON property
 names contain characters invalid in Python (like hyphens). Without this flag,
 fields are renamed to Python-safe names with `Field(alias='original-name')`.
 With this flag, only Python-safe names are used without aliases.
+
+**See also:** [Field Aliases](../aliases.md)
 
 !!! tip "Usage"
 

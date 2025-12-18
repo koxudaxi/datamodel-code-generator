@@ -42,14 +42,18 @@ class CLIOptionMeta:
     deprecated_message: str | None = None
 
 
-# Options excluded from documentation (intentionally not documented)
-EXCLUDED_FROM_DOCS: frozenset[str] = frozenset({
+# Options with manual documentation (not auto-generated from tests)
+# These options have hand-written docs in docs/cli-reference/manual/
+MANUAL_DOCS: frozenset[str] = frozenset({
     "--help",
     "--version",
     "--debug",
     "--profile",
     "--no-color",
 })
+
+# Backward compatibility alias
+EXCLUDED_FROM_DOCS = MANUAL_DOCS
 
 # Documentation metadata for CLI options
 # Sync is verified by tests/cli_doc/test_cli_options_sync.py
@@ -149,6 +153,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
+    "--use-specialized-enum": CLIOptionMeta(name="--use-specialized-enum", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
     # ==========================================================================
@@ -257,10 +262,19 @@ def get_all_canonical_options() -> frozenset[str]:
     return frozenset(_build_alias_map_from_argparse().values())
 
 
-def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
-    """Check if an option is excluded from documentation."""
+def is_manual_doc(option: str) -> bool:  # pragma: no cover
+    """Check if an option has manual documentation (not auto-generated)."""
     canonical = get_canonical_option(option)
-    return canonical in EXCLUDED_FROM_DOCS
+    return canonical in MANUAL_DOCS
+
+
+# Backward compatibility alias
+def is_excluded_from_docs(option: str) -> bool:  # pragma: no cover
+    """Check if an option is excluded from auto-generated documentation.
+
+    Deprecated: Use is_manual_doc() instead.
+    """
+    return is_manual_doc(option)
 
 
 def get_option_meta(option: str) -> CLIOptionMeta | None:  # pragma: no cover

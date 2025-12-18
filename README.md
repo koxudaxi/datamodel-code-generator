@@ -25,8 +25,10 @@
 **👉 [koxudaxi.github.io/datamodel-code-generator](https://koxudaxi.github.io/datamodel-code-generator)**
 
 - 🖥️ [CLI Reference](https://koxudaxi.github.io/datamodel-code-generator/cli-reference/) - All command-line options
-- ❓ [FAQ](https://koxudaxi.github.io/datamodel-code-generator/faq/) - Common questions
 - ⚙️ [pyproject.toml](https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/) - Configuration file
+- 🔄 [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) - GitHub Actions, pre-commit hooks
+- 🚀 [One-liner Usage](https://koxudaxi.github.io/datamodel-code-generator/oneliner/) - uvx, pipx, clipboard integration
+- ❓ [FAQ](https://koxudaxi.github.io/datamodel-code-generator/faq/) - Common questions
 
 ---
 
@@ -181,6 +183,13 @@ output-model-type = "pydantic_v2.BaseModel"
 ```
 
 See [pyproject.toml Configuration](https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/) for more options.
+
+### 🔄 CI/CD Integration
+```bash
+datamodel-codegen --check
+```
+
+Verify generated code stays in sync with schemas. See [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) for GitHub Actions and pre-commit hooks.
 
 ---
 

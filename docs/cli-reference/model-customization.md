@@ -1208,6 +1208,8 @@ The `--collapse-root-models` option generates simpler output by inlining root mo
 directly instead of creating separate wrapper types. This shows how different output
 model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -1355,6 +1357,8 @@ This overrides individual flags like --frozen-dataclasses and provides fine-grai
 control over dataclass generation.
 
 **Related:** `--frozen`, [`--keyword-only`](model-customization.md#keyword-only)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
@@ -2379,6 +2383,8 @@ keyword-only arguments.
 
 **Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
 
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -2623,6 +2629,8 @@ with keyword-only arguments, improving code clarity and preventing positional
 argument errors.
 
 **Related:** `--frozen`, [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
@@ -2954,6 +2962,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
 `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
 `msgspec.Struct`.
 
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -3197,6 +3207,8 @@ code duplication in the output.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -3307,6 +3319,8 @@ code duplication in the output.
 Scope for model reuse detection (root or tree).
 
 The `--reuse-scope` flag configures the code generation behavior.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
 !!! tip "Usage"
 
@@ -3993,6 +4007,8 @@ The `--target-python-version` flag controls Python version-specific syntax:
 - **Python 3.10+**: Can use `X | None` union operator, built-in `dict/list`
 
 This affects import statements and type annotation syntax in generated code.
+
+**See also:** [CI/CD Integration](../ci-cd.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 

@@ -15,6 +15,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 11 | Utilities and meta options |
+| 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
 ## All Options
 
@@ -50,6 +51,7 @@ This documentation is auto-generated from test cases.
 ### D {#d}
 
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
+- [`--debug`](utility-options.md#debug)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)
@@ -82,6 +84,7 @@ This documentation is auto-generated from test cases.
 
 ### H {#h}
 
+- [`--help`](utility-options.md#help)
 - [`--http-headers`](general-options.md#http-headers)
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls)
 - [`--http-query-parameters`](general-options.md#http-query-parameters)
@@ -101,6 +104,7 @@ This documentation is auto-generated from test cases.
 ### N {#n}
 
 - [`--no-alias`](field-customization.md#no-alias)
+- [`--no-color`](utility-options.md#no-color)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 
 ### O {#o}
@@ -114,6 +118,7 @@ This documentation is auto-generated from test cases.
 ### P {#p}
 
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
+- [`--profile`](utility-options.md#profile)
 
 ### R {#r}
 
@@ -171,6 +176,7 @@ This documentation is auto-generated from test cases.
 ### V {#v}
 
 - [`--validation`](openapi-only-options.md#validation)
+- [`--version`](utility-options.md#version)
 
 ### W {#w}
 
