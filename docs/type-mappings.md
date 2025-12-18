@@ -314,7 +314,7 @@ datamodel-codegen --input schema.json --output models.py \
 | `uuid` | `UUID` | `str` |
 | `email` | `EmailStr` | `str`, custom Email class |
 | `uri` | `AnyUrl` | `str`, `pydantic.HttpUrl` |
-| `binary` | `bytes` | `base64.b64decode` |
+| `binary` | `bytes` | `str` (base64-encoded) |
 
 ---
 

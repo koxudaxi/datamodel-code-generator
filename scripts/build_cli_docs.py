@@ -723,14 +723,16 @@ def build_docs(*, check: bool = False) -> int:
             md = generate_manual_docs_section(manual_docs)
             output_path = DOCS_OUTPUT / "utility-options.md"
             write_or_check(output_path, md, f"utility-options.md ({len(manual_docs)} options)")
-        except (OSError, ValueError, KeyError):
+        except (OSError, ValueError, KeyError) as e:
+            print(f"Error generating utility-options.md: {e}", file=sys.stderr)
             errors += 1
 
     try:
         md = generate_index_page(categories, manual_docs)
         output_path = DOCS_OUTPUT / "index.md"
         write_or_check(output_path, md, "index.md")
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError) as e:
+        print(f"Error generating index.md: {e}", file=sys.stderr)
         errors += 1
 
     try:
