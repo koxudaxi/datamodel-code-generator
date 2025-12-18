@@ -1062,7 +1062,7 @@ class Parser(ABC):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    def __change_from_import(
+    def __change_from_import(  # noqa: PLR0913, PLR0914
         self,
         models: list[DataModel],
         imports: Imports,
