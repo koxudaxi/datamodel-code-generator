@@ -14,14 +14,17 @@ datamodel-codegen --input {your_input_file} --output {your_output_file} --custom
 
 ### 1️⃣ Create your formatter
 
-**your_module.py**
+### your_module.py
+
 ```python
 from datamodel_code_generator.format import CustomCodeFormatter
 
 class CodeFormatter(CustomCodeFormatter):
     def apply(self, code: str) -> str:
-        # Process and return the formatted code
-        return processed_code
+        # Apply your custom formatting here
+        # For example, add a custom header comment:
+        header = "# This code was formatted by custom formatter\n"
+        return header + code
 ```
 
 ### 2️⃣ Use your formatter
