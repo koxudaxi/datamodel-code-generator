@@ -14,12 +14,12 @@ This documentation is auto-generated from test cases.
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 15 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
-| ⚙️ [General Options](general-options.md) | 11 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 12 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
 ## All Options
 
-**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
+**Jump to:** [A](#a) · [B](#b) · [C](#c) · [D](#d) · [E](#e) · [F](#f) · [G](#g) · [H](#h) · [I](#i) · [K](#k) · [M](#m) · [N](#n) · [O](#o) · [P](#p) · [R](#r) · [S](#s) · [T](#t) · [U](#u) · [V](#v) · [W](#w)
 
 
 ### A {#a}
@@ -100,6 +100,10 @@ This documentation is auto-generated from test cases.
 
 - [`--keep-model-order`](model-customization.md#keep-model-order)
 - [`--keyword-only`](model-customization.md#keyword-only)
+
+### M {#m}
+
+- [`--module-split-mode`](general-options.md#module-split-mode)
 
 ### N {#n}
 
