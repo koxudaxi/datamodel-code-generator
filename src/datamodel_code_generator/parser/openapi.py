@@ -19,6 +19,7 @@ from pydantic import Field
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfMergeMode,
     DataclassArguments,
     Error,
     LiteralType,
@@ -235,11 +236,13 @@ class OpenAPIParser(JsonSchemaParser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
+        use_decimal_for_multiple_of: bool = False,
         original_field_name_delimiter: str | None = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
@@ -268,6 +271,7 @@ class OpenAPIParser(JsonSchemaParser):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        use_frozen_field: bool = False,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -326,11 +330,13 @@ class OpenAPIParser(JsonSchemaParser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
             use_serialize_as_any=use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
@@ -359,6 +365,7 @@ class OpenAPIParser(JsonSchemaParser):
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
+            use_frozen_field=use_frozen_field,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters

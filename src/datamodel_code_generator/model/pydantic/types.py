@@ -171,6 +171,7 @@ class DataTypeManager(_DataTypeManager):
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
@@ -184,6 +185,7 @@ class DataTypeManager(_DataTypeManager):
             use_generic_container_types,
             strict_types,
             use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of,
             use_union_operator,
             use_pendulum,
             target_datetime_class,
@@ -268,6 +270,12 @@ class DataTypeManager(_DataTypeManager):
         data_type_kwargs = self.transform_kwargs(kwargs, number_kwargs)
         strict = StrictTypes.float in self.strict_types
         if data_type_kwargs:
+            # Use Decimal instead of float when multipleOf is present to avoid floating-point precision issues
+            if self.use_decimal_for_multiple_of and "multiple_of" in data_type_kwargs:
+                return self.data_type.from_import(
+                    IMPORT_CONDECIMAL,
+                    kwargs={k: Decimal(str(v)) for k, v in data_type_kwargs.items()},
+                )
             if not strict:
                 if data_type_kwargs == {"gt": 0}:
                     return self.data_type.from_import(IMPORT_POSITIVE_FLOAT)

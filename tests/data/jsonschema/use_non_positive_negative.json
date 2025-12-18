@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NumberConstraints",
+  "type": "object",
+  "properties": {
+    "non_negative_count": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "A count that cannot be negative"
+    },
+    "non_positive_balance": {
+      "type": "integer",
+      "maximum": 0,
+      "description": "A balance that cannot be positive"
+    },
+    "non_negative_amount": {
+      "type": "number",
+      "minimum": 0,
+      "description": "An amount that cannot be negative"
+    },
+    "non_positive_score": {
+      "type": "number",
+      "maximum": 0,
+      "description": "A score that cannot be positive"
+    }
+  }
+}

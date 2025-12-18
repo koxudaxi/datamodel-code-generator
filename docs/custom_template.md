@@ -1,21 +1,32 @@
-# Custom Templates
+<!-- related-cli-options: --custom-template-dir, --extra-template-data -->
 
-One of the powerful features of the `datamodel-code-generator` is the ability to use custom templates with the `--custom-template-dir` option.
-This option allows you to provide a directory containing Jinja2 templates for customizing the generated code. In this document, we'll explore how to use this option and provide an example to help you understand its usage.
+# 🎨 Custom Templates
 
-## Usage
-To use the `--custom-template-dir` option, you'll need to pass the directory path containing your custom templates as an argument. The command will look like this:
+One of the powerful features of datamodel-code-generator is the ability to use custom templates with the `--custom-template-dir` option. This allows you to provide a directory containing Jinja2 templates for customizing the generated code.
 
+## 🚀 Usage
 
-```sh
-$ datamodel-codegen --input {your_input_file} --output {your_output_file} --custom-template-dir {your_custom_template_directory}
+Pass the directory path containing your custom templates:
+
+```bash
+datamodel-codegen --input {your_input_file} --output {your_output_file} --custom-template-dir {your_custom_template_directory}
 ```
-Replace {your_input_file}, {your_output_file}, and {your_custom_template_directory} with the appropriate paths.
 
-## Example
-Let's say you want to generate a custom Python data model from a JSON Schema file called person.json. You want the generated data model to include a custom comment at the top of the file. To achieve this, you can create a custom template using Jinja2.
+## 📝 Example
 
-First, create a directory called `custom_templates` in your project directory. Inside this folder, create another folder called pydantic. Now, inside the `pydantic` folder, create a new file called `BaseModel.jinja2` with the following content:
+Let's say you want to generate a custom Python data model from a JSON Schema file called `person.json`. You want the generated data model to include a custom comment at the top of the file.
+
+### 1️⃣ Create the template directory
+
+Create a directory structure matching the output model type:
+
+```
+custom_templates/
+└── pydantic/
+    └── BaseModel.jinja2
+```
+
+### 2️⃣ Create the template
 
 **custom_templates/pydantic/BaseModel.jinja2**
 ```jinja2
@@ -27,14 +38,15 @@ class {{ class_name }}({{ base_class }}):
 {%- endfor -%}
 ```
 
-This custom template includes the custom comment at the top and replicates the default rendering behavior of the BaseModel.jinja2 template from the Datamodel Code Generator.
+This custom template includes the custom comment at the top and replicates the default rendering behavior of the `BaseModel.jinja2` template.
 
-Now, you can use the --custom-template-dir option to generate the data model with your custom template:
-```sh
-$ datamodel-codegen --input person.json --output person.py --custom-template-dir custom_templates
+### 3️⃣ Run the generator
+
+```bash
+datamodel-codegen --input person.json --output person.py --custom-template-dir custom_templates
 ```
 
-The generated `person.py` file will now include your custom comment at the top:
+### ✨ Generated Output
 
 **person.py**
 ```python
@@ -57,4 +69,13 @@ class Model(BaseModel):
 
 ```
 
-In this example, we kept it simple, but you can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template) Use [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template) as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
+## 📚 Template Reference
+
+You can create more complex custom templates by copying [the default templates](https://github.com/koxudaxi/datamodel-code-generator/tree/main/src/datamodel_code_generator/model/template). Use them as a reference for understanding the structure and available variables, and customize the code generation process according to your specific requirements.
+
+---
+
+## 📖 See Also
+
+- 🖥️ [CLI Reference: `--custom-template-dir`](cli-reference/template-customization.md#custom-template-dir) - Detailed CLI option documentation
+- 📊 [CLI Reference: `--extra-template-data`](cli-reference/template-customization.md#extra-template-data) - Pass custom variables to templates

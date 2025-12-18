@@ -136,6 +136,9 @@ class DataModelField(DataModelFieldV1):
         # unique_items is not supported in pydantic 2.0
         data.pop("unique_items", None)
 
+        if self.use_frozen_field and self.read_only:
+            data["frozen"] = True
+
         if "union_mode" in data:
             if self.data_type.is_union:
                 data["union_mode"] = data.pop("union_mode").value

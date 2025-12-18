@@ -1,4 +1,4 @@
-"""Update command help text in markdown documentation files."""  # noqa: INP001
+"""Update command help text in markdown documentation files."""
 
 from __future__ import annotations
 
@@ -23,10 +23,9 @@ CURRENT_DIR = Path(__file__).parent
 PROJECT_DIR = CURRENT_DIR.parent
 DOC_DIR = PROJECT_DIR / "docs"
 
-TARGET_MARKDOWN_FILES: list[Path] = [
-    DOC_DIR / "index.md",
-    PROJECT_DIR / "README.md",
-]
+# CLI help is now auto-generated in docs/cli-reference/ by build_cli_docs.py
+# These files no longer contain command help markers
+TARGET_MARKDOWN_FILES: list[Path] = []
 
 REPLACE_MAP = {"(default: UTF-8)": "(default: utf-8)", "'": r"''"}
 

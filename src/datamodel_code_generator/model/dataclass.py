@@ -31,7 +31,8 @@ if TYPE_CHECKING:
     from datamodel_code_generator.reference import Reference
 
 
-def _has_field_assignment(field: DataModelFieldBase) -> bool:
+def has_field_assignment(field: DataModelFieldBase) -> bool:
+    """Check if a dataclass field has a default value or field() assignment."""
     return bool(field.field) or not (
         field.required or (field.represented_default == "None" and field.strip_default_none)
     )
@@ -66,7 +67,7 @@ class DataClass(DataModel):
         """Initialize dataclass with fields sorted by field assignment requirement."""
         super().__init__(
             reference=reference,
-            fields=sorted(fields, key=_has_field_assignment),
+            fields=sorted(fields, key=has_field_assignment),
             decorators=decorators,
             base_classes=base_classes,
             custom_base_class=custom_base_class,
@@ -149,8 +150,13 @@ class DataModelField(DataModelFieldBase):
         if len(data) == 1 and "default" in data:
             default = data["default"]
 
-            if isinstance(default, (list, dict)):
-                return f"field(default_factory=lambda :{default!r})"
+            if isinstance(default, (list, dict, set)):
+                if default:
+                    from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+                    default_repr = repr_set_sorted(default) if isinstance(default, set) else repr(default)
+                    return f"field(default_factory=lambda: {default_repr})"
+                return f"field(default_factory={type(default).__name__})"
             return repr(default)
         kwargs = [f"{k}={v if k == 'default_factory' else repr(v)}" for k, v in data.items()]
         return f"field({', '.join(kwargs)})"
@@ -166,6 +172,7 @@ class DataTypeManager(_DataTypeManager):
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
@@ -179,6 +186,7 @@ class DataTypeManager(_DataTypeManager):
             use_generic_container_types,
             strict_types,
             use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of,
             use_union_operator,
             use_pendulum,
             target_datetime_class,

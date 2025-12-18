@@ -18,12 +18,20 @@ class DogRelationships(BaseModel):
     people: Optional[List[Person]] = Field(None, title='People')
 
 
+class Dog(DogBase, DogRelationships):
+    pass
+
+
 class PersonBase(BaseModel):
     name: Optional[str] = Field(None, title='Name')
 
 
 class PersonRelationships(BaseModel):
     people: Optional[List[Person]] = Field(None, title='People')
+
+
+class Person(PersonBase, PersonRelationships):
+    pass
 
 
 class PersonsBestFriend(BaseModel):
@@ -35,16 +43,8 @@ class PersonsBestFriend(BaseModel):
     person_relationships: Optional[PersonRelationships] = None
 
 
-class Dog(DogBase, DogRelationships):
-    pass
-
-
-class Person(PersonBase, PersonRelationships):
-    pass
-
-
 DogRelationships.update_forward_refs()
-PersonRelationships.update_forward_refs()
-PersonsBestFriend.update_forward_refs()
 Dog.update_forward_refs()
+PersonRelationships.update_forward_refs()
 Person.update_forward_refs()
+PersonsBestFriend.update_forward_refs()

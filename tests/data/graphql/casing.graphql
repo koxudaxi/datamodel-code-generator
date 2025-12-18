@@ -1,0 +1,24 @@
+enum lowercase {
+  foo
+}
+
+type lowercasetype {
+  foo: Int!
+}
+
+type conflict {
+  foo: String!
+  Foo: Int!
+}
+
+type Conflict {
+  bar: String!
+  Bar: Int!
+}
+
+type Ref {
+  bar: lowercase!
+  baz: lowercasetype!
+  spam: conflict!
+  eggs: Conflict!
+}

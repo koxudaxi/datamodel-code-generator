@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import difflib
 import inspect
+import json
+import re
 import sys
+import time
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
@@ -14,7 +18,246 @@ from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-    from pathlib import Path
+
+CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
+CLI_DOC_SCHEMA_VERSION = 1
+_VERSION_PATTERN = re.compile(r"^\d+\.\d+$")
+
+
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Add --collect-cli-docs option."""
+    parser.addoption(
+        "--collect-cli-docs",
+        action="store_true",
+        default=False,
+        help="Collect CLI documentation metadata from tests marked with @pytest.mark.cli_doc",
+    )
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register the cli_doc marker."""
+    config.addinivalue_line(
+        "markers",
+        "cli_doc(options, input_schema=None, cli_args=None, golden_output=None, version_outputs=None, "
+        "model_outputs=None, expected_stdout=None, config_content=None, aliases=None, **kwargs): "
+        "Mark test as CLI documentation source. "
+        "Either golden_output, version_outputs, model_outputs, or expected_stdout is required. "
+        "aliases: list of alternative option names (e.g., ['--capitalise-enum-members']).",
+    )
+    config._cli_doc_items: list[dict[str, Any]] = []
+
+
+def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
+    """Validate marker required fields and types."""
+    errors: list[str] = []
+
+    if "options" not in kwargs:
+        errors.append("Missing required field: 'options'")
+    if "cli_args" not in kwargs:
+        errors.append("Missing required field: 'cli_args'")
+
+    has_golden = "golden_output" in kwargs and kwargs["golden_output"] is not None
+    has_versions = "version_outputs" in kwargs and kwargs["version_outputs"] is not None
+    has_models = "model_outputs" in kwargs and kwargs["model_outputs"] is not None
+    has_stdout = "expected_stdout" in kwargs and kwargs["expected_stdout"] is not None
+    if not has_golden and not has_versions and not has_models and not has_stdout:
+        errors.append("Either 'golden_output', 'version_outputs', 'model_outputs', or 'expected_stdout' is required")
+
+    has_input_schema = "input_schema" in kwargs and kwargs["input_schema"] is not None
+    has_config_content = "config_content" in kwargs and kwargs["config_content"] is not None
+    if not has_input_schema and not has_config_content and not has_stdout:
+        errors.append(
+            "Either 'input_schema' or 'config_content' is required (or 'expected_stdout' with cli_args as input)"
+        )
+
+    if "options" in kwargs:
+        opts = kwargs["options"]
+        if not isinstance(opts, list):
+            errors.append(f"'options' must be a list, got {type(opts).__name__}")
+        elif not opts:
+            errors.append("'options' must be a non-empty list")
+        elif not all(isinstance(o, str) for o in opts):
+            errors.append("'options' must be a list of strings")
+
+    if "cli_args" in kwargs:
+        args = kwargs["cli_args"]
+        if not isinstance(args, list):
+            errors.append(f"'cli_args' must be a list, got {type(args).__name__}")
+        elif not all(isinstance(a, str) for a in args):
+            errors.append("'cli_args' must be a list of strings")
+
+    if "input_schema" in kwargs:
+        schema = kwargs["input_schema"]
+        if not isinstance(schema, str):
+            errors.append(f"'input_schema' must be a string, got {type(schema).__name__}")
+
+    if has_golden:
+        golden = kwargs["golden_output"]
+        if not isinstance(golden, str):
+            errors.append(f"'golden_output' must be a string, got {type(golden).__name__}")
+
+    if has_versions:
+        versions = kwargs["version_outputs"]
+        if not isinstance(versions, dict):
+            errors.append(f"'version_outputs' must be a dict, got {type(versions).__name__}")
+        else:
+            for key, value in versions.items():
+                if not isinstance(key, str):
+                    errors.append(f"'version_outputs' keys must be strings, got {type(key).__name__}")
+                elif not _VERSION_PATTERN.match(key):
+                    errors.append(f"Invalid version key '{key}': must match X.Y format (e.g., '3.10')")
+                if not isinstance(value, str):
+                    errors.append(f"'version_outputs' values must be strings, got {type(value).__name__}")
+
+    if has_models:
+        models = kwargs["model_outputs"]
+        if not isinstance(models, dict):
+            errors.append(f"'model_outputs' must be a dict, got {type(models).__name__}")
+        else:
+            valid_keys = {"pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"}
+            for key, value in models.items():
+                if not isinstance(key, str):
+                    errors.append(f"'model_outputs' keys must be strings, got {type(key).__name__}")
+                elif key not in valid_keys:
+                    errors.append(f"Invalid model key '{key}': must be one of {valid_keys}")
+                if not isinstance(value, str):
+                    errors.append(f"'model_outputs' values must be strings, got {type(value).__name__}")
+
+    if "related_options" in kwargs:
+        related = kwargs["related_options"]
+        if not isinstance(related, list):
+            errors.append(f"'related_options' must be a list, got {type(related).__name__}")
+        elif not all(isinstance(r, str) for r in related):
+            errors.append("'related_options' must be a list of strings")
+
+    if "aliases" in kwargs:
+        aliases = kwargs["aliases"]
+        if aliases is not None:
+            if not isinstance(aliases, list):
+                errors.append(f"'aliases' must be a list, got {type(aliases).__name__}")
+            elif not all(isinstance(a, str) for a in aliases):
+                errors.append("'aliases' must be a list of strings")
+
+    return errors
+
+
+def pytest_collection_modifyitems(
+    session: pytest.Session,  # noqa: ARG001
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:  # pragma: no cover
+    """Collect CLI doc metadata from tests with cli_doc marker."""
+    if not config.getoption("--collect-cli-docs"):
+        return
+
+    validation_errors: list[tuple[str, list[str]]] = []
+
+    for item in items:
+        marker = item.get_closest_marker("cli_doc")
+        if marker is None:
+            continue
+
+        errors = _validate_cli_doc_marker(item.nodeid, marker.kwargs)
+        if errors:
+            validation_errors.append((item.nodeid, errors))
+            continue
+
+        docstring = ""
+        func = getattr(item, "function", None)
+        if func is not None:
+            docstring = func.__doc__ or ""
+
+        config._cli_doc_items.append({
+            "node_id": item.nodeid,
+            "marker_kwargs": marker.kwargs,
+            "docstring": docstring,
+        })
+
+    if validation_errors:
+        error_msg = "CLI doc marker validation errors:\n"
+        for node_id, errors in validation_errors:
+            error_msg += f"\n  {node_id}:\n"
+            error_msg += "\n".join(f"    - {e}" for e in errors)
+        pytest.fail(error_msg, pytrace=False)
+
+
+def pytest_runtestloop(session: pytest.Session) -> bool | None:  # pragma: no cover
+    """Skip test execution when --collect-cli-docs is used."""
+    if session.config.getoption("--collect-cli-docs"):
+        return True
+    return None
+
+
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001  # pragma: no cover
+    """Save collected CLI doc metadata to JSON file."""
+    config = session.config
+    if not config.getoption("--collect-cli-docs"):
+        return
+
+    items = getattr(config, "_cli_doc_items", [])
+
+    output = {
+        "schema_version": CLI_DOC_SCHEMA_VERSION,
+        "items": items,
+    }
+
+    CLI_DOC_COLLECTION_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    with Path(CLI_DOC_COLLECTION_OUTPUT).open("w", encoding="utf-8") as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+
+
+class CodeValidationStats:
+    """Track code validation statistics."""
+
+    def __init__(self) -> None:
+        """Initialize statistics counters."""
+        self.compile_count = 0
+        self.compile_time = 0.0
+        self.exec_count = 0
+        self.exec_time = 0.0
+        self.errors: list[tuple[str, str]] = []
+
+    def record_compile(self, elapsed: float) -> None:
+        """Record a compile operation."""
+        self.compile_count += 1
+        self.compile_time += elapsed
+
+    def record_exec(self, elapsed: float) -> None:
+        """Record an exec operation."""
+        self.exec_count += 1
+        self.exec_time += elapsed
+
+    def record_error(self, file_path: str, error: str) -> None:  # pragma: no cover
+        """Record a validation error."""
+        self.errors.append((file_path, error))
+
+
+_validation_stats = CodeValidationStats()
+
+
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001  # pragma: no cover
+    """Print code validation and CLI doc collection summary at the end of test run."""
+    if config.getoption("--collect-cli-docs", default=False):
+        items = getattr(config, "_cli_doc_items", [])
+        terminalreporter.write_sep("=", "CLI Documentation Collection")
+        terminalreporter.write_line(f"Collected {len(items)} CLI doc items -> {CLI_DOC_COLLECTION_OUTPUT}")
+
+    if _validation_stats.compile_count > 0:
+        terminalreporter.write_sep("=", "Code Validation Summary")
+        terminalreporter.write_line(
+            f"Compiled {_validation_stats.compile_count} files in {_validation_stats.compile_time:.3f}s "
+            f"(avg: {_validation_stats.compile_time / _validation_stats.compile_count * 1000:.2f}ms)"
+        )
+        if _validation_stats.exec_count > 0:
+            terminalreporter.write_line(
+                f"Executed {_validation_stats.exec_count} files in {_validation_stats.exec_time:.3f}s "
+                f"(avg: {_validation_stats.exec_time / _validation_stats.exec_count * 1000:.2f}ms)"
+            )
+        if _validation_stats.errors:
+            terminalreporter.write_line(f"\nValidation errors: {len(_validation_stats.errors)}")
+            for file_path, error in _validation_stats.errors:
+                terminalreporter.write_line(f"  {file_path}: {error}")
+
 
 if sys.version_info >= (3, 10):
     from datetime import datetime, timezone
@@ -358,3 +601,33 @@ def _preload_heavy_modules() -> None:
     import isort  # noqa: PLC0415, F401
 
     import datamodel_code_generator  # noqa: PLC0415, F401
+
+
+def validate_generated_code(
+    code: str,
+    file_path: str,
+    *,
+    do_exec: bool = False,
+) -> None:
+    """Validate generated code by compiling and optionally executing it.
+
+    Args:
+        code: The generated Python code to validate.
+        file_path: Path to the file (for error reporting).
+        do_exec: Whether to execute the code after compiling (default: False).
+    """
+    try:
+        start = time.perf_counter()
+        compiled = compile(code, file_path, "exec")
+        _validation_stats.record_compile(time.perf_counter() - start)
+
+        if do_exec:
+            start = time.perf_counter()
+            exec(compiled, {})
+            _validation_stats.record_exec(time.perf_counter() - start)
+    except SyntaxError as e:  # pragma: no cover
+        _validation_stats.record_error(file_path, f"SyntaxError: {e}")
+        raise
+    except Exception as e:  # pragma: no cover
+        _validation_stats.record_error(file_path, f"{type(e).__name__}: {e}")
+        raise

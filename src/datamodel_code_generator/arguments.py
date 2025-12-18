@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfMergeMode,
     DataclassArguments,
     DataModelType,
     InputFileType,
@@ -61,8 +62,8 @@ def _dataclass_arguments(value: str) -> DataclassArguments:
     return cast("DataclassArguments", result)
 
 
-class SortingHelpFormatter(HelpFormatter):
-    """Help formatter that sorts arguments and adds color to section headers."""
+class SortingHelpFormatter(RawDescriptionHelpFormatter):
+    """Help formatter that sorts arguments, adds color to section headers, and preserves epilog formatting."""
 
     def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
         """Wrap text in ANSI bold cyan escape codes."""
@@ -80,7 +81,10 @@ class SortingHelpFormatter(HelpFormatter):
 
 arg_parser = ArgumentParser(
     usage="\n  datamodel-codegen [options]",
-    description="Generate Python data models from schema definitions or structured data",
+    description="Generate Python data models from schema definitions or structured data\n\n"
+    "For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator",
+    epilog="Documentation: https://koxudaxi.github.io/datamodel-code-generator\n"
+    "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
 )
@@ -374,6 +378,13 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-decimal-for-multiple-of",
+    help="Use condecimal instead of confloat for float/number fields with multipleOf constraint "
+    "(Pydantic only). Avoids floating-point precision issues in validation.",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-one-literal-as-default",
     help="Use one literal as default value for one literal field",
     action="store_true",
@@ -399,7 +410,7 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-specialized-enum",
-    help="Don't use specialized Enum class (StrEnum, IntEnum) even if the target Python version supports it",
+    help="Use specialized Enum class (StrEnum, IntEnum). Requires --target-python-version 3.11+",
     action=BooleanOptionalAction,
     default=None,
 )
@@ -413,6 +424,15 @@ typing_options.add_argument(
     "--use-unique-items-as-set",
     help="define field type as `set` when the field attribute has `uniqueItems`",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--allof-merge-mode",
+    help="Mode for field merging in allOf schemas. "
+    "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "
+    "'all': merge constraints plus annotations (default, examples) from parent. "
+    "'none': do not merge any fields from parent properties.",
+    choices=[m.value for m in AllOfMergeMode],
     default=None,
 )
 typing_options.add_argument(
@@ -545,6 +565,12 @@ field_options.add_argument(
     "--no-alias",
     help="""Do not add a field alias. E.g., if --snake-case-field is used along with a base class, which has an
             alias_generator""",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--use-frozen-field",
+    help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
     action="store_true",
     default=None,
 )

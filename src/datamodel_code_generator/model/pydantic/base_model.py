@@ -23,7 +23,7 @@ from datamodel_code_generator.model.pydantic.imports import (
     IMPORT_EXTRA,
     IMPORT_FIELD,
 )
-from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.types import STANDARD_LIST, UnionIntFloat, chain_as_tuple
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -134,6 +134,8 @@ class DataModelField(DataModelFieldBase):
                     and isinstance(data_type_child.reference.source, BaseModelBase)
                     and isinstance(self.default, list)
                 ):  # pragma: no cover
+                    if not self.default:
+                        return STANDARD_LIST
                     return (
                         f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
                         f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
@@ -153,6 +155,9 @@ class DataModelField(DataModelFieldBase):
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
             data["const"] = True
+
+        if self.use_frozen_field and self.read_only:
+            data["allow_mutation"] = False
 
     def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301
         return field_arguments
@@ -194,7 +199,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.required:
             default_factory = None
-        elif self.default and "default_factory" not in data:
+        elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
         else:
             default_factory = data.pop("default_factory", None)
@@ -216,7 +221,10 @@ class DataModelField(DataModelFieldBase):
         elif self.required:
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
-            field_arguments = [f"{self.default!r}", *field_arguments]
+            from datamodel_code_generator.model.base import repr_set_sorted  # noqa: PLC0415
+
+            default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
+            field_arguments = [default_repr, *field_arguments]
 
         return f"Field({', '.join(field_arguments)})"
 
@@ -294,7 +302,7 @@ class BaseModel(BaseModelBase):
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0912, PLR0913
         self,
         *,
         reference: Reference,
@@ -348,6 +356,12 @@ class BaseModel(BaseModelBase):
         for config_attribute in "allow_population_by_field_name", "allow_mutation":
             if config_attribute in self.extra_template_data:
                 config_parameters[config_attribute] = self.extra_template_data[config_attribute]
+
+        if "validate_assignment" not in config_parameters and any(
+            field.use_frozen_field and field.read_only for field in self.fields
+        ):
+            config_parameters["validate_assignment"] = True
+
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True

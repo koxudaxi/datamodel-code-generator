@@ -270,6 +270,19 @@ class AllExportsCollisionStrategy(Enum):
     FullPrefix = "full-prefix"
 
 
+class AllOfMergeMode(Enum):
+    """Mode for field merging in allOf schemas.
+
+    constraints: Merge only constraint fields (minItems, maxItems, pattern, etc.) from parent.
+    all: Merge constraints plus annotation fields (default, examples) from parent.
+    none: Do not merge any fields from parent properties.
+    """
+
+    Constraints = "constraints"
+    All = "all"
+    NoMerge = "none"
+
+
 class GraphQLScope(Enum):
     """Scopes for GraphQL model generation."""
 
@@ -415,11 +428,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
+    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     use_annotated: bool = False,
     use_serialize_as_any: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
+    use_decimal_for_multiple_of: bool = False,
     original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
     use_union_operator: bool = False,
@@ -443,6 +458,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     keyword_only: bool = False,
     frozen_dataclasses: bool = False,
     no_alias: bool = False,
+    use_frozen_field: bool = False,
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
@@ -655,11 +671,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,
         use_unique_items_as_set=use_unique_items_as_set,
+        allof_merge_mode=allof_merge_mode,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         use_annotated=use_annotated,
         use_serialize_as_any=use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+        use_decimal_for_multiple_of=use_decimal_for_multiple_of,
         original_field_name_delimiter=original_field_name_delimiter,
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
@@ -682,6 +700,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         keyword_only=keyword_only,
         frozen_dataclasses=frozen_dataclasses,
         no_alias=no_alias,
+        use_frozen_field=use_frozen_field,
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
@@ -779,7 +798,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 if header_after:
                     content = header_before + "\n" + extracted_future + "\n\n" + header_after
                 else:
-                    content = header_before + "\n\n\n" + extracted_future
+                    content = header_before + "\n\n" + extracted_future
                 print(content, file=file)
                 print(file=file)
                 print(body_without_future.rstrip(), file=file)

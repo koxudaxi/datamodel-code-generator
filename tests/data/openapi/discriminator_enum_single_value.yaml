@@ -1,0 +1,31 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    ToolCall:
+      oneOf:
+        - $ref: '#/components/schemas/FunctionToolCall'
+      discriminator:
+        propertyName: type
+
+    ToolType:
+      type: string
+      enum:
+        - function
+
+    ToolBase:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/ToolType'
+      required:
+        - type
+
+    FunctionToolCall:
+      allOf:
+        - $ref: '#/components/schemas/ToolBase'
+      type: object
+      properties:
+        id:
+          type: string
+      required:
+        - id

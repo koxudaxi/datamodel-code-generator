@@ -40,7 +40,6 @@ from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_fil
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
-
 FixtureRequest = pytest.FixtureRequest
 
 
@@ -57,8 +56,20 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
 
 
 @pytest.mark.benchmark
+@pytest.mark.cli_doc(
+    options=["--keep-model-order"],
+    input_schema="jsonschema/inheritance_forward_ref.json",
+    cli_args=["--keep-model-order"],
+    golden_output="jsonschema/inheritance_forward_ref_keep_model_order.py",
+    related_options=["--collapse-root-models"],
+)
 def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_path: Path) -> None:
-    """Test inheritance with forward references keeping model order."""
+    """Keep model definition order as specified in schema.
+
+    The `--keep-model-order` flag preserves the original definition order from the schema
+    instead of reordering models based on dependencies. This is useful when the order
+    of model definitions matters for documentation or readability.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "inheritance_forward_ref.json",
         output_path=output_file,
@@ -84,6 +95,154 @@ def test_main_type_alias_forward_ref_keep_model_order(output_file: Path) -> None
             "--use-standard-collections",
             "--use-union-operator",
             "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_type_alias_cycle_keep_model_order(output_file: Path) -> None:
+    """Test TypeAlias cycle ordering with keep_model_order."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_cycle.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--keep-model-order",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--use-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--disable-future-imports"],
+    input_schema="jsonschema/keep_model_order_field_references.json",
+    cli_args=["--disable-future-imports", "--target-python-version", "3.10"],
+    golden_output="main/jsonschema/keep_model_order_field_references.py",
+)
+@pytest.mark.benchmark
+def test_main_keep_model_order_field_references(output_file: Path) -> None:
+    """Prevent automatic addition of __future__ imports in generated code.
+
+    The --disable-future-imports option stops the generator from adding
+    'from __future__ import annotations' to the output. This is useful when
+    you need compatibility with tools or environments that don't support
+    postponed evaluation of annotations (PEP 563).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--keep-model-order",
+            "--disable-future-imports",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("target_python_version", "keep_model_order", "disable_future_imports"),
+    [
+        ("3.10", False, False),
+        ("3.10", False, True),
+        ("3.10", True, False),
+        ("3.10", True, True),
+        ("3.11", True, False),
+        ("3.11", True, True),
+        ("3.12", True, False),
+        ("3.12", True, True),
+        ("3.13", True, False),
+        ("3.13", True, True),
+        ("3.14", True, False),
+        ("3.14", True, True),
+    ],
+)
+def test_main_keep_model_order_matrix_keep_model_order_field_references(
+    output_file: Path,
+    target_python_version: str,
+    keep_model_order: bool,
+    disable_future_imports: bool,
+) -> None:
+    """E2E matrix for keep_model_order vs deferred annotations.
+
+    When deferred annotations are enabled (default), field references should not
+    force reordering (to avoid meaningless churn). When disabled, ordering must
+    satisfy runtime dependency requirements.
+    """
+    target_version = PythonVersion(target_python_version)
+    if not is_supported_in_black(target_version):
+        pytest.skip(f"Installed black ({black.__version__}) doesn't support Python {target_python_version}")
+
+    args = [
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--target-python-version",
+        target_python_version,
+        "--formatters",
+        "isort",
+    ]
+    if keep_model_order:
+        args.append("--keep-model-order")
+    if disable_future_imports:
+        args.append("--disable-future-imports")
+
+    run_main_with_args(args)
+    code = output_file.read_text(encoding="utf-8")
+    compile(code, str(output_file), "exec")
+
+    if not keep_model_order:
+        return
+
+    metadata_index = code.index("class Metadata")
+    description_type_index = code.index("class DescriptionType")
+    use_deferred_annotations_for_target = target_version.has_native_deferred_annotations or not disable_future_imports
+    if use_deferred_annotations_for_target:
+        assert description_type_index < metadata_index
+    else:
+        assert metadata_index < description_type_index
+
+    # For targets without native deferred annotations, validate runtime safety
+    # under the current interpreter by executing the generated module.
+    if not target_version.has_native_deferred_annotations:
+        exec(compile(code, str(output_file), "exec"), {})
+
+
+@pytest.mark.cli_doc(
+    options=["--target-python-version"],
+    input_schema="jsonschema/pydantic_v2_model_rebuild_inheritance.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--keep-model-order", "--target-python-version", "3.10"],
+    golden_output="jsonschema/pydantic_v2_model_rebuild_inheritance.py",
+)
+@pytest.mark.benchmark
+def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
+    """Target Python version for generated code syntax and imports.
+
+    The `--target-python-version` flag configures the code generation behavior.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_model_rebuild_inheritance.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--keep-model-order",
             "--target-python-version",
             "3.10",
         ],
@@ -144,7 +303,7 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
         assert_func=assert_file_content,
         expected_file="general.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "pydantic.BaseModel",
             "--dataclass-arguments",
             '{"slots": true, "order": true}',
@@ -165,7 +324,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
         assert_func=assert_file_content,
         expected_file="general_dataclass_frozen_kw_only.py",
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             "dataclasses.dataclass",
             "--frozen",
             "--keyword-only",
@@ -269,20 +428,45 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="jsonschema/null_and_array.json",
+    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/null_and_array.py",
+        "pydantic_v2": "main/jsonschema/null_and_array_v2.py",
+    },
+    primary=True,
+)
 def test_main_null_and_array(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test handling of null and array types."""
+    """Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+
+    The `--output-model-type` flag specifies which Python data model framework to use
+    for the generated code. Supported values include `pydantic.BaseModel`,
+    `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+    `msgspec.Struct`.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-default"],
+    input_schema="jsonschema/use_default_with_const.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-default"],
+    golden_output="jsonschema/use_default_with_const.py",
+)
 def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> None:
-    """Test use-default with const in Pydantic v2."""
+    """Use default values from schema in generated models.
+
+    The `--use-default` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_default_with_const.json",
         output_path=output_file,
@@ -317,7 +501,7 @@ def test_main_complicated_enum_default_member(
     output_model: str, expected_output: str, option: str | None, output_file: Path
 ) -> None:
     """Test complicated enum with default member."""
-    extra_args = [a for a in [option, "--output-model", output_model] if a]
+    extra_args = [a for a in [option, "--output-model-type", output_model] if a]
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "complicated_enum.json",
         output_path=output_file,
@@ -328,9 +512,18 @@ def test_main_complicated_enum_default_member(
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--set-default-enum-member"],
+    input_schema="jsonschema/duplicate_enum.json",
+    cli_args=["--reuse-model", "--set-default-enum-member"],
+    golden_output="jsonschema/json_reuse_enum_default_member.py",
+)
 @pytest.mark.benchmark
 def test_main_json_reuse_enum_default_member(output_file: Path) -> None:
-    """Test enum reuse with default member."""
+    """Set the first enum member as the default value for enum fields.
+
+    The `--set-default-enum-member` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_enum.json",
         output_path=output_file,
@@ -365,8 +558,20 @@ def test_main_invalid_model_name_converted(capsys: pytest.CaptureFixture[str], o
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--class-name"],
+    input_schema="jsonschema/invalid_model_name.json",
+    cli_args=["--class-name", "ValidModelName"],
+    golden_output="main/jsonschema/invalid_model_name.py",
+)
 def test_main_invalid_model_name(output_file: Path) -> None:
-    """Test invalid model name with custom class name."""
+    """Override the auto-generated class name with a custom name.
+
+    The --class-name option allows you to specify a custom class name for the
+    generated model. This is useful when the schema title is invalid as a Python
+    class name (e.g., starts with a number) or when you want to use a different
+    naming convention than what's in the schema.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_model_name.json",
         output_path=output_file,
@@ -637,8 +842,20 @@ def test_main_invalid_enum_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--snake-case-field"],
+    input_schema="jsonschema/invalid_enum_name.json",
+    cli_args=["--snake-case-field"],
+    golden_output="jsonschema/invalid_enum_name_snake_case_field.py",
+    related_options=["--capitalize-enum-members"],
+)
 def test_main_invalid_enum_name_snake_case_field(output_file: Path) -> None:
-    """Test invalid enum name with snake case fields."""
+    """Convert field names to snake_case format.
+
+    The `--snake-case-field` flag converts camelCase or PascalCase field names
+    to snake_case format in the generated Python code, following Python naming
+    conventions (PEP 8).
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "invalid_enum_name.json",
         output_path=output_file,
@@ -648,8 +865,20 @@ def test_main_invalid_enum_name_snake_case_field(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--reuse-model"],
+    input_schema="jsonschema/duplicate_enum.json",
+    cli_args=["--reuse-model"],
+    golden_output="jsonschema/json_reuse_enum.py",
+    related_options=["--collapse-root-models"],
+)
 def test_main_json_reuse_enum(output_file: Path) -> None:
-    """Test enum reuse in JSON generation."""
+    """Reuse identical model definitions instead of generating duplicates.
+
+    The `--reuse-model` flag detects identical enum or model definitions
+    across the schema and generates a single shared definition, reducing
+    code duplication in the output.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "duplicate_enum.json",
         output_path=output_file,
@@ -659,8 +888,21 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--capitalize-enum-members"],
+    input_schema="jsonschema/many_case_enum.json",
+    cli_args=["--capitalize-enum-members"],
+    golden_output="jsonschema/json_capitalise_enum_members.py",
+    related_options=["--snake-case-field"],
+    aliases=["--capitalise-enum-members"],
+)
 def test_main_json_capitalise_enum_members(output_file: Path) -> None:
-    """Test enum member capitalization."""
+    """Capitalize enum member names to UPPER_CASE format.
+
+    The `--capitalize-enum-members` flag converts enum member names to
+    UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
+    naming conventions for constants.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "many_case_enum.json",
         output_path=output_file,
@@ -819,8 +1061,20 @@ def test_main_root_model_with_additional_properties(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-generic-container-types"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--use-generic-container-types"],
+    golden_output="jsonschema/root_model_with_additional_properties_use_generic_container_types.py",
+    related_options=["--use-standard-collections"],
+)
 def test_main_root_model_with_additional_properties_use_generic_container_types(output_file: Path) -> None:
-    """Test root model additional properties with generic containers."""
+    """Use typing.Dict/List instead of dict/list for container types.
+
+    The `--use-generic-container-types` flag generates typing module generic
+    containers (Dict, List, etc.) instead of built-in types. This is useful for
+    Python 3.8 compatibility or when explicit typing imports are preferred.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
         output_path=output_file,
@@ -830,8 +1084,20 @@ def test_main_root_model_with_additional_properties_use_generic_container_types(
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-standard-collections"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--use-standard-collections"],
+    golden_output="jsonschema/root_model_with_additional_properties_use_standard_collections.py",
+    related_options=["--use-generic-container-types"],
+)
 def test_main_root_model_with_additional_properties_use_standard_collections(output_file: Path) -> None:
-    """Test root model additional properties with standard collections."""
+    """Use built-in dict/list instead of typing.Dict/List.
+
+    The `--use-standard-collections` flag generates built-in container types
+    (dict, list) instead of typing module equivalents. This produces cleaner
+    code for Python 3.9+ where built-in types support subscripting.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
         output_path=output_file,
@@ -874,8 +1140,20 @@ def test_main_jsonschema_multiple_files_ref_test_json(output_file: Path) -> None
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--original-field-name-delimiter"],
+    input_schema="jsonschema/space_field_enum.json",
+    cli_args=["--snake-case-field", "--original-field-name-delimiter", " "],
+    golden_output="main/jsonschema/space_field_enum_snake_case_field.py",
+)
 def test_main_space_field_enum_snake_case_field(output_file: Path) -> None:
-    """Test enum with space in field name using snake case."""
+    """Specify delimiter for original field names when using snake-case conversion.
+
+    The `--original-field-name-delimiter` option works with `--snake-case-field` to specify
+    the delimiter used in original field names. This is useful when field names contain
+    delimiters like spaces or hyphens that should be treated as word boundaries during
+    snake_case conversion.
+    """
     with chdir(JSON_SCHEMA_DATA_PATH / "space_field_enum.json"):
         run_main_and_assert(
             input_path=Path("space_field_enum.json"),
@@ -936,6 +1214,18 @@ def test_main_all_of_merge_boolean_property(output_file: Path) -> None:
         )
 
 
+def test_main_all_of_ref_with_property_override(output_file: Path) -> None:
+    """Test allOf with $ref preserves inheritance when properties are overridden."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_ref_with_property_override.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_ref_with_property_override.py",
+        )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
@@ -951,14 +1241,24 @@ def test_main_combined_array(output_file: Path) -> None:
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-timestamp"],
+    input_schema="jsonschema/pattern.json",
+    cli_args=["--disable-timestamp"],
+    golden_output="jsonschema/pattern.py",
+)
 def test_main_jsonschema_pattern(output_file: Path) -> None:
-    """Test JSON Schema pattern validation."""
+    """Disable timestamp in generated file header for reproducible output.
+
+    The `--disable-timestamp` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "pattern.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pattern.py",
+        extra_args=["--disable-timestamp"],
     )
 
 
@@ -1051,24 +1351,28 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
+    base_url = "https://example.com/external_files_in_directory/"
 
-    def get_mock_response(path: str) -> mocker.Mock:
+    url_to_path = {
+        f"{base_url}person.json": "person.json",
+        f"{base_url}definitions/relative/animal/pet/pet.json": "definitions/relative/animal/pet/pet.json",
+        f"{base_url}definitions/relative/animal/fur.json": "definitions/relative/animal/fur.json",
+        f"{base_url}definitions/friends.json": "definitions/friends.json",
+        f"{base_url}definitions/food.json": "definitions/food.json",
+        f"{base_url}definitions/machine/robot.json": "definitions/machine/robot.json",
+        f"{base_url}definitions/drink/coffee.json": "definitions/drink/coffee.json",
+        f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
+    }
+
+    def get_mock_response(url: str, **_: object) -> mocker.Mock:
+        path = url_to_path.get(url)
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
 
     httpx_get_mock = mocker.patch(
         "httpx.get",
-        side_effect=[
-            get_mock_response("person.json"),
-            get_mock_response("definitions/relative/animal/pet/pet.json"),
-            get_mock_response("definitions/relative/animal/fur.json"),
-            get_mock_response("definitions/friends.json"),
-            get_mock_response("definitions/food.json"),
-            get_mock_response("definitions/machine/robot.json"),
-            get_mock_response("definitions/drink/coffee.json"),
-            get_mock_response("definitions/drink/tea.json"),
-        ],
+        side_effect=get_mock_response,
     )
     run_main_url_and_assert(
         url="https://example.com/external_files_in_directory/person.json",
@@ -1081,64 +1385,68 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/external_files_in_directory/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/friends.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/food.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-        ),
-    ])
+    httpx_get_mock.assert_has_calls(
+        [
+            call(
+                "https://example.com/external_files_in_directory/person.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/friends.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/food.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+            ),
+        ],
+        any_order=True,
+    )
+    assert httpx_get_mock.call_count == 8
 
 
 @pytest.mark.parametrize(
@@ -1177,24 +1485,28 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
 ) -> None:
     """Test HTTP JSON Schema with headers, query params, and TLS ignore."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
+    base_url = "https://example.com/external_files_in_directory/"
 
-    def get_mock_response(path: str) -> mocker.Mock:
+    url_to_path = {
+        f"{base_url}person.json": "person.json",
+        f"{base_url}definitions/relative/animal/pet/pet.json": "definitions/relative/animal/pet/pet.json",
+        f"{base_url}definitions/relative/animal/fur.json": "definitions/relative/animal/fur.json",
+        f"{base_url}definitions/friends.json": "definitions/friends.json",
+        f"{base_url}definitions/food.json": "definitions/food.json",
+        f"{base_url}definitions/machine/robot.json": "definitions/machine/robot.json",
+        f"{base_url}definitions/drink/coffee.json": "definitions/drink/coffee.json",
+        f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
+    }
+
+    def get_mock_response(url: str, **_: object) -> mocker.Mock:
+        path = url_to_path.get(url)
         mock = mocker.Mock()
         mock.text = (external_directory / path).read_text()
         return mock
 
     httpx_get_mock = mocker.patch(
         "httpx.get",
-        side_effect=[
-            get_mock_response("person.json"),
-            get_mock_response("definitions/relative/animal/pet/pet.json"),
-            get_mock_response("definitions/relative/animal/fur.json"),
-            get_mock_response("definitions/friends.json"),
-            get_mock_response("definitions/food.json"),
-            get_mock_response("definitions/machine/robot.json"),
-            get_mock_response("definitions/drink/coffee.json"),
-            get_mock_response("definitions/drink/tea.json"),
-        ],
+        side_effect=get_mock_response,
     )
     output_file: Path = tmp_path / "output.py"
     extra_args = [
@@ -1218,64 +1530,68 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/external_files_in_directory/person.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/friends.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/food.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-        call(
-            "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-            headers=headers_requests,
-            verify=bool(not http_ignore_tls),
-            follow_redirects=True,
-            params=query_parameters_requests,
-        ),
-    ])
+    httpx_get_mock.assert_has_calls(
+        [
+            call(
+                "https://example.com/external_files_in_directory/person.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/friends.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/food.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+            call(
+                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
+                headers=headers_requests,
+                verify=bool(not http_ignore_tls),
+                follow_redirects=True,
+                params=query_parameters_requests,
+            ),
+        ],
+        any_order=True,
+    )
+    assert httpx_get_mock.call_count == 8
 
 
 def test_main_self_reference(output_file: Path) -> None:
@@ -1299,12 +1615,24 @@ def test_main_strict_types(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--strict-types"],
+    input_schema="jsonschema/strict_types.json",
+    cli_args=["--strict-types", "str", "bytes", "int", "float", "bool"],
+    golden_output="main/jsonschema/strict_types_all.py",
+)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",
 )
 def test_main_strict_types_all(output_file: Path) -> None:
-    """Test strict types for all fields."""
+    """Enable strict type validation for specified Python types.
+
+    The --strict-types option enforces stricter type checking by preventing implicit
+    type coercion for the specified types (str, bytes, int, float, bool). This
+    generates StrictStr, StrictBytes, StrictInt, StrictFloat, and StrictBool types
+    in Pydantic models, ensuring values match exactly without automatic conversion.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "strict_types.json",
         output_path=output_file,
@@ -1314,8 +1642,20 @@ def test_main_strict_types_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-constraints"],
+    input_schema="jsonschema/strict_types.json",
+    cli_args=["--strict-types", "str", "bytes", "int", "float", "bool", "--field-constraints"],
+    golden_output="jsonschema/strict_types_all_field_constraints.py",
+    related_options=["--strict-types"],
+)
 def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None:
-    """Test strict types with field constraints."""
+    """Generate Field() with validation constraints from schema.
+
+    The `--field-constraints` flag generates Pydantic Field() declarations with
+    validation constraints (min/max length, pattern, minimum/maximum values, etc.)
+    extracted from the JSON Schema, enabling runtime validation.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "strict_types.json",
         output_path=output_file,
@@ -1337,8 +1677,17 @@ def test_main_jsonschema_special_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--special-field-name-prefix"],
+    input_schema="jsonschema/special_enum.json",
+    cli_args=["--special-field-name-prefix", "special"],
+    golden_output="jsonschema/special_enum_special_field_name_prefix.py",
+)
 def test_main_jsonschema_special_enum_special_field_name_prefix(output_file: Path) -> None:
-    """Test special enum with field name prefix."""
+    """Prefix to add to special field names (like reserved keywords).
+
+    The `--special-field-name-prefix` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_enum.json",
         output_path=output_file,
@@ -1361,8 +1710,17 @@ def test_main_jsonschema_special_enum_special_field_name_prefix_keep_private(out
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--remove-special-field-name-prefix"],
+    input_schema="jsonschema/special_prefix_model.json",
+    cli_args=["--remove-special-field-name-prefix"],
+    golden_output="jsonschema/special_model_remove_special_field_name_prefix.py",
+)
 def test_main_jsonschema_special_model_remove_special_field_name_prefix(output_file: Path) -> None:
-    """Test removing special field name prefix from models."""
+    """Remove the special prefix from field names.
+
+    The `--remove-special-field-name-prefix` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_prefix_model.json",
         output_path=output_file,
@@ -1413,8 +1771,22 @@ def test_main_jsonschema_allof_enum_no_external_ref(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--use-specialized-enum"],
+    input_schema="jsonschema/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--use-specialized-enum"],
+    golden_output="jsonschema/enum_specialized.py",
+    related_options=["--no-use-specialized-enum", "--use-subclass-enum"],
+)
 def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
-    """Test specialized enum generation."""
+    """Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
+
+    The `--use-specialized-enum` flag generates specialized enum types:
+    - `StrEnum` for string enums
+    - `IntEnum` for integer enums
+
+    This is the default behavior for Python 3.11+ targets.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
@@ -1429,8 +1801,19 @@ def test_main_jsonschema_specialized_enums(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--no-use-specialized-enum"],
+    input_schema="jsonschema/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    golden_output="jsonschema/enum_specialized_disable.py",
+    related_options=["--use-specialized-enum", "--use-subclass-enum"],
+)
 def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
-    """Test with specialized enums disabled."""
+    """Disable specialized enum generation (StrEnum/IntEnum).
+
+    The `--no-use-specialized-enum` flag disables specialized enum types,
+    generating standard `Enum` classes instead of `StrEnum`/`IntEnum`.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
@@ -1441,8 +1824,17 @@ def test_main_jsonschema_specialized_enums_disabled(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--empty-enum-field-name"],
+    input_schema="jsonschema/special_enum.json",
+    cli_args=["--empty-enum-field-name", "empty"],
+    golden_output="jsonschema/special_enum_empty_enum_field_name.py",
+)
 def test_main_jsonschema_special_enum_empty_enum_field_name(output_file: Path) -> None:
-    """Test special enum with empty field name."""
+    """Name for empty string enum field values.
+
+    The `--empty-enum-field-name` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "special_enum.json",
         output_path=output_file,
@@ -1514,11 +1906,20 @@ def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--union-mode"],
+    input_schema="jsonschema/combine_any_of_object.json",
+    cli_args=["--union-mode", "left_to_right", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/combine_any_of_object_left_to_right.py",
+)
 def test_main_jsonschema_combine_any_of_object(
     union_mode: str | None, output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test combining anyOf with objects."""
-    extra_args = ["--output-model", output_model]
+    """Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
+
+    The `--union-mode` flag configures the code generation behavior.
+    """
+    extra_args = ["--output-model-type", output_model]
     if union_mode is not None:
         extra_args.extend(["--union-mode", union_mode])
     run_main_and_assert(
@@ -1535,9 +1936,9 @@ def test_main_jsonschema_combine_any_of_object(
 @pytest.mark.parametrize(
     ("extra_args", "expected_file"),
     [
-        (["--output-model", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
+        (["--output-model-type", "pydantic_v2.BaseModel"], "jsonschema_root_model_ordering.py"),
         (
-            ["--output-model", "pydantic_v2.BaseModel", "--keep-model-order"],
+            ["--output-model-type", "pydantic_v2.BaseModel", "--keep-model-order"],
             "jsonschema_root_model_ordering_keep_model_order.py",
         ),
     ],
@@ -1554,9 +1955,18 @@ def test_main_jsonschema_root_model_ordering(output_file: Path, extra_args: list
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-include-all-keys"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--field-include-all-keys"],
+    golden_output="jsonschema/general.py",
+)
 @pytest.mark.benchmark
 def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
-    """Test field generation including all keys."""
+    """Include all schema keys in Field() json_schema_extra.
+
+    The `--field-include-all-keys` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
@@ -1580,10 +1990,25 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--field-extra-keys-without-x-prefix"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--field-include-all-keys", "--field-extra-keys-without-x-prefix", "x-repr"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/field_extras_field_include_all_keys.py",
+        "pydantic_v2": "main/jsonschema/field_extras_field_include_all_keys_v2.py",
+    },
+)
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test field extras including all keys."""
+    """Include specified schema extension keys in Field() without requiring 'x-' prefix.
+
+    The --field-extra-keys-without-x-prefix option allows you to specify custom
+    schema extension keys that should be included in Pydantic Field() extras without
+    the 'x-' prefix requirement. For example, 'x-repr' in the schema becomes 'repr'
+    in Field(). This is useful for custom schema extensions and vendor-specific metadata.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
@@ -1591,7 +2016,7 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             output_model,
             "--field-include-all-keys",
             "--field-extra-keys-without-x-prefix",
@@ -1613,10 +2038,22 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--field-extra-keys"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--field-extra-keys", "key2", "--field-extra-keys-without-x-prefix", "x-repr"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/field_extras_field_extra_keys.py",
+        "pydantic_v2": "main/jsonschema/field_extras_field_extra_keys_v2.py",
+    },
+)
 def test_main_jsonschema_field_extras_field_extra_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Test field extras with extra keys."""
+    """Include specific extra keys in Field() definitions.
+
+    The `--field-extra-keys` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
@@ -1624,7 +2061,7 @@ def test_main_jsonschema_field_extras_field_extra_keys(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=[
-            "--output-model",
+            "--output-model-type",
             output_model,
             "--field-extra-keys",
             "key2",
@@ -1656,7 +2093,7 @@ def test_main_jsonschema_field_extras(output_model: str, expected_output: str, o
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -1681,8 +2118,19 @@ def test_long_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--wrap-string-literal"],
+    input_schema="jsonschema/long_description.json",
+    cli_args=["--wrap-string-literal"],
+    golden_output="jsonschema/long_description_wrap_string_literal.py",
+)
 def test_long_description_wrap_string_literal(output_file: Path) -> None:
-    """Test long description with string literal wrapping."""
+    """Wrap long string literals across multiple lines.
+
+    The `--wrap-string-literal` flag breaks long string literals (like descriptions)
+    across multiple lines for better readability, instead of having very long
+    single-line strings in the generated code.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "long_description.json",
         output_path=output_file,
@@ -1736,8 +2184,20 @@ def test_jsonschema_titles(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-title-as-name"],
+    input_schema="jsonschema/titles.json",
+    cli_args=["--use-title-as-name"],
+    golden_output="jsonschema/titles_use_title_as_name.py",
+    related_options=["--class-name"],
+)
 def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
-    """Test using title as model name."""
+    """Use schema title as the generated class name.
+
+    The `--use-title-as-name` flag uses the `title` property from the schema
+    as the class name instead of deriving it from the property name or path.
+    This is useful when schemas have descriptive titles that should be preserved.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "titles.json",
         output_path=output_file,
@@ -1833,8 +2293,17 @@ def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--treat-dot-as-module"],
+    input_schema="jsonschema/treat_dot_as_module_single",
+    cli_args=["--treat-dot-as-module"],
+    golden_output="jsonschema/treat_dot_as_module_single/",
+)
 def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
-    """Test treat-dot-as-module with single file having short path."""
+    """Treat dots in schema names as module separators.
+
+    The `--treat-dot-as-module` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module_single",
         output_path=output_dir,
@@ -1897,6 +2366,18 @@ def test_main_jsonschema_nullable_object(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_ref_type_has_null(output_file: Path) -> None:
+    """Test that type: [type, null] from $ref schema is propagated."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_type_has_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_type_has_null.py",
+        extra_args=["--use-union-operator"],
+    )
+
+
 def test_main_jsonschema_object_has_one_of(output_file: Path) -> None:
     """Test object with oneOf constraint."""
     run_main_and_assert(
@@ -1941,8 +2422,20 @@ def test_main_jsonschema_oneof_const_enum_nested(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="jsonschema/oneof_const_enum_nested.yaml",
+    cli_args=["--enum-field-as-literal", "all"],
+    golden_output="main/jsonschema/oneof_const_enum_nested_literal.py",
+)
 def test_main_jsonschema_oneof_const_enum_nested_literal(output_file: Path) -> None:
-    """Test nested oneOf const with --enum-field-as-literal all."""
+    """Generate Literal types instead of Enums for fields with enumerated values.
+
+    The --enum-field-as-literal option replaces Enum classes with Literal types for
+    fields that have a fixed set of allowed values. Use 'all' to convert all enum
+    fields, or 'one' to only convert enums with a single value. This produces more
+    concise type hints and avoids creating Enum classes when not needed.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "oneof_const_enum_nested.yaml",
         output_path=output_file,
@@ -2116,9 +2609,20 @@ def test_main_disable_warnings_config(capsys: pytest.CaptureFixture[str], output
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-warnings"],
+    input_schema="jsonschema/all_of_with_object.json",
+    cli_args=["--disable-warnings"],
+    golden_output="main/jsonschema/all_of_with_object.py",
+)
 @pytest.mark.filterwarnings("error")
 def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
-    """Test disable warnings flag."""
+    """Suppress warning messages during code generation.
+
+    The --disable-warnings option silences all warning messages that the generator
+    might emit during processing (e.g., about unsupported features, ambiguous schemas,
+    or potential issues). Useful for clean output in CI/CD pipelines.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_with_object.json",
         output_path=output_file,
@@ -2238,8 +2742,19 @@ def test_main_all_of_any_of(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-double-quotes"],
+    input_schema="jsonschema/all_of_any_of_base_class_ref.json",
+    cli_args=["--use-double-quotes"],
+    golden_output="main/jsonschema/all_of_any_of_base_class_ref.py",
+)
 def test_main_all_of_any_of_base_class_ref(output_file: Path) -> None:
-    """Test allOf/anyOf with base class references to avoid invalid imports."""
+    """Use double quotes for string literals in generated code.
+
+    The --use-double-quotes option formats all string literals in the generated
+    Python code with double quotes instead of the default single quotes. This
+    helps maintain consistency with codebases that prefer double-quote formatting.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_of_any_of_base_class_ref.json",
         output_path=output_file,
@@ -3018,8 +3533,17 @@ def test_main_jsonschema_forwarding_reference_collapse_root(output_dir: Path) ->
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-type-alias"],
+    input_schema="jsonschema/type_alias.json",
+    cli_args=["--use-type-alias"],
+    golden_output="jsonschema/type_alias.py",
+)
 def test_main_jsonschema_type_alias(output_file: Path) -> None:
-    """Test that TypeAliasType is generated for Python 3.9-3.11."""
+    """Generate TypeAlias for root models instead of wrapper classes.
+
+    The `--use-type-alias` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
@@ -3052,8 +3576,19 @@ def test_main_jsonschema_type_alias_py312(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-field-description"],
+    input_schema="jsonschema/type_alias.json",
+    cli_args=["--use-type-alias", "--use-field-description"],
+    golden_output="jsonschema/type_alias_with_field_description.py",
+)
 def test_main_jsonschema_type_alias_with_field_description(output_file: Path) -> None:
-    """Test that TypeAliasType is generated with field descriptions for Python 3.9-3.11."""
+    """Include schema descriptions as Field docstrings.
+
+    The `--use-field-description` flag extracts the `description` property from
+    schema fields and includes them as docstrings or Field descriptions in the
+    generated models, preserving documentation from the original schema.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_alias.json",
         output_path=output_file,
@@ -3087,8 +3622,17 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--type-mappings"],
+    input_schema="jsonschema/type_mappings.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--type-mappings", "binary=string"],
+    golden_output="jsonschema/type_mappings.py",
+)
 def test_main_jsonschema_type_mappings(output_file: Path) -> None:
-    """Test --type-mappings option to override format-to-type mappings."""
+    """Override default type mappings for schema formats.
+
+    The `--type-mappings` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
         output_path=output_file,
@@ -3172,8 +3716,17 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--reuse-scope"],
+    input_schema="jsonschema/reuse_scope_tree",
+    cli_args=["--reuse-model", "--reuse-scope", "tree"],
+    golden_output="jsonschema/reuse_scope_tree",
+)
 def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
-    """Test --reuse-scope=tree to deduplicate models across multiple files."""
+    """Scope for model reuse detection (root or tree).
+
+    The `--reuse-scope` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
         output_path=output_dir,
@@ -3319,6 +3872,12 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--aliases"],
+    input_schema="jsonschema/hierarchical_aliases.json",
+    cli_args=["--aliases", "aliases/hierarchical_aliases_scoped.json"],
+    golden_output="jsonschema/jsonschema_hierarchical_aliases_scoped.py",
+)
 def test_main_jsonschema_hierarchical_aliases_scoped(output_file: Path) -> None:
     """Test hierarchical aliases with scoped format (ClassName.field)."""
     run_main_and_assert(
@@ -3371,8 +3930,20 @@ def test_main_jsonschema_enum_object_values(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models"],
+    input_schema="jsonschema/collapse_root_models_empty_union.json",
+    cli_args=["--collapse-root-models"],
+    golden_output="main/jsonschema/jsonschema_collapse_root_models_empty_union.py",
+)
 def test_main_jsonschema_collapse_root_models_empty_union(output_file: Path) -> None:
-    """Test that collapse-root-models with empty union fallback generates Any instead of invalid Union syntax."""
+    """Inline root model definitions instead of creating separate wrapper classes.
+
+    The --collapse-root-models option simplifies generated code by collapsing
+    root-level models (top-level type aliases) directly into their usage sites.
+    This eliminates unnecessary wrapper classes and produces more concise output,
+    especially useful when schemas define simple root types or type aliases.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_empty_union.json",
         output_path=output_file,
@@ -3587,19 +4158,43 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("typing.TypedDict", "reserved_field_name_schema_typed_dict.py"),
+        ("dataclasses.dataclass", "reserved_field_name_schema_dataclass.py"),
+        ("pydantic_v2.BaseModel", "reserved_field_name_schema_pydantic.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--output-model-type"],
+    input_schema="jsonschema/reserved_field_name_schema.json",
+    cli_args=["--target-python-version", "3.11"],
+    model_outputs={
+        "typeddict": "main/jsonschema/reserved_field_name_schema_typed_dict.py",
+        "dataclass": "main/jsonschema/reserved_field_name_schema_dataclass.py",
+        "pydantic_v2": "main/jsonschema/reserved_field_name_schema_pydantic.py",
+    },
+)
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> None:
-    """Test that 'schema' field is not renamed in TypedDict (Issue #1833)."""
+def test_main_jsonschema_reserved_field_name(output_model: str, expected_file: str, output_file: Path) -> None:
+    """Test reserved field name handling across model types (Issue #1833).
+
+    This demonstrates how 'schema' field is handled:
+    - TypedDict: not renamed (schema is not reserved)
+    - dataclass: not renamed (schema is not reserved)
+    - Pydantic: renamed to 'schema_' with alias (BaseModel.schema conflicts)
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_typed_dict.py",
+        expected_file=expected_file,
         extra_args=[
             "--output-model-type",
-            "typing.TypedDict",
+            output_model,
             "--target-python-version",
             "3.11",
         ],
@@ -3608,37 +4203,161 @@ def test_main_jsonschema_reserved_field_name_typed_dict(output_file: Path) -> No
 
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_dataclass(output_file: Path) -> None:
-    """Test that 'schema' field is not renamed in dataclass (Issue #1833)."""
+def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
+    """Test bundled schema with $id using local file input (Issue #1798)."""
     run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
+        input_path=JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_dataclass.py",
-        extra_args=[
-            "--output-model-type",
-            "dataclasses.dataclass",
-            "--target-python-version",
-            "3.11",
-        ],
-    )
-
-
-@pytest.mark.benchmark
-@LEGACY_BLACK_SKIP
-def test_main_jsonschema_reserved_field_name_pydantic(output_file: Path) -> None:
-    """Test that 'schema' field is renamed to 'schema_' with alias in Pydantic (Issue #1833)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "reserved_field_name_schema.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="reserved_field_name_schema_pydantic.py",
+        expected_file="bundled_schema_with_id.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--target-python-version",
-            "3.11",
         ],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Path) -> None:
+    """Test bundled schema with $id using URL input produces same output as local file."""
+    schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
+
+    mock_response = mocker.Mock()
+    mock_response.text = schema_path.read_text()
+
+    httpx_get_mock = mocker.patch(
+        "httpx.get",
+        return_value=mock_response,
+    )
+
+    run_main_url_and_assert(
+        url="https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="bundled_schema_with_id.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        transform=lambda s: s.replace(
+            "#   filename:  https://cdn.example.com/schemas/bundled_schema_with_id.json",
+            "#   filename:  bundled_schema_with_id.json",
+        ),
+    )
+
+    httpx_get_mock.assert_called_once_with(
+        "https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic.BaseModel", "use_frozen_field_v1.py"),
+        ("pydantic_v2.BaseModel", "use_frozen_field_v2.py"),
+        ("dataclasses.dataclass", "use_frozen_field_dataclass.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-frozen-field"],
+    input_schema="jsonschema/use_frozen_field.json",
+    cli_args=["--use-frozen-field"],
+    model_outputs={
+        "pydantic_v1": "main/jsonschema/use_frozen_field_v1.py",
+        "pydantic_v2": "main/jsonschema/use_frozen_field_v2.py",
+        "dataclass": "main/jsonschema/use_frozen_field_dataclass.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field(output_model: str, expected_file: str, output_file: Path) -> None:
+    """Generate frozen (immutable) field definitions for readOnly properties.
+
+    The `--use-frozen-field` flag generates frozen field definitions:
+    - Pydantic v1: `Field(allow_mutation=False)`
+    - Pydantic v2: `Field(frozen=True)`
+    - Dataclasses: silently ignored (no frozen fields generated)
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--output-model-type", output_model, "--use-frozen-field"],
+    )
+
+
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
+    """Test --use-frozen-field with no readOnly fields produces no frozen fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "user.json",  # Has no readOnly fields
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_frozen_field_no_readonly.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-frozen-field"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_field_name_shadows_class_name(output_file: Path) -> None:
+    """Test field name shadowing class name is renamed with alias for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_name_shadows_class_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--allof-merge-mode"],
+    input_schema="jsonschema/allof_root_model_constraints.json",
+    cli_args=["--allof-merge-mode", "constraints"],
+    golden_output="main/jsonschema/allof_root_model_constraints_merge.py",
+    comparison_output="main/jsonschema/allof_root_model_constraints.py",
+)
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_merge(output_file: Path) -> None:
+    """Merge constraints from root model references in allOf schemas.
+
+    The `--allof-merge-mode constraints` merges only constraint properties
+    (minLength, maximum, etc.) from parent schemas referenced in allOf.
+    This ensures child schemas inherit validation constraints while keeping
+    other properties separate.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints_merge.py",
+        extra_args=["--allof-merge-mode", "constraints"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
+    """Test allOf with root model reference without merging (issue #1901)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints.py",
+        extra_args=["--allof-merge-mode", "none"],
     )

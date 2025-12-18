@@ -4,12 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Union
-
-from msgspec import Meta, Struct, UnsetType
+from msgspec import Struct
 
 
 class Type1(Struct, tag_field='type_', tag='a'):
-    type_: ClassVar[Annotated[Union[Literal['a'], UnsetType], Meta(title='Type ')]] = (
-        'a'
-    )
+    pass

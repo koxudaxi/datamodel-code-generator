@@ -1,0 +1,4950 @@
+# 🏗️ Model Customization
+
+## 📋 Options
+
+| Option | Description |
+|--------|-------------|
+| [`--allow-extra-fields`](#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allo... |
+| [`--allow-population-by-field-name`](#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alia... |
+| [`--base-class`](#base-class) | Specify a custom base class for generated models. |
+| [`--class-name`](#class-name) | Override the auto-generated class name with a custom name. |
+| [`--collapse-root-models`](#collapse-root-models) | Inline root model definitions instead of creating separate w... |
+| [`--dataclass-arguments`](#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary.... |
+| [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutati... |
+| [`--force-optional`](#force-optional) | Force all fields to be Optional regardless of required statu... |
+| [`--frozen-dataclasses`](#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only field... |
+| [`--keep-model-order`](#keep-model-order) | Keep model definition order as specified in schema. |
+| [`--keyword-only`](#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+)... |
+| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, T... |
+| [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
+| [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
+| [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
+| [`--skip-root-model`](#skip-root-model) | Skip generation of root model when schema contains nested de... |
+| [`--strict-nullable`](#strict-nullable) | Strictly handle nullable types in OpenAPI schemas. |
+| [`--strip-default-none`](#strip-default-none) | Remove fields with None as default value from generated mode... |
+| [`--target-python-version`](#target-python-version) | Target Python version for generated code syntax and imports.... |
+| [`--union-mode`](#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_... |
+| [`--use-default`](#use-default) | Use default values from schema in generated models. |
+| [`--use-default-kwarg`](#use-default-kwarg) | Use default= keyword argument instead of positional argument... |
+| [`--use-frozen-field`](#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly p... |
+| [`--use-one-literal-as-default`](#use-one-literal-as-default) | Use single literal value as default when enum has only one o... |
+| [`--use-serialize-as-any`](#use-serialize-as-any) | Wrap fields with subtypes in Pydantic's SerializeAsAny. |
+| [`--use-subclass-enum`](#use-subclass-enum) | Generate typed Enum subclasses for enums with specific field... |
+
+---
+
+## `--allow-extra-fields` {#allow-extra-fields}
+
+Allow extra fields in generated Pydantic models (extra='allow').
+
+The `--allow-extra-fields` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --allow-extra-fields # (1)!
+    ```
+
+    1. :material-arrow-left: `--allow-extra-fields` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, Extra, Field
+        
+        
+        class Pet(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            __root__: List[Pet]
+        
+        
+        class User(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            __root__: List[User]
+        
+        
+        class Id(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            __root__: str
+        
+        
+        class Rules(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            __root__: List[str]
+        
+        
+        class Error(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            __root__: List[Api]
+        
+        
+        class Event(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            class Config:
+                extra = Extra.allow
+        
+            event: Optional[Event] = None
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
+        
+        
+        class Pet(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(RootModel[List[Pet]]):
+            root: List[Pet]
+        
+        
+        class User(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(RootModel[List[User]]):
+            root: List[User]
+        
+        
+        class Id(RootModel[str]):
+            root: str
+        
+        
+        class Rules(RootModel[List[str]]):
+            root: List[str]
+        
+        
+        class Error(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(RootModel[List[Api]]):
+            root: List[Api]
+        
+        
+        class Event(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            model_config = ConfigDict(
+                extra='allow',
+            )
+            event: Optional[Event] = None
+        ```
+
+---
+
+## `--allow-population-by-field-name` {#allow-population-by-field-name}
+
+Allow Pydantic model population by field name (not just alias).
+
+The `--allow-population-by-field-name` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --allow-population-by-field-name # (1)!
+    ```
+
+    1. :material-arrow-left: `--allow-population-by-field-name` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, Field
+        
+        
+        class Pet(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            __root__: List[Pet]
+        
+        
+        class User(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            __root__: List[User]
+        
+        
+        class Id(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            __root__: str
+        
+        
+        class Rules(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            __root__: List[str]
+        
+        
+        class Error(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            __root__: List[Api]
+        
+        
+        class Event(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            class Config:
+                allow_population_by_field_name = True
+        
+            event: Optional[Event] = None
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
+        
+        
+        class Pet(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(RootModel[List[Pet]]):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            root: List[Pet]
+        
+        
+        class User(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(RootModel[List[User]]):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            root: List[User]
+        
+        
+        class Id(RootModel[str]):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            root: str
+        
+        
+        class Rules(RootModel[List[str]]):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            root: List[str]
+        
+        
+        class Error(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(RootModel[List[Api]]):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            root: List[Api]
+        
+        
+        class Event(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            model_config = ConfigDict(
+                populate_by_name=True,
+            )
+            event: Optional[Event] = None
+        ```
+
+---
+
+## `--base-class` {#base-class}
+
+Specify a custom base class for generated models.
+
+The `--base-class` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --base-class custom_module.Base # (1)!
+    ```
+
+    1. :material-arrow-left: `--base-class` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  api.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Optional
+    
+    from pydantic import AnyUrl, Field
+    
+    from custom_module import Base
+    
+    
+    class Pet(Base):
+        id: int
+        name: str
+        tag: Optional[str] = None
+    
+    
+    class Pets(Base):
+        __root__: List[Pet]
+    
+    
+    class User(Base):
+        id: int
+        name: str
+        tag: Optional[str] = None
+    
+    
+    class Users(Base):
+        __root__: List[User]
+    
+    
+    class Id(Base):
+        __root__: str
+    
+    
+    class Rules(Base):
+        __root__: List[str]
+    
+    
+    class Error(Base):
+        code: int
+        message: str
+    
+    
+    class Api(Base):
+        apiKey: Optional[str] = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: Optional[str] = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: Optional[AnyUrl] = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: Optional[AnyUrl] = Field(
+            None, description='A URL to the API console for each API'
+        )
+    
+    
+    class Apis(Base):
+        __root__: List[Api]
+    
+    
+    class Event(Base):
+        name: Optional[str] = None
+    
+    
+    class Result(Base):
+        event: Optional[Event] = None
+    ```
+
+---
+
+## `--class-name` {#class-name}
+
+Override the auto-generated class name with a custom name.
+
+The --class-name option allows you to specify a custom class name for the
+generated model. This is useful when the schema title is invalid as a Python
+class name (e.g., starts with a number) or when you want to use a different
+naming convention than what's in the schema.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --class-name ValidModelName # (1)!
+    ```
+
+    1. :material-arrow-left: `--class-name` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "1 xyz",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The person's last name."
+        },
+        "age": {
+          "description": "Age in years which must be equal to or greater than zero.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "friends": {
+          "type": "array"
+        },
+        "comment": {
+          "type": "null"
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  invalid_model_name.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Any, List, Optional
+    
+    from pydantic import BaseModel, Field, conint
+    
+    
+    class ValidModelName(BaseModel):
+        firstName: Optional[str] = Field(None, description="The person's first name.")
+        lastName: Optional[str] = Field(None, description="The person's last name.")
+        age: Optional[conint(ge=0)] = Field(
+            None, description='Age in years which must be equal to or greater than zero.'
+        )
+        friends: Optional[List[Any]] = None
+        comment: None = None
+    ```
+
+---
+
+## `--collapse-root-models` {#collapse-root-models}
+
+Inline root model definitions instead of creating separate wrapper classes.
+
+The `--collapse-root-models` option generates simpler output by inlining root models
+directly instead of creating separate wrapper types. This shows how different output
+model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --collapse-root-models # (1)!
+    ```
+
+    1. :material-arrow-left: `--collapse-root-models` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: '3.0.2'
+    components:
+      schemas:
+        ApiVersion:
+          description: The version of this API
+          type: string
+          const: v1
+        Api:
+          type: object
+          required:
+            - version
+          properties:
+            version:
+              $ref: "#/components/schemas/ApiVersion"
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class Api(BaseModel):
+            version: str = Field('v1', const=True, description='The version of this API')
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Literal
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class Api(BaseModel):
+            version: Literal['v1'] = Field(..., description='The version of this API')
+        ```
+
+    === "dataclass"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from dataclasses import dataclass
+        from typing import Literal
+        
+        
+        @dataclass
+        class Api:
+            version: Literal['v1']
+        ```
+
+    === "TypedDict"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Literal, TypedDict
+        
+        
+        class Api(TypedDict):
+            version: Literal['v1']
+        ```
+
+    === "msgspec"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Annotated, Literal
+        
+        from msgspec import Meta, Struct
+        
+        
+        class Api(Struct):
+            version: Annotated[Literal['v1'], Meta(description='The version of this API')]
+        ```
+
+    === "Without Option (Baseline)"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  const.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class ApiVersion(BaseModel):
+            __root__: str = Field('v1', const=True, description='The version of this API')
+        
+        
+        class Api(BaseModel):
+            version: ApiVersion
+        ```
+
+---
+
+## `--dataclass-arguments` {#dataclass-arguments}
+
+Customize dataclass decorator arguments via JSON dictionary.
+
+The `--dataclass-arguments` flag accepts custom dataclass arguments as a JSON
+dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": true}').
+This overrides individual flags like --frozen-dataclasses and provides fine-grained
+control over dataclass generation.
+
+**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --dataclass-arguments "{"slots": true, "order": true}" # (1)!
+    ```
+
+    1. :material-arrow-left: `--dataclass-arguments` - the option documented here
+
+??? example "Input Schema"
+
+    ```graphql
+    type Person {
+        id: ID!
+        name: String!
+        height: Int
+        mass: Int
+        hair_color: String
+        skin_color: String
+        eye_color: String
+        birth_year: String
+        gender: String
+    
+        # Relationships
+        homeworld_id: ID
+        homeworld: Planet
+        species: [Species!]!
+        species_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+        starships: [Starship!]!
+        starships_ids: [ID!]!
+        vehicles: [Vehicle!]!
+        vehicles_ids: [ID!]!
+    }
+    
+    type Planet {
+        id: ID!
+        name: String!
+        rotation_period: String
+        orbital_period: String
+        diameter: String
+        climate: String
+        gravity: String
+        terrain: String
+        surface_water: String
+        population: String
+    
+        # Relationships
+        residents: [Person!]!
+        residents_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Species {
+        id: ID!
+        name: String!
+        classification: String
+        designation: String
+        average_height: String
+        skin_colors: String
+        hair_colors: String
+        eye_colors: String
+        average_lifespan: String
+        language: String
+    
+        # Relationships
+        people: [Person!]!
+        people_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Vehicle {
+        id: ID!
+        name: String!
+        model: String
+        manufacturer: String
+        cost_in_credits: String
+        length: String
+        max_atmosphering_speed: String
+        crew: String
+        passengers: String
+        cargo_capacity: String
+        consumables: String
+        vehicle_class: String
+    
+        # Relationships
+        pilots: [Person!]!
+        pilots_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Starship {
+        id: ID!
+        name: String!
+        model: String
+        manufacturer: String
+        cost_in_credits: String
+        length: String
+        max_atmosphering_speed: String
+        crew: String
+        passengers: String
+        cargo_capacity: String
+        consumables: String
+        hyperdrive_rating: String
+        MGLT: String
+        starship_class: String
+    
+        # Relationships
+        pilots: [Person!]!
+        pilots_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Film {
+      id: ID!
+      title: String!
+      episode_id: Int!
+      opening_crawl: String!
+      director: String!
+      producer: String
+      release_date: String!
+    
+      # Relationships
+      characters: [Person!]!
+      characters_ids: [ID!]!
+      planets: [Planet!]!
+      planets_ids: [ID!]!
+      starships: [Starship!]!
+      starships_ids: [ID!]!
+      vehicles: [Vehicle!]!
+      vehicles_ids: [ID!]!
+      species: [Species!]!
+      species_ids: [ID!]!
+    }
+    
+    type Query {
+      planet(id: ID!): Planet
+      listPlanets(page: Int): [Planet!]!
+      person(id: ID!): Person
+      listPeople(page: Int): [Person!]!
+      species(id: ID!): Species
+      listSpecies(page: Int): [Species!]!
+      film(id: ID!): Film
+      listFilms(page: Int): [Film!]!
+      starship(id: ID!): Starship
+      listStarships(page: Int): [Starship!]!
+      vehicle(id: ID!): Vehicle
+      listVehicles(page: Int): [Vehicle!]!
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  simple-star-wars.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from dataclasses import dataclass
+    from typing import List, Literal, Optional
+    
+    from typing_extensions import TypeAlias
+    
+    Boolean: TypeAlias = bool
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    ID: TypeAlias = str
+    """
+    The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+    """
+    
+    
+    Int: TypeAlias = int
+    """
+    The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
+    """
+    
+    
+    String: TypeAlias = str
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    @dataclass(order=True, slots=True)
+    class Film:
+        characters: List[Person]
+        characters_ids: List[ID]
+        director: String
+        episode_id: Int
+        id: ID
+        opening_crawl: String
+        planets: List[Planet]
+        planets_ids: List[ID]
+        release_date: String
+        species: List[Species]
+        species_ids: List[ID]
+        starships: List[Starship]
+        starships_ids: List[ID]
+        title: String
+        vehicles: List[Vehicle]
+        vehicles_ids: List[ID]
+        producer: Optional[String] = None
+        typename__: Optional[Literal['Film']] = 'Film'
+    
+    
+    @dataclass(order=True, slots=True)
+    class Person:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        species: List[Species]
+        species_ids: List[ID]
+        starships: List[Starship]
+        starships_ids: List[ID]
+        vehicles: List[Vehicle]
+        vehicles_ids: List[ID]
+        birth_year: Optional[String] = None
+        eye_color: Optional[String] = None
+        gender: Optional[String] = None
+        hair_color: Optional[String] = None
+        height: Optional[Int] = None
+        homeworld: Optional[Planet] = None
+        homeworld_id: Optional[ID] = None
+        mass: Optional[Int] = None
+        skin_color: Optional[String] = None
+        typename__: Optional[Literal['Person']] = 'Person'
+    
+    
+    @dataclass(order=True, slots=True)
+    class Planet:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        residents: List[Person]
+        residents_ids: List[ID]
+        climate: Optional[String] = None
+        diameter: Optional[String] = None
+        gravity: Optional[String] = None
+        orbital_period: Optional[String] = None
+        population: Optional[String] = None
+        rotation_period: Optional[String] = None
+        surface_water: Optional[String] = None
+        terrain: Optional[String] = None
+        typename__: Optional[Literal['Planet']] = 'Planet'
+    
+    
+    @dataclass(order=True, slots=True)
+    class Species:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        people: List[Person]
+        people_ids: List[ID]
+        average_height: Optional[String] = None
+        average_lifespan: Optional[String] = None
+        classification: Optional[String] = None
+        designation: Optional[String] = None
+        eye_colors: Optional[String] = None
+        hair_colors: Optional[String] = None
+        language: Optional[String] = None
+        skin_colors: Optional[String] = None
+        typename__: Optional[Literal['Species']] = 'Species'
+    
+    
+    @dataclass(order=True, slots=True)
+    class Starship:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        pilots: List[Person]
+        pilots_ids: List[ID]
+        MGLT: Optional[String] = None
+        cargo_capacity: Optional[String] = None
+        consumables: Optional[String] = None
+        cost_in_credits: Optional[String] = None
+        crew: Optional[String] = None
+        hyperdrive_rating: Optional[String] = None
+        length: Optional[String] = None
+        manufacturer: Optional[String] = None
+        max_atmosphering_speed: Optional[String] = None
+        model: Optional[String] = None
+        passengers: Optional[String] = None
+        starship_class: Optional[String] = None
+        typename__: Optional[Literal['Starship']] = 'Starship'
+    
+    
+    @dataclass(order=True, slots=True)
+    class Vehicle:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        pilots: List[Person]
+        pilots_ids: List[ID]
+        cargo_capacity: Optional[String] = None
+        consumables: Optional[String] = None
+        cost_in_credits: Optional[String] = None
+        crew: Optional[String] = None
+        length: Optional[String] = None
+        manufacturer: Optional[String] = None
+        max_atmosphering_speed: Optional[String] = None
+        model: Optional[String] = None
+        passengers: Optional[String] = None
+        vehicle_class: Optional[String] = None
+        typename__: Optional[Literal['Vehicle']] = 'Vehicle'
+    ```
+
+---
+
+## `--enable-faux-immutability` {#enable-faux-immutability}
+
+Enable faux immutability in Pydantic v1 models (allow_mutation=False).
+
+The `--enable-faux-immutability` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --enable-faux-immutability # (1)!
+    ```
+
+    1. :material-arrow-left: `--enable-faux-immutability` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, Field
+        
+        
+        class Pet(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            __root__: List[Pet]
+        
+        
+        class User(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            __root__: List[User]
+        
+        
+        class Id(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            __root__: str
+        
+        
+        class Rules(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            __root__: List[str]
+        
+        
+        class Error(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            __root__: List[Api]
+        
+        
+        class Event(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            class Config:
+                allow_mutation = False
+        
+            event: Optional[Event] = None
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
+        
+        
+        class Pet(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(RootModel[List[Pet]]):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            root: List[Pet]
+        
+        
+        class User(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(RootModel[List[User]]):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            root: List[User]
+        
+        
+        class Id(RootModel[str]):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            root: str
+        
+        
+        class Rules(RootModel[List[str]]):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            root: List[str]
+        
+        
+        class Error(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            apiKey: Optional[str] = Field(
+                None, description='To be used as a dataset parameter value'
+            )
+            apiVersionNumber: Optional[str] = Field(
+                None, description='To be used as a version parameter value'
+            )
+            apiUrl: Optional[AnyUrl] = Field(
+                None, description="The URL describing the dataset's fields"
+            )
+            apiDocumentationUrl: Optional[AnyUrl] = Field(
+                None, description='A URL to the API console for each API'
+            )
+        
+        
+        class Apis(RootModel[List[Api]]):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            root: List[Api]
+        
+        
+        class Event(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            model_config = ConfigDict(
+                frozen=True,
+            )
+            event: Optional[Event] = None
+        ```
+
+---
+
+## `--force-optional` {#force-optional}
+
+Force all fields to be Optional regardless of required status.
+
+The `--force-optional` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --force-optional # (1)!
+    ```
+
+    1. :material-arrow-left: `--force-optional` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  api.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Optional
+    
+    from pydantic import AnyUrl, BaseModel, Field
+    
+    
+    class Pet(BaseModel):
+        id: Optional[int] = 1
+        name: Optional[str] = None
+        tag: Optional[str] = None
+    
+    
+    class Pets(BaseModel):
+        __root__: Optional[List[Pet]] = None
+    
+    
+    class User(BaseModel):
+        id: Optional[int] = None
+        name: Optional[str] = None
+        tag: Optional[str] = None
+    
+    
+    class Users(BaseModel):
+        __root__: Optional[List[User]] = None
+    
+    
+    class Id(BaseModel):
+        __root__: Optional[str] = None
+    
+    
+    class Rules(BaseModel):
+        __root__: Optional[List[str]] = None
+    
+    
+    class Error(BaseModel):
+        code: Optional[int] = None
+        message: Optional[str] = None
+    
+    
+    class Api(BaseModel):
+        apiKey: Optional[str] = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: Optional[str] = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: Optional[AnyUrl] = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: Optional[AnyUrl] = Field(
+            None, description='A URL to the API console for each API'
+        )
+    
+    
+    class Apis(BaseModel):
+        __root__: Optional[List[Api]] = None
+    
+    
+    class Event(BaseModel):
+        name: Optional[str] = None
+    
+    
+    class Result(BaseModel):
+        event: Optional[Event] = None
+    ```
+
+---
+
+## `--frozen-dataclasses` {#frozen-dataclasses}
+
+Generate frozen dataclasses with optional keyword-only fields.
+
+The `--frozen-dataclasses` flag generates dataclass instances that are immutable
+(frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
+keyword-only arguments.
+
+**Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen-dataclasses # (1)!
+    ```
+
+    1. :material-arrow-left: `--frozen-dataclasses` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "title": "User",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "age": {
+          "type": "integer"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      "required": ["name", "age"]
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  simple_frozen_test.json
+    #   timestamp: 1985-10-26T08:21:00+00:00
+    
+    from __future__ import annotations
+    
+    from dataclasses import dataclass
+    from typing import Optional
+    
+    
+    @dataclass(frozen=True)
+    class User:
+        name: str
+        age: int
+        email: Optional[str] = None
+    ```
+
+---
+
+## `--keep-model-order` {#keep-model-order}
+
+Keep model definition order as specified in schema.
+
+The `--keep-model-order` flag preserves the original definition order from the schema
+instead of reordering models based on dependencies. This is useful when the order
+of model definitions matters for documentation or readability.
+
+**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --keep-model-order # (1)!
+    ```
+
+    1. :material-arrow-left: `--keep-model-order` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+        "title": "PersonsBestFriend",
+        "description": "This is the main model.",
+        "type": "object",
+        "properties": {
+          "people": {
+            "title": "People",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Person"
+            }
+          },
+          "dogs": {
+            "title": "Dogs",
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Dog"
+            }
+          },
+          "dog_base": {
+            "$ref": "#/definitions/DogBase"
+          },
+          "dog_relationships": {
+            "$ref": "#/definitions/DogRelationships"
+          },
+          "person_base": {
+            "$ref": "#/definitions/PersonBase"
+          },
+          "person_relationships": {
+            "$ref": "#/definitions/PersonRelationships"
+          }
+        },
+        "definitions": {
+          "Person": {
+            "title": "Person",
+            "allOf": [
+                {"$ref": "#/definitions/PersonBase"},
+                {"$ref": "#/definitions/PersonRelationships"}
+            ]
+          },
+          "Dog": {
+            "title": "Dog",
+            "allOf": [
+                {"$ref": "#/definitions/DogBase"},
+                {"$ref": "#/definitions/DogRelationships"}
+            ]
+          },
+          "DogBase": {
+            "title": "DogBase",
+            "type": "object",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              },
+              "woof": {
+                "title": "Woof",
+                "default": true,
+                "type": "boolean"
+              }
+            }
+          },
+          "DogRelationships": {
+            "title": "DogRelationships",
+            "type": "object",
+            "properties": {
+              "people": {
+                "title": "People",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Person"
+                }
+              }
+            }
+          },
+          "PersonBase": {
+            "title": "PersonBase",
+            "type": "object",
+            "properties": {
+              "name": {
+                "title": "Name",
+                "type": "string"
+              }
+            }
+          },
+          "PersonRelationships": {
+            "title": "PersonRelationships",
+            "type": "object",
+            "properties": {
+              "people": {
+                "title": "People",
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Person"
+                }
+              }
+            }
+          }
+        }
+      }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  inheritance_forward_ref.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Optional
+    
+    from pydantic import BaseModel, Field
+    
+    
+    class DogBase(BaseModel):
+        name: Optional[str] = Field(None, title='Name')
+        woof: Optional[bool] = Field(True, title='Woof')
+    
+    
+    class DogRelationships(BaseModel):
+        people: Optional[List[Person]] = Field(None, title='People')
+    
+    
+    class Dog(DogBase, DogRelationships):
+        pass
+    
+    
+    class PersonBase(BaseModel):
+        name: Optional[str] = Field(None, title='Name')
+    
+    
+    class PersonRelationships(BaseModel):
+        people: Optional[List[Person]] = Field(None, title='People')
+    
+    
+    class Person(PersonBase, PersonRelationships):
+        pass
+    
+    
+    class PersonsBestFriend(BaseModel):
+        people: Optional[List[Person]] = Field(None, title='People')
+        dogs: Optional[List[Dog]] = Field(None, title='Dogs')
+        dog_base: Optional[DogBase] = None
+        dog_relationships: Optional[DogRelationships] = None
+        person_base: Optional[PersonBase] = None
+        person_relationships: Optional[PersonRelationships] = None
+    
+    
+    DogRelationships.update_forward_refs()
+    Dog.update_forward_refs()
+    PersonRelationships.update_forward_refs()
+    Person.update_forward_refs()
+    PersonsBestFriend.update_forward_refs()
+    ```
+
+---
+
+## `--keyword-only` {#keyword-only}
+
+Generate dataclasses with keyword-only fields (Python 3.10+).
+
+The `--keyword-only` flag generates dataclasses where all fields must be
+specified as keyword arguments (kw_only=True). This is only available for
+Python 3.10+. When combined with `--frozen`, it creates immutable dataclasses
+with keyword-only arguments, improving code clarity and preventing positional
+argument errors.
+
+**Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--target-python-version`](model-customization.md#target-python-version), [`--output-model-type`](model-customization.md#output-model-type)
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type dataclasses.dataclass --frozen-dataclasses --keyword-only --target-python-version 3.10 # (1)!
+    ```
+
+    1. :material-arrow-left: `--keyword-only` - the option documented here
+
+??? example "Input Schema"
+
+    ```graphql
+    type Person {
+        id: ID!
+        name: String!
+        height: Int
+        mass: Int
+        hair_color: String
+        skin_color: String
+        eye_color: String
+        birth_year: String
+        gender: String
+    
+        # Relationships
+        homeworld_id: ID
+        homeworld: Planet
+        species: [Species!]!
+        species_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+        starships: [Starship!]!
+        starships_ids: [ID!]!
+        vehicles: [Vehicle!]!
+        vehicles_ids: [ID!]!
+    }
+    
+    type Planet {
+        id: ID!
+        name: String!
+        rotation_period: String
+        orbital_period: String
+        diameter: String
+        climate: String
+        gravity: String
+        terrain: String
+        surface_water: String
+        population: String
+    
+        # Relationships
+        residents: [Person!]!
+        residents_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Species {
+        id: ID!
+        name: String!
+        classification: String
+        designation: String
+        average_height: String
+        skin_colors: String
+        hair_colors: String
+        eye_colors: String
+        average_lifespan: String
+        language: String
+    
+        # Relationships
+        people: [Person!]!
+        people_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Vehicle {
+        id: ID!
+        name: String!
+        model: String
+        manufacturer: String
+        cost_in_credits: String
+        length: String
+        max_atmosphering_speed: String
+        crew: String
+        passengers: String
+        cargo_capacity: String
+        consumables: String
+        vehicle_class: String
+    
+        # Relationships
+        pilots: [Person!]!
+        pilots_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Starship {
+        id: ID!
+        name: String!
+        model: String
+        manufacturer: String
+        cost_in_credits: String
+        length: String
+        max_atmosphering_speed: String
+        crew: String
+        passengers: String
+        cargo_capacity: String
+        consumables: String
+        hyperdrive_rating: String
+        MGLT: String
+        starship_class: String
+    
+        # Relationships
+        pilots: [Person!]!
+        pilots_ids: [ID!]!
+        films: [Film!]!
+        films_ids: [ID!]!
+    }
+    
+    type Film {
+      id: ID!
+      title: String!
+      episode_id: Int!
+      opening_crawl: String!
+      director: String!
+      producer: String
+      release_date: String!
+    
+      # Relationships
+      characters: [Person!]!
+      characters_ids: [ID!]!
+      planets: [Planet!]!
+      planets_ids: [ID!]!
+      starships: [Starship!]!
+      starships_ids: [ID!]!
+      vehicles: [Vehicle!]!
+      vehicles_ids: [ID!]!
+      species: [Species!]!
+      species_ids: [ID!]!
+    }
+    
+    type Query {
+      planet(id: ID!): Planet
+      listPlanets(page: Int): [Planet!]!
+      person(id: ID!): Person
+      listPeople(page: Int): [Person!]!
+      species(id: ID!): Species
+      listSpecies(page: Int): [Species!]!
+      film(id: ID!): Film
+      listFilms(page: Int): [Film!]!
+      starship(id: ID!): Starship
+      listStarships(page: Int): [Starship!]!
+      vehicle(id: ID!): Vehicle
+      listVehicles(page: Int): [Vehicle!]!
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  simple-star-wars.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from dataclasses import dataclass
+    from typing import List, Literal, Optional, TypeAlias
+    
+    Boolean: TypeAlias = bool
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    ID: TypeAlias = str
+    """
+    The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
+    """
+    
+    
+    Int: TypeAlias = int
+    """
+    The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
+    """
+    
+    
+    String: TypeAlias = str
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Film:
+        characters: List[Person]
+        characters_ids: List[ID]
+        director: String
+        episode_id: Int
+        id: ID
+        opening_crawl: String
+        planets: List[Planet]
+        planets_ids: List[ID]
+        release_date: String
+        species: List[Species]
+        species_ids: List[ID]
+        starships: List[Starship]
+        starships_ids: List[ID]
+        title: String
+        vehicles: List[Vehicle]
+        vehicles_ids: List[ID]
+        producer: Optional[String] = None
+        typename__: Optional[Literal['Film']] = 'Film'
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Person:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        species: List[Species]
+        species_ids: List[ID]
+        starships: List[Starship]
+        starships_ids: List[ID]
+        vehicles: List[Vehicle]
+        vehicles_ids: List[ID]
+        birth_year: Optional[String] = None
+        eye_color: Optional[String] = None
+        gender: Optional[String] = None
+        hair_color: Optional[String] = None
+        height: Optional[Int] = None
+        homeworld: Optional[Planet] = None
+        homeworld_id: Optional[ID] = None
+        mass: Optional[Int] = None
+        skin_color: Optional[String] = None
+        typename__: Optional[Literal['Person']] = 'Person'
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Planet:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        residents: List[Person]
+        residents_ids: List[ID]
+        climate: Optional[String] = None
+        diameter: Optional[String] = None
+        gravity: Optional[String] = None
+        orbital_period: Optional[String] = None
+        population: Optional[String] = None
+        rotation_period: Optional[String] = None
+        surface_water: Optional[String] = None
+        terrain: Optional[String] = None
+        typename__: Optional[Literal['Planet']] = 'Planet'
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Species:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        people: List[Person]
+        people_ids: List[ID]
+        average_height: Optional[String] = None
+        average_lifespan: Optional[String] = None
+        classification: Optional[String] = None
+        designation: Optional[String] = None
+        eye_colors: Optional[String] = None
+        hair_colors: Optional[String] = None
+        language: Optional[String] = None
+        skin_colors: Optional[String] = None
+        typename__: Optional[Literal['Species']] = 'Species'
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Starship:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        pilots: List[Person]
+        pilots_ids: List[ID]
+        MGLT: Optional[String] = None
+        cargo_capacity: Optional[String] = None
+        consumables: Optional[String] = None
+        cost_in_credits: Optional[String] = None
+        crew: Optional[String] = None
+        hyperdrive_rating: Optional[String] = None
+        length: Optional[String] = None
+        manufacturer: Optional[String] = None
+        max_atmosphering_speed: Optional[String] = None
+        model: Optional[String] = None
+        passengers: Optional[String] = None
+        starship_class: Optional[String] = None
+        typename__: Optional[Literal['Starship']] = 'Starship'
+    
+    
+    @dataclass(frozen=True, kw_only=True)
+    class Vehicle:
+        films: List[Film]
+        films_ids: List[ID]
+        id: ID
+        name: String
+        pilots: List[Person]
+        pilots_ids: List[ID]
+        cargo_capacity: Optional[String] = None
+        consumables: Optional[String] = None
+        cost_in_credits: Optional[String] = None
+        crew: Optional[String] = None
+        length: Optional[String] = None
+        manufacturer: Optional[String] = None
+        max_atmosphering_speed: Optional[String] = None
+        model: Optional[String] = None
+        passengers: Optional[String] = None
+        vehicle_class: Optional[String] = None
+        typename__: Optional[Literal['Vehicle']] = 'Vehicle'
+    ```
+
+---
+
+## `--output-model-type` {#output-model-type}
+
+Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+
+The `--output-model-type` flag specifies which Python data model framework to use
+for the generated code. Supported values include `pydantic.BaseModel`,
+`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+`msgspec.Struct`.
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic.BaseModel # (1)!
+    ```
+
+    1. :material-arrow-left: `--output-model-type` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+        "$schema": "http://json-schema.org/schema#",
+        "type": "object",
+        "properties": {
+            "my_obj": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": [
+                                "array",
+                                "null"
+                            ]
+                        }
+                    },
+                    "required": [
+                        "items"
+                    ]
+                }
+            }
+        },
+        "required": [
+            "my_obj"
+        ]
+    }
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  null_and_array.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any, List, Optional
+        
+        from pydantic import BaseModel
+        
+        
+        class MyObjItem(BaseModel):
+            items: Optional[List[Any]]
+        
+        
+        class Model(BaseModel):
+            my_obj: List[MyObjItem]
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  null_and_array.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any, List, Optional
+        
+        from pydantic import BaseModel
+        
+        
+        class MyObjItem(BaseModel):
+            items: Optional[List[Any]] = None
+        
+        
+        class Model(BaseModel):
+            my_obj: List[MyObjItem]
+        ```
+
+---
+
+## `--parent-scoped-naming` {#parent-scoped-naming}
+
+Namespace models by their parent scope to avoid naming conflicts.
+
+The `--parent-scoped-naming` flag prefixes model names with their parent scope
+(operation/path/parameter) to prevent name collisions when the same model name
+appears in different contexts within an OpenAPI specification.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --parent-scoped-naming --use-operation-id-as-name --openapi-scopes paths schemas parameters # (1)!
+    ```
+
+    1. :material-arrow-left: `--parent-scoped-naming` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: Get pet
+          operationId: getPets
+          responses:
+            '200':
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pet"
+      /cars:
+        get:
+          summary: Get car
+          operationId: getCar
+          responses:
+            '200':
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Cars"
+    
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+            - type
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            tag:
+              type: string
+            type:
+              type: string
+              enum: [ 'pet' ]
+            details:
+              type: object
+              properties:
+                race: { type: string }
+        Car:
+          required:
+            - id
+            - name
+            - type
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            tag:
+              type: string
+            type:
+              type: string
+              enum: [ 'car' ]
+            details:
+              type: object
+              properties:
+                brand: { type: string }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  duplicate_models2.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum
+    from typing import Any, Optional
+    
+    from pydantic import BaseModel, RootModel
+    
+    
+    class PetType(Enum):
+        pet = 'pet'
+    
+    
+    class PetDetails(BaseModel):
+        race: Optional[str] = None
+    
+    
+    class Pet(BaseModel):
+        id: int
+        name: str
+        tag: Optional[str] = None
+        type: PetType
+        details: Optional[PetDetails] = None
+    
+    
+    class CarType(Enum):
+        car = 'car'
+    
+    
+    class CarDetails(BaseModel):
+        brand: Optional[str] = None
+    
+    
+    class Car(BaseModel):
+        id: int
+        name: str
+        tag: Optional[str] = None
+        type: CarType
+        details: Optional[CarDetails] = None
+    
+    
+    class Cars(RootModel[Any]):
+        root: Any
+    ```
+
+---
+
+## `--reuse-model` {#reuse-model}
+
+Reuse identical model definitions instead of generating duplicates.
+
+The `--reuse-model` flag detects identical enum or model definitions
+across the schema and generates a single shared definition, reducing
+code duplication in the output.
+
+**Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --reuse-model # (1)!
+    ```
+
+    1. :material-arrow-left: `--reuse-model` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "title": "User",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "animal": {
+          "type": "string",
+          "enum": [
+            "dog",
+            "cat",
+            "snake"
+          ],
+          "default": "dog"
+        },
+        "pet": {
+          "type": "string",
+          "enum": [
+            "dog",
+            "cat",
+            "snake"
+          ],
+          "default": "cat"
+        },
+        "redistribute": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "static",
+              "connected"
+            ]
+          }
+        }
+      },
+      "definitions": {
+        "redistribute": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "static",
+              "connected"
+            ]
+          },
+          "description": "Redistribute type for routes."
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  duplicate_enum.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum
+    from typing import List, Optional
+    
+    from pydantic import BaseModel, Field
+    
+    
+    class Animal(Enum):
+        dog = 'dog'
+        cat = 'cat'
+        snake = 'snake'
+    
+    
+    class RedistributeEnum(Enum):
+        static = 'static'
+        connected = 'connected'
+    
+    
+    class User(BaseModel):
+        name: Optional[str] = None
+        animal: Optional[Animal] = 'dog'
+        pet: Optional[Animal] = 'cat'
+        redistribute: Optional[List[RedistributeEnum]] = None
+    
+    
+    class Redistribute(BaseModel):
+        __root__: List[RedistributeEnum] = Field(
+            ..., description='Redistribute type for routes.'
+        )
+    ```
+
+---
+
+## `--reuse-scope` {#reuse-scope}
+
+Scope for model reuse detection (root or tree).
+
+The `--reuse-scope` flag configures the code generation behavior.
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --reuse-model --reuse-scope tree # (1)!
+    ```
+
+    1. :material-arrow-left: `--reuse-scope` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    # schema_a.json
+    {
+      "type": "object",
+      "properties": {
+        "data": { "$ref": "#/$defs/SharedModel" }
+      },
+      "$defs": {
+        "SharedModel": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" },
+            "name": { "type": "string" }
+          }
+        }
+      }
+    }
+    
+    # schema_b.json
+    {
+      "type": "object",
+      "properties": {
+        "info": { "$ref": "#/$defs/SharedModel" }
+      },
+      "$defs": {
+        "SharedModel": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" },
+            "name": { "type": "string" }
+          }
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # __init__.py
+    # generated by datamodel-codegen:
+    #   filename:  reuse_scope_tree
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    # schema_a.py
+    # generated by datamodel-codegen:
+    #   filename:  reuse_scope_tree
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Optional
+    
+    from pydantic import BaseModel
+    
+    from .shared import SharedModel as SharedModel_1
+    
+    
+    class SharedModel(SharedModel_1):
+        pass
+    
+    
+    class Model(BaseModel):
+        data: Optional[SharedModel] = None
+    
+    # schema_b.py
+    # generated by datamodel-codegen:
+    #   filename:  schema_b.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Optional
+    
+    from pydantic import BaseModel
+    
+    from . import shared
+    
+    
+    class Model(BaseModel):
+        info: Optional[shared.SharedModel] = None
+    
+    # shared.py
+    # generated by datamodel-codegen:
+    #   filename:  shared.py
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Optional
+    
+    from pydantic import BaseModel
+    
+    
+    class SharedModel(BaseModel):
+        id: Optional[int] = None
+        name: Optional[str] = None
+    ```
+
+---
+
+## `--skip-root-model` {#skip-root-model}
+
+Skip generation of root model when schema contains nested definitions.
+
+The `--skip-root-model` flag prevents generating a model for the root schema object
+when the schema primarily contains reusable definitions. This is useful when the root
+object is just a container for $defs and not a meaningful model itself.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --skip-root-model # (1)!
+    ```
+
+    1. :material-arrow-left: `--skip-root-model` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "_Placeholder",
+      "type": "null",
+      "$defs": {
+        "Person": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"},
+            "age": {"type": "integer"}
+          },
+          "required": ["name"]
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  skip_root_model_test.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Optional
+    
+    from pydantic import BaseModel
+    
+    
+    class Person(BaseModel):
+        name: str
+        age: Optional[int] = None
+    ```
+
+---
+
+## `--strict-nullable` {#strict-nullable}
+
+Strictly handle nullable types in OpenAPI schemas.
+
+The `--strict-nullable` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --strict-nullable # (1)!
+    ```
+
+    1. :material-arrow-left: `--strict-nullable` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: 3.0.3
+    info:
+      version: 1.0.0
+      title: testapi
+      license:
+        name: proprietary
+    servers: []
+    paths: {}
+    components:
+      schemas:
+        TopLevel:
+          type: object
+          properties:
+            cursors:
+              type: object
+              properties:
+                prev:
+                  type: string
+                  nullable: true
+                next:
+                  type: string
+                  default: last
+                index:
+                  type: number
+                tag:
+                  type: string
+              required:
+              - prev
+              - index
+          required:
+          - cursors
+        User:
+          type: object
+          properties:
+            info:
+              type: object
+              properties:
+                name:
+                  type: string
+              required:
+                - name
+          required:
+            - info
+        apis:
+          type: array
+          nullable: true
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+                nullable: true
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+                nullable: true
+        email:
+          type: array
+          items:
+            type: object
+            properties:
+              author:
+                type: string
+              address:
+                type: string
+                description: email address
+              description:
+                type: string
+                default: empty
+              tag:
+                type: string
+            required:
+              - author
+              - address
+        id:
+          type: integer
+          default: 1
+        description:
+          type: string
+          nullable: true
+          default: example
+        name:
+          type: string
+          nullable: true
+        tag:
+          type: string
+        notes:
+          type: object
+          properties:
+            comments:
+              type: array
+              items:
+                  type: string
+              default_factory: list
+              nullable: false
+        options:
+          type: object
+          properties:
+            comments:
+              type: array
+              items:
+                  type: string
+                  nullable: true
+            oneOfComments:
+               type: array
+               items:
+                   oneOf:
+                    - type: string
+                    - type: number
+                   nullable: true
+          required:
+            - comments
+            - oneOfComments
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  nullable.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Optional, Union
+    
+    from pydantic import AnyUrl, BaseModel, Field
+    
+    
+    class Cursors(BaseModel):
+        prev: Optional[str] = Field(...)
+        next: str = 'last'
+        index: float
+        tag: Optional[str] = None
+    
+    
+    class TopLevel(BaseModel):
+        cursors: Cursors
+    
+    
+    class Info(BaseModel):
+        name: str
+    
+    
+    class User(BaseModel):
+        info: Info
+    
+    
+    class Api(BaseModel):
+        apiKey: Optional[str] = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: Optional[str] = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: Optional[AnyUrl] = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: Optional[AnyUrl] = Field(
+            None, description='A URL to the API console for each API'
+        )
+    
+    
+    class Apis(BaseModel):
+        __root__: Optional[List[Api]] = Field(...)
+    
+    
+    class EmailItem(BaseModel):
+        author: str
+        address: str = Field(..., description='email address')
+        description: str = 'empty'
+        tag: Optional[str] = None
+    
+    
+    class Email(BaseModel):
+        __root__: List[EmailItem]
+    
+    
+    class Id(BaseModel):
+        __root__: int
+    
+    
+    class Description(BaseModel):
+        __root__: Optional[str] = 'example'
+    
+    
+    class Name(BaseModel):
+        __root__: Optional[str] = None
+    
+    
+    class Tag(BaseModel):
+        __root__: str
+    
+    
+    class Notes(BaseModel):
+        comments: List[str] = Field(default_factory=list)
+    
+    
+    class Options(BaseModel):
+        comments: List[Optional[str]]
+        oneOfComments: List[Union[Optional[str], Optional[float]]]
+    ```
+
+---
+
+## `--strip-default-none` {#strip-default-none}
+
+Remove fields with None as default value from generated models.
+
+The `--strip-default-none` option removes fields that have None as their default value from the
+generated models. This results in cleaner model definitions by excluding optional fields that
+default to None.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --strip-default-none # (1)!
+    ```
+
+    1. :material-arrow-left: `--strip-default-none` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+              default: 1
+            name:
+              type: string
+            tag:
+              type: string
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        Users:
+          type: array
+          items:
+            required:
+              - id
+              - name
+            properties:
+              id:
+                type: integer
+                format: int64
+              name:
+                type: string
+              tag:
+                type: string
+        Id:
+          type: string
+        Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          description: error result
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+        Event:
+          type: object
+          description: Event object
+          properties:
+            name:
+              type: string
+        Result:
+            type: object
+            properties:
+              event:
+                $ref: '#/components/schemas/Event'
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  api.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Optional
+    
+    from pydantic import AnyUrl, BaseModel, Field
+    
+    
+    class Pet(BaseModel):
+        id: int
+        name: str
+        tag: Optional[str]
+    
+    
+    class Pets(BaseModel):
+        __root__: List[Pet]
+    
+    
+    class User(BaseModel):
+        id: int
+        name: str
+        tag: Optional[str]
+    
+    
+    class Users(BaseModel):
+        __root__: List[User]
+    
+    
+    class Id(BaseModel):
+        __root__: str
+    
+    
+    class Rules(BaseModel):
+        __root__: List[str]
+    
+    
+    class Error(BaseModel):
+        code: int
+        message: str
+    
+    
+    class Api(BaseModel):
+        apiKey: Optional[str] = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: Optional[str] = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: Optional[AnyUrl] = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: Optional[AnyUrl] = Field(
+            None, description='A URL to the API console for each API'
+        )
+    
+    
+    class Apis(BaseModel):
+        __root__: List[Api]
+    
+    
+    class Event(BaseModel):
+        name: Optional[str]
+    
+    
+    class Result(BaseModel):
+        event: Optional[Event]
+    ```
+
+---
+
+## `--target-python-version` {#target-python-version}
+
+Target Python version for generated code syntax and imports.
+
+The `--target-python-version` flag controls Python version-specific syntax:
+
+- **Python 3.9**: Uses `Optional[X]` for optional types, `typing.Dict/List`
+- **Python 3.10+**: Can use `X | None` union operator, built-in `dict/list`
+
+This affects import statements and type annotation syntax in generated code.
+
+**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md), [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --target-python-version 3.9 --use-standard-collections # (1)!
+    ```
+
+    1. :material-arrow-left: `--target-python-version` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Person",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+        "lastName": {
+          "type": ["string", "null"],
+          "description": "The person's last name."
+        },
+        "age": {
+          "description": "Age in years which must be equal to or greater than zero.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "friends": {
+          "type": "array"
+        },
+        "comment": {
+          "type": "null"
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    === "Python 3.9"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  person.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any, Optional
+        
+        from pydantic import BaseModel, Field, conint
+        
+        
+        class Person(BaseModel):
+            firstName: Optional[str] = Field(None, description="The person's first name.")
+            lastName: Optional[str] = Field(None, description="The person's last name.")
+            age: Optional[conint(ge=0)] = Field(
+                None, description='Age in years which must be equal to or greater than zero.'
+            )
+            friends: Optional[list[Any]] = None
+            comment: None = None
+        ```
+
+    === "Python 3.10"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  person.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any
+        
+        from pydantic import BaseModel, Field, conint
+        
+        
+        class Person(BaseModel):
+            firstName: str | None = Field(None, description="The person's first name.")
+            lastName: str | None = Field(None, description="The person's last name.")
+            age: conint(ge=0) | None = Field(
+                None, description='Age in years which must be equal to or greater than zero.'
+            )
+            friends: list[Any] | None = None
+            comment: None = None
+        ```
+
+---
+
+## `--union-mode` {#union-mode}
+
+Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
+
+The `--union-mode` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --union-mode left_to_right --output-model-type pydantic_v2.BaseModel # (1)!
+    ```
+
+    1. :material-arrow-left: `--union-mode` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "title": "My schema",
+        "additionalProperties": true,
+        "properties": {
+            "AddressLine1": { "type": "string" },
+            "AddressLine2": { "type": "string" },
+            "City":         { "type": "string" }
+        },
+        "required": [ "AddressLine1" ],
+        "anyOf": [
+            {
+                "type": "object",
+                "properties": {
+                    "State":   { "type": "string" },
+                    "ZipCode": { "type": "string" }
+                },
+                "required": [ "ZipCode" ]
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "County":   { "type": "string" },
+                    "PostCode": { "type": "string" }
+                },
+                "required": [ "PostCode" ]
+            },
+            { "$ref": "#/definitions/US" }
+        ],
+        "definitions": {
+            "US":  {
+                "type": "object",
+                "properties": {
+                    "County":   { "type": "string" },
+                    "PostCode": { "type": "string" }
+                },
+                "required": [ "PostCode" ]
+            }
+        }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  combine_any_of_object.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Optional, Union
+    
+    from pydantic import BaseModel, ConfigDict, Field, RootModel
+    
+    
+    class MySchema1(BaseModel):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+        AddressLine1: str
+        AddressLine2: Optional[str] = None
+        City: Optional[str] = None
+        State: Optional[str] = None
+        ZipCode: str
+    
+    
+    class MySchema2(BaseModel):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+        AddressLine1: str
+        AddressLine2: Optional[str] = None
+        City: Optional[str] = None
+        County: Optional[str] = None
+        PostCode: str
+    
+    
+    class US(BaseModel):
+        County: Optional[str] = None
+        PostCode: str
+    
+    
+    class MySchema3(US):
+        model_config = ConfigDict(
+            extra='allow',
+        )
+        AddressLine1: str
+        AddressLine2: Optional[str] = None
+        City: Optional[str] = None
+    
+    
+    class MySchema(RootModel[Union[MySchema1, MySchema2, MySchema3]]):
+        root: Union[MySchema1, MySchema2, MySchema3] = Field(
+            ..., title='My schema', union_mode='left_to_right'
+        )
+    ```
+
+---
+
+## `--use-default` {#use-default}
+
+Use default values from schema in generated models.
+
+The `--use-default` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-default # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-default` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Use default with const",
+        "properties": {
+            "foo": {
+                "const": "foo"
+            }
+        }
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  use_default_with_const.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Literal
+    
+    from pydantic import BaseModel
+    
+    
+    class UseDefaultWithConst(BaseModel):
+        foo: Literal['foo'] = 'foo'
+    ```
+
+---
+
+## `--use-default-kwarg` {#use-default-kwarg}
+
+Use default= keyword argument instead of positional argument for fields with defaults.
+
+The `--use-default-kwarg` flag generates Field() declarations using `default=`
+as a keyword argument instead of a positional argument for fields that have
+default values.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-default-kwarg # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-default-kwarg` - the option documented here
+
+??? example "Input Schema"
+
+    ```graphql
+    type A {
+        field: String!
+        optionalField: String
+        listField: [String!]!
+        listOptionalField: [String]!
+        optionalListField: [String!]
+        optionalListOptionalField: [String]
+        listListField:[[String!]!]!
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  annotated.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List, Literal, Optional
+    
+    from pydantic import BaseModel, Field
+    from typing_extensions import TypeAlias
+    
+    Boolean: TypeAlias = bool
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    String: TypeAlias = str
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    class A(BaseModel):
+        field: String
+        listField: List[String]
+        listListField: List[List[String]]
+        listOptionalField: List[Optional[String]]
+        optionalField: Optional[String] = None
+        optionalListField: Optional[List[String]] = None
+        optionalListOptionalField: Optional[List[Optional[String]]] = None
+        typename__: Optional[Literal['A']] = Field(default='A', alias='__typename')
+    ```
+
+---
+
+## `--use-frozen-field` {#use-frozen-field}
+
+Generate frozen (immutable) field definitions for readOnly properties.
+
+The `--use-frozen-field` flag generates frozen field definitions:
+- Pydantic v1: `Field(allow_mutation=False)`
+- Pydantic v2: `Field(frozen=True)`
+- Dataclasses: silently ignored (no frozen fields generated)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-frozen-field # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-frozen-field` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "required": ["id", "name", "password"],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "description": "Server-generated ID",
+          "readOnly": true
+        },
+        "name": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string",
+          "description": "User password",
+          "writeOnly": true
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    === "Pydantic v1"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  use_frozen_field.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from datetime import datetime
+        from typing import Optional
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class User(BaseModel):
+            class Config:
+                validate_assignment = True
+        
+            id: int = Field(..., allow_mutation=False, description='Server-generated ID')
+            name: str
+            password: str = Field(..., description='User password')
+            created_at: Optional[datetime] = Field(None, allow_mutation=False)
+        ```
+
+    === "Pydantic v2"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  use_frozen_field.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Optional
+        
+        from pydantic import AwareDatetime, BaseModel, Field
+        
+        
+        class User(BaseModel):
+            id: int = Field(..., description='Server-generated ID', frozen=True)
+            name: str
+            password: str = Field(..., description='User password')
+            created_at: Optional[AwareDatetime] = Field(None, frozen=True)
+        ```
+
+    === "dataclass"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  use_frozen_field.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from dataclasses import dataclass
+        from typing import Optional
+        
+        
+        @dataclass
+        class User:
+            id: int
+            name: str
+            password: str
+            created_at: Optional[str] = None
+        ```
+
+---
+
+## `--use-one-literal-as-default` {#use-one-literal-as-default}
+
+Use single literal value as default when enum has only one option.
+
+The `--use-one-literal-as-default` flag configures the code generation behavior.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-one-literal-as-default --enum-field-as-literal one # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-one-literal-as-default` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+    components:
+      schemas:
+        Pet:
+          required:
+            - id
+            - name
+            - number
+            - boolean
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            tag:
+              type: string
+            kind:
+              type: string
+              enum: ['dog', 'cat']
+            type:
+              type: string
+              enum: [ 'animal' ]
+            number:
+              type: integer
+              enum: [ 1 ]
+            boolean:
+              type: boolean
+              enum: [ true ]
+    
+        Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pet"
+        animal:
+          type: object
+          properties:
+            kind:
+              type: string
+              enum: ['snake', 'rabbit']
+        Error:
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        EnumObject:
+          type: object
+          properties:
+            type:
+              enum: ['a', 'b']
+              type: string
+        EnumRoot:
+          enum: ['a', 'b']
+          type: string
+        IntEnum:
+          enum: [1,2]
+          type: number
+        AliasEnum:
+          enum: [1,2,3]
+          type: number
+          x-enum-varnames: ['a', 'b', 'c']
+        MultipleTypeEnum:
+          enum: [ "red", "amber", "green", null, 42 ]
+        singleEnum:
+          enum: [ "pet" ]
+          type: string
+        arrayEnum:
+          type: array
+          items: [
+            { enum: [ "cat" ] },
+            { enum: [ "dog"]}
+          ]
+        nestedNullableEnum:
+          type: object
+          properties:
+            nested_version:
+              type: string
+              nullable: true
+              default: RC1
+              description: nullable enum
+              example: RC2
+              enum:
+                - RC1
+                - RC1N
+                - RC2
+                - RC2N
+                - RC3
+                - RC4
+                - null
+        version:
+          type: string
+          nullable: true
+          default: RC1
+          description: nullable enum
+          example: RC2
+          enum:
+          - RC1
+          - RC1N
+          - RC2
+          - RC2N
+          - RC3
+          - RC4
+          - null
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  enum_models.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum
+    from typing import List, Literal, Optional, Union
+    
+    from pydantic import BaseModel, Field
+    
+    
+    class Kind(Enum):
+        dog = 'dog'
+        cat = 'cat'
+    
+    
+    class Pet(BaseModel):
+        id: int
+        name: str
+        tag: Optional[str] = None
+        kind: Optional[Kind] = None
+        type: Optional[Literal['animal']] = None
+        number: Literal[1] = 1
+        boolean: Literal[True] = True
+    
+    
+    class Pets(BaseModel):
+        __root__: List[Pet]
+    
+    
+    class Kind1(Enum):
+        snake = 'snake'
+        rabbit = 'rabbit'
+    
+    
+    class Animal(BaseModel):
+        kind: Optional[Kind1] = None
+    
+    
+    class Error(BaseModel):
+        code: int
+        message: str
+    
+    
+    class Type(Enum):
+        a = 'a'
+        b = 'b'
+    
+    
+    class EnumObject(BaseModel):
+        type: Optional[Type] = None
+    
+    
+    class EnumRoot(Enum):
+        a = 'a'
+        b = 'b'
+    
+    
+    class IntEnum(Enum):
+        number_1 = 1
+        number_2 = 2
+    
+    
+    class AliasEnum(Enum):
+        a = 1
+        b = 2
+        c = 3
+    
+    
+    class MultipleTypeEnum(Enum):
+        red = 'red'
+        amber = 'amber'
+        green = 'green'
+        NoneType_None = None
+        int_42 = 42
+    
+    
+    class SingleEnum(BaseModel):
+        __root__: Literal['pet'] = 'pet'
+    
+    
+    class ArrayEnum(BaseModel):
+        __root__: List[Union[Literal['cat'], Literal['dog']]]
+    
+    
+    class NestedVersionEnum(Enum):
+        RC1 = 'RC1'
+        RC1N = 'RC1N'
+        RC2 = 'RC2'
+        RC2N = 'RC2N'
+        RC3 = 'RC3'
+        RC4 = 'RC4'
+    
+    
+    class NestedVersion(BaseModel):
+        __root__: Optional[NestedVersionEnum] = Field(
+            'RC1', description='nullable enum', example='RC2'
+        )
+    
+    
+    class NestedNullableEnum(BaseModel):
+        nested_version: Optional[NestedVersion] = Field(
+            default_factory=lambda: NestedVersion.parse_obj('RC1'),
+            description='nullable enum',
+            example='RC2',
+        )
+    
+    
+    class VersionEnum(Enum):
+        RC1 = 'RC1'
+        RC1N = 'RC1N'
+        RC2 = 'RC2'
+        RC2N = 'RC2N'
+        RC3 = 'RC3'
+        RC4 = 'RC4'
+    
+    
+    class Version(BaseModel):
+        __root__: Optional[VersionEnum] = Field(
+            'RC1', description='nullable enum', example='RC2'
+        )
+    ```
+
+---
+
+## `--use-serialize-as-any` {#use-serialize-as-any}
+
+Wrap fields with subtypes in Pydantic's SerializeAsAny.
+
+The `--use-serialize-as-any` flag applies Pydantic v2's SerializeAsAny wrapper
+to fields that have subtype relationships, ensuring proper serialization of
+polymorphic types and inheritance hierarchies.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-serialize-as-any # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-serialize-as-any` - the option documented here
+
+??? example "Input Schema"
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: SerializeAsAny Test
+      description: Test schema for SerializeAsAny annotation on types with subtypes
+    paths: {}
+    components:
+      schemas:
+        User:
+          type: object
+          description: Base user model
+          properties:
+            name:
+              type: string
+              description: User's name
+          required:
+            - name
+    
+        AdminUser:
+          allOf:
+            - $ref: '#/components/schemas/User'
+            - type: object
+              description: Admin user with additional permissions
+              properties:
+                admin_level:
+                  type: integer
+                  description: Admin permission level
+              required:
+                - admin_level
+    
+        Container:
+          type: object
+          description: Container that holds user references
+          properties:
+            admin_user_field:
+              $ref: '#/components/schemas/AdminUser'
+              description: Field that should not use SerializeAsAny
+            user_field:
+              $ref: '#/components/schemas/User'
+              description: Field that should use SerializeAsAny
+            user_list:
+              type: array
+              description: List of users that should use SerializeAsAny
+              items:
+                $ref: '#/components/schemas/User'
+          required:
+            - user_field
+            - user_list
+            - admin_user_field
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  serialize_as_any.yaml
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import List
+    
+    from pydantic import BaseModel, Field, SerializeAsAny
+    
+    
+    class User(BaseModel):
+        name: str = Field(..., description="User's name")
+    
+    
+    class AdminUser(User):
+        admin_level: int = Field(..., description='Admin permission level')
+    
+    
+    class Container(BaseModel):
+        admin_user_field: AdminUser = Field(
+            ..., description='Field that should not use SerializeAsAny'
+        )
+        user_field: SerializeAsAny[User] = Field(
+            ..., description='Field that should use SerializeAsAny'
+        )
+        user_list: List[SerializeAsAny[User]] = Field(
+            ..., description='List of users that should use SerializeAsAny'
+        )
+    ```
+
+---
+
+## `--use-subclass-enum` {#use-subclass-enum}
+
+Generate typed Enum subclasses for enums with specific field types.
+
+The `--use-subclass-enum` flag generates Enum classes as subclasses of the
+appropriate field type (int, float, bytes, str) when an enum has a specific
+type, providing better type safety and IDE support.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-subclass-enum # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-subclass-enum` - the option documented here
+
+??? example "Input Schema"
+
+    ```graphql
+    "Employee shift status"
+    enum EmployeeShiftStatus {
+      "not on shift"
+      NOT_ON_SHIFT
+      "on shift"
+      ON_SHIFT
+    }
+    
+    enum Color {
+      RED
+      GREEN
+      BLUE
+    }
+    
+    enum EnumWithOneField {
+        FIELD
+    }
+    ```
+
+??? example "Output"
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  enums.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum
+    
+    from typing_extensions import TypeAlias
+    
+    Boolean: TypeAlias = bool
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    String: TypeAlias = str
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    class Color(str, Enum):
+        BLUE = 'BLUE'
+        GREEN = 'GREEN'
+        RED = 'RED'
+    
+    
+    class EmployeeShiftStatus(str, Enum):
+        """
+        Employee shift status
+        """
+    
+        NOT_ON_SHIFT = 'NOT_ON_SHIFT'
+        ON_SHIFT = 'ON_SHIFT'
+    
+    
+    class EnumWithOneField(str, Enum):
+        FIELD = 'FIELD'
+    ```
+
+---
+
