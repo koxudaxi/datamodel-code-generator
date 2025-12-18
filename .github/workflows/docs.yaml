@@ -22,7 +22,7 @@ jobs:
     - name: Install dependencies
       run: uv sync
     - name: build site
-      run:  mkdocs build --verbose --clean --strict
+      run: zensical build --clean
     - name: Deploy
       uses: peaceiris/actions-gh-pages@v2
       env:

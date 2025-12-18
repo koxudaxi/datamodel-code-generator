@@ -102,8 +102,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "mkdocs>=1.6",
-  "mkdocs-material>=9.5.31",
+  "zensical>=0.0.11; python_version>='3.10'",
 ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
