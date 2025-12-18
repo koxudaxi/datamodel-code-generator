@@ -78,9 +78,8 @@ def test_get_watchfiles_import_error() -> None:
     """Test _get_watchfiles raises exception when watchfiles is not installed."""
     from datamodel_code_generator.watch import _get_watchfiles
 
-    with patch.dict("sys.modules", {"watchfiles": None}):
-        with pytest.raises(Exception, match="pip install"):
-            _get_watchfiles()
+    with patch.dict("sys.modules", {"watchfiles": None}), pytest.raises(Exception, match="pip install"):
+        _get_watchfiles()
 
 
 def test_get_watchfiles_success() -> None:
@@ -172,11 +171,9 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
 
     output_file = tmp_path / "output.py"
     mock_watchfiles = MagicMock()
-    mock_watchfiles.watch.return_value = iter(
-        [
-            {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
-        ]
-    )
+    mock_watchfiles.watch.return_value = iter([
+        {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
+    ])
     config = Config(
         input=str(JSON_SCHEMA_DATA_PATH / "person.json"),
         output=output_file,
@@ -204,11 +201,9 @@ def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFix
     from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
-    mock_watchfiles.watch.return_value = iter(
-        [
-            {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
-        ]
-    )
+    mock_watchfiles.watch.return_value = iter([
+        {("modified", str(JSON_SCHEMA_DATA_PATH / "person.json"))},
+    ])
     config = Config(input=str(JSON_SCHEMA_DATA_PATH / "person.json"))
 
     with (
