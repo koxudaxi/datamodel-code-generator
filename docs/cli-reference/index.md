@@ -4,6 +4,18 @@ This documentation is auto-generated from test cases.
 
 **[Quick Reference](quick-reference.md)** - All options on one page for Ctrl+F search
 
+## Related Documentation
+
+| Topic | Description |
+|-------|-------------|
+| [Generate from OpenAPI](../openapi.md) | OpenAPI schema generation guide |
+| [Generate from JSON Schema](../jsonschema.md) | JSON Schema generation guide |
+| [Generate from GraphQL](../graphql.md) | GraphQL schema generation guide |
+| [pyproject.toml Configuration](../pyproject_toml.md) | File-based configuration |
+| [Custom Templates](../custom_template.md) | Jinja2 template customization |
+| [Field Aliases](../aliases.md) | Field renaming with aliases |
+| [Root Models and Type Aliases](../root-model-and-type-alias.md) | Type alias generation |
+
 ## Categories
 
 | Category | Options | Description |

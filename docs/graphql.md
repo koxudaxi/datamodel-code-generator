@@ -193,3 +193,9 @@ class A(BaseModel):
     typename__: Optional[Literal['A']] = Field('A', alias='__typename')
 
 ```
+
+## See Also
+
+- [CLI Reference](cli-reference/index.md) - Complete CLI options reference
+- [CLI Reference: Typing Customization](cli-reference/typing-customization.md) - Type annotation options
+- [CLI Reference: `--extra-template-data`](cli-reference/template-customization.md#extra-template-data) - Custom scalar type mappings

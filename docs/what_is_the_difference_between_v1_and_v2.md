@@ -22,7 +22,12 @@ https://docs.pydantic.dev/2.0/migration/#changes-to-pydanticfield
 - regex (use pattern instead)
 
 ### Model Config
-- `pydantic.Config` -> `pydantic.ConfigDict` 
+- `pydantic.Config` -> `pydantic.ConfigDict`
 - allow_mutation —> frozen (inverse value for getting same behavior).
 - allow_population_by_field_name → populate_by_name
+
+## See Also
+
+- [CLI Reference: `--output-model-type`](cli-reference/model-customization.md#output-model-type) - Select Pydantic v1 or v2 output
+- [CLI Reference: Model Customization](cli-reference/model-customization.md) - All model generation options
 

@@ -26,3 +26,9 @@ known_first_party = "kelvin"
 ```
 
 See the [Black Project](https://pypi.org/project/black/) for more information.
+
+## See Also
+
+- [CLI Reference: `--formatters`](cli-reference/template-customization.md#formatters) - Specify code formatters
+- [CLI Reference: `--use-double-quotes`](cli-reference/template-customization.md#use-double-quotes) - Use double quotes for strings
+- [Custom Code Formatters](custom-formatters.md) - Create custom formatters

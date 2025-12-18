@@ -1826,6 +1826,9 @@ syntax. This feature is experimental.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
 
+!!! tip "See Also"
+    For detailed explanation and examples, see [Root Models and Type Aliases](../root-model-and-type-alias.md).
+
 !!! tip "Usage"
 
     ```bash

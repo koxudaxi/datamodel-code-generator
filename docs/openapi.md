@@ -345,3 +345,8 @@ readOnly/writeOnly resolution works with local and file reference types:
 |---------------|---------|---------|
 | Local | `#/components/schemas/User` | ✅ |
 | File | `./common.yaml#/User` | ✅ |
+
+## See Also
+
+- [CLI Reference: OpenAPI-only Options](cli-reference/openapi-only-options.md) - All OpenAPI-specific CLI options
+- [CLI Reference: Base Options](cli-reference/base-options.md) - Input/output configuration options
