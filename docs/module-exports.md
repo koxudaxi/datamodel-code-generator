@@ -78,7 +78,7 @@ When using `--all-exports-scope recursive`, name collisions can occur if multipl
 
 ### The Problem
 
-```
+```text
 models/
 ├── user/
 │   └── types.py      # defines `ID`
@@ -148,7 +148,7 @@ datamodel-codegen --input schema.json --output models/ --treat-dot-as-module
 
 Schema with `title: "api.v1.User"` generates:
 
-```
+```text
 models/
 ├── __init__.py
 └── api/
