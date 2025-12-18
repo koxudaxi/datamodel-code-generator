@@ -1,0 +1,88 @@
+name: 'datamodel-code-generator'
+description: 'Generate Python data models from schema definitions (OpenAPI, JSON Schema, GraphQL, and more)'
+branding:
+  icon: 'code'
+  color: 'blue'
+
+inputs:
+  input:
+    description: 'Input schema file or directory'
+    required: true
+  output:
+    description: 'Output file or directory'
+    required: true
+  input-file-type:
+    description: 'Input file type (openapi, jsonschema, json, yaml, csv, graphql)'
+    required: true
+  output-model-type:
+    description: 'Output model type (pydantic_v2.BaseModel, pydantic.BaseModel, dataclasses.dataclass, typing.TypedDict, msgspec.Struct)'
+    required: true
+  check:
+    description: 'Validate that existing output is up to date (no generation)'
+    required: false
+    default: 'true'
+  working-directory:
+    description: 'Working directory (where pyproject.toml is located)'
+    required: false
+    default: '.'
+  profile:
+    description: 'Named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]'
+    required: false
+    default: ''
+  extra-args:
+    description: 'Additional CLI arguments'
+    required: false
+    default: ''
+  version:
+    description: 'Specific version to install (defaults to action tag version if tag looks like a version, otherwise latest)'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: '3.14'
+
+    - uses: actions/cache@v5
+      with:
+        path: ~/.cache/pip
+        key: datamodel-codegen-${{ runner.os }}
+
+    - run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          pip install "datamodel-code-generator==${{ inputs.version }}"
+        elif [[ "${{ github.action_ref }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          pip install "datamodel-code-generator==${{ github.action_ref }}"
+        else
+          pip install datamodel-code-generator
+        fi
+      shell: bash
+
+    - run: |
+        PROFILE_ARG=""
+        if [ -n "${{ inputs.profile }}" ]; then
+          PROFILE_ARG="--profile ${{ inputs.profile }}"
+        fi
+
+        if [ "${{ inputs.check }}" = "true" ]; then
+          datamodel-codegen \
+            --input ${{ inputs.input }} \
+            --output ${{ inputs.output }} \
+            --input-file-type ${{ inputs.input-file-type }} \
+            --output-model-type ${{ inputs.output-model-type }} \
+            --check \
+            $PROFILE_ARG \
+            ${{ inputs.extra-args }}
+        else
+          datamodel-codegen \
+            --input ${{ inputs.input }} \
+            --output ${{ inputs.output }} \
+            --input-file-type ${{ inputs.input-file-type }} \
+            --output-model-type ${{ inputs.output-model-type }} \
+            $PROFILE_ARG \
+            ${{ inputs.extra-args }}
+        fi
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
