@@ -15,6 +15,8 @@
 | [`--http-query-parameters`](#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
+| [`--watch`](#watch) | Watch mode cannot be used with --check mode. |
+| [`--watch-delay`](#watch-delay) | Watch mode starts file watcher and handles clean exit. |
 
 ---
 
@@ -1731,6 +1733,113 @@ Note: This option only affects modular output with tree-level model reuse.
         name: Optional[str] = None
         tag: Optional[str] = None
     ```
+
+---
+
+## `--watch` {#watch}
+
+Watch mode cannot be used with --check mode.
+
+The `--watch` flag enables file watching for automatic regeneration.
+It cannot be combined with `--check` since check mode requires a single
+comparison, not continuous watching.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --watch --check # (1)!
+    ```
+
+    1. :material-arrow-left: `--watch` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Person",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+        "lastName": {
+          "type": ["string", "null"],
+          "description": "The person's last name."
+        },
+        "age": {
+          "description": "Age in years which must be equal to or greater than zero.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "friends": {
+          "type": "array"
+        },
+        "comment": {
+          "type": "null"
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    > **Error:** File not found: /home/runner/work/datamodel-code-generator/datamodel-code-generator/tests/data/expected/Error: --watch and --check cannot be used together
+
+---
+
+## `--watch-delay` {#watch-delay}
+
+Watch mode starts file watcher and handles clean exit.
+
+The `--watch` flag starts a file watcher that monitors the input file
+or directory for changes. The `--watch-delay` option sets the debounce
+delay in seconds (default: 0.5) to prevent multiple regenerations for
+rapid file changes. Press Ctrl+C to stop watching.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --watch --watch-delay 1.5 # (1)!
+    ```
+
+    1. :material-arrow-left: `--watch-delay` - the option documented here
+
+??? example "Input Schema"
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Person",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string",
+          "description": "The person's first name."
+        },
+        "lastName": {
+          "type": ["string", "null"],
+          "description": "The person's last name."
+        },
+        "age": {
+          "description": "Age in years which must be equal to or greater than zero.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "friends": {
+          "type": "array"
+        },
+        "comment": {
+          "type": "null"
+        }
+      }
+    }
+    ```
+
+??? example "Output"
+
+    > **Error:** File not found: /home/runner/work/datamodel-code-generator/datamodel-code-generator/tests/data/expected/Watching
 
 ---
 
