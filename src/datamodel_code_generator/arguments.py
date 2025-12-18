@@ -22,6 +22,7 @@ from datamodel_code_generator import (
     DataclassArguments,
     DataModelType,
     InputFileType,
+    ModuleSplitMode,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -321,6 +322,12 @@ model_options.add_argument(
     "'minimal-prefix': add module prefix only to colliding names. "
     "'full-prefix': add full module path prefix to colliding names.",
     choices=[s.value for s in AllExportsCollisionStrategy],
+    default=None,
+)
+model_options.add_argument(
+    "--module-split-mode",
+    help="Split generated models into separate files. 'single': generate one file per model class.",
+    choices=[m.value for m in ModuleSplitMode],
     default=None,
 )
 

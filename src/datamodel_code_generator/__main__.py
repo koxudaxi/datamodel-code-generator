@@ -31,6 +31,7 @@ from datamodel_code_generator import (
     Error,
     InputFileType,
     InvalidClassNameError,
+    ModuleSplitMode,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -464,6 +465,7 @@ class Config(BaseModel):
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
     all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
+    module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
     watch: bool = False
     watch_delay: float = 0.5
 
@@ -765,6 +767,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         read_only_write_only_model_type=config.read_only_write_only_model_type,
         all_exports_scope=config.all_exports_scope,
         all_exports_collision_strategy=config.all_exports_collision_strategy,
+        module_split_mode=config.module_split_mode,
     )
 
 

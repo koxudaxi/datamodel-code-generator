@@ -36,7 +36,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_validator
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, camel_to_snake, model_validator
 
 if TYPE_CHECKING:
     from collections.abc import Generator, Iterator, Mapping, Sequence
@@ -219,17 +219,6 @@ def context_variable(setter: Callable[[T], None], current_value: T, new_value: T
         yield
     finally:
         setter(previous_value)
-
-
-_UNDER_SCORE_1: Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
-_UNDER_SCORE_2: Pattern[str] = re.compile(r"([a-z0-9])([A-Z])")
-
-
-@lru_cache
-def camel_to_snake(string: str) -> str:
-    """Convert camelCase or PascalCase to snake_case."""
-    subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
-    return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
 class FieldNameResolver:

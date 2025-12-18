@@ -1027,3 +1027,33 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
             assert_func=assert_file_content,
             expected_file="no_use_specialized_enum.py",
         )
+
+
+@pytest.mark.cli_doc(
+    options=["--module-split-mode"],
+    input_schema="jsonschema/module_split_single/input.json",
+    cli_args=["--module-split-mode", "single", "--all-exports-scope", "recursive", "--use-exact-imports"],
+    golden_output="jsonschema/module_split_single",
+    related_options=["--all-exports-scope", "--use-exact-imports"],
+)
+def test_module_split_mode_single(output_dir: Path) -> None:
+    """Split generated models into separate files, one per model class.
+
+    The `--module-split-mode=single` flag generates each model class in its own file,
+    named after the class in snake_case. Use with `--all-exports-scope=recursive` to
+    create an __init__.py that re-exports all models for convenient imports.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "module_split_single" / "input.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--module-split-mode",
+            "single",
+            "--all-exports-scope",
+            "recursive",
+            "--use-exact-imports",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "module_split_single",
+    )
