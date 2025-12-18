@@ -79,7 +79,7 @@ class TestCLIDocCoverage:  # pragma: no cover
                 + "\n\nAdd entries to CLI_OPTION_META in cli_options.py."
             )
 
-    def test_documented_options_not_manual(self) -> None:
+    def test_documented_options_not_manual(self) -> None:  # noqa: PLR6301
         """Verify that DOCUMENTED_OPTIONS are not in MANUAL_DOCS."""
         overlap = DOCUMENTED_OPTIONS & MANUAL_DOCS
         if overlap:
@@ -101,7 +101,7 @@ class TestCoverageStats:  # pragma: no cover
     """Informational tests for coverage statistics."""
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_coverage_stats(self, collected_options: set[str]) -> None:
+    def test_show_coverage_stats(self, collected_options: set[str]) -> None:  # noqa: PLR6301
         """Display documentation coverage statistics."""
         all_options = get_all_canonical_options()
         documentable = all_options - MANUAL_DOCS

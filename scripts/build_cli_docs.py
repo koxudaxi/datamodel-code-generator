@@ -64,6 +64,15 @@ CATEGORY_EMOJIS = {
     OptionCategory.GENERAL: "⚙️",
 }
 
+# Manual option descriptions for utility options
+MANUAL_OPTION_DESCRIPTIONS = {
+    "--help": "Show help message and exit",
+    "--version": "Show program version and exit",
+    "--debug": "Show debug messages during code generation",
+    "--profile": "Use a named profile from pyproject.toml",
+    "--no-color": "Disable colorized output",
+}
+
 
 def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
     """Scan markdown files in docs/ for related-cli-options tags.
@@ -424,7 +433,7 @@ def generate_category_page(
     return md
 
 
-def generate_quick_reference(
+def generate_quick_reference(  # noqa: PLR0912, PLR0915
     categories: dict[OptionCategory, dict[str, Any]],
     manual_docs: dict[str, str] | None = None,
 ) -> str:
@@ -432,14 +441,6 @@ def generate_quick_reference(
     md = "# 🔍 Quick Reference\n\n"
     md += "All CLI options in one page for easy **Ctrl+F** searching.\n\n"
     md += "👆 Click any option to see detailed documentation with examples.\n\n"
-
-    manual_descriptions = {
-        "--help": "Show help message and exit",
-        "--version": "Show program version and exit",
-        "--debug": "Show debug messages during code generation",
-        "--profile": "Use a named profile from pyproject.toml",
-        "--no-color": "Disable colorized output",
-    }
 
     # Collect all options with their descriptions
     all_options: list[tuple[str, str, OptionCategory | None]] = []
@@ -449,7 +450,7 @@ def generate_quick_reference(
             all_options.append((option, desc, category))
     if manual_docs:
         for option in manual_docs:
-            desc = manual_descriptions.get(option, "")
+            desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
             all_options.append((option, desc, None))
 
     # Sort alphabetically by option name
@@ -491,7 +492,7 @@ def generate_quick_reference(
         md += "| Option | Description |\n"
         md += "|--------|-------------|\n"
         for option in sorted(manual_docs.keys()):
-            desc = manual_descriptions.get(option, "")
+            desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
             slug_opt = slugify(option)
             md += f"| [`{option}`](utility-options.md#{slug_opt}) | {desc} |\n"
         md += "\n"
@@ -604,16 +605,8 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
     md += "| Option | Description |\n"
     md += "|--------|-------------|\n"
 
-    descriptions = {
-        "--help": "Show help message and exit",
-        "--version": "Show program version and exit",
-        "--debug": "Show debug messages during code generation",
-        "--profile": "Use a named profile from pyproject.toml",
-        "--no-color": "Disable colorized output",
-    }
-
     for option in sorted(manual_docs.keys()):
-        desc = descriptions.get(option, "")
+        desc = MANUAL_OPTION_DESCRIPTIONS.get(option, "")
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
 
     md += "\n---\n\n"
@@ -656,12 +649,12 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
 
         schema_version = collection.get("schema_version", 0)
         if schema_version != 1:
-            print(f"Warning: Unexpected schema version {schema_version}, expected 1", file=sys.stderr)
+            print(f"Warning: Unexpected schema version {schema_version}, expected 1", file=sys.stderr)  # noqa: T201
 
         items = collection.get("items", [])
     else:
-        print(f"Warning: Collection file not found: {COLLECTION_PATH}", file=sys.stderr)
-        print("Run 'pytest --collect-cli-docs -p no:xdist' to generate it.", file=sys.stderr)
+        print(f"Warning: Collection file not found: {COLLECTION_PATH}", file=sys.stderr)  # noqa: T201
+        print("Run 'pytest --collect-cli-docs -p no:xdist' to generate it.", file=sys.stderr)  # noqa: T201
 
     manual_docs = read_manual_docs()
     if not items and not manual_docs:
@@ -734,7 +727,7 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
             output_path = DOCS_OUTPUT / "utility-options.md"
             write_or_check(output_path, md, f"utility-options.md ({len(manual_docs)} options)")
         except (OSError, ValueError, KeyError) as e:
-            print(f"Error generating utility-options.md: {e}", file=sys.stderr)
+            print(f"Error generating utility-options.md: {e}", file=sys.stderr)  # noqa: T201
             errors += 1
 
     try:
@@ -742,7 +735,7 @@ def build_docs(*, check: bool = False) -> int:  # noqa: PLR0912, PLR0915
         output_path = DOCS_OUTPUT / "index.md"
         write_or_check(output_path, md, "index.md")
     except (OSError, ValueError, KeyError) as e:
-        print(f"Error generating index.md: {e}", file=sys.stderr)
+        print(f"Error generating index.md: {e}", file=sys.stderr)  # noqa: T201
         errors += 1
 
     try:

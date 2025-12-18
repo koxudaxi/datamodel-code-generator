@@ -1990,6 +1990,8 @@ Treat dots in schema names as module separators.
 
 The `--treat-dot-as-module` flag configures the code generation behavior.
 
+**See also:** [Module Structure and Exports](../module-exports.md)
+
 !!! tip "Usage"
 
     ```bash

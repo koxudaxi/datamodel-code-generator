@@ -484,7 +484,7 @@ def test_main_graphql_type_alias_py312(output_file: Path) -> None:
         '{"slots": true, "order": true}',
     ],
     golden_output="graphql/simple_star_wars_dataclass_arguments.py",
-    related_options=["--frozen", "--keyword-only"],
+    related_options=["--frozen-dataclasses", "--keyword-only"],
 )
 def test_main_graphql_dataclass_arguments(output_file: Path) -> None:
     """Customize dataclass decorator arguments via JSON dictionary.
@@ -543,13 +543,13 @@ def test_main_graphql_dataclass_arguments_with_pydantic(output_file: Path) -> No
     cli_args=[
         "--output-model-type",
         "dataclasses.dataclass",
-        "--frozen",
+        "--frozen-dataclasses",
         "--keyword-only",
         "--target-python-version",
         "3.10",
     ],
     golden_output="graphql/simple_star_wars_dataclass_frozen_kw_only.py",
-    related_options=["--frozen", "--target-python-version", "--output-model-type"],
+    related_options=["--frozen-dataclasses", "--target-python-version", "--output-model-type"],
 )
 def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
     """Generate dataclasses with keyword-only fields (Python 3.10+).

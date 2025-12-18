@@ -29,6 +29,8 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
 
 **Related:** [`--all-exports-scope`](general-options.md#all-exports-scope)
 
+**See also:** [Module Structure and Exports](../module-exports.md)
+
 !!! tip "Usage"
 
     ```bash
@@ -598,6 +600,8 @@ exports from direct child modules. This improves IDE autocomplete and explicit e
 Use 'recursive' to include all descendant exports with collision handling.
 
 **Related:** [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
+
+**See also:** [Module Structure and Exports](../module-exports.md)
 
 !!! tip "Usage"
 
