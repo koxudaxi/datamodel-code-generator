@@ -27,7 +27,7 @@
     
     
       
-        <title>Root Models and Type Aliases - datamodel-code-generator</title>
+        <title>📦 Root Models and Type Aliases - datamodel-code-generator</title>
       
     
     
@@ -109,7 +109,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Root Models and Type Aliases
+              📦 Root Models and Type Aliases
             
           </span>
         </div>
@@ -167,7 +167,21 @@
     
     
     
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
     
   
 </form>
@@ -1024,7 +1038,7 @@
   <a href="#notes-and-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes and limitations
+        ⚠️ Notes and Limitations
       
     </span>
   </a>
@@ -1035,10 +1049,27 @@
   <a href="#type-alias-behavior-by-output-type-and-python-version" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Type Alias Behavior by Output Type and Python Version
+        📊 Type Alias Behavior by Output Type and Python Version
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="📊 Type Alias Behavior by Output Type and Python Version">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-the-difference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Why the difference?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1046,24 +1077,35 @@
   <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example
+        📝 Example
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Example">
+    <nav class="md-nav" aria-label="📝 Example">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modeljson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model.json
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#pydantic-v1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1
+        🔹 Pydantic v1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v1">
+    <nav class="md-nav" aria-label="🔹 Pydantic v1">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1076,6 +1118,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generated-modelpy-pydantic-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✨ Generated model.py (Pydantic v1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="✨ Generated model.py (Pydantic v1)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#generating-typealias-annotation" class="md-nav__link">
@@ -1094,15 +1153,26 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pydantic-v2" class="md-nav__link">
+  <a href="#generated-modelpy-python-310" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v2
+        ✨ Generated model.py (Python 3.10+)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v2">
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pydantic-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔸 Pydantic v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔸 Pydantic v2">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1116,16 +1186,22 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
           <li class="md-nav__item">
-  <a href="#generating-typealiastype-python-39-311" class="md-nav__link">
+  <a href="#generated-modelpy-pydantic-v2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generating TypeAliasType (Python 3.9-3.11)
+        ✨ Generated model.py (Pydantic v2)
       
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="✨ Generated model.py (Pydantic v2)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#generating-type-statement-python-312" class="md-nav__link">
@@ -1143,6 +1219,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#generated-modelpy-python-312-type-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✨ Generated model.py (Python 3.12+ type statement)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1152,7 +1239,7 @@
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        📖 See Also
       
     </span>
   </a>
@@ -1196,9 +1283,64 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Field Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1261,7 +1403,7 @@
   <a href="#notes-and-limitations" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Notes and limitations
+        ⚠️ Notes and Limitations
       
     </span>
   </a>
@@ -1272,10 +1414,27 @@
   <a href="#type-alias-behavior-by-output-type-and-python-version" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Type Alias Behavior by Output Type and Python Version
+        📊 Type Alias Behavior by Output Type and Python Version
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="📊 Type Alias Behavior by Output Type and Python Version">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#why-the-difference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤔 Why the difference?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1283,24 +1442,35 @@
   <a href="#example" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example
+        📝 Example
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Example">
+    <nav class="md-nav" aria-label="📝 Example">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#modeljson" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        model.json
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#pydantic-v1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v1
+        🔹 Pydantic v1
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v1">
+    <nav class="md-nav" aria-label="🔹 Pydantic v1">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1313,6 +1483,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#generated-modelpy-pydantic-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✨ Generated model.py (Pydantic v1)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="✨ Generated model.py (Pydantic v1)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#generating-typealias-annotation" class="md-nav__link">
@@ -1331,15 +1518,26 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pydantic-v2" class="md-nav__link">
+  <a href="#generated-modelpy-python-310" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pydantic v2
+        ✨ Generated model.py (Python 3.10+)
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Pydantic v2">
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pydantic-v2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔸 Pydantic v2
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🔸 Pydantic v2">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1353,16 +1551,22 @@
   
 </li>
         
+      </ul>
+    </nav>
+  
+</li>
+        
           <li class="md-nav__item">
-  <a href="#generating-typealiastype-python-39-311" class="md-nav__link">
+  <a href="#generated-modelpy-pydantic-v2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generating TypeAliasType (Python 3.9-3.11)
+        ✨ Generated model.py (Pydantic v2)
       
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="✨ Generated model.py (Pydantic v2)">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#generating-type-statement-python-312" class="md-nav__link">
@@ -1380,6 +1584,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#generated-modelpy-python-312-type-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ✨ Generated model.py (Python 3.12+ type statement)
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1389,7 +1604,7 @@
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        📖 See Also
       
     </span>
   </a>
@@ -1411,15 +1626,17 @@
                 
                   
 
-<h1 id="root-models-and-type-aliases">Root Models and Type Aliases<a class="headerlink" href="#root-models-and-type-aliases" title="Permanent link">&para;</a></h1>
+<h1 id="root-models-and-type-aliases">📦 Root Models and Type Aliases<a class="headerlink" href="#root-models-and-type-aliases" title="Permanent link">&para;</a></h1>
 <p>When a schema defines a simple type (not an object with properties), <code>datamodel-code-generator</code> creates a root model. If you don't want to introduce a new level of attribute access (<code>.root</code>) or want to use generated types as plain Python types in non-Pydantic code, you can use the <code>--use-type-alias</code> flag to generate type aliases instead of root models.</p>
-<h2 id="notes-and-limitations"><img alt="⚠" class="twemoji" src="https://cdn.jsdelivr.net/gh/jdecked/twemoji@15.1.0/assets/svg/26a0.svg" title=":warning:" /> Notes and limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
-<p><strong>This functionality experimental!</strong> Here are a few known issues:
-- RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases for details.
-- Type aliases do not support some RootModel features (e.g. <code>model_config</code>)
-- A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. <code>model.json</code> containing <code>{"title": "MyString", "type": "string"}</code>)
-- Type aliases cannot be combined with <code>Annotated</code> for Pydantic v1</p>
-<h2 id="type-alias-behavior-by-output-type-and-python-version">Type Alias Behavior by Output Type and Python Version<a class="headerlink" href="#type-alias-behavior-by-output-type-and-python-version" title="Permanent link">&para;</a></h2>
+<h2 id="notes-and-limitations">⚠️ Notes and Limitations<a class="headerlink" href="#notes-and-limitations" title="Permanent link">&para;</a></h2>
+<p><strong>This functionality is experimental!</strong> Here are a few known issues:</p>
+<ul>
+<li>📌 RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See <a href="https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases">Named Type Aliases</a> for details.</li>
+<li>🚫 Type aliases do not support some RootModel features (e.g. <code>model_config</code>)</li>
+<li>📄 A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. <code>model.json</code> containing <code>{"title": "MyString", "type": "string"}</code>)</li>
+<li>❌ Type aliases cannot be combined with <code>Annotated</code> for Pydantic v1</li>
+</ul>
+<h2 id="type-alias-behavior-by-output-type-and-python-version">📊 Type Alias Behavior by Output Type and Python Version<a class="headerlink" href="#type-alias-behavior-by-output-type-and-python-version" title="Permanent link">&para;</a></h2>
 <p>The type of type alias generated depends on the output model type and target Python version:</p>
 <table>
 <thead>
@@ -1463,15 +1680,14 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Why the difference?</strong></p>
+<h3 id="why-the-difference">🤔 Why the difference?<a class="headerlink" href="#why-the-difference" title="Permanent link">&para;</a></h3>
 <ul>
 <li><strong>Pydantic v2</strong> requires <code>TypeAliasType</code> because it cannot properly handle <code>TypeAlias</code> annotations</li>
 <li><strong>Other output types</strong> (TypedDict, dataclasses, msgspec) use <code>TypeAlias</code> for better compatibility with libraries that may not expect <code>TypeAliasType</code> objects</li>
 <li><strong>Python 3.12+</strong> uses the native <code>type</code> statement for all output types</li>
 </ul>
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<p>Input JSON Schema</p>
-<p><code>model.json</code>
+<h2 id="example">📝 Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
+<h3 id="modeljson">model.json<a class="headerlink" href="#modeljson" title="Permanent link">&para;</a></h3>
 <div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;definitions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
@@ -1493,13 +1709,12 @@
 </span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="p">}</span>
 </span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="p">}</span>
 </span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<h3 id="pydantic-v1">Pydantic v1<a class="headerlink" href="#pydantic-v1" title="Permanent link">&para;</a></h3>
-<h4 id="generating-rootmodel">Generating RootModel<a class="headerlink" href="#generating-rootmodel" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<p>Generated Model</p>
-<p><code>model.py</code>
+<h3 id="pydantic-v1">🔹 Pydantic v1<a class="headerlink" href="#pydantic-v1" title="Permanent link">&para;</a></h3>
+<h4 id="generating-rootmodel">Generating RootModel<a class="headerlink" href="#generating-rootmodel" title="Permanent link">&para;</a></h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<h3 id="generated-modelpy-pydantic-v1">✨ Generated model.py (Pydantic v1)<a class="headerlink" href="#generated-modelpy-pydantic-v1" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># generated by datamodel-codegen:</span>
 </span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="c1">#   filename:  model.json</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
@@ -1525,12 +1740,11 @@
 </span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 </span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
-<h4 id="generating-typealias-annotation">Generating TypeAlias annotation<a class="headerlink" href="#generating-typealias-annotation" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--use-type-alias<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<p>Generated Model (Python 3.10+)</p>
-<p><code>model.py</code>
+<h4 id="generating-typealias-annotation">Generating TypeAlias annotation<a class="headerlink" href="#generating-typealias-annotation" title="Permanent link">&para;</a></h4>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--use-type-alias<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<h3 id="generated-modelpy-python-310">✨ Generated model.py (Python 3.10+)<a class="headerlink" href="#generated-modelpy-python-310" title="Permanent link">&para;</a></h3>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># generated by datamodel-codegen:</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1">#   filename:  model.json</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
@@ -1552,123 +1766,69 @@
 </span><span id="__span-4-19"><a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
 </span><span id="__span-4-20"><a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </span><span id="__span-4-21"><a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
-<p>Generated Model (Python 3.9)</p>
-<p><code>model.py</code>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># generated by datamodel-codegen:</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="c1">#   filename:  model.json</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAlias</span>
-</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>
-</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="n">Model</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Any</span>
-</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
-</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a>
-</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="n">UserId</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="nb">str</span>
-</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a>
-</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
-</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="n">Status</span><span class="p">:</span> <span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a>
-</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>
-</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
-<h3 id="pydantic-v2">Pydantic v2<a class="headerlink" href="#pydantic-v2" title="Permanent link">&para;</a></h3>
+</span></code></pre></div>
+<h3 id="pydantic-v2">🔸 Pydantic v2<a class="headerlink" href="#pydantic-v2" title="Permanent link">&para;</a></h3>
 <h4 id="generating-rootmodel_1">Generating RootModel<a class="headerlink" href="#generating-rootmodel_1" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<p>Generated Model</p>
-<p><code>model.py</code>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># generated by datamodel-codegen:</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1">#   filename:  model.json</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">RootModel</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="n">Any</span><span class="p">]):</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>    <span class="n">root</span><span class="p">:</span> <span class="n">Any</span>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserId</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
-</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">root</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
-</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
-</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">Status</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]):</span>
-</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>
-</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>
-</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-7-24"><a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-7-25"><a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
-<h4 id="generating-typealiastype-python-39-311">Generating TypeAliasType (Python 3.9-3.11)<a class="headerlink" href="#generating-typealiastype-python-39-311" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--use-type-alias<span class="w"> </span>--output<span class="w"> </span>model.py
+<h3 id="generated-modelpy-pydantic-v2">✨ Generated model.py (Pydantic v2)<a class="headerlink" href="#generated-modelpy-pydantic-v2" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># generated by datamodel-codegen:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1">#   filename:  model.json</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">RootModel</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>
+</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="n">Any</span><span class="p">]):</span>
+</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>    <span class="n">root</span><span class="p">:</span> <span class="n">Any</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>
+</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="k">class</span><span class="w"> </span><span class="nc">UserId</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="nb">str</span><span class="p">]):</span>
+</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a>    <span class="n">root</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-6-17"><a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
+</span><span id="__span-6-18"><a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a>
+</span><span id="__span-6-19"><a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">Status</span><span class="p">(</span><span class="n">RootModel</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]]):</span>
+</span><span id="__span-6-20"><a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>    <span class="n">root</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+</span><span id="__span-6-21"><a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+</span><span id="__span-6-22"><a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>
+</span><span id="__span-6-23"><a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-6-24"><a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-6-25"><a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 </span></code></pre></div>
-<p>Generated Model</p>
-<p><code>model.py</code>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># generated by datamodel-codegen:</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="c1">#   filename:  model.json</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing_extensions</span><span class="w"> </span><span class="kn">import</span> <span class="n">TypeAliasType</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a>
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="n">Model</span> <span class="o">=</span> <span class="n">TypeAliasType</span><span class="p">(</span><span class="s2">&quot;Model&quot;</span><span class="p">,</span> <span class="n">Any</span><span class="p">)</span>
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a>
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="n">UserId</span> <span class="o">=</span> <span class="n">TypeAliasType</span><span class="p">(</span><span class="s2">&quot;UserId&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a>
-</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a>
-</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="n">Status</span> <span class="o">=</span> <span class="n">TypeAliasType</span><span class="p">(</span><span class="s2">&quot;Status&quot;</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span>
-</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a>
-</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a>
-</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
 <h4 id="generating-type-statement-python-312">Generating type statement (Python 3.12+)<a class="headerlink" href="#generating-type-statement-python-312" title="Permanent link">&para;</a></h4>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--use-type-alias<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--output<span class="w"> </span>model.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>model.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--use-type-alias<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.12<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
-<p>Generated Model</p>
-<p><code>model.py</code>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># generated by datamodel-codegen:</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1">#   filename:  model.json</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
-</span><span id="__span-11-7"><a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>
-</span><span id="__span-11-8"><a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
-</span><span id="__span-11-9"><a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-</span><span id="__span-11-10"><a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="nb">type</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">Any</span>
-</span><span id="__span-11-11"><a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>
-</span><span id="__span-11-12"><a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
-</span><span id="__span-11-13"><a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="nb">type</span> <span class="n">UserId</span> <span class="o">=</span> <span class="nb">str</span>
-</span><span id="__span-11-14"><a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>
-</span><span id="__span-11-15"><a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
-</span><span id="__span-11-16"><a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="nb">type</span> <span class="n">Status</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
-</span><span id="__span-11-17"><a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>
-</span><span id="__span-11-18"><a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>
-</span><span id="__span-11-19"><a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-11-20"><a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-11-21"><a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div></p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<h3 id="generated-modelpy-python-312-type-statement">✨ Generated model.py (Python 3.12+ type statement)<a class="headerlink" href="#generated-modelpy-python-312-type-statement" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># generated by datamodel-codegen:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="c1">#   filename:  model.json</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="nb">type</span> <span class="n">Model</span> <span class="o">=</span> <span class="n">Any</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="nb">type</span> <span class="n">UserId</span> <span class="o">=</span> <span class="nb">str</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>
+</span><span id="__span-8-15"><a id="__codelineno-8-15" name="__codelineno-8-15" href="#__codelineno-8-15"></a>
+</span><span id="__span-8-16"><a id="__codelineno-8-16" name="__codelineno-8-16" href="#__codelineno-8-16"></a><span class="nb">type</span> <span class="n">Status</span> <span class="o">=</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">]</span>
+</span><span id="__span-8-17"><a id="__codelineno-8-17" name="__codelineno-8-17" href="#__codelineno-8-17"></a>
+</span><span id="__span-8-18"><a id="__codelineno-8-18" name="__codelineno-8-18" href="#__codelineno-8-18"></a>
+</span><span id="__span-8-19"><a id="__codelineno-8-19" name="__codelineno-8-19" href="#__codelineno-8-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-8-20"><a id="__codelineno-8-20" name="__codelineno-8-20" href="#__codelineno-8-20"></a>    <span class="nb">id</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">UserId</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-8-21"><a id="__codelineno-8-21" name="__codelineno-8-21" href="#__codelineno-8-21"></a>    <span class="n">status</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Status</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div>
+<hr />
+<h2 id="see-also">📖 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../cli-reference/typing-customization/#use-type-alias">CLI Reference: <code>--use-type-alias</code></a> - Detailed CLI option documentation</li>
-<li><a href="../cli-reference/model-customization/#target-python-version">CLI Reference: <code>--target-python-version</code></a> - Control Python version-specific syntax</li>
+<li>🖥️ <a href="../cli-reference/typing-customization/#use-type-alias">CLI Reference: <code>--use-type-alias</code></a> - Detailed CLI option documentation</li>
+<li>🎯 <a href="../cli-reference/model-customization/#target-python-version">CLI Reference: <code>--target-python-version</code></a> - Control Python version-specific syntax</li>
 </ul>
 
 

@@ -70,6 +70,12 @@
         <loc>https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/</loc>
       </url>
       <url>
+        <loc>https://koxudaxi.github.io/datamodel-code-generator/aliases/</loc>
+      </url>
+      <url>
+        <loc>https://koxudaxi.github.io/datamodel-code-generator/faq/</loc>
+      </url>
+      <url>
         <loc>https://koxudaxi.github.io/datamodel-code-generator/development-contributing/</loc>
       </url>
 </urlset>

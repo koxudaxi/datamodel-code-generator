@@ -27,7 +27,7 @@
     
     
       
-        <title>Formatting - datamodel-code-generator</title>
+        <title>🖌️ Code Formatting - datamodel-code-generator</title>
       
     
     
@@ -109,7 +109,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -118,7 +118,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#formatting" class="md-skip">
+        <a href="#code-formatting" class="md-skip">
           Skip to content
         </a>
       
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Formatting
+              🖌️ Code Formatting
             
           </span>
         </div>
@@ -167,7 +167,21 @@
     
     
     
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
     
   
 </form>
@@ -965,10 +979,99 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#default-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example
+        🎯 Default Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Available Formatters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🛠️ Available Formatters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-ruff-instead-of-black" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Using ruff instead of black
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disable-formatting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚫 Disable formatting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-via-pyprojecttoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Configuration via pyproject.toml
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚙️ Configuration via pyproject.toml">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📝 Example Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#string-quotes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💬 String Quotes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎨 Custom Formatters
       
     </span>
   </a>
@@ -979,7 +1082,7 @@
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        📖 See Also
       
     </span>
   </a>
@@ -1079,9 +1182,64 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Field Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1141,10 +1299,99 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#example" class="md-nav__link">
+  <a href="#default-behavior" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example
+        🎯 Default Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🛠️ Available Formatters
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🛠️ Available Formatters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-ruff-instead-of-black" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚡ Using ruff instead of black
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#disable-formatting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🚫 Disable formatting
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration-via-pyprojecttoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚙️ Configuration via pyproject.toml
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="⚙️ Configuration via pyproject.toml">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📝 Example Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#string-quotes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        💬 String Quotes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-formatters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🎨 Custom Formatters
       
     </span>
   </a>
@@ -1155,7 +1402,7 @@
   <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        See Also
+        📖 See Also
       
     </span>
   </a>
@@ -1177,34 +1424,92 @@
                 
                   
 
-<h1 id="formatting">Formatting<a class="headerlink" href="#formatting" title="Permanent link">&para;</a></h1>
-<p>Code generated by <code>datamodel-codegen</code> will be passed through <code>isort</code> and
-<code>black</code> to produce consistent, well-formatted results. Settings for these tools
-can be specified in <code>pyproject.toml</code> (located in the output directory, or in
-some parent of the output directory). Also for black you can disable 
-skip-string-normalization with using datamodel-codegen option <code>--use-double-quotes</code>, 
-it will override your black config skip-string-normalization value.
-Using --use-double-quotes may be useful if you can't use black config. </p>
-<h2 id="example">Example<a class="headerlink" href="#example" title="Permanent link">&para;</a></h2>
-<p><strong>pyproject.toml</strong>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[tool.black]</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">skip-string-normalization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">line-length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">[tool.isort]</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">multi_line_output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="n">include_trailing_comma</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="n">force_grid_wrap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="n">use_parentheses</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="n">line_length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="n">known_first_party</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;kelvin&quot;</span>
-</span></code></pre></div></p>
-<p>See the <a href="https://pypi.org/project/black/">Black Project</a> for more information.</p>
-<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<h1 id="code-formatting">🖌️ Code Formatting<a class="headerlink" href="#code-formatting" title="Permanent link">&para;</a></h1>
+<p>Generated code is automatically formatted using code formatters. By default, <code>black</code> and <code>isort</code> are used to produce consistent, well-formatted output.</p>
+<h2 id="default-behavior">🎯 Default Behavior<a class="headerlink" href="#default-behavior" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<p>This runs the following formatters in order:</p>
+<ol>
+<li><strong>isort</strong> - Sorts and organizes imports</li>
+<li><strong>black</strong> - Formats code style</li>
+</ol>
+<h2 id="available-formatters">🛠️ Available Formatters<a class="headerlink" href="#available-formatters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Formatter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>black</code></td>
+<td>Code formatting (PEP 8 style)</td>
+</tr>
+<tr>
+<td><code>isort</code></td>
+<td>Import sorting</td>
+</tr>
+<tr>
+<td><code>ruff-check</code></td>
+<td>Linting with auto-fix</td>
+</tr>
+<tr>
+<td><code>ruff-format</code></td>
+<td>Fast code formatting (black alternative)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="using-ruff-instead-of-black">⚡ Using ruff instead of black<a class="headerlink" href="#using-ruff-instead-of-black" title="Permanent link">&para;</a></h3>
+<p><a href="https://github.com/astral-sh/ruff">Ruff</a> is a fast Python linter and formatter. To use it:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Use ruff for both linting and formatting</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>ruff-check<span class="w"> </span>ruff-format<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Use ruff-format as a black replacement</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>isort<span class="w"> </span>ruff-format<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<h3 id="disable-formatting">🚫 Disable formatting<a class="headerlink" href="#disable-formatting" title="Permanent link">&para;</a></h3>
+<p><code>datamodel-codegen</code> requires at least one formatter when using the CLI <code>--formatters</code> option.</p>
+<p>To disable built-in formatting entirely, configure it via <code>pyproject.toml</code>:</p>
+<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">formatters</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[]</span>
+</span></code></pre></div>
+<h2 id="configuration-via-pyprojecttoml">⚙️ Configuration via pyproject.toml<a class="headerlink" href="#configuration-via-pyprojecttoml" title="Permanent link">&para;</a></h2>
+<p>Formatters read their configuration from <code>pyproject.toml</code>. The tool searches for <code>pyproject.toml</code> in:</p>
+<ol>
+<li>The output file's directory</li>
+<li>Parent directories (up to the git repository root)</li>
+</ol>
+<h3 id="example-configuration">📝 Example Configuration<a class="headerlink" href="#example-configuration" title="Permanent link">&para;</a></h3>
+<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[tool.black]</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">line-length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">skip-string-normalization</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="k">[tool.isort]</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="n">profile</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;black&quot;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="n">line_length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="k">[tool.ruff]</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="n">line-length</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">[tool.ruff.format]</span>
+</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="n">quote-style</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;single&quot;</span>
+</span></code></pre></div>
+<h2 id="string-quotes">💬 String Quotes<a class="headerlink" href="#string-quotes" title="Permanent link">&para;</a></h2>
+<p>By default, string quote style is determined by your formatter configuration. To force double quotes regardless of configuration:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--use-double-quotes<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<p>This overrides <code>skip_string_normalization</code> in black config.</p>
+<h2 id="custom-formatters">🎨 Custom Formatters<a class="headerlink" href="#custom-formatters" title="Permanent link">&para;</a></h2>
+<p>You can create custom formatters for specialized formatting needs. See <a href="../custom-formatters/">Custom Formatters</a> for details.</p>
+<hr />
+<h2 id="see-also">📖 See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="../cli-reference/template-customization/#formatters">CLI Reference: <code>--formatters</code></a> - Specify code formatters</li>
-<li><a href="../cli-reference/template-customization/#use-double-quotes">CLI Reference: <code>--use-double-quotes</code></a> - Use double quotes for strings</li>
-<li><a href="../custom-formatters/">Custom Code Formatters</a> - Create custom formatters</li>
+<li>🖥️ <a href="../cli-reference/template-customization/#formatters">CLI Reference: <code>--formatters</code></a> - Specify code formatters</li>
+<li>💬 <a href="../cli-reference/template-customization/#use-double-quotes">CLI Reference: <code>--use-double-quotes</code></a> - Force double quotes</li>
+<li>🎨 <a href="../custom-formatters/">Custom Formatters</a> - Create your own formatters</li>
+<li>⚙️ <a href="../pyproject_toml/">pyproject.toml Configuration</a> - Configure datamodel-codegen options</li>
 </ul>
 
 

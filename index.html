@@ -107,7 +107,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -165,7 +165,21 @@
     
     
     
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
     
   
 </form>
@@ -318,65 +332,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-installation" class="md-nav__link">
+  <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Installation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#simple-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simple Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-input-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported input types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-output-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported output types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sponsors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sponsors
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Projects that use datamodel-code-generator
+        ✨ What it does
       
     </span>
   </a>
@@ -387,19 +346,102 @@
   <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        📦 Installation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installation">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏃 Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏃 Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-schema-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1️⃣ Create a schema file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-run-the-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2️⃣ Run the generator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-use-your-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3️⃣ Use your models
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-your-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📥 Choose Your Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-your-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📤 Choose Your Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🍳 Common Recipes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🍳 Common Recipes">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#http-extra-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        http extra option
+        🌐 Generate from URL
       
     </span>
   </a>
@@ -407,10 +449,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#graphql-extra-option" class="md-nav__link">
+  <a href="#use-with-pyprojecttoml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        graphql extra option
+        ⚙️ Use with pyproject.toml
       
     </span>
   </a>
@@ -418,10 +460,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#docker-image" class="md-nav__link">
+  <a href="#snake-case-field-names" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Image
+        🐍 Snake-case field names
       
     </span>
   </a>
@@ -434,10 +476,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#advanced-uses" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Advanced Uses
+        📚 Next Steps
       
     </span>
   </a>
@@ -445,10 +487,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#all-command-options" class="md-nav__link">
+  <a href="#sponsors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        All Command Options
+        💖 Sponsors
       
     </span>
   </a>
@@ -456,60 +498,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#related-projects" class="md-nav__link">
+  <a href="#used-by" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Related projects
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Related projects">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#fastapi-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fastapi-code-generator
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pydantic-pycharm-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pydantic-pycharm-plugin
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pypi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PyPi
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        License
+        🏢 Used by
       
     </span>
   </a>
@@ -1254,9 +1246,64 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Field Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1316,65 +1363,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#quick-installation" class="md-nav__link">
+  <a href="#what-it-does" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Quick Installation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#simple-usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simple Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-input-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported input types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#supported-output-types" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported output types
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#sponsors" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Sponsors
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#projects-that-use-datamodel-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Projects that use datamodel-code-generator
+        ✨ What it does
       
     </span>
   </a>
@@ -1385,19 +1377,102 @@
   <a href="#installation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Installation
+        📦 Installation
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Installation">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🏃 Quick Start
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🏃 Quick Start">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-schema-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1️⃣ Create a schema file
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-run-the-generator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2️⃣ Run the generator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-use-your-models" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3️⃣ Use your models
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-your-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📥 Choose Your Input
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-your-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        📤 Choose Your Output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-recipes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🍳 Common Recipes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="🍳 Common Recipes">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#http-extra-option" class="md-nav__link">
     <span class="md-ellipsis">
       
-        http extra option
+        🌐 Generate from URL
       
     </span>
   </a>
@@ -1405,10 +1480,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#graphql-extra-option" class="md-nav__link">
+  <a href="#use-with-pyprojecttoml" class="md-nav__link">
     <span class="md-ellipsis">
       
-        graphql extra option
+        ⚙️ Use with pyproject.toml
       
     </span>
   </a>
@@ -1416,10 +1491,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#docker-image" class="md-nav__link">
+  <a href="#snake-case-field-names" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Docker Image
+        🐍 Snake-case field names
       
     </span>
   </a>
@@ -1432,10 +1507,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#advanced-uses" class="md-nav__link">
+  <a href="#next-steps" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Advanced Uses
+        📚 Next Steps
       
     </span>
   </a>
@@ -1443,10 +1518,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#all-command-options" class="md-nav__link">
+  <a href="#sponsors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        All Command Options
+        💖 Sponsors
       
     </span>
   </a>
@@ -1454,60 +1529,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#related-projects" class="md-nav__link">
+  <a href="#used-by" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Related projects
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Related projects">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#fastapi-code-generator" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        fastapi-code-generator
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#pydantic-pycharm-plugin" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        pydantic-pycharm-plugin
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#pypi" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        PyPi
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#license" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        License
+        🏢 Used by
       
     </span>
   </a>
@@ -1530,244 +1555,184 @@
                   
 
 <h1 id="datamodel-code-generator">datamodel-code-generator<a class="headerlink" href="#datamodel-code-generator" title="Permanent link">&para;</a></h1>
-<p>This code generator creates <a href="https://docs.pydantic.dev/">pydantic v1 and v2</a> model, <a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a>, <a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a> and <a href="https://github.com/jcrist/msgspec">msgspec.Struct</a> from an openapi file and others.</p>
+<p>🚀 Generate Python data models from schema definitions in seconds.</p>
 <p><a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="PyPI version" src="https://badge.fury.io/py/datamodel-code-generator.svg" /></a>
-<a href="https://anaconda.org/conda-forge/datamodel-code-generator"><img alt="Conda-forge" src="https://img.shields.io/conda/v/conda-forge/datamodel-code-generator" /></a>
 <a href="https://pepy.tech/project/datamodel-code-generator"><img alt="Downloads" src="https://pepy.tech/badge/datamodel-code-generator/month" /></a>
-<a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="PyPI - Python Version" src="https://img.shields.io/pypi/pyversions/datamodel-code-generator" /></a>
-<a href="https://codecov.io/gh/koxudaxi/datamodel-code-generator"><img alt="codecov" src="https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li" /></a>
-<img alt="license" src="https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg" />
-<a href="https://github.com/astral-sh/ruff"><img alt="Ruff" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a>
-<a href="https://pydantic.dev"><img alt="Pydantic v1" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json" /></a>
-<a href="https://pydantic.dev"><img alt="Pydantic v2" src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json" /></a></p>
-<h2 id="quick-installation">Quick Installation<a class="headerlink" href="#quick-installation" title="Permanent link">&para;</a></h2>
-<p>To install <code>datamodel-code-generator</code>:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
-</span></code></pre></div></p>
-<h2 id="simple-usage">Simple Usage<a class="headerlink" href="#simple-usage" title="Permanent link">&para;</a></h2>
-<p>You can generate models from a local file.
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>api.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div></p>
-<details>
-<summary>api.yaml</summary>
-
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">openapi</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;3.0.0&quot;</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">info</span><span class="p">:</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1.0.0</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Swagger Petstore</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">license</span><span class="p">:</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">MIT</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="nt">servers</span><span class="p">:</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://petstore.swagger.io/v1</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="nt">paths</span><span class="p">:</span>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">  </span><span class="nt">/pets</span><span class="p">:</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">    </span><span class="nt">get</span><span class="p">:</span>
-</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">List all pets</span>
-</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">listPets</span>
-</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
-</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
-</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
-</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">limit</span>
-</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">query</span>
-</span><span id="__span-2-19"><a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">How many items to return at one time (max 100)</span>
-</span><span id="__span-2-20"><a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
-</span><span id="__span-2-21"><a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a><span class="w">          </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-22"><a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
-</span><span id="__span-2-23"><a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a><span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span>
-</span><span id="__span-2-24"><a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a><span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
-</span><span id="__span-2-25"><a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a><span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
-</span><span id="__span-2-26"><a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A paged array of pets</span>
-</span><span id="__span-2-27"><a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="w">          </span><span class="nt">headers</span><span class="p">:</span>
-</span><span id="__span-2-28"><a id="__codelineno-2-28" name="__codelineno-2-28" href="#__codelineno-2-28"></a><span class="w">            </span><span class="nt">x-next</span><span class="p">:</span>
-</span><span id="__span-2-29"><a id="__codelineno-2-29" name="__codelineno-2-29" href="#__codelineno-2-29"></a><span class="w">              </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A link to the next page of responses</span>
-</span><span id="__span-2-30"><a id="__codelineno-2-30" name="__codelineno-2-30" href="#__codelineno-2-30"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-31"><a id="__codelineno-2-31" name="__codelineno-2-31" href="#__codelineno-2-31"></a><span class="w">                </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-32"><a id="__codelineno-2-32" name="__codelineno-2-32" href="#__codelineno-2-32"></a><span class="w">          </span><span class="nt">content</span><span class="p">:</span>
-</span><span id="__span-2-33"><a id="__codelineno-2-33" name="__codelineno-2-33" href="#__codelineno-2-33"></a><span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
-</span><span id="__span-2-34"><a id="__codelineno-2-34" name="__codelineno-2-34" href="#__codelineno-2-34"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-35"><a id="__codelineno-2-35" name="__codelineno-2-35" href="#__codelineno-2-35"></a><span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span>
-</span><span id="__span-2-36"><a id="__codelineno-2-36" name="__codelineno-2-36" href="#__codelineno-2-36"></a><span class="w">        </span><span class="nt">default</span><span class="p">:</span>
-</span><span id="__span-2-37"><a id="__codelineno-2-37" name="__codelineno-2-37" href="#__codelineno-2-37"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-</span><span id="__span-2-38"><a id="__codelineno-2-38" name="__codelineno-2-38" href="#__codelineno-2-38"></a><span class="w">          </span><span class="nt">content</span><span class="p">:</span>
-</span><span id="__span-2-39"><a id="__codelineno-2-39" name="__codelineno-2-39" href="#__codelineno-2-39"></a><span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
-</span><span id="__span-2-40"><a id="__codelineno-2-40" name="__codelineno-2-40" href="#__codelineno-2-40"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-41"><a id="__codelineno-2-41" name="__codelineno-2-41" href="#__codelineno-2-41"></a><span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
-</span><span id="__span-2-42"><a id="__codelineno-2-42" name="__codelineno-2-42" href="#__codelineno-2-42"></a><span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-</span><span id="__span-2-43"><a id="__codelineno-2-43" name="__codelineno-2-43" href="#__codelineno-2-43"></a><span class="w">                  </span><span class="nt">uri</span><span class="p">:</span>
-</span><span id="__span-2-44"><a id="__codelineno-2-44" name="__codelineno-2-44" href="#__codelineno-2-44"></a><span class="w">                    </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-</span><span id="__span-2-45"><a id="__codelineno-2-45" name="__codelineno-2-45" href="#__codelineno-2-45"></a><span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-</span><span id="__span-2-46"><a id="__codelineno-2-46" name="__codelineno-2-46" href="#__codelineno-2-46"></a><span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
-</span><span id="__span-2-47"><a id="__codelineno-2-47" name="__codelineno-2-47" href="#__codelineno-2-47"></a><span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-</span><span id="__span-2-48"><a id="__codelineno-2-48" name="__codelineno-2-48" href="#__codelineno-2-48"></a><span class="w">    </span><span class="nt">post</span><span class="p">:</span>
-</span><span id="__span-2-49"><a id="__codelineno-2-49" name="__codelineno-2-49" href="#__codelineno-2-49"></a><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Create a pet</span>
-</span><span id="__span-2-50"><a id="__codelineno-2-50" name="__codelineno-2-50" href="#__codelineno-2-50"></a><span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">createPets</span>
-</span><span id="__span-2-51"><a id="__codelineno-2-51" name="__codelineno-2-51" href="#__codelineno-2-51"></a><span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
-</span><span id="__span-2-52"><a id="__codelineno-2-52" name="__codelineno-2-52" href="#__codelineno-2-52"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
-</span><span id="__span-2-53"><a id="__codelineno-2-53" name="__codelineno-2-53" href="#__codelineno-2-53"></a><span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
-</span><span id="__span-2-54"><a id="__codelineno-2-54" name="__codelineno-2-54" href="#__codelineno-2-54"></a><span class="w">        </span><span class="s">&#39;201&#39;</span><span class="p p-Indicator">:</span>
-</span><span id="__span-2-55"><a id="__codelineno-2-55" name="__codelineno-2-55" href="#__codelineno-2-55"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Null response</span>
-</span><span id="__span-2-56"><a id="__codelineno-2-56" name="__codelineno-2-56" href="#__codelineno-2-56"></a><span class="w">        </span><span class="nt">default</span><span class="p">:</span>
-</span><span id="__span-2-57"><a id="__codelineno-2-57" name="__codelineno-2-57" href="#__codelineno-2-57"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-</span><span id="__span-2-58"><a id="__codelineno-2-58" name="__codelineno-2-58" href="#__codelineno-2-58"></a><span class="w">          </span><span class="nt">content</span><span class="p">:</span>
-</span><span id="__span-2-59"><a id="__codelineno-2-59" name="__codelineno-2-59" href="#__codelineno-2-59"></a><span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
-</span><span id="__span-2-60"><a id="__codelineno-2-60" name="__codelineno-2-60" href="#__codelineno-2-60"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-61"><a id="__codelineno-2-61" name="__codelineno-2-61" href="#__codelineno-2-61"></a><span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
-</span><span id="__span-2-62"><a id="__codelineno-2-62" name="__codelineno-2-62" href="#__codelineno-2-62"></a><span class="w">                </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-</span><span id="__span-2-63"><a id="__codelineno-2-63" name="__codelineno-2-63" href="#__codelineno-2-63"></a><span class="w">                  </span><span class="nt">uri</span><span class="p">:</span>
-</span><span id="__span-2-64"><a id="__codelineno-2-64" name="__codelineno-2-64" href="#__codelineno-2-64"></a><span class="w">                    </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-</span><span id="__span-2-65"><a id="__codelineno-2-65" name="__codelineno-2-65" href="#__codelineno-2-65"></a><span class="w">                  </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-</span><span id="__span-2-66"><a id="__codelineno-2-66" name="__codelineno-2-66" href="#__codelineno-2-66"></a><span class="w">                  </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
-</span><span id="__span-2-67"><a id="__codelineno-2-67" name="__codelineno-2-67" href="#__codelineno-2-67"></a><span class="w">                  </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-</span><span id="__span-2-68"><a id="__codelineno-2-68" name="__codelineno-2-68" href="#__codelineno-2-68"></a><span class="w">  </span><span class="l l-Scalar l-Scalar-Plain">/pets/{petId}</span><span class="p p-Indicator">:</span>
-</span><span id="__span-2-69"><a id="__codelineno-2-69" name="__codelineno-2-69" href="#__codelineno-2-69"></a><span class="w">    </span><span class="nt">get</span><span class="p">:</span>
-</span><span id="__span-2-70"><a id="__codelineno-2-70" name="__codelineno-2-70" href="#__codelineno-2-70"></a><span class="w">      </span><span class="nt">summary</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Info for a specific pet</span>
-</span><span id="__span-2-71"><a id="__codelineno-2-71" name="__codelineno-2-71" href="#__codelineno-2-71"></a><span class="w">      </span><span class="nt">operationId</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">showPetById</span>
-</span><span id="__span-2-72"><a id="__codelineno-2-72" name="__codelineno-2-72" href="#__codelineno-2-72"></a><span class="w">      </span><span class="nt">tags</span><span class="p">:</span>
-</span><span id="__span-2-73"><a id="__codelineno-2-73" name="__codelineno-2-73" href="#__codelineno-2-73"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pets</span>
-</span><span id="__span-2-74"><a id="__codelineno-2-74" name="__codelineno-2-74" href="#__codelineno-2-74"></a><span class="w">      </span><span class="nt">parameters</span><span class="p">:</span>
-</span><span id="__span-2-75"><a id="__codelineno-2-75" name="__codelineno-2-75" href="#__codelineno-2-75"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">petId</span>
-</span><span id="__span-2-76"><a id="__codelineno-2-76" name="__codelineno-2-76" href="#__codelineno-2-76"></a><span class="w">          </span><span class="nt">in</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">path</span>
-</span><span id="__span-2-77"><a id="__codelineno-2-77" name="__codelineno-2-77" href="#__codelineno-2-77"></a><span class="w">          </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
-</span><span id="__span-2-78"><a id="__codelineno-2-78" name="__codelineno-2-78" href="#__codelineno-2-78"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">The id of the pet to retrieve</span>
-</span><span id="__span-2-79"><a id="__codelineno-2-79" name="__codelineno-2-79" href="#__codelineno-2-79"></a><span class="w">          </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-80"><a id="__codelineno-2-80" name="__codelineno-2-80" href="#__codelineno-2-80"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-81"><a id="__codelineno-2-81" name="__codelineno-2-81" href="#__codelineno-2-81"></a><span class="w">      </span><span class="nt">responses</span><span class="p">:</span>
-</span><span id="__span-2-82"><a id="__codelineno-2-82" name="__codelineno-2-82" href="#__codelineno-2-82"></a><span class="w">        </span><span class="s">&#39;200&#39;</span><span class="p p-Indicator">:</span>
-</span><span id="__span-2-83"><a id="__codelineno-2-83" name="__codelineno-2-83" href="#__codelineno-2-83"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Expected response to a valid request</span>
-</span><span id="__span-2-84"><a id="__codelineno-2-84" name="__codelineno-2-84" href="#__codelineno-2-84"></a><span class="w">          </span><span class="nt">content</span><span class="p">:</span>
-</span><span id="__span-2-85"><a id="__codelineno-2-85" name="__codelineno-2-85" href="#__codelineno-2-85"></a><span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
-</span><span id="__span-2-86"><a id="__codelineno-2-86" name="__codelineno-2-86" href="#__codelineno-2-86"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-87"><a id="__codelineno-2-87" name="__codelineno-2-87" href="#__codelineno-2-87"></a><span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pets&quot;</span>
-</span><span id="__span-2-88"><a id="__codelineno-2-88" name="__codelineno-2-88" href="#__codelineno-2-88"></a><span class="w">        </span><span class="nt">default</span><span class="p">:</span>
-</span><span id="__span-2-89"><a id="__codelineno-2-89" name="__codelineno-2-89" href="#__codelineno-2-89"></a><span class="w">          </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unexpected error</span>
-</span><span id="__span-2-90"><a id="__codelineno-2-90" name="__codelineno-2-90" href="#__codelineno-2-90"></a><span class="w">          </span><span class="nt">content</span><span class="p">:</span>
-</span><span id="__span-2-91"><a id="__codelineno-2-91" name="__codelineno-2-91" href="#__codelineno-2-91"></a><span class="w">            </span><span class="nt">application/json</span><span class="p">:</span>
-</span><span id="__span-2-92"><a id="__codelineno-2-92" name="__codelineno-2-92" href="#__codelineno-2-92"></a><span class="w">              </span><span class="nt">schema</span><span class="p">:</span>
-</span><span id="__span-2-93"><a id="__codelineno-2-93" name="__codelineno-2-93" href="#__codelineno-2-93"></a><span class="w">                </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Error&quot;</span>
-</span><span id="__span-2-94"><a id="__codelineno-2-94" name="__codelineno-2-94" href="#__codelineno-2-94"></a><span class="w">    </span><span class="nt">x-amazon-apigateway-integration</span><span class="p">:</span>
-</span><span id="__span-2-95"><a id="__codelineno-2-95" name="__codelineno-2-95" href="#__codelineno-2-95"></a><span class="w">      </span><span class="nt">uri</span><span class="p">:</span>
-</span><span id="__span-2-96"><a id="__codelineno-2-96" name="__codelineno-2-96" href="#__codelineno-2-96"></a><span class="w">        </span><span class="nt">Fn::Sub</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations</span>
-</span><span id="__span-2-97"><a id="__codelineno-2-97" name="__codelineno-2-97" href="#__codelineno-2-97"></a><span class="w">      </span><span class="nt">passthroughBehavior</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">when_no_templates</span>
-</span><span id="__span-2-98"><a id="__codelineno-2-98" name="__codelineno-2-98" href="#__codelineno-2-98"></a><span class="w">      </span><span class="nt">httpMethod</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">POST</span>
-</span><span id="__span-2-99"><a id="__codelineno-2-99" name="__codelineno-2-99" href="#__codelineno-2-99"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">aws_proxy</span>
-</span><span id="__span-2-100"><a id="__codelineno-2-100" name="__codelineno-2-100" href="#__codelineno-2-100"></a><span class="nt">components</span><span class="p">:</span>
-</span><span id="__span-2-101"><a id="__codelineno-2-101" name="__codelineno-2-101" href="#__codelineno-2-101"></a><span class="w">  </span><span class="nt">schemas</span><span class="p">:</span>
-</span><span id="__span-2-102"><a id="__codelineno-2-102" name="__codelineno-2-102" href="#__codelineno-2-102"></a><span class="w">    </span><span class="nt">Pet</span><span class="p">:</span>
-</span><span id="__span-2-103"><a id="__codelineno-2-103" name="__codelineno-2-103" href="#__codelineno-2-103"></a><span class="w">      </span><span class="nt">required</span><span class="p">:</span>
-</span><span id="__span-2-104"><a id="__codelineno-2-104" name="__codelineno-2-104" href="#__codelineno-2-104"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">id</span>
-</span><span id="__span-2-105"><a id="__codelineno-2-105" name="__codelineno-2-105" href="#__codelineno-2-105"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">name</span>
-</span><span id="__span-2-106"><a id="__codelineno-2-106" name="__codelineno-2-106" href="#__codelineno-2-106"></a><span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
-</span><span id="__span-2-107"><a id="__codelineno-2-107" name="__codelineno-2-107" href="#__codelineno-2-107"></a><span class="w">        </span><span class="nt">id</span><span class="p">:</span>
-</span><span id="__span-2-108"><a id="__codelineno-2-108" name="__codelineno-2-108" href="#__codelineno-2-108"></a><span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
-</span><span id="__span-2-109"><a id="__codelineno-2-109" name="__codelineno-2-109" href="#__codelineno-2-109"></a><span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int64</span>
-</span><span id="__span-2-110"><a id="__codelineno-2-110" name="__codelineno-2-110" href="#__codelineno-2-110"></a><span class="w">        </span><span class="nt">name</span><span class="p">:</span>
-</span><span id="__span-2-111"><a id="__codelineno-2-111" name="__codelineno-2-111" href="#__codelineno-2-111"></a><span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-112"><a id="__codelineno-2-112" name="__codelineno-2-112" href="#__codelineno-2-112"></a><span class="w">        </span><span class="nt">tag</span><span class="p">:</span>
-</span><span id="__span-2-113"><a id="__codelineno-2-113" name="__codelineno-2-113" href="#__codelineno-2-113"></a><span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-114"><a id="__codelineno-2-114" name="__codelineno-2-114" href="#__codelineno-2-114"></a><span class="w">    </span><span class="nt">Pets</span><span class="p">:</span>
-</span><span id="__span-2-115"><a id="__codelineno-2-115" name="__codelineno-2-115" href="#__codelineno-2-115"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span>
-</span><span id="__span-2-116"><a id="__codelineno-2-116" name="__codelineno-2-116" href="#__codelineno-2-116"></a><span class="w">      </span><span class="nt">items</span><span class="p">:</span>
-</span><span id="__span-2-117"><a id="__codelineno-2-117" name="__codelineno-2-117" href="#__codelineno-2-117"></a><span class="w">        </span><span class="nt">$ref</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;#/components/schemas/Pet&quot;</span>
-</span><span id="__span-2-118"><a id="__codelineno-2-118" name="__codelineno-2-118" href="#__codelineno-2-118"></a><span class="w">    </span><span class="nt">Error</span><span class="p">:</span>
-</span><span id="__span-2-119"><a id="__codelineno-2-119" name="__codelineno-2-119" href="#__codelineno-2-119"></a><span class="w">      </span><span class="nt">required</span><span class="p">:</span>
-</span><span id="__span-2-120"><a id="__codelineno-2-120" name="__codelineno-2-120" href="#__codelineno-2-120"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">code</span>
-</span><span id="__span-2-121"><a id="__codelineno-2-121" name="__codelineno-2-121" href="#__codelineno-2-121"></a><span class="w">        </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">message</span>
-</span><span id="__span-2-122"><a id="__codelineno-2-122" name="__codelineno-2-122" href="#__codelineno-2-122"></a><span class="w">      </span><span class="nt">properties</span><span class="p">:</span>
-</span><span id="__span-2-123"><a id="__codelineno-2-123" name="__codelineno-2-123" href="#__codelineno-2-123"></a><span class="w">        </span><span class="nt">code</span><span class="p">:</span>
-</span><span id="__span-2-124"><a id="__codelineno-2-124" name="__codelineno-2-124" href="#__codelineno-2-124"></a><span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">integer</span>
-</span><span id="__span-2-125"><a id="__codelineno-2-125" name="__codelineno-2-125" href="#__codelineno-2-125"></a><span class="w">          </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int32</span>
-</span><span id="__span-2-126"><a id="__codelineno-2-126" name="__codelineno-2-126" href="#__codelineno-2-126"></a><span class="w">        </span><span class="nt">message</span><span class="p">:</span>
-</span><span id="__span-2-127"><a id="__codelineno-2-127" name="__codelineno-2-127" href="#__codelineno-2-127"></a><span class="w">          </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-128"><a id="__codelineno-2-128" name="__codelineno-2-128" href="#__codelineno-2-128"></a><span class="w">    </span><span class="nt">apis</span><span class="p">:</span>
-</span><span id="__span-2-129"><a id="__codelineno-2-129" name="__codelineno-2-129" href="#__codelineno-2-129"></a><span class="w">      </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">array</span>
-</span><span id="__span-2-130"><a id="__codelineno-2-130" name="__codelineno-2-130" href="#__codelineno-2-130"></a><span class="w">      </span><span class="nt">items</span><span class="p">:</span>
-</span><span id="__span-2-131"><a id="__codelineno-2-131" name="__codelineno-2-131" href="#__codelineno-2-131"></a><span class="w">        </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">object</span>
-</span><span id="__span-2-132"><a id="__codelineno-2-132" name="__codelineno-2-132" href="#__codelineno-2-132"></a><span class="w">        </span><span class="nt">properties</span><span class="p">:</span>
-</span><span id="__span-2-133"><a id="__codelineno-2-133" name="__codelineno-2-133" href="#__codelineno-2-133"></a><span class="w">          </span><span class="nt">apiKey</span><span class="p">:</span>
-</span><span id="__span-2-134"><a id="__codelineno-2-134" name="__codelineno-2-134" href="#__codelineno-2-134"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-135"><a id="__codelineno-2-135" name="__codelineno-2-135" href="#__codelineno-2-135"></a><span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a dataset parameter value</span>
-</span><span id="__span-2-136"><a id="__codelineno-2-136" name="__codelineno-2-136" href="#__codelineno-2-136"></a><span class="w">          </span><span class="nt">apiVersionNumber</span><span class="p">:</span>
-</span><span id="__span-2-137"><a id="__codelineno-2-137" name="__codelineno-2-137" href="#__codelineno-2-137"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-138"><a id="__codelineno-2-138" name="__codelineno-2-138" href="#__codelineno-2-138"></a><span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">To be used as a version parameter value</span>
-</span><span id="__span-2-139"><a id="__codelineno-2-139" name="__codelineno-2-139" href="#__codelineno-2-139"></a><span class="w">          </span><span class="nt">apiUrl</span><span class="p">:</span>
-</span><span id="__span-2-140"><a id="__codelineno-2-140" name="__codelineno-2-140" href="#__codelineno-2-140"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-141"><a id="__codelineno-2-141" name="__codelineno-2-141" href="#__codelineno-2-141"></a><span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span>
-</span><span id="__span-2-142"><a id="__codelineno-2-142" name="__codelineno-2-142" href="#__codelineno-2-142"></a><span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;The</span><span class="nv"> </span><span class="s">URL</span><span class="nv"> </span><span class="s">describing</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">dataset&#39;s</span><span class="nv"> </span><span class="s">fields&quot;</span>
-</span><span id="__span-2-143"><a id="__codelineno-2-143" name="__codelineno-2-143" href="#__codelineno-2-143"></a><span class="w">          </span><span class="nt">apiDocumentationUrl</span><span class="p">:</span>
-</span><span id="__span-2-144"><a id="__codelineno-2-144" name="__codelineno-2-144" href="#__codelineno-2-144"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">string</span>
-</span><span id="__span-2-145"><a id="__codelineno-2-145" name="__codelineno-2-145" href="#__codelineno-2-145"></a><span class="w">            </span><span class="nt">format</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">uri</span>
-</span><span id="__span-2-146"><a id="__codelineno-2-146" name="__codelineno-2-146" href="#__codelineno-2-146"></a><span class="w">            </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">A URL to the API console for each API</span>
-</span></code></pre></div>
-
-</details>
-
-<details>
-<summary>model.py</summary>
-
-<div class="language-py highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># generated by datamodel-codegen:</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="c1">#   filename:  api.yaml</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1">#   timestamp: 2020-06-02T05:28:24+00:00</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">AnyUrl</span><span class="p">,</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
-</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>
-</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>
-</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-13"><a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-3-14"><a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-3-15"><a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>    <span class="n">tag</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-3-16"><a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>
-</span><span id="__span-3-17"><a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>
-</span><span id="__span-3-18"><a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pets</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-19"><a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>    <span class="n">__root__</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Pet</span><span class="p">]</span>
-</span><span id="__span-3-20"><a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>
-</span><span id="__span-3-21"><a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>
-</span><span id="__span-3-22"><a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a><span class="k">class</span><span class="w"> </span><span class="nc">Error</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-23"><a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="n">code</span><span class="p">:</span> <span class="nb">int</span>
-</span><span id="__span-3-24"><a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>    <span class="n">message</span><span class="p">:</span> <span class="nb">str</span>
-</span><span id="__span-3-25"><a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>
-</span><span id="__span-3-26"><a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>
-</span><span id="__span-3-27"><a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="k">class</span><span class="w"> </span><span class="nc">Api</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-28"><a id="__codelineno-3-28" name="__codelineno-3-28" href="#__codelineno-3-28"></a>    <span class="n">apiKey</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-3-29"><a id="__codelineno-3-29" name="__codelineno-3-29" href="#__codelineno-3-29"></a>        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;To be used as a dataset parameter value&#39;</span>
-</span><span id="__span-3-30"><a id="__codelineno-3-30" name="__codelineno-3-30" href="#__codelineno-3-30"></a>    <span class="p">)</span>
-</span><span id="__span-3-31"><a id="__codelineno-3-31" name="__codelineno-3-31" href="#__codelineno-3-31"></a>    <span class="n">apiVersionNumber</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-3-32"><a id="__codelineno-3-32" name="__codelineno-3-32" href="#__codelineno-3-32"></a>        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;To be used as a version parameter value&#39;</span>
-</span><span id="__span-3-33"><a id="__codelineno-3-33" name="__codelineno-3-33" href="#__codelineno-3-33"></a>    <span class="p">)</span>
-</span><span id="__span-3-34"><a id="__codelineno-3-34" name="__codelineno-3-34" href="#__codelineno-3-34"></a>    <span class="n">apiUrl</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AnyUrl</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-3-35"><a id="__codelineno-3-35" name="__codelineno-3-35" href="#__codelineno-3-35"></a>        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The URL describing the dataset&#39;s fields&quot;</span>
-</span><span id="__span-3-36"><a id="__codelineno-3-36" name="__codelineno-3-36" href="#__codelineno-3-36"></a>    <span class="p">)</span>
-</span><span id="__span-3-37"><a id="__codelineno-3-37" name="__codelineno-3-37" href="#__codelineno-3-37"></a>    <span class="n">apiDocumentationUrl</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">AnyUrl</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span>
-</span><span id="__span-3-38"><a id="__codelineno-3-38" name="__codelineno-3-38" href="#__codelineno-3-38"></a>        <span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;A URL to the API console for each API&#39;</span>
-</span><span id="__span-3-39"><a id="__codelineno-3-39" name="__codelineno-3-39" href="#__codelineno-3-39"></a>    <span class="p">)</span>
-</span><span id="__span-3-40"><a id="__codelineno-3-40" name="__codelineno-3-40" href="#__codelineno-3-40"></a>
-</span><span id="__span-3-41"><a id="__codelineno-3-41" name="__codelineno-3-41" href="#__codelineno-3-41"></a>
-</span><span id="__span-3-42"><a id="__codelineno-3-42" name="__codelineno-3-42" href="#__codelineno-3-42"></a><span class="k">class</span><span class="w"> </span><span class="nc">Apis</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-3-43"><a id="__codelineno-3-43" name="__codelineno-3-43" href="#__codelineno-3-43"></a>    <span class="n">__root__</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Api</span><span class="p">]</span>
-</span></code></pre></div>
-</details>
-
-<h2 id="supported-input-types">Supported input types<a class="headerlink" href="#supported-input-types" title="Permanent link">&para;</a></h2>
+<a href="https://pypi.python.org/pypi/datamodel-code-generator"><img alt="Python Version" src="https://img.shields.io/pypi/pyversions/datamodel-code-generator" /></a></p>
+<hr />
+<h2 id="what-it-does">✨ What it does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
 <ul>
-<li>OpenAPI 3 (YAML/JSON, <a href="https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types">OpenAPI Data Type</a>);</li>
-<li>JSON Schema (<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Core</a>/<a href="http://json-schema.org/draft/2019-09/json-schema-validation.html">JSON Schema Validation</a>);</li>
-<li>JSON/YAML/CSV Data (it will be converted to JSON Schema);</li>
-<li>Python dictionary (it will be converted to JSON Schema);</li>
-<li>GraphQL schema (<a href="https://graphql.org/learn/schema/">GraphQL Schemas and Types</a>);</li>
+<li>📄 Converts <strong>OpenAPI 3</strong>, <strong>JSON Schema</strong>, <strong>GraphQL</strong>, and raw data (JSON/YAML/CSV) into Python models</li>
+<li>🎯 Generates <strong>Pydantic v1/v2</strong>, <strong>dataclasses</strong>, <strong>TypedDict</strong>, or <strong>msgspec</strong> output</li>
+<li>🔗 Handles complex schemas: <code>$ref</code>, <code>allOf</code>, <code>oneOf</code>, <code>anyOf</code>, enums, and nested types</li>
+<li>✅ Produces type-safe, validated code ready for your IDE and type checker</li>
 </ul>
-<h2 id="supported-output-types">Supported output types<a class="headerlink" href="#supported-output-types" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="installation">📦 Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">pip</label><label for="__tabbed_1_2">uv</label><label for="__tabbed_1_3">conda</label><label for="__tabbed_1_4">pipx (global)</label><label for="__tabbed_1_5">uvx (global)</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uv<span class="w"> </span>add<span class="w"> </span>datamodel-code-generator
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>datamodel-code-generator
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pipx<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
+</span></code></pre></div>
+</div>
+<div class="tabbed-block">
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uvx<span class="w"> </span>datamodel-codegen<span class="w"> </span>--help
+</span></code></pre></div>
+</div>
+</div>
+</div>
+<hr />
+<h2 id="quick-start">🏃 Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<h3 id="1-create-a-schema-file">1️⃣ Create a schema file<a class="headerlink" href="#1-create-a-schema-file" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><span class="filename">pet.json</span><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;$schema&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;http://json-schema.org/draft-07/schema#&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Pet&quot;</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;species&quot;</span><span class="p">],</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;The pet&#39;s name&quot;</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="nt">&quot;species&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="p">,</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">      </span><span class="nt">&quot;enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;dog&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;cat&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bird&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;fish&quot;</span><span class="p">]</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="nt">&quot;age&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-16"><a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;integer&quot;</span><span class="p">,</span>
+</span><span id="__span-5-17"><a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">      </span><span class="nt">&quot;minimum&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+</span><span id="__span-5-18"><a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Age in years&quot;</span>
+</span><span id="__span-5-19"><a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="p">},</span>
+</span><span id="__span-5-20"><a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="w">    </span><span class="nt">&quot;vaccinated&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-5-21"><a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;boolean&quot;</span><span class="p">,</span>
+</span><span id="__span-5-22"><a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="w">      </span><span class="nt">&quot;default&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+</span><span id="__span-5-23"><a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-24"><a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-5-25"><a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="2-run-the-generator">2️⃣ Run the generator<a class="headerlink" href="#2-run-the-generator" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>pet.json<span class="w"> </span>--input-file-type<span class="w"> </span>jsonschema<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<h3 id="3-use-your-models">3️⃣ Use your models<a class="headerlink" href="#3-use-your-models" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><span class="filename">model.py</span><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># generated by datamodel-codegen:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1">#   filename:  tutorial_pet.json</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span>
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="kn">from</span><span class="w"> </span><span class="nn">pydantic</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseModel</span><span class="p">,</span> <span class="n">Field</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">Species</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>    <span class="n">dog</span> <span class="o">=</span> <span class="s1">&#39;dog&#39;</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>    <span class="n">cat</span> <span class="o">=</span> <span class="s1">&#39;cat&#39;</span>
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>    <span class="n">bird</span> <span class="o">=</span> <span class="s1">&#39;bird&#39;</span>
+</span><span id="__span-7-16"><a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a>    <span class="n">fish</span> <span class="o">=</span> <span class="s1">&#39;fish&#39;</span>
+</span><span id="__span-7-17"><a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>
+</span><span id="__span-7-18"><a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a>
+</span><span id="__span-7-19"><a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="k">class</span><span class="w"> </span><span class="nc">Pet</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-7-20"><a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s2">&quot;The pet&#39;s name&quot;</span><span class="p">)</span>
+</span><span id="__span-7-21"><a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a>    <span class="n">species</span><span class="p">:</span> <span class="n">Species</span>
+</span><span id="__span-7-22"><a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>    <span class="n">age</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">description</span><span class="o">=</span><span class="s1">&#39;Age in years&#39;</span><span class="p">,</span> <span class="n">ge</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+</span><span id="__span-7-23"><a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>    <span class="n">vaccinated</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+</span></code></pre></div>
+<p>🎉 That's it! Your schema is now a fully-typed Python model.</p>
+<hr />
+<h2 id="choose-your-input">📥 Choose Your Input<a class="headerlink" href="#choose-your-input" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Input Type</th>
+<th>File Types</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📘 <a href="openapi/">OpenAPI 3</a></td>
+<td><code>.yaml</code>, <code>.json</code></td>
+<td>API specifications</td>
+</tr>
+<tr>
+<td>📋 <a href="jsonschema/">JSON Schema</a></td>
+<td><code>.json</code></td>
+<td>Data validation schemas</td>
+</tr>
+<tr>
+<td>🔷 <a href="graphql/">GraphQL</a></td>
+<td><code>.graphql</code></td>
+<td>GraphQL type definitions</td>
+</tr>
+<tr>
+<td>📊 <a href="jsondata/">JSON/YAML Data</a></td>
+<td><code>.json</code>, <code>.yaml</code></td>
+<td>Infer schema from data</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="choose-your-output">📤 Choose Your Output<a class="headerlink" href="#choose-your-output" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># 🆕 Pydantic v2 (recommended for new projects)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># 🔄 Pydantic v1 (default, for compatibility)</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic.BaseModel<span class="w"> </span>...
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># 🏗️ Python dataclasses</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span>...
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a><span class="c1"># 📝 TypedDict (for type hints without validation)</span>
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>typing.TypedDict<span class="w"> </span>...
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a><span class="c1"># ⚡ msgspec (high-performance serialization)</span>
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>msgspec.Struct<span class="w"> </span>...
+</span></code></pre></div>
+<p>See <a href="supported-data-types/">Supported Data Types</a> for the full list.</p>
+<hr />
+<h2 id="common-recipes">🍳 Common Recipes<a class="headerlink" href="#common-recipes" title="Permanent link">&para;</a></h2>
+<h3 id="http-extra-option">🌐 Generate from URL<a class="headerlink" href="#http-extra-option" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://example.com/api/openapi.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<h3 id="use-with-pyprojecttoml">⚙️ Use with pyproject.toml<a class="headerlink" href="#use-with-pyprojecttoml" title="Permanent link">&para;</a></h3>
+<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models.py&quot;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span></code></pre></div>
+<p>Then simply run:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>datamodel-codegen
+</span></code></pre></div>
+<p>See <a href="pyproject_toml/">pyproject.toml Configuration</a> for more options.</p>
+<h3 id="snake-case-field-names">🐍 Snake-case field names<a class="headerlink" href="#snake-case-field-names" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>datamodel-codegen<span class="w"> </span>--snake-case-field<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py
+</span></code></pre></div>
+<hr />
+<h2 id="next-steps">📚 Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://docs.pydantic.dev/1.10/">pydantic</a>.BaseModel;</li>
-<li><a href="https://docs.pydantic.dev/2.0/">pydantic_v2</a>.BaseModel;</li>
-<li><a href="https://docs.python.org/3/library/dataclasses.html">dataclasses.dataclass</a>;</li>
-<li><a href="https://docs.python.org/3/library/typing.html#typing.TypedDict">typing.TypedDict</a>;</li>
-<li><a href="https://github.com/jcrist/msgspec">msgspec.Struct</a>;</li>
-<li>Custom type from your <a href="https://jinja.palletsprojects.com/en/3.1.x">jinja2</a> template;</li>
+<li>🖥️ <strong><a href="cli-reference/">CLI Reference</a></strong> - All command-line options with examples</li>
+<li>⚙️ <strong><a href="pyproject_toml/">pyproject.toml Configuration</a></strong> - Configure via pyproject.toml</li>
+<li>🎨 <strong><a href="custom_template/">Custom Templates</a></strong> - Customize generated code with Jinja2</li>
+<li>🖌️ <strong><a href="formatting/">Code Formatting</a></strong> - Configure black, isort, and ruff</li>
+<li>❓ <strong><a href="faq/">FAQ</a></strong> - Common questions and troubleshooting</li>
 </ul>
-<h2 id="sponsors">Sponsors<a class="headerlink" href="#sponsors" title="Permanent link">&para;</a></h2>
+<hr />
+<h2 id="sponsors">💖 Sponsors<a class="headerlink" href="#sponsors" title="Permanent link">&para;</a></h2>
 <table>
   <tr>
     <td valign="top" align="center">
@@ -1778,354 +1743,27 @@
     </td>
   </tr>
 </table>
-<h2 id="projects-that-use-datamodel-code-generator">Projects that use datamodel-code-generator<a class="headerlink" href="#projects-that-use-datamodel-code-generator" title="Permanent link">&para;</a></h2>
-<p>These OSS projects use datamodel-code-generator to generate many models. 
-See the following linked projects for real world examples and inspiration.</p>
-<ul>
-<li><a href="https://github.com/airbytehq/airbyte">airbytehq/airbyte</a><ul>
-<li><em><a href="https://github.com/airbytehq/airbyte/blob/master/tools/code-generator/Dockerfile">code-generator/Dockerfile</a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/apache/iceberg">apache/iceberg</a><ul>
-<li><em><a href="https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39">Generate Python code</a></em> 
-<em><a href="https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/Makefile#L24-L34"><code>make generate</code></a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/argoproj-labs/hera">argoproj-labs/hera</a><ul>
-<li><em><a href="https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62"><code>Makefile</code></a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/awslabs/aws-lambda-powertools-python">awslabs/aws-lambda-powertools-python</a><ul>
-<li><em>Recommended for <a href="https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases">advanced-use-cases</a> in the official documentation</em></li>
-</ul>
-</li>
-<li><a href="https://github.com/DataDog/integrations-core">DataDog/integrations-core</a><ul>
-<li><em><a href="https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md">Config models</a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/hashintel/hash">hashintel/hash</a><ul>
-<li><em><a href="https://github.com/hashintel/hash/blob/9762b1a1937e14f6b387677e4c7fe4a5f3d4a1e1/libs/%40local/hash-graph-client/python/scripts/codegen.sh#L21-L39"><code>codegen.sh</code></a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/IBM/compliance-trestle">IBM/compliance-trestle</a><ul>
-<li><em><a href="https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas">Building the models from the OSCAL schemas.</a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/Netflix/consoleme">Netflix/consoleme</a><ul>
-<li><em><a href="https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification">How do I generate models from the Swagger specification?</a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/Nike-Inc/brickflow">Nike-Inc/brickflow</a><ul>
-<li><em><a href="https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8">Code generate tools</a><a href="https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/gen-bundle.sh#L15-L22"><code>./tools/gen-bundle.sh</code></a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/open-metadata/OpenMetadata">open-metadata/OpenMetadata</a><ul>
-<li><em><a href="https://github.com/open-metadata/OpenMetadata/blob/main/Makefile">Makefile</a></em></li>
-</ul>
-</li>
-<li><a href="https://github.com/PostHog/posthog">PostHog/posthog</a><ul>
-<li><em><a href="https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41">Generate models via <code>npm run</code></a></em> </li>
-</ul>
-</li>
-<li><a href="https://github.com/SeldonIO/MLServer">SeldonIO/MLServer</a><ul>
-<li><em><a href="https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh">generate-types.sh</a></em></li>
-</ul>
-</li>
-</ul>
-<h2 id="installation">Installation<a class="headerlink" href="#installation" title="Permanent link">&para;</a></h2>
-<p>To install <code>datamodel-code-generator</code>:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>datamodel-code-generator
-</span></code></pre></div></p>
-<h3 id="http-extra-option"><code>http</code> extra option<a class="headerlink" href="#http-extra-option" title="Permanent link">&para;</a></h3>
-<p>If you want to resolve <code>$ref</code> for remote files then you should specify <code>http</code> extra option.
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
-</span></code></pre></div></p>
-<h3 id="graphql-extra-option"><code>graphql</code> extra option<a class="headerlink" href="#graphql-extra-option" title="Permanent link">&para;</a></h3>
-<p>If you want to generate data model from a GraphQL schema then you should specify <code>graphql</code> extra option.
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[graphql]&#39;</span>
-</span></code></pre></div></p>
-<h3 id="docker-image">Docker Image<a class="headerlink" href="#docker-image" title="Permanent link">&para;</a></h3>
-<p>The docker image is in <a href="https://hub.docker.com/r/koxudaxi/datamodel-code-generator">Docker Hub</a>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>$<span class="w"> </span>docker<span class="w"> </span>pull<span class="w"> </span>koxudaxi/datamodel-code-generator
-</span></code></pre></div></p>
-<h2 id="advanced-uses">Advanced Uses<a class="headerlink" href="#advanced-uses" title="Permanent link">&para;</a></h2>
-<p>You can generate models from a URL.
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>$<span class="w"> </span>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://&lt;INPUT<span class="w"> </span>FILE<span class="w"> </span>URL&gt;<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
-This method needs the <a href="#http-extra-option">http extra option</a></p>
-<h2 id="all-command-options">All Command Options<a class="headerlink" href="#all-command-options" title="Permanent link">&para;</a></h2>
-<p><strong><a href="cli-reference/">See detailed CLI Reference →</a></strong></p>
-<p>The <code>datamodel-codegen</code> command:</p>
-<!-- start command help -->
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>usage:<span class="w"> </span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>datamodel-codegen<span class="w"> </span><span class="o">[</span>options<span class="o">]</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>Generate<span class="w"> </span>Python<span class="w"> </span>data<span class="w"> </span>models<span class="w"> </span>from<span class="w"> </span>schema<span class="w"> </span>definitions<span class="w"> </span>or<span class="w"> </span>structured<span class="w"> </span>data
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Options:
-</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span>--additional-imports<span class="w"> </span>ADDITIONAL_IMPORTS
-</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">                        </span>Custom<span class="w"> </span>imports<span class="w"> </span><span class="k">for</span><span class="w"> </span>output<span class="w"> </span><span class="o">(</span>delimited<span class="w"> </span>list<span class="w"> </span>input<span class="o">)</span>.<span class="w"> </span>For<span class="w"> </span>example
-</span><span id="__span-9-9"><a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">                        </span><span class="s2">&quot;datetime.date,datetime.datetime&quot;</span>
-</span><span id="__span-9-10"><a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">  </span>--custom-formatters<span class="w"> </span>CUSTOM_FORMATTERS
-</span><span id="__span-9-11"><a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a><span class="w">                        </span>List<span class="w"> </span>of<span class="w"> </span>modules<span class="w"> </span>with<span class="w"> </span>custom<span class="w"> </span>formatter<span class="w"> </span><span class="o">(</span>delimited<span class="w"> </span>list<span class="w"> </span>input<span class="o">)</span>.
-</span><span id="__span-9-12"><a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">  </span>--formatters<span class="w"> </span><span class="o">{</span>black,isort,ruff-check,ruff-format<span class="o">}</span><span class="w"> </span><span class="o">[{</span>black,isort,ruff-check,ruff-format<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-13"><a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">                        </span>Formatters<span class="w"> </span><span class="k">for</span><span class="w"> </span>output<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="o">[</span>black,<span class="w"> </span>isort<span class="o">])</span>
-</span><span id="__span-9-14"><a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">  </span>--http-headers<span class="w"> </span>HTTP_HEADER<span class="w"> </span><span class="o">[</span>HTTP_HEADER<span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-15"><a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">                        </span>Set<span class="w"> </span>headers<span class="w"> </span><span class="k">in</span><span class="w"> </span>HTTP<span class="w"> </span>requests<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host.<span class="w"> </span><span class="o">(</span>example:
-</span><span id="__span-9-16"><a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">                        </span><span class="s2">&quot;Authorization: Basic dXNlcjpwYXNz&quot;</span><span class="o">)</span>
-</span><span id="__span-9-17"><a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">  </span>--http-ignore-tls<span class="w">     </span>Disable<span class="w"> </span>verification<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host<span class="s1">&#39;&#39;</span>s<span class="w"> </span>TLS<span class="w"> </span>certificate
-</span><span id="__span-9-18"><a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">  </span>--http-query-parameters<span class="w"> </span>HTTP_QUERY_PARAMETERS<span class="w"> </span><span class="o">[</span>HTTP_QUERY_PARAMETERS<span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-19"><a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">                        </span>Set<span class="w"> </span>query<span class="w"> </span>parameters<span class="w"> </span><span class="k">in</span><span class="w"> </span>HTTP<span class="w"> </span>requests<span class="w"> </span>to<span class="w"> </span>the<span class="w"> </span>remote<span class="w"> </span>host.<span class="w"> </span><span class="o">(</span>example:
-</span><span id="__span-9-20"><a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="w">                        </span><span class="s2">&quot;ref=branch&quot;</span><span class="o">)</span>
-</span><span id="__span-9-21"><a id="__codelineno-9-21" name="__codelineno-9-21" href="#__codelineno-9-21"></a><span class="w">  </span>--input<span class="w"> </span>INPUT<span class="w">         </span>Input<span class="w"> </span>file/directory<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>stdin<span class="o">)</span>
-</span><span id="__span-9-22"><a id="__codelineno-9-22" name="__codelineno-9-22" href="#__codelineno-9-22"></a><span class="w">  </span>--input-file-type<span class="w"> </span><span class="o">{</span>auto,openapi,jsonschema,json,yaml,dict,csv,graphql<span class="o">}</span>
-</span><span id="__span-9-23"><a id="__codelineno-9-23" name="__codelineno-9-23" href="#__codelineno-9-23"></a><span class="w">                        </span>Input<span class="w"> </span>file<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>auto<span class="o">)</span>
-</span><span id="__span-9-24"><a id="__codelineno-9-24" name="__codelineno-9-24" href="#__codelineno-9-24"></a><span class="w">  </span>--output<span class="w"> </span>OUTPUT<span class="w">       </span>Output<span class="w"> </span>file<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>stdout<span class="o">)</span>
-</span><span id="__span-9-25"><a id="__codelineno-9-25" name="__codelineno-9-25" href="#__codelineno-9-25"></a><span class="w">  </span>--output-model-type<span class="w"> </span><span class="o">{</span>pydantic.BaseModel,pydantic_v2.BaseModel,dataclasses.dataclass,typing.TypedDict,msgspec.Struct<span class="o">}</span>
-</span><span id="__span-9-26"><a id="__codelineno-9-26" name="__codelineno-9-26" href="#__codelineno-9-26"></a><span class="w">                        </span>Output<span class="w"> </span>model<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>pydantic.BaseModel<span class="o">)</span>
-</span><span id="__span-9-27"><a id="__codelineno-9-27" name="__codelineno-9-27" href="#__codelineno-9-27"></a><span class="w">  </span>--url<span class="w"> </span>URL<span class="w">             </span>Input<span class="w"> </span>file<span class="w"> </span>URL.<span class="w"> </span><span class="sb">`</span>--input<span class="sb">`</span><span class="w"> </span>is<span class="w"> </span>ignored<span class="w"> </span>when<span class="w"> </span><span class="sb">`</span>--url<span class="sb">`</span><span class="w"> </span>is<span class="w"> </span>used
-</span><span id="__span-9-28"><a id="__codelineno-9-28" name="__codelineno-9-28" href="#__codelineno-9-28"></a>
-</span><span id="__span-9-29"><a id="__codelineno-9-29" name="__codelineno-9-29" href="#__codelineno-9-29"></a>Typing<span class="w"> </span>customization:
-</span><span id="__span-9-30"><a id="__codelineno-9-30" name="__codelineno-9-30" href="#__codelineno-9-30"></a><span class="w">  </span>--allof-merge-mode<span class="w"> </span><span class="o">{</span>constraints,all,none<span class="o">}</span>
-</span><span id="__span-9-31"><a id="__codelineno-9-31" name="__codelineno-9-31" href="#__codelineno-9-31"></a><span class="w">                        </span>Mode<span class="w"> </span><span class="k">for</span><span class="w"> </span>field<span class="w"> </span>merging<span class="w"> </span><span class="k">in</span><span class="w"> </span>allOf<span class="w"> </span>schemas.<span class="w"> </span><span class="s1">&#39;&#39;</span>constraints<span class="s1">&#39;&#39;</span>:<span class="w"> </span>merge<span class="w"> </span>only
-</span><span id="__span-9-32"><a id="__codelineno-9-32" name="__codelineno-9-32" href="#__codelineno-9-32"></a><span class="w">                        </span>constraints<span class="w"> </span><span class="o">(</span>minItems,<span class="w"> </span>maxItems,<span class="w"> </span>pattern,<span class="w"> </span>etc.<span class="o">)</span><span class="w"> </span>from<span class="w"> </span>parent
-</span><span id="__span-9-33"><a id="__codelineno-9-33" name="__codelineno-9-33" href="#__codelineno-9-33"></a><span class="w">                        </span><span class="o">(</span>default<span class="o">)</span>.<span class="w"> </span><span class="s1">&#39;&#39;</span>all<span class="s1">&#39;&#39;</span>:<span class="w"> </span>merge<span class="w"> </span>constraints<span class="w"> </span>plus<span class="w"> </span>annotations<span class="w"> </span><span class="o">(</span>default,
-</span><span id="__span-9-34"><a id="__codelineno-9-34" name="__codelineno-9-34" href="#__codelineno-9-34"></a><span class="w">                        </span>examples<span class="o">)</span><span class="w"> </span>from<span class="w"> </span>parent.<span class="w"> </span><span class="s1">&#39;&#39;</span>none<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="k">do</span><span class="w"> </span>not<span class="w"> </span>merge<span class="w"> </span>any<span class="w"> </span>fields<span class="w"> </span>from<span class="w"> </span>parent
-</span><span id="__span-9-35"><a id="__codelineno-9-35" name="__codelineno-9-35" href="#__codelineno-9-35"></a><span class="w">                        </span>properties.
-</span><span id="__span-9-36"><a id="__codelineno-9-36" name="__codelineno-9-36" href="#__codelineno-9-36"></a><span class="w">  </span>--base-class<span class="w"> </span>BASE_CLASS
-</span><span id="__span-9-37"><a id="__codelineno-9-37" name="__codelineno-9-37" href="#__codelineno-9-37"></a><span class="w">                        </span>Base<span class="w"> </span>Class<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>pydantic.BaseModel<span class="o">)</span>
-</span><span id="__span-9-38"><a id="__codelineno-9-38" name="__codelineno-9-38" href="#__codelineno-9-38"></a><span class="w">  </span>--disable-future-imports
-</span><span id="__span-9-39"><a id="__codelineno-9-39" name="__codelineno-9-39" href="#__codelineno-9-39"></a><span class="w">                        </span>Disable<span class="w"> </span>__future__<span class="w"> </span>imports
-</span><span id="__span-9-40"><a id="__codelineno-9-40" name="__codelineno-9-40" href="#__codelineno-9-40"></a><span class="w">  </span>--enum-field-as-literal<span class="w"> </span><span class="o">{</span>all,one<span class="o">}</span>
-</span><span id="__span-9-41"><a id="__codelineno-9-41" name="__codelineno-9-41" href="#__codelineno-9-41"></a><span class="w">                        </span>Parse<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>literal.<span class="w"> </span>all:<span class="w"> </span>all<span class="w"> </span>enum<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>are<span class="w"> </span>Literal.
-</span><span id="__span-9-42"><a id="__codelineno-9-42" name="__codelineno-9-42" href="#__codelineno-9-42"></a><span class="w">                        </span>one:<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>is<span class="w"> </span>Literal<span class="w"> </span>when<span class="w"> </span>an<span class="w"> </span>enum<span class="w"> </span>has<span class="w"> </span>only<span class="w"> </span>one<span class="w"> </span>possible<span class="w"> </span>value
-</span><span id="__span-9-43"><a id="__codelineno-9-43" name="__codelineno-9-43" href="#__codelineno-9-43"></a><span class="w">  </span>--field-constraints<span class="w">   </span>Use<span class="w"> </span>field<span class="w"> </span>constraints<span class="w"> </span>and<span class="w"> </span>not<span class="w"> </span>con*<span class="w"> </span>annotations
-</span><span id="__span-9-44"><a id="__codelineno-9-44" name="__codelineno-9-44" href="#__codelineno-9-44"></a><span class="w">  </span>--set-default-enum-member
-</span><span id="__span-9-45"><a id="__codelineno-9-45" name="__codelineno-9-45" href="#__codelineno-9-45"></a><span class="w">                        </span>Set<span class="w"> </span>enum<span class="w"> </span>members<span class="w"> </span>as<span class="w"> </span>default<span class="w"> </span>values<span class="w"> </span><span class="k">for</span><span class="w"> </span>enum<span class="w"> </span>field
-</span><span id="__span-9-46"><a id="__codelineno-9-46" name="__codelineno-9-46" href="#__codelineno-9-46"></a><span class="w">  </span>--strict-types<span class="w"> </span><span class="o">{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span><span class="o">[{</span>str,bytes,int,float,bool<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-47"><a id="__codelineno-9-47" name="__codelineno-9-47" href="#__codelineno-9-47"></a><span class="w">                        </span>Use<span class="w"> </span>strict<span class="w"> </span>types
-</span><span id="__span-9-48"><a id="__codelineno-9-48" name="__codelineno-9-48" href="#__codelineno-9-48"></a><span class="w">  </span>--type-mappings<span class="w"> </span>TYPE_MAPPINGS<span class="w"> </span><span class="o">[</span>TYPE_MAPPINGS<span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-49"><a id="__codelineno-9-49" name="__codelineno-9-49" href="#__codelineno-9-49"></a><span class="w">                        </span>Override<span class="w"> </span>default<span class="w"> </span><span class="nb">type</span><span class="w"> </span>mappings.<span class="w"> </span>Format:<span class="w"> </span><span class="s2">&quot;type+format=target&quot;</span><span class="w"> </span><span class="o">(</span>e.g.,
-</span><span id="__span-9-50"><a id="__codelineno-9-50" name="__codelineno-9-50" href="#__codelineno-9-50"></a><span class="w">                        </span><span class="s2">&quot;string+binary=string&quot;</span><span class="w"> </span>to<span class="w"> </span>map<span class="w"> </span>binary<span class="w"> </span>format<span class="w"> </span>to<span class="w"> </span>string<span class="w"> </span><span class="nb">type</span><span class="o">)</span><span class="w"> </span>or
-</span><span id="__span-9-51"><a id="__codelineno-9-51" name="__codelineno-9-51" href="#__codelineno-9-51"></a><span class="w">                        </span><span class="s2">&quot;format=target&quot;</span><span class="w"> </span><span class="o">(</span>e.g.,<span class="w"> </span><span class="s2">&quot;binary=string&quot;</span><span class="o">)</span>.<span class="w"> </span>Can<span class="w"> </span>be<span class="w"> </span>specified<span class="w"> </span>multiple
-</span><span id="__span-9-52"><a id="__codelineno-9-52" name="__codelineno-9-52" href="#__codelineno-9-52"></a><span class="w">                        </span>times.
-</span><span id="__span-9-53"><a id="__codelineno-9-53" name="__codelineno-9-53" href="#__codelineno-9-53"></a><span class="w">  </span>--use-annotated<span class="w">       </span>Use<span class="w"> </span>typing.Annotated<span class="w"> </span><span class="k">for</span><span class="w"> </span>Field<span class="o">()</span>.<span class="w"> </span>Also,<span class="w"> </span><span class="sb">`</span>--field-constraints<span class="sb">`</span><span class="w"> </span>option
-</span><span id="__span-9-54"><a id="__codelineno-9-54" name="__codelineno-9-54" href="#__codelineno-9-54"></a><span class="w">                        </span>will<span class="w"> </span>be<span class="w"> </span>enabled.
-</span><span id="__span-9-55"><a id="__codelineno-9-55" name="__codelineno-9-55" href="#__codelineno-9-55"></a><span class="w">  </span>--use-decimal-for-multiple-of
-</span><span id="__span-9-56"><a id="__codelineno-9-56" name="__codelineno-9-56" href="#__codelineno-9-56"></a><span class="w">                        </span>Use<span class="w"> </span>condecimal<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>confloat<span class="w"> </span><span class="k">for</span><span class="w"> </span>float/number<span class="w"> </span>fields<span class="w"> </span>with
-</span><span id="__span-9-57"><a id="__codelineno-9-57" name="__codelineno-9-57" href="#__codelineno-9-57"></a><span class="w">                        </span>multipleOf<span class="w"> </span>constraint<span class="w"> </span><span class="o">(</span>Pydantic<span class="w"> </span>only<span class="o">)</span>.<span class="w"> </span>Avoids<span class="w"> </span>floating-point
-</span><span id="__span-9-58"><a id="__codelineno-9-58" name="__codelineno-9-58" href="#__codelineno-9-58"></a><span class="w">                        </span>precision<span class="w"> </span>issues<span class="w"> </span><span class="k">in</span><span class="w"> </span>validation.
-</span><span id="__span-9-59"><a id="__codelineno-9-59" name="__codelineno-9-59" href="#__codelineno-9-59"></a><span class="w">  </span>--use-enum-values-in-discriminator
-</span><span id="__span-9-60"><a id="__codelineno-9-60" name="__codelineno-9-60" href="#__codelineno-9-60"></a><span class="w">                        </span>Use<span class="w"> </span>enum<span class="w"> </span>member<span class="w"> </span>literals<span class="w"> </span><span class="k">in</span><span class="w"> </span>discriminator<span class="w"> </span>fields<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>string
-</span><span id="__span-9-61"><a id="__codelineno-9-61" name="__codelineno-9-61" href="#__codelineno-9-61"></a><span class="w">                        </span>literals
-</span><span id="__span-9-62"><a id="__codelineno-9-62" name="__codelineno-9-62" href="#__codelineno-9-62"></a><span class="w">  </span>--use-generic-container-types
-</span><span id="__span-9-63"><a id="__codelineno-9-63" name="__codelineno-9-63" href="#__codelineno-9-63"></a><span class="w">                        </span>Use<span class="w"> </span>generic<span class="w"> </span>container<span class="w"> </span>types<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span>hinting<span class="w"> </span><span class="o">(</span>typing.Sequence,
-</span><span id="__span-9-64"><a id="__codelineno-9-64" name="__codelineno-9-64" href="#__codelineno-9-64"></a><span class="w">                        </span>typing.Mapping<span class="o">)</span>.<span class="w"> </span>If<span class="w"> </span><span class="sb">`</span>--use-standard-collections<span class="sb">`</span><span class="w"> </span>option<span class="w"> </span>is<span class="w"> </span>set,<span class="w"> </span><span class="k">then</span>
-</span><span id="__span-9-65"><a id="__codelineno-9-65" name="__codelineno-9-65" href="#__codelineno-9-65"></a><span class="w">                        </span>import<span class="w"> </span>from<span class="w"> </span>collections.abc<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>typing
-</span><span id="__span-9-66"><a id="__codelineno-9-66" name="__codelineno-9-66" href="#__codelineno-9-66"></a><span class="w">  </span>--use-non-positive-negative-number-constrained-types
-</span><span id="__span-9-67"><a id="__codelineno-9-67" name="__codelineno-9-67" href="#__codelineno-9-67"></a><span class="w">                        </span>Use<span class="w"> </span>the<span class="w"> </span>Non<span class="o">{</span>Positive,Negative<span class="o">}{</span>FloatInt<span class="o">}</span><span class="w"> </span>types<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>the
-</span><span id="__span-9-68"><a id="__codelineno-9-68" name="__codelineno-9-68" href="#__codelineno-9-68"></a><span class="w">                        </span>corresponding<span class="w"> </span>con*<span class="w"> </span>constrained<span class="w"> </span>types.
-</span><span id="__span-9-69"><a id="__codelineno-9-69" name="__codelineno-9-69" href="#__codelineno-9-69"></a><span class="w">  </span>--use-one-literal-as-default
-</span><span id="__span-9-70"><a id="__codelineno-9-70" name="__codelineno-9-70" href="#__codelineno-9-70"></a><span class="w">                        </span>Use<span class="w"> </span>one<span class="w"> </span>literal<span class="w"> </span>as<span class="w"> </span>default<span class="w"> </span>value<span class="w"> </span><span class="k">for</span><span class="w"> </span>one<span class="w"> </span>literal<span class="w"> </span>field
-</span><span id="__span-9-71"><a id="__codelineno-9-71" name="__codelineno-9-71" href="#__codelineno-9-71"></a><span class="w">  </span>--use-serialize-as-any
-</span><span id="__span-9-72"><a id="__codelineno-9-72" name="__codelineno-9-72" href="#__codelineno-9-72"></a><span class="w">                        </span>Use<span class="w"> </span>pydantic.SerializeAsAny<span class="w"> </span><span class="k">for</span><span class="w"> </span>fields<span class="w"> </span>with<span class="w"> </span>types<span class="w"> </span>that<span class="w"> </span>have<span class="w"> </span>subtypes
-</span><span id="__span-9-73"><a id="__codelineno-9-73" name="__codelineno-9-73" href="#__codelineno-9-73"></a><span class="w">                        </span><span class="o">(</span>Pydantic<span class="w"> </span>v2<span class="w"> </span>only<span class="o">)</span>
-</span><span id="__span-9-74"><a id="__codelineno-9-74" name="__codelineno-9-74" href="#__codelineno-9-74"></a><span class="w">  </span>--use-specialized-enum,<span class="w"> </span>--no-use-specialized-enum
-</span><span id="__span-9-75"><a id="__codelineno-9-75" name="__codelineno-9-75" href="#__codelineno-9-75"></a><span class="w">                        </span>Use<span class="w"> </span>specialized<span class="w"> </span>Enum<span class="w"> </span>class<span class="w"> </span><span class="o">(</span>StrEnum,<span class="w"> </span>IntEnum<span class="o">)</span>.<span class="w"> </span>Requires<span class="w"> </span>--target-
-</span><span id="__span-9-76"><a id="__codelineno-9-76" name="__codelineno-9-76" href="#__codelineno-9-76"></a><span class="w">                        </span>python-version<span class="w"> </span><span class="m">3</span>.11+
-</span><span id="__span-9-77"><a id="__codelineno-9-77" name="__codelineno-9-77" href="#__codelineno-9-77"></a><span class="w">  </span>--use-standard-collections
-</span><span id="__span-9-78"><a id="__codelineno-9-78" name="__codelineno-9-78" href="#__codelineno-9-78"></a><span class="w">                        </span>Use<span class="w"> </span>standard<span class="w"> </span>collections<span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="nb">type</span><span class="w"> </span>hinting<span class="w"> </span><span class="o">(</span>list,<span class="w"> </span>dict<span class="o">)</span>
-</span><span id="__span-9-79"><a id="__codelineno-9-79" name="__codelineno-9-79" href="#__codelineno-9-79"></a><span class="w">  </span>--use-subclass-enum<span class="w">   </span>Define<span class="w"> </span>generic<span class="w"> </span>Enum<span class="w"> </span>class<span class="w"> </span>as<span class="w"> </span>subclass<span class="w"> </span>with<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>when<span class="w"> </span>enum<span class="w"> </span>has
-</span><span id="__span-9-80"><a id="__codelineno-9-80" name="__codelineno-9-80" href="#__codelineno-9-80"></a><span class="w">                        </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>int,<span class="w"> </span>float,<span class="w"> </span>bytes,<span class="w"> </span>str<span class="o">)</span>
-</span><span id="__span-9-81"><a id="__codelineno-9-81" name="__codelineno-9-81" href="#__codelineno-9-81"></a><span class="w">  </span>--use-type-alias<span class="w">      </span>Use<span class="w"> </span>TypeAlias<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>root<span class="w"> </span>models<span class="w"> </span><span class="o">(</span>experimental<span class="o">)</span>
-</span><span id="__span-9-82"><a id="__codelineno-9-82" name="__codelineno-9-82" href="#__codelineno-9-82"></a><span class="w">  </span>--use-union-operator<span class="w">  </span>Use<span class="w"> </span><span class="p">|</span><span class="w"> </span>operator<span class="w"> </span><span class="k">for</span><span class="w"> </span>Union<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>PEP<span class="w"> </span><span class="m">604</span><span class="o">)</span>.
-</span><span id="__span-9-83"><a id="__codelineno-9-83" name="__codelineno-9-83" href="#__codelineno-9-83"></a><span class="w">  </span>--use-unique-items-as-set
-</span><span id="__span-9-84"><a id="__codelineno-9-84" name="__codelineno-9-84" href="#__codelineno-9-84"></a><span class="w">                        </span>define<span class="w"> </span>field<span class="w"> </span><span class="nb">type</span><span class="w"> </span>as<span class="w"> </span><span class="sb">`</span><span class="nb">set</span><span class="sb">`</span><span class="w"> </span>when<span class="w"> </span>the<span class="w"> </span>field<span class="w"> </span>attribute<span class="w"> </span>has
-</span><span id="__span-9-85"><a id="__codelineno-9-85" name="__codelineno-9-85" href="#__codelineno-9-85"></a><span class="w">                        </span><span class="sb">`</span>uniqueItems<span class="sb">`</span>
-</span><span id="__span-9-86"><a id="__codelineno-9-86" name="__codelineno-9-86" href="#__codelineno-9-86"></a>
-</span><span id="__span-9-87"><a id="__codelineno-9-87" name="__codelineno-9-87" href="#__codelineno-9-87"></a>Field<span class="w"> </span>customization:
-</span><span id="__span-9-88"><a id="__codelineno-9-88" name="__codelineno-9-88" href="#__codelineno-9-88"></a><span class="w">  </span>--capitalise-enum-members,<span class="w"> </span>--capitalize-enum-members
-</span><span id="__span-9-89"><a id="__codelineno-9-89" name="__codelineno-9-89" href="#__codelineno-9-89"></a><span class="w">                        </span>Capitalize<span class="w"> </span>field<span class="w"> </span>names<span class="w"> </span>on<span class="w"> </span>enum
-</span><span id="__span-9-90"><a id="__codelineno-9-90" name="__codelineno-9-90" href="#__codelineno-9-90"></a><span class="w">  </span>--empty-enum-field-name<span class="w"> </span>EMPTY_ENUM_FIELD_NAME
-</span><span id="__span-9-91"><a id="__codelineno-9-91" name="__codelineno-9-91" href="#__codelineno-9-91"></a><span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>when<span class="w"> </span>enum<span class="w"> </span>value<span class="w"> </span>is<span class="w"> </span>empty<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>_<span class="sb">`</span><span class="o">)</span>
-</span><span id="__span-9-92"><a id="__codelineno-9-92" name="__codelineno-9-92" href="#__codelineno-9-92"></a><span class="w">  </span>--field-extra-keys<span class="w"> </span>FIELD_EXTRA_KEYS<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS<span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-93"><a id="__codelineno-9-93" name="__codelineno-9-93" href="#__codelineno-9-93"></a><span class="w">                        </span>Add<span class="w"> </span>extra<span class="w"> </span>keys<span class="w"> </span>to<span class="w"> </span>field<span class="w"> </span>parameters
-</span><span id="__span-9-94"><a id="__codelineno-9-94" name="__codelineno-9-94" href="#__codelineno-9-94"></a><span class="w">  </span>--field-extra-keys-without-x-prefix<span class="w"> </span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span><span class="o">[</span>FIELD_EXTRA_KEYS_WITHOUT_X_PREFIX<span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-95"><a id="__codelineno-9-95" name="__codelineno-9-95" href="#__codelineno-9-95"></a><span class="w">                        </span>Add<span class="w"> </span>extra<span class="w"> </span>keys<span class="w"> </span>with<span class="w"> </span><span class="sb">`</span>x-<span class="sb">`</span><span class="w"> </span>prefix<span class="w"> </span>to<span class="w"> </span>field<span class="w"> </span>parameters.<span class="w"> </span>The<span class="w"> </span>extra<span class="w"> </span>keys
-</span><span id="__span-9-96"><a id="__codelineno-9-96" name="__codelineno-9-96" href="#__codelineno-9-96"></a><span class="w">                        </span>are<span class="w"> </span>stripped<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span><span class="sb">`</span>x-<span class="sb">`</span><span class="w"> </span>prefix.
-</span><span id="__span-9-97"><a id="__codelineno-9-97" name="__codelineno-9-97" href="#__codelineno-9-97"></a><span class="w">  </span>--field-include-all-keys
-</span><span id="__span-9-98"><a id="__codelineno-9-98" name="__codelineno-9-98" href="#__codelineno-9-98"></a><span class="w">                        </span>Add<span class="w"> </span>all<span class="w"> </span>keys<span class="w"> </span>to<span class="w"> </span>field<span class="w"> </span>parameters
-</span><span id="__span-9-99"><a id="__codelineno-9-99" name="__codelineno-9-99" href="#__codelineno-9-99"></a><span class="w">  </span>--force-optional<span class="w">      </span>Force<span class="w"> </span>optional<span class="w"> </span><span class="k">for</span><span class="w"> </span>required<span class="w"> </span>fields
-</span><span id="__span-9-100"><a id="__codelineno-9-100" name="__codelineno-9-100" href="#__codelineno-9-100"></a><span class="w">  </span>--no-alias<span class="w">            </span>Do<span class="w"> </span>not<span class="w"> </span>add<span class="w"> </span>a<span class="w"> </span>field<span class="w"> </span>alias.<span class="w"> </span>E.g.,<span class="w"> </span><span class="k">if</span><span class="w"> </span>--snake-case-field<span class="w"> </span>is<span class="w"> </span>used<span class="w"> </span>along
-</span><span id="__span-9-101"><a id="__codelineno-9-101" name="__codelineno-9-101" href="#__codelineno-9-101"></a><span class="w">                        </span>with<span class="w"> </span>a<span class="w"> </span>base<span class="w"> </span>class,<span class="w"> </span>which<span class="w"> </span>has<span class="w"> </span>an<span class="w"> </span>alias_generator
-</span><span id="__span-9-102"><a id="__codelineno-9-102" name="__codelineno-9-102" href="#__codelineno-9-102"></a><span class="w">  </span>--original-field-name-delimiter<span class="w"> </span>ORIGINAL_FIELD_NAME_DELIMITER
-</span><span id="__span-9-103"><a id="__codelineno-9-103" name="__codelineno-9-103" href="#__codelineno-9-103"></a><span class="w">                        </span>Set<span class="w"> </span>delimiter<span class="w"> </span>to<span class="w"> </span>convert<span class="w"> </span>to<span class="w"> </span>snake<span class="w"> </span><span class="k">case</span>.<span class="w"> </span>This<span class="w"> </span>option<span class="w"> </span>only<span class="w"> </span>can<span class="w"> </span>be<span class="w"> </span>used
-</span><span id="__span-9-104"><a id="__codelineno-9-104" name="__codelineno-9-104" href="#__codelineno-9-104"></a><span class="w">                        </span>with<span class="w"> </span>--snake-case-field<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>_<span class="sb">`</span><span class="w"> </span><span class="o">)</span>
-</span><span id="__span-9-105"><a id="__codelineno-9-105" name="__codelineno-9-105" href="#__codelineno-9-105"></a><span class="w">  </span>--remove-special-field-name-prefix
-</span><span id="__span-9-106"><a id="__codelineno-9-106" name="__codelineno-9-106" href="#__codelineno-9-106"></a><span class="w">                        </span>Remove<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>prefix<span class="w"> </span><span class="k">if</span><span class="w"> </span>it<span class="w"> </span>has<span class="w"> </span>a<span class="w"> </span>special<span class="w"> </span>meaning<span class="w"> </span>e.g.
-</span><span id="__span-9-107"><a id="__codelineno-9-107" name="__codelineno-9-107" href="#__codelineno-9-107"></a><span class="w">                        </span>underscores
-</span><span id="__span-9-108"><a id="__codelineno-9-108" name="__codelineno-9-108" href="#__codelineno-9-108"></a><span class="w">  </span>--snake-case-field<span class="w">    </span>Change<span class="w"> </span>camel-case<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>to<span class="w"> </span>snake-case
-</span><span id="__span-9-109"><a id="__codelineno-9-109" name="__codelineno-9-109" href="#__codelineno-9-109"></a><span class="w">  </span>--special-field-name-prefix<span class="w"> </span>SPECIAL_FIELD_NAME_PREFIX
-</span><span id="__span-9-110"><a id="__codelineno-9-110" name="__codelineno-9-110" href="#__codelineno-9-110"></a><span class="w">                        </span>Set<span class="w"> </span>field<span class="w"> </span>name<span class="w"> </span>prefix<span class="w"> </span>when<span class="w"> </span>first<span class="w"> </span>character<span class="w"> </span>can<span class="s1">&#39;&#39;</span>t<span class="w"> </span>be<span class="w"> </span>used<span class="w"> </span>as<span class="w"> </span>Python
-</span><span id="__span-9-111"><a id="__codelineno-9-111" name="__codelineno-9-111" href="#__codelineno-9-111"></a><span class="w">                        </span>field<span class="w"> </span>name<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span><span class="sb">`</span>field<span class="sb">`</span><span class="o">)</span>
-</span><span id="__span-9-112"><a id="__codelineno-9-112" name="__codelineno-9-112" href="#__codelineno-9-112"></a><span class="w">  </span>--strip-default-none<span class="w">  </span>Strip<span class="w"> </span>default<span class="w"> </span>None<span class="w"> </span>on<span class="w"> </span>fields
-</span><span id="__span-9-113"><a id="__codelineno-9-113" name="__codelineno-9-113" href="#__codelineno-9-113"></a><span class="w">  </span>--union-mode<span class="w"> </span><span class="o">{</span>smart,left_to_right<span class="o">}</span>
-</span><span id="__span-9-114"><a id="__codelineno-9-114" name="__codelineno-9-114" href="#__codelineno-9-114"></a><span class="w">                        </span>Union<span class="w"> </span>mode<span class="w"> </span><span class="k">for</span><span class="w"> </span>only<span class="w"> </span>pydantic<span class="w"> </span>v2<span class="w"> </span>field
-</span><span id="__span-9-115"><a id="__codelineno-9-115" name="__codelineno-9-115" href="#__codelineno-9-115"></a><span class="w">  </span>--use-attribute-docstrings
-</span><span id="__span-9-116"><a id="__codelineno-9-116" name="__codelineno-9-116" href="#__codelineno-9-116"></a><span class="w">                        </span>Set<span class="w"> </span><span class="nv">use_attribute_docstrings</span><span class="o">=</span>True<span class="w"> </span><span class="k">in</span><span class="w"> </span>Pydantic<span class="w"> </span>v2<span class="w"> </span>ConfigDict
-</span><span id="__span-9-117"><a id="__codelineno-9-117" name="__codelineno-9-117" href="#__codelineno-9-117"></a><span class="w">  </span>--use-default<span class="w">         </span>Use<span class="w"> </span>default<span class="w"> </span>value<span class="w"> </span>even<span class="w"> </span><span class="k">if</span><span class="w"> </span>a<span class="w"> </span>field<span class="w"> </span>is<span class="w"> </span>required
-</span><span id="__span-9-118"><a id="__codelineno-9-118" name="__codelineno-9-118" href="#__codelineno-9-118"></a><span class="w">  </span>--use-default-kwarg<span class="w">   </span>Use<span class="w"> </span><span class="sb">`</span><span class="nv">default</span><span class="o">=</span><span class="sb">`</span><span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>a<span class="w"> </span>positional<span class="w"> </span>argument<span class="w"> </span><span class="k">for</span><span class="w"> </span>Fields<span class="w"> </span>that<span class="w"> </span>have
-</span><span id="__span-9-119"><a id="__codelineno-9-119" name="__codelineno-9-119" href="#__codelineno-9-119"></a><span class="w">                        </span>default<span class="w"> </span>values.
-</span><span id="__span-9-120"><a id="__codelineno-9-120" name="__codelineno-9-120" href="#__codelineno-9-120"></a><span class="w">  </span>--use-field-description
-</span><span id="__span-9-121"><a id="__codelineno-9-121" name="__codelineno-9-121" href="#__codelineno-9-121"></a><span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>field<span class="w"> </span>docstring
-</span><span id="__span-9-122"><a id="__codelineno-9-122" name="__codelineno-9-122" href="#__codelineno-9-122"></a><span class="w">  </span>--use-frozen-field<span class="w">    </span>Use<span class="w"> </span>Field<span class="o">(</span><span class="nv">frozen</span><span class="o">=</span>True<span class="o">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>readOnly<span class="w"> </span>fields<span class="w"> </span><span class="o">(</span>Pydantic<span class="w"> </span>v2<span class="o">)</span><span class="w"> </span>or
-</span><span id="__span-9-123"><a id="__codelineno-9-123" name="__codelineno-9-123" href="#__codelineno-9-123"></a><span class="w">                        </span>Field<span class="o">(</span><span class="nv">allow_mutation</span><span class="o">=</span>False<span class="o">)</span><span class="w"> </span><span class="o">(</span>Pydantic<span class="w"> </span>v1<span class="o">)</span>
-</span><span id="__span-9-124"><a id="__codelineno-9-124" name="__codelineno-9-124" href="#__codelineno-9-124"></a><span class="w">  </span>--use-inline-field-description
-</span><span id="__span-9-125"><a id="__codelineno-9-125" name="__codelineno-9-125" href="#__codelineno-9-125"></a><span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>field<span class="w"> </span>docstring<span class="w"> </span>as<span class="w"> </span>inline
-</span><span id="__span-9-126"><a id="__codelineno-9-126" name="__codelineno-9-126" href="#__codelineno-9-126"></a><span class="w">                        </span>docstring
-</span><span id="__span-9-127"><a id="__codelineno-9-127" name="__codelineno-9-127" href="#__codelineno-9-127"></a>
-</span><span id="__span-9-128"><a id="__codelineno-9-128" name="__codelineno-9-128" href="#__codelineno-9-128"></a>Model<span class="w"> </span>customization:
-</span><span id="__span-9-129"><a id="__codelineno-9-129" name="__codelineno-9-129" href="#__codelineno-9-129"></a><span class="w">  </span>--all-exports-collision-strategy<span class="w"> </span><span class="o">{</span>error,minimal-prefix,full-prefix<span class="o">}</span>
-</span><span id="__span-9-130"><a id="__codelineno-9-130" name="__codelineno-9-130" href="#__codelineno-9-130"></a><span class="w">                        </span>Strategy<span class="w"> </span><span class="k">for</span><span class="w"> </span>name<span class="w"> </span>collisions<span class="w"> </span>when<span class="w"> </span>using<span class="w"> </span>--all-exports-
-</span><span id="__span-9-131"><a id="__codelineno-9-131" name="__codelineno-9-131" href="#__codelineno-9-131"></a><span class="w">                        </span><span class="nv">scope</span><span class="o">=</span>recursive.<span class="w"> </span><span class="s1">&#39;&#39;</span>error<span class="s1">&#39;&#39;</span>:<span class="w"> </span>raise<span class="w"> </span>an<span class="w"> </span>error<span class="w"> </span><span class="o">(</span>default<span class="o">)</span>.<span class="w"> </span><span class="s1">&#39;&#39;</span>minimal-
-</span><span id="__span-9-132"><a id="__codelineno-9-132" name="__codelineno-9-132" href="#__codelineno-9-132"></a><span class="w">                        </span>prefix<span class="s1">&#39;&#39;</span>:<span class="w"> </span>add<span class="w"> </span>module<span class="w"> </span>prefix<span class="w"> </span>only<span class="w"> </span>to<span class="w"> </span>colliding<span class="w"> </span>names.<span class="w"> </span><span class="s1">&#39;&#39;</span>full-prefix<span class="s1">&#39;&#39;</span>:
-</span><span id="__span-9-133"><a id="__codelineno-9-133" name="__codelineno-9-133" href="#__codelineno-9-133"></a><span class="w">                        </span>add<span class="w"> </span>full<span class="w"> </span>module<span class="w"> </span>path<span class="w"> </span>prefix<span class="w"> </span>to<span class="w"> </span>colliding<span class="w"> </span>names.
-</span><span id="__span-9-134"><a id="__codelineno-9-134" name="__codelineno-9-134" href="#__codelineno-9-134"></a><span class="w">  </span>--all-exports-scope<span class="w"> </span><span class="o">{</span>children,recursive<span class="o">}</span>
-</span><span id="__span-9-135"><a id="__codelineno-9-135" name="__codelineno-9-135" href="#__codelineno-9-135"></a><span class="w">                        </span>Generate<span class="w"> </span>__all__<span class="w"> </span><span class="k">in</span><span class="w"> </span>__init__.py<span class="w"> </span>with<span class="w"> </span>re-exports.<span class="w"> </span><span class="s1">&#39;&#39;</span>children<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="nb">export</span>
-</span><span id="__span-9-136"><a id="__codelineno-9-136" name="__codelineno-9-136" href="#__codelineno-9-136"></a><span class="w">                        </span>from<span class="w"> </span>direct<span class="w"> </span>child<span class="w"> </span>modules<span class="w"> </span>only.<span class="w"> </span><span class="s1">&#39;&#39;</span>recursive<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="nb">export</span><span class="w"> </span>from<span class="w"> </span>all
-</span><span id="__span-9-137"><a id="__codelineno-9-137" name="__codelineno-9-137" href="#__codelineno-9-137"></a><span class="w">                        </span>descendant<span class="w"> </span>modules.
-</span><span id="__span-9-138"><a id="__codelineno-9-138" name="__codelineno-9-138" href="#__codelineno-9-138"></a><span class="w">  </span>--allow-extra-fields<span class="w">  </span>Deprecated:<span class="w"> </span>Allow<span class="w"> </span>passing<span class="w"> </span>extra<span class="w"> </span>fields.<span class="w"> </span>This<span class="w"> </span>flag<span class="w"> </span>is<span class="w"> </span>deprecated.<span class="w"> </span>Use
-</span><span id="__span-9-139"><a id="__codelineno-9-139" name="__codelineno-9-139" href="#__codelineno-9-139"></a><span class="w">                        </span><span class="sb">`</span>--extra-fields<span class="o">=</span>allow<span class="sb">`</span><span class="w"> </span>instead.
-</span><span id="__span-9-140"><a id="__codelineno-9-140" name="__codelineno-9-140" href="#__codelineno-9-140"></a><span class="w">  </span>--allow-population-by-field-name
-</span><span id="__span-9-141"><a id="__codelineno-9-141" name="__codelineno-9-141" href="#__codelineno-9-141"></a><span class="w">                        </span>Allow<span class="w"> </span>population<span class="w"> </span>by<span class="w"> </span>field<span class="w"> </span>name
-</span><span id="__span-9-142"><a id="__codelineno-9-142" name="__codelineno-9-142" href="#__codelineno-9-142"></a><span class="w">  </span>--class-name<span class="w"> </span>CLASS_NAME
-</span><span id="__span-9-143"><a id="__codelineno-9-143" name="__codelineno-9-143" href="#__codelineno-9-143"></a><span class="w">                        </span>Set<span class="w"> </span>class<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>root<span class="w"> </span>model
-</span><span id="__span-9-144"><a id="__codelineno-9-144" name="__codelineno-9-144" href="#__codelineno-9-144"></a><span class="w">  </span>--collapse-root-models
-</span><span id="__span-9-145"><a id="__codelineno-9-145" name="__codelineno-9-145" href="#__codelineno-9-145"></a><span class="w">                        </span>Models<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>a<span class="w"> </span>root-type<span class="w"> </span>field<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>merged<span class="w"> </span>into<span class="w"> </span>the
-</span><span id="__span-9-146"><a id="__codelineno-9-146" name="__codelineno-9-146" href="#__codelineno-9-146"></a><span class="w">                        </span>models<span class="w"> </span>using<span class="w"> </span>that<span class="w"> </span>root-type<span class="w"> </span>model
-</span><span id="__span-9-147"><a id="__codelineno-9-147" name="__codelineno-9-147" href="#__codelineno-9-147"></a><span class="w">  </span>--dataclass-arguments<span class="w"> </span>DATACLASS_ARGUMENTS
-</span><span id="__span-9-148"><a id="__codelineno-9-148" name="__codelineno-9-148" href="#__codelineno-9-148"></a><span class="w">                        </span>Custom<span class="w"> </span>dataclass<span class="w"> </span>arguments<span class="w"> </span>as<span class="w"> </span>a<span class="w"> </span>JSON<span class="w"> </span>dictionary,<span class="w"> </span>e.g.<span class="w"> </span><span class="s1">&#39;&#39;</span><span class="o">{</span><span class="s2">&quot;frozen&quot;</span>:
-</span><span id="__span-9-149"><a id="__codelineno-9-149" name="__codelineno-9-149" href="#__codelineno-9-149"></a><span class="w">                        </span>true,<span class="w"> </span><span class="s2">&quot;kw_only&quot;</span>:<span class="w"> </span>true<span class="o">}</span><span class="s1">&#39;&#39;</span>.<span class="w"> </span>Overrides<span class="w"> </span>--frozen-dataclasses<span class="w"> </span>and<span class="w"> </span>similar
-</span><span id="__span-9-150"><a id="__codelineno-9-150" name="__codelineno-9-150" href="#__codelineno-9-150"></a><span class="w">                        </span>flags.
-</span><span id="__span-9-151"><a id="__codelineno-9-151" name="__codelineno-9-151" href="#__codelineno-9-151"></a><span class="w">  </span>--disable-appending-item-suffix
-</span><span id="__span-9-152"><a id="__codelineno-9-152" name="__codelineno-9-152" href="#__codelineno-9-152"></a><span class="w">                        </span>Disable<span class="w"> </span>appending<span class="w"> </span><span class="sb">`</span>Item<span class="sb">`</span><span class="w"> </span>suffix<span class="w"> </span>to<span class="w"> </span>model<span class="w"> </span>name<span class="w"> </span><span class="k">in</span><span class="w"> </span>an<span class="w"> </span>array
-</span><span id="__span-9-153"><a id="__codelineno-9-153" name="__codelineno-9-153" href="#__codelineno-9-153"></a><span class="w">  </span>--disable-timestamp<span class="w">   </span>Disable<span class="w"> </span>timestamp<span class="w"> </span>on<span class="w"> </span>file<span class="w"> </span>headers
-</span><span id="__span-9-154"><a id="__codelineno-9-154" name="__codelineno-9-154" href="#__codelineno-9-154"></a><span class="w">  </span>--enable-faux-immutability
-</span><span id="__span-9-155"><a id="__codelineno-9-155" name="__codelineno-9-155" href="#__codelineno-9-155"></a><span class="w">                        </span>Enable<span class="w"> </span>faux<span class="w"> </span>immutability
-</span><span id="__span-9-156"><a id="__codelineno-9-156" name="__codelineno-9-156" href="#__codelineno-9-156"></a><span class="w">  </span>--enable-version-header
-</span><span id="__span-9-157"><a id="__codelineno-9-157" name="__codelineno-9-157" href="#__codelineno-9-157"></a><span class="w">                        </span>Enable<span class="w"> </span>package<span class="w"> </span>version<span class="w"> </span>on<span class="w"> </span>file<span class="w"> </span>headers
-</span><span id="__span-9-158"><a id="__codelineno-9-158" name="__codelineno-9-158" href="#__codelineno-9-158"></a><span class="w">  </span>--extra-fields<span class="w"> </span><span class="o">{</span>allow,ignore,forbid<span class="o">}</span>
-</span><span id="__span-9-159"><a id="__codelineno-9-159" name="__codelineno-9-159" href="#__codelineno-9-159"></a><span class="w">                        </span>Set<span class="w"> </span>the<span class="w"> </span>generated<span class="w"> </span>models<span class="w"> </span>to<span class="w"> </span>allow,<span class="w"> </span>forbid,<span class="w"> </span>or<span class="w"> </span>ignore<span class="w"> </span>extra<span class="w"> </span>fields.
-</span><span id="__span-9-160"><a id="__codelineno-9-160" name="__codelineno-9-160" href="#__codelineno-9-160"></a><span class="w">  </span>--frozen-dataclasses<span class="w">  </span>Generate<span class="w"> </span>frozen<span class="w"> </span>dataclasses<span class="w"> </span><span class="o">(</span>dataclass<span class="o">(</span><span class="nv">frozen</span><span class="o">=</span>True<span class="o">))</span>.<span class="w"> </span>Only<span class="w"> </span>applies
-</span><span id="__span-9-161"><a id="__codelineno-9-161" name="__codelineno-9-161" href="#__codelineno-9-161"></a><span class="w">                        </span>to<span class="w"> </span>dataclass<span class="w"> </span>output.
-</span><span id="__span-9-162"><a id="__codelineno-9-162" name="__codelineno-9-162" href="#__codelineno-9-162"></a><span class="w">  </span>--keep-model-order<span class="w">    </span>Keep<span class="w"> </span>generated<span class="w"> </span>models<span class="s1">&#39;&#39;</span><span class="w"> </span>order
-</span><span id="__span-9-163"><a id="__codelineno-9-163" name="__codelineno-9-163" href="#__codelineno-9-163"></a><span class="w">  </span>--keyword-only<span class="w">        </span>Defined<span class="w"> </span>models<span class="w"> </span>as<span class="w"> </span>keyword<span class="w"> </span>only<span class="w"> </span><span class="o">(</span><span class="k">for</span><span class="w"> </span>example
-</span><span id="__span-9-164"><a id="__codelineno-9-164" name="__codelineno-9-164" href="#__codelineno-9-164"></a><span class="w">                        </span>dataclass<span class="o">(</span><span class="nv">kw_only</span><span class="o">=</span>True<span class="o">))</span>.
-</span><span id="__span-9-165"><a id="__codelineno-9-165" name="__codelineno-9-165" href="#__codelineno-9-165"></a><span class="w">  </span>--output-datetime-class<span class="w"> </span><span class="o">{</span>datetime,AwareDatetime,NaiveDatetime<span class="o">}</span>
-</span><span id="__span-9-166"><a id="__codelineno-9-166" name="__codelineno-9-166" href="#__codelineno-9-166"></a><span class="w">                        </span>Choose<span class="w"> </span>Datetime<span class="w"> </span>class<span class="w"> </span>between<span class="w"> </span>AwareDatetime,<span class="w"> </span>NaiveDatetime<span class="w"> </span>or
-</span><span id="__span-9-167"><a id="__codelineno-9-167" name="__codelineno-9-167" href="#__codelineno-9-167"></a><span class="w">                        </span>datetime.<span class="w"> </span>Each<span class="w"> </span>output<span class="w"> </span>model<span class="w"> </span>has<span class="w"> </span>its<span class="w"> </span>default<span class="w"> </span>mapping<span class="w"> </span><span class="o">(</span><span class="k">for</span><span class="w"> </span>example
-</span><span id="__span-9-168"><a id="__codelineno-9-168" name="__codelineno-9-168" href="#__codelineno-9-168"></a><span class="w">                        </span>pydantic:<span class="w"> </span>datetime,<span class="w"> </span>dataclass:<span class="w"> </span>str,<span class="w"> </span>...<span class="o">)</span>
-</span><span id="__span-9-169"><a id="__codelineno-9-169" name="__codelineno-9-169" href="#__codelineno-9-169"></a><span class="w">  </span>--parent-scoped-naming
-</span><span id="__span-9-170"><a id="__codelineno-9-170" name="__codelineno-9-170" href="#__codelineno-9-170"></a><span class="w">                        </span>Set<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>models<span class="w"> </span>defined<span class="w"> </span>inline<span class="w"> </span>from<span class="w"> </span>the<span class="w"> </span>parent<span class="w"> </span>model
-</span><span id="__span-9-171"><a id="__codelineno-9-171" name="__codelineno-9-171" href="#__codelineno-9-171"></a><span class="w">  </span>--reuse-model<span class="w">         </span>Reuse<span class="w"> </span>models<span class="w"> </span>on<span class="w"> </span>the<span class="w"> </span>field<span class="w"> </span>when<span class="w"> </span>a<span class="w"> </span>module<span class="w"> </span>has<span class="w"> </span>the<span class="w"> </span>model<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>same
-</span><span id="__span-9-172"><a id="__codelineno-9-172" name="__codelineno-9-172" href="#__codelineno-9-172"></a><span class="w">                        </span>content
-</span><span id="__span-9-173"><a id="__codelineno-9-173" name="__codelineno-9-173" href="#__codelineno-9-173"></a><span class="w">  </span>--reuse-scope<span class="w"> </span><span class="o">{</span>module,tree<span class="o">}</span>
-</span><span id="__span-9-174"><a id="__codelineno-9-174" name="__codelineno-9-174" href="#__codelineno-9-174"></a><span class="w">                        </span>Scope<span class="w"> </span><span class="k">for</span><span class="w"> </span>model<span class="w"> </span>reuse<span class="w"> </span>deduplication:<span class="w"> </span>module<span class="w"> </span><span class="o">(</span>per-file,<span class="w"> </span>default<span class="o">)</span><span class="w"> </span>or
-</span><span id="__span-9-175"><a id="__codelineno-9-175" name="__codelineno-9-175" href="#__codelineno-9-175"></a><span class="w">                        </span>tree<span class="w"> </span><span class="o">(</span>cross-file<span class="w"> </span>with<span class="w"> </span>shared<span class="w"> </span>module<span class="o">)</span>.<span class="w"> </span>Only<span class="w"> </span>effective<span class="w"> </span>when<span class="w"> </span>--reuse-
-</span><span id="__span-9-176"><a id="__codelineno-9-176" name="__codelineno-9-176" href="#__codelineno-9-176"></a><span class="w">                        </span>model<span class="w"> </span>is<span class="w"> </span>set.
-</span><span id="__span-9-177"><a id="__codelineno-9-177" name="__codelineno-9-177" href="#__codelineno-9-177"></a><span class="w">  </span>--shared-module-name<span class="w"> </span>SHARED_MODULE_NAME
-</span><span id="__span-9-178"><a id="__codelineno-9-178" name="__codelineno-9-178" href="#__codelineno-9-178"></a><span class="w">                        </span>Name<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>shared<span class="w"> </span>module<span class="w"> </span><span class="k">for</span><span class="w"> </span>--reuse-scope<span class="o">=</span>tree<span class="w"> </span><span class="o">(</span>default:
-</span><span id="__span-9-179"><a id="__codelineno-9-179" name="__codelineno-9-179" href="#__codelineno-9-179"></a><span class="w">                        </span><span class="s2">&quot;shared&quot;</span><span class="o">)</span>.<span class="w"> </span>Use<span class="w"> </span>this<span class="w"> </span>option<span class="w"> </span><span class="k">if</span><span class="w"> </span>your<span class="w"> </span>schema<span class="w"> </span>has<span class="w"> </span>a<span class="w"> </span>file<span class="w"> </span>named<span class="w"> </span><span class="s2">&quot;shared&quot;</span>.
-</span><span id="__span-9-180"><a id="__codelineno-9-180" name="__codelineno-9-180" href="#__codelineno-9-180"></a><span class="w">  </span>--skip-root-model<span class="w">     </span>Skip<span class="w"> </span>generating<span class="w"> </span>the<span class="w"> </span>model<span class="w"> </span><span class="k">for</span><span class="w"> </span>the<span class="w"> </span>root<span class="w"> </span>schema<span class="w"> </span>element
-</span><span id="__span-9-181"><a id="__codelineno-9-181" name="__codelineno-9-181" href="#__codelineno-9-181"></a><span class="w">  </span>--target-python-version<span class="w"> </span><span class="o">{</span><span class="m">3</span>.9,3.10,3.11,3.12,3.13,3.14<span class="o">}</span>
-</span><span id="__span-9-182"><a id="__codelineno-9-182" name="__codelineno-9-182" href="#__codelineno-9-182"></a><span class="w">                        </span>target<span class="w"> </span>python<span class="w"> </span>version
-</span><span id="__span-9-183"><a id="__codelineno-9-183" name="__codelineno-9-183" href="#__codelineno-9-183"></a><span class="w">  </span>--treat-dot-as-module
-</span><span id="__span-9-184"><a id="__codelineno-9-184" name="__codelineno-9-184" href="#__codelineno-9-184"></a><span class="w">                        </span>treat<span class="w"> </span>dotted<span class="w"> </span>module<span class="w"> </span>names<span class="w"> </span>as<span class="w"> </span>modules
-</span><span id="__span-9-185"><a id="__codelineno-9-185" name="__codelineno-9-185" href="#__codelineno-9-185"></a><span class="w">  </span>--use-exact-imports<span class="w">   </span>import<span class="w"> </span>exact<span class="w"> </span>types<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>modules,<span class="w"> </span><span class="k">for</span><span class="w"> </span>example:<span class="w"> </span><span class="s2">&quot;from .foo</span>
-</span><span id="__span-9-186"><a id="__codelineno-9-186" name="__codelineno-9-186" href="#__codelineno-9-186"></a><span class="s2">                        import Bar&quot;</span><span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span><span class="s2">&quot;from . import foo&quot;</span><span class="w"> </span>with<span class="w"> </span><span class="s2">&quot;foo.Bar&quot;</span>
-</span><span id="__span-9-187"><a id="__codelineno-9-187" name="__codelineno-9-187" href="#__codelineno-9-187"></a><span class="w">  </span>--use-pendulum<span class="w">        </span>use<span class="w"> </span>pendulum<span class="w"> </span>instead<span class="w"> </span>of<span class="w"> </span>datetime
-</span><span id="__span-9-188"><a id="__codelineno-9-188" name="__codelineno-9-188" href="#__codelineno-9-188"></a><span class="w">  </span>--use-schema-description
-</span><span id="__span-9-189"><a id="__codelineno-9-189" name="__codelineno-9-189" href="#__codelineno-9-189"></a><span class="w">                        </span>Use<span class="w"> </span>schema<span class="w"> </span>description<span class="w"> </span>to<span class="w"> </span>populate<span class="w"> </span>class<span class="w"> </span>docstring
-</span><span id="__span-9-190"><a id="__codelineno-9-190" name="__codelineno-9-190" href="#__codelineno-9-190"></a><span class="w">  </span>--use-title-as-name<span class="w">   </span>use<span class="w"> </span>titles<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
-</span><span id="__span-9-191"><a id="__codelineno-9-191" name="__codelineno-9-191" href="#__codelineno-9-191"></a>
-</span><span id="__span-9-192"><a id="__codelineno-9-192" name="__codelineno-9-192" href="#__codelineno-9-192"></a>Template<span class="w"> </span>customization:
-</span><span id="__span-9-193"><a id="__codelineno-9-193" name="__codelineno-9-193" href="#__codelineno-9-193"></a><span class="w">  </span>--aliases<span class="w"> </span>ALIASES<span class="w">     </span>Alias<span class="w"> </span>mapping<span class="w"> </span>file<span class="w"> </span><span class="o">(</span>JSON<span class="o">)</span><span class="w"> </span><span class="k">for</span><span class="w"> </span>renaming<span class="w"> </span>fields.<span class="w"> </span>Supports<span class="w"> </span>hierarchical
-</span><span id="__span-9-194"><a id="__codelineno-9-194" name="__codelineno-9-194" href="#__codelineno-9-194"></a><span class="w">                        </span>formats:<span class="w"> </span>Flat:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;&#39;</span>field<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="s1">&#39;&#39;</span>alias<span class="s1">&#39;&#39;</span><span class="o">}</span><span class="w"> </span>applies<span class="w"> </span>to<span class="w"> </span>all<span class="w"> </span>occurrences.
-</span><span id="__span-9-195"><a id="__codelineno-9-195" name="__codelineno-9-195" href="#__codelineno-9-195"></a><span class="w">                        </span>Scoped:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;&#39;</span>ClassName.field<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="s1">&#39;&#39;</span>alias<span class="s1">&#39;&#39;</span><span class="o">}</span><span class="w"> </span>applies<span class="w"> </span>to<span class="w"> </span>specific<span class="w"> </span>class.
-</span><span id="__span-9-196"><a id="__codelineno-9-196" name="__codelineno-9-196" href="#__codelineno-9-196"></a><span class="w">                        </span>Priority:<span class="w"> </span>scoped<span class="w"> </span>&gt;<span class="w"> </span>flat.<span class="w"> </span>Example:<span class="w"> </span><span class="o">{</span><span class="s1">&#39;&#39;</span>User.name<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="s1">&#39;&#39;</span>user_name<span class="s1">&#39;&#39;</span>,
-</span><span id="__span-9-197"><a id="__codelineno-9-197" name="__codelineno-9-197" href="#__codelineno-9-197"></a><span class="w">                        </span><span class="s1">&#39;&#39;</span>Address.name<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="s1">&#39;&#39;</span>addr_name<span class="s1">&#39;&#39;</span>,<span class="w"> </span><span class="s1">&#39;&#39;</span>id<span class="s1">&#39;&#39;</span>:<span class="w"> </span><span class="s1">&#39;&#39;</span>id_<span class="s1">&#39;&#39;</span><span class="o">}</span>
-</span><span id="__span-9-198"><a id="__codelineno-9-198" name="__codelineno-9-198" href="#__codelineno-9-198"></a><span class="w">  </span>--custom-file-header<span class="w"> </span>CUSTOM_FILE_HEADER
-</span><span id="__span-9-199"><a id="__codelineno-9-199" name="__codelineno-9-199" href="#__codelineno-9-199"></a><span class="w">                        </span>Custom<span class="w"> </span>file<span class="w"> </span>header
-</span><span id="__span-9-200"><a id="__codelineno-9-200" name="__codelineno-9-200" href="#__codelineno-9-200"></a><span class="w">  </span>--custom-file-header-path<span class="w"> </span>CUSTOM_FILE_HEADER_PATH
-</span><span id="__span-9-201"><a id="__codelineno-9-201" name="__codelineno-9-201" href="#__codelineno-9-201"></a><span class="w">                        </span>Custom<span class="w"> </span>file<span class="w"> </span>header<span class="w"> </span>file<span class="w"> </span>path
-</span><span id="__span-9-202"><a id="__codelineno-9-202" name="__codelineno-9-202" href="#__codelineno-9-202"></a><span class="w">  </span>--custom-formatters-kwargs<span class="w"> </span>CUSTOM_FORMATTERS_KWARGS
-</span><span id="__span-9-203"><a id="__codelineno-9-203" name="__codelineno-9-203" href="#__codelineno-9-203"></a><span class="w">                        </span>A<span class="w"> </span>file<span class="w"> </span>with<span class="w"> </span>kwargs<span class="w"> </span><span class="k">for</span><span class="w"> </span>custom<span class="w"> </span>formatters.
-</span><span id="__span-9-204"><a id="__codelineno-9-204" name="__codelineno-9-204" href="#__codelineno-9-204"></a><span class="w">  </span>--custom-template-dir<span class="w"> </span>CUSTOM_TEMPLATE_DIR
-</span><span id="__span-9-205"><a id="__codelineno-9-205" name="__codelineno-9-205" href="#__codelineno-9-205"></a><span class="w">                        </span>Custom<span class="w"> </span>template<span class="w"> </span>directory
-</span><span id="__span-9-206"><a id="__codelineno-9-206" name="__codelineno-9-206" href="#__codelineno-9-206"></a><span class="w">  </span>--encoding<span class="w"> </span>ENCODING<span class="w">   </span>The<span class="w"> </span>encoding<span class="w"> </span>of<span class="w"> </span>input<span class="w"> </span>and<span class="w"> </span>output<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>utf-8<span class="o">)</span>
-</span><span id="__span-9-207"><a id="__codelineno-9-207" name="__codelineno-9-207" href="#__codelineno-9-207"></a><span class="w">  </span>--extra-template-data<span class="w"> </span>EXTRA_TEMPLATE_DATA
-</span><span id="__span-9-208"><a id="__codelineno-9-208" name="__codelineno-9-208" href="#__codelineno-9-208"></a><span class="w">                        </span>Extra<span class="w"> </span>template<span class="w"> </span>data<span class="w"> </span><span class="k">for</span><span class="w"> </span>output<span class="w"> </span>models.<span class="w"> </span>Input<span class="w"> </span>is<span class="w"> </span>supposed<span class="w"> </span>to<span class="w"> </span>be<span class="w"> </span>a
-</span><span id="__span-9-209"><a id="__codelineno-9-209" name="__codelineno-9-209" href="#__codelineno-9-209"></a><span class="w">                        </span>json/yaml<span class="w"> </span>file.<span class="w"> </span>For<span class="w"> </span>OpenAPI<span class="w"> </span>and<span class="w"> </span>Jsonschema<span class="w"> </span>the<span class="w"> </span>keys<span class="w"> </span>are<span class="w"> </span>the<span class="w"> </span>spec
-</span><span id="__span-9-210"><a id="__codelineno-9-210" name="__codelineno-9-210" href="#__codelineno-9-210"></a><span class="w">                        </span>path<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>object,<span class="w"> </span>or<span class="w"> </span>the<span class="w"> </span>name<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>object<span class="w"> </span><span class="k">if</span><span class="w"> </span>you<span class="w"> </span>want<span class="w"> </span>to<span class="w"> </span>apply
-</span><span id="__span-9-211"><a id="__codelineno-9-211" name="__codelineno-9-211" href="#__codelineno-9-211"></a><span class="w">                        </span>the<span class="w"> </span>template<span class="w"> </span>data<span class="w"> </span>to<span class="w"> </span>multiple<span class="w"> </span>objects<span class="w"> </span>with<span class="w"> </span>the<span class="w"> </span>same<span class="w"> </span>name.<span class="w"> </span>If<span class="w"> </span>you<span class="w"> </span>are
-</span><span id="__span-9-212"><a id="__codelineno-9-212" name="__codelineno-9-212" href="#__codelineno-9-212"></a><span class="w">                        </span>using<span class="w"> </span>another<span class="w"> </span>input<span class="w"> </span>file<span class="w"> </span><span class="nb">type</span><span class="w"> </span><span class="o">(</span>e.g.<span class="w"> </span>GraphQL<span class="o">)</span>,<span class="w"> </span>the<span class="w"> </span>key<span class="w"> </span>is<span class="w"> </span>the<span class="w"> </span>name<span class="w"> </span>of
-</span><span id="__span-9-213"><a id="__codelineno-9-213" name="__codelineno-9-213" href="#__codelineno-9-213"></a><span class="w">                        </span>the<span class="w"> </span>object.<span class="w"> </span>The<span class="w"> </span>value<span class="w"> </span>is<span class="w"> </span>a<span class="w"> </span>dictionary<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>template<span class="w"> </span>data<span class="w"> </span>to<span class="w"> </span>add.
-</span><span id="__span-9-214"><a id="__codelineno-9-214" name="__codelineno-9-214" href="#__codelineno-9-214"></a><span class="w">  </span>--use-double-quotes<span class="w">   </span>Model<span class="w"> </span>generated<span class="w"> </span>with<span class="w"> </span>double<span class="w"> </span>quotes.<span class="w"> </span>Single<span class="w"> </span>quotes<span class="w"> </span>or<span class="w"> </span>your<span class="w"> </span>black
-</span><span id="__span-9-215"><a id="__codelineno-9-215" name="__codelineno-9-215" href="#__codelineno-9-215"></a><span class="w">                        </span>config<span class="w"> </span>skip_string_normalization<span class="w"> </span>value<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>used<span class="w"> </span>without<span class="w"> </span>this
-</span><span id="__span-9-216"><a id="__codelineno-9-216" name="__codelineno-9-216" href="#__codelineno-9-216"></a><span class="w">                        </span>option.
-</span><span id="__span-9-217"><a id="__codelineno-9-217" name="__codelineno-9-217" href="#__codelineno-9-217"></a><span class="w">  </span>--wrap-string-literal
-</span><span id="__span-9-218"><a id="__codelineno-9-218" name="__codelineno-9-218" href="#__codelineno-9-218"></a><span class="w">                        </span>Wrap<span class="w"> </span>string<span class="w"> </span>literal<span class="w"> </span>by<span class="w"> </span>using<span class="w"> </span>black<span class="w"> </span><span class="sb">`</span>experimental-string-processing<span class="sb">`</span>
-</span><span id="__span-9-219"><a id="__codelineno-9-219" name="__codelineno-9-219" href="#__codelineno-9-219"></a><span class="w">                        </span>option<span class="w"> </span><span class="o">(</span>require<span class="w"> </span>black<span class="w"> </span><span class="m">20</span>.8b0<span class="w"> </span>or<span class="w"> </span>later<span class="o">)</span>
-</span><span id="__span-9-220"><a id="__codelineno-9-220" name="__codelineno-9-220" href="#__codelineno-9-220"></a>
-</span><span id="__span-9-221"><a id="__codelineno-9-221" name="__codelineno-9-221" href="#__codelineno-9-221"></a>OpenAPI-only<span class="w"> </span>options:
-</span><span id="__span-9-222"><a id="__codelineno-9-222" name="__codelineno-9-222" href="#__codelineno-9-222"></a><span class="w">  </span>--include-path-parameters
-</span><span id="__span-9-223"><a id="__codelineno-9-223" name="__codelineno-9-223" href="#__codelineno-9-223"></a><span class="w">                        </span>Include<span class="w"> </span>path<span class="w"> </span>parameters<span class="w"> </span><span class="k">in</span><span class="w"> </span>generated<span class="w"> </span>parameter<span class="w"> </span>models<span class="w"> </span><span class="k">in</span><span class="w"> </span>addition<span class="w"> </span>to
-</span><span id="__span-9-224"><a id="__codelineno-9-224" name="__codelineno-9-224" href="#__codelineno-9-224"></a><span class="w">                        </span>query<span class="w"> </span>parameters<span class="w"> </span><span class="o">(</span>Only<span class="w"> </span>OpenAPI<span class="o">)</span>
-</span><span id="__span-9-225"><a id="__codelineno-9-225" name="__codelineno-9-225" href="#__codelineno-9-225"></a><span class="w">  </span>--openapi-scopes<span class="w"> </span><span class="o">{</span>schemas,paths,tags,parameters,webhooks<span class="o">}</span><span class="w"> </span><span class="o">[{</span>schemas,paths,tags,parameters,webhooks<span class="o">}</span><span class="w"> </span>...<span class="o">]</span>
-</span><span id="__span-9-226"><a id="__codelineno-9-226" name="__codelineno-9-226" href="#__codelineno-9-226"></a><span class="w">                        </span>Scopes<span class="w"> </span>of<span class="w"> </span>OpenAPI<span class="w"> </span>model<span class="w"> </span>generation<span class="w"> </span><span class="o">(</span>default:<span class="w"> </span>schemas<span class="o">)</span>
-</span><span id="__span-9-227"><a id="__codelineno-9-227" name="__codelineno-9-227" href="#__codelineno-9-227"></a><span class="w">  </span>--read-only-write-only-model-type<span class="w"> </span><span class="o">{</span>request-response,all<span class="o">}</span>
-</span><span id="__span-9-228"><a id="__codelineno-9-228" name="__codelineno-9-228" href="#__codelineno-9-228"></a><span class="w">                        </span>Model<span class="w"> </span>generation<span class="w"> </span><span class="k">for</span><span class="w"> </span>readOnly/writeOnly<span class="w"> </span>fields:<span class="w"> </span><span class="s1">&#39;&#39;</span>request-response<span class="s1">&#39;&#39;</span><span class="w"> </span><span class="o">=</span>
-</span><span id="__span-9-229"><a id="__codelineno-9-229" name="__codelineno-9-229" href="#__codelineno-9-229"></a><span class="w">                        </span>Request/Response<span class="w"> </span>models<span class="w"> </span>only<span class="w"> </span><span class="o">(</span>no<span class="w"> </span>base<span class="w"> </span>model<span class="o">)</span>,<span class="w"> </span><span class="s1">&#39;&#39;</span>all<span class="s1">&#39;&#39;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>Base<span class="w"> </span>+<span class="w"> </span>Request
-</span><span id="__span-9-230"><a id="__codelineno-9-230" name="__codelineno-9-230" href="#__codelineno-9-230"></a><span class="w">                        </span>+<span class="w"> </span>Response<span class="w"> </span>models.
-</span><span id="__span-9-231"><a id="__codelineno-9-231" name="__codelineno-9-231" href="#__codelineno-9-231"></a><span class="w">  </span>--strict-nullable<span class="w">     </span>Treat<span class="w"> </span>default<span class="w"> </span>field<span class="w"> </span>as<span class="w"> </span>a<span class="w"> </span>non-nullable<span class="w"> </span>field<span class="w"> </span><span class="o">(</span>Only<span class="w"> </span>OpenAPI<span class="o">)</span>
-</span><span id="__span-9-232"><a id="__codelineno-9-232" name="__codelineno-9-232" href="#__codelineno-9-232"></a><span class="w">  </span>--use-operation-id-as-name
-</span><span id="__span-9-233"><a id="__codelineno-9-233" name="__codelineno-9-233" href="#__codelineno-9-233"></a><span class="w">                        </span>use<span class="w"> </span>operation<span class="w"> </span>id<span class="w"> </span>of<span class="w"> </span>OpenAPI<span class="w"> </span>as<span class="w"> </span>class<span class="w"> </span>names<span class="w"> </span>of<span class="w"> </span>models
-</span><span id="__span-9-234"><a id="__codelineno-9-234" name="__codelineno-9-234" href="#__codelineno-9-234"></a><span class="w">  </span>--validation<span class="w">          </span>Deprecated:<span class="w"> </span>Enable<span class="w"> </span>validation<span class="w"> </span><span class="o">(</span>Only<span class="w"> </span>OpenAPI<span class="o">)</span>.<span class="w"> </span>this<span class="w"> </span>option<span class="w"> </span>is
-</span><span id="__span-9-235"><a id="__codelineno-9-235" name="__codelineno-9-235" href="#__codelineno-9-235"></a><span class="w">                        </span>deprecated.<span class="w"> </span>it<span class="w"> </span>will<span class="w"> </span>be<span class="w"> </span>removed<span class="w"> </span><span class="k">in</span><span class="w"> </span>future<span class="w"> </span>releases
-</span><span id="__span-9-236"><a id="__codelineno-9-236" name="__codelineno-9-236" href="#__codelineno-9-236"></a>
-</span><span id="__span-9-237"><a id="__codelineno-9-237" name="__codelineno-9-237" href="#__codelineno-9-237"></a>General<span class="w"> </span>options:
-</span><span id="__span-9-238"><a id="__codelineno-9-238" name="__codelineno-9-238" href="#__codelineno-9-238"></a><span class="w">  </span>--check<span class="w">               </span>Verify<span class="w"> </span>generated<span class="w"> </span>files<span class="w"> </span>are<span class="w"> </span>up-to-date<span class="w"> </span>without<span class="w"> </span>modifying<span class="w"> </span>them.<span class="w"> </span>Exits
-</span><span id="__span-9-239"><a id="__codelineno-9-239" name="__codelineno-9-239" href="#__codelineno-9-239"></a><span class="w">                        </span>with<span class="w"> </span>code<span class="w"> </span><span class="m">1</span><span class="w"> </span><span class="k">if</span><span class="w"> </span>differences<span class="w"> </span>found,<span class="w"> </span><span class="m">0</span><span class="w"> </span><span class="k">if</span><span class="w"> </span>up-to-date.<span class="w"> </span>Useful<span class="w"> </span><span class="k">for</span><span class="w"> </span>CI<span class="w"> </span>to
-</span><span id="__span-9-240"><a id="__codelineno-9-240" name="__codelineno-9-240" href="#__codelineno-9-240"></a><span class="w">                        </span>ensure<span class="w"> </span>generated<span class="w"> </span>code<span class="w"> </span>is<span class="w"> </span>committed.
-</span><span id="__span-9-241"><a id="__codelineno-9-241" name="__codelineno-9-241" href="#__codelineno-9-241"></a><span class="w">  </span>--debug<span class="w">               </span>show<span class="w"> </span>debug<span class="w"> </span>message<span class="w"> </span><span class="o">(</span>require<span class="w"> </span><span class="s2">&quot;debug&quot;</span>.<span class="w"> </span><span class="sb">`</span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;&#39;</span>datamodel-code-
-</span><span id="__span-9-242"><a id="__codelineno-9-242" name="__codelineno-9-242" href="#__codelineno-9-242"></a><span class="w">                        </span>generator<span class="o">[</span>debug<span class="o">]</span><span class="s1">&#39;&#39;</span><span class="sb">`</span><span class="o">)</span>
-</span><span id="__span-9-243"><a id="__codelineno-9-243" name="__codelineno-9-243" href="#__codelineno-9-243"></a><span class="w">  </span>--disable-warnings<span class="w">    </span>disable<span class="w"> </span>warnings
-</span><span id="__span-9-244"><a id="__codelineno-9-244" name="__codelineno-9-244" href="#__codelineno-9-244"></a><span class="w">  </span>--generate-cli-command
-</span><span id="__span-9-245"><a id="__codelineno-9-245" name="__codelineno-9-245" href="#__codelineno-9-245"></a><span class="w">                        </span>Generate<span class="w"> </span>CLI<span class="w"> </span><span class="nb">command</span><span class="w"> </span>from<span class="w"> </span>pyproject.toml<span class="w"> </span>configuration<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
-</span><span id="__span-9-246"><a id="__codelineno-9-246" name="__codelineno-9-246" href="#__codelineno-9-246"></a><span class="w">  </span>--generate-pyproject-config
-</span><span id="__span-9-247"><a id="__codelineno-9-247" name="__codelineno-9-247" href="#__codelineno-9-247"></a><span class="w">                        </span>Generate<span class="w"> </span>pyproject.toml<span class="w"> </span>configuration<span class="w"> </span>from<span class="w"> </span>the<span class="w"> </span>provided<span class="w"> </span>CLI
-</span><span id="__span-9-248"><a id="__codelineno-9-248" name="__codelineno-9-248" href="#__codelineno-9-248"></a><span class="w">                        </span>arguments<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
-</span><span id="__span-9-249"><a id="__codelineno-9-249" name="__codelineno-9-249" href="#__codelineno-9-249"></a><span class="w">  </span>--ignore-pyproject<span class="w">    </span>Ignore<span class="w"> </span>pyproject.toml<span class="w"> </span>configuration
-</span><span id="__span-9-250"><a id="__codelineno-9-250" name="__codelineno-9-250" href="#__codelineno-9-250"></a><span class="w">  </span>--no-color<span class="w">            </span>disable<span class="w"> </span>colorized<span class="w"> </span>output
-</span><span id="__span-9-251"><a id="__codelineno-9-251" name="__codelineno-9-251" href="#__codelineno-9-251"></a><span class="w">  </span>--profile<span class="w"> </span>PROFILE<span class="w">     </span>Use<span class="w"> </span>a<span class="w"> </span>named<span class="w"> </span>profile<span class="w"> </span>from<span class="w"> </span>pyproject.toml<span class="w"> </span><span class="o">[</span>tool.datamodel-
-</span><span id="__span-9-252"><a id="__codelineno-9-252" name="__codelineno-9-252" href="#__codelineno-9-252"></a><span class="w">                        </span>codegen.profiles.&lt;name&gt;<span class="o">]</span>
-</span><span id="__span-9-253"><a id="__codelineno-9-253" name="__codelineno-9-253" href="#__codelineno-9-253"></a><span class="w">  </span>--version<span class="w">             </span>show<span class="w"> </span>version
-</span><span id="__span-9-254"><a id="__codelineno-9-254" name="__codelineno-9-254" href="#__codelineno-9-254"></a><span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>show<span class="w"> </span>this<span class="w"> </span><span class="nb">help</span><span class="w"> </span>message<span class="w"> </span>and<span class="w"> </span><span class="nb">exit</span>
-</span></code></pre></div>
-<!-- end command help -->
 
-<p><strong><a href="supported-data-types/">See supported input formats →</a></strong></p>
-<h2 id="related-projects">Related projects<a class="headerlink" href="#related-projects" title="Permanent link">&para;</a></h2>
-<h3 id="fastapi-code-generator">fastapi-code-generator<a class="headerlink" href="#fastapi-code-generator" title="Permanent link">&para;</a></h3>
-<p>This code generator creates <a href="https://github.com/tiangolo/fastapi">FastAPI</a> app from an openapi file.</p>
-<p><a href="https://github.com/koxudaxi/fastapi-code-generator">https://github.com/koxudaxi/fastapi-code-generator</a></p>
-<h3 id="pydantic-pycharm-plugin">pydantic-pycharm-plugin<a class="headerlink" href="#pydantic-pycharm-plugin" title="Permanent link">&para;</a></h3>
-<p><a href="https://plugins.jetbrains.com/plugin/12861-pydantic">A JetBrains PyCharm plugin</a> for <a href="https://github.com/samuelcolvin/pydantic"><code>pydantic</code></a>.</p>
-<p><a href="https://github.com/koxudaxi/pydantic-pycharm-plugin">https://github.com/koxudaxi/pydantic-pycharm-plugin</a></p>
-<h2 id="pypi">PyPi<a class="headerlink" href="#pypi" title="Permanent link">&para;</a></h2>
-<p><a href="https://pypi.org/project/datamodel-code-generator">https://pypi.org/project/datamodel-code-generator</a></p>
-<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
-<p>datamodel-code-generator is released under the MIT License. http://www.opensource.org/licenses/mit-license</p>
+<hr />
+<h2 id="used-by">🏢 Used by<a class="headerlink" href="#used-by" title="Permanent link">&para;</a></h2>
+<p>These projects use datamodel-code-generator. See the linked examples for real-world usage.</p>
+<ul>
+<li><a href="https://github.com/PostHog/posthog">PostHog/posthog</a> - <em><a href="https://github.com/PostHog/posthog/blob/e1a55b9cb38d01225224bebf8f0c1e28faa22399/package.json#L41">Generate models via npm run</a></em></li>
+<li><a href="https://github.com/airbytehq/airbyte">airbytehq/airbyte</a> - <em><a href="https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin">Generate Python, Java/Kotlin, and Typescript protocol models</a></em></li>
+<li><a href="https://github.com/apache/iceberg">apache/iceberg</a> - <em><a href="https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39">Generate Python code</a></em></li>
+<li><a href="https://github.com/open-metadata/OpenMetadata">open-metadata/OpenMetadata</a> - <em><a href="https://github.com/open-metadata/OpenMetadata/blob/main/scripts/datamodel_generation.py">datamodel_generation.py</a></em></li>
+<li><a href="https://github.com/awslabs/aws-lambda-powertools-python">awslabs/aws-lambda-powertools-python</a> - <em><a href="https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases">Recommended for advanced-use-cases</a></em></li>
+<li><a href="https://github.com/Netflix/consoleme">Netflix/consoleme</a> - <em><a href="https://github.com/Netflix/consoleme/blob/master/docs/gitbook/faq.md#how-do-i-generate-models-from-the-swagger-specification">Generate models from Swagger</a></em></li>
+<li><a href="https://github.com/DataDog/integrations-core">DataDog/integrations-core</a> - <em><a href="https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md">Config models</a></em></li>
+<li><a href="https://github.com/argoproj-labs/hera">argoproj-labs/hera</a> - <em><a href="https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62">Makefile</a></em></li>
+<li><a href="https://github.com/SeldonIO/MLServer">SeldonIO/MLServer</a> - <em><a href="https://github.com/SeldonIO/MLServer/blob/master/hack/generate-types.sh">generate-types.sh</a></em></li>
+<li><a href="https://github.com/geojupyter/jupytergis">geojupyter/jupytergis</a> - <em><a href="https://jupytergis.readthedocs.io/en/latest/contributor_guide/explanation/code-generation.html">Python type generation from JSONSchema</a></em></li>
+<li><a href="https://github.com/Nike-Inc/brickflow">Nike-Inc/brickflow</a> - <em><a href="https://github.com/Nike-Inc/brickflow/blob/e3245bf638588867b831820a6675ada76b2010bf/tools/README.md?plain=1#L8">Code generate tools</a></em></li>
+<li><a href="https://github.com/cloudcoil/cloudcoil">cloudcoil/cloudcoil</a> - <em><a href="https://github.com/cloudcoil/cloudcoil#%EF%B8%8F-model-generation">Model generation</a></em></li>
+<li><a href="https://github.com/IBM/compliance-trestle">IBM/compliance-trestle</a> - <em><a href="https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas">Building models from OSCAL schemas</a></em></li>
+<li><a href="https://github.com/hashintel/hash">hashintel/hash</a> - <em><a href="https://github.com/hashintel/hash/blob/9762b1a1937e14f6b387677e4c7fe4a5f3d4a1e1/libs/%40local/hash-graph-client/python/scripts/codegen.sh#L21-L39">codegen.sh</a></em></li>
+</ul>
+<p><a href="https://github.com/koxudaxi/datamodel-code-generator/network/dependents">See all dependents →</a></p>
 
 
 

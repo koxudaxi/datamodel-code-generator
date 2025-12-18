@@ -27,7 +27,7 @@
     
     
       
-        <title>Field Customization - datamodel-code-generator</title>
+        <title>🏷️ Field Customization - datamodel-code-generator</title>
       
     
     
@@ -109,7 +109,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -154,7 +154,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Field Customization
+              🏷️ Field Customization
             
           </span>
         </div>
@@ -167,7 +167,21 @@
     
     
     
-    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-hidden="true"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="slate" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="none" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
     
   
 </form>
@@ -488,7 +502,7 @@
   <a href="#options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options
+        📋 Options
       
     </span>
   </a>
@@ -1288,9 +1302,64 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Field Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1353,7 +1422,7 @@
   <a href="#options" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Options
+        📋 Options
       
     </span>
   </a>
@@ -1595,8 +1664,8 @@
                 
                   
 
-<h1 id="field-customization">Field Customization<a class="headerlink" href="#field-customization" title="Permanent link">&para;</a></h1>
-<h2 id="options">Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
+<h1 id="field-customization">🏷️ Field Customization<a class="headerlink" href="#field-customization" title="Permanent link">&para;</a></h1>
+<h2 id="options">📋 Options<a class="headerlink" href="#options" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1692,10 +1761,6 @@
 <p>Apply custom field and class name aliases from JSON file.</p>
 <p>The <code>--aliases</code> option allows renaming fields and classes via a JSON mapping file,
 providing fine-grained control over generated names independent of schema definitions.</p>
-<div class="admonition tip">
-<p class="admonition-title">See Also</p>
-<p>For detailed explanation and examples, see <a href="../../aliases/">Field Aliases</a>.</p>
-</div>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--aliases<span class="w"> </span>openapi/aliases.json<span class="w"> </span>--target-python<span class="w"> </span><span class="m">3</span>.9<span class="w"> </span><span class="c1"># (1)!</span>
@@ -2492,10 +2557,6 @@ store fields not defined in the schema. Options: allow, ignore, forbid.</p>
 <p>The <code>--field-constraints</code> flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
 Output differs between Pydantic v1 and v2 due to API changes.</p>
-<div class="admonition tip">
-<p class="admonition-title">See Also</p>
-<p>For detailed explanation and mypy compatibility, see <a href="../../field-constraints/">Field Constraints</a>.</p>
-</div>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--field-constraints<span class="w"> </span><span class="c1"># (1)!</span>
