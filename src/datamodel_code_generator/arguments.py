@@ -418,8 +418,8 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-standard-collections",
-    help="Use standard collections for type hinting (list, dict)",
-    action="store_true",
+    help="Use standard collections for type hinting (list, dict). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(

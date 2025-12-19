@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, Union
+from typing import Annotated, Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 
@@ -15,8 +15,8 @@ class Pet(BaseModel):
     tag: Annotated[Optional[str], Field(max_length=64)] = None
 
 
-class Pets(RootModel[List[Pet]]):
-    root: Annotated[List[Pet], Field(max_length=10, min_length=1)]
+class Pets(RootModel[list[Pet]]):
+    root: Annotated[list[Pet], Field(max_length=10, min_length=1)]
 
 
 class UID(RootModel[int]):
@@ -36,24 +36,24 @@ class User(BaseModel):
     name: Annotated[str, Field(max_length=256)]
     tag: Annotated[Optional[str], Field(max_length=64)] = None
     uid: UID
-    phones: Annotated[Optional[List[Phone]], Field(max_length=10)] = None
-    fax: Optional[List[FaxItem]] = None
+    phones: Annotated[Optional[list[Phone]], Field(max_length=10)] = None
+    fax: Optional[list[FaxItem]] = None
     height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
     weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
     age: Annotated[Optional[int], Field(gt=0, le=200)] = None
     rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
 
 
-class Users(RootModel[List[User]]):
-    root: List[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
 class Id(RootModel[str]):
     root: str
 
 
-class Rules(RootModel[List[str]]):
-    root: List[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
@@ -76,8 +76,8 @@ class Api(BaseModel):
     ] = None
 
 
-class Apis(RootModel[List[Api]]):
-    root: List[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]
 
 
 class Event(BaseModel):

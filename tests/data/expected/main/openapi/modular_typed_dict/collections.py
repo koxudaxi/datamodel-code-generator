@@ -4,17 +4,17 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, NotRequired, TypeAlias, TypedDict
+from typing import Literal, NotRequired, TypeAlias, TypedDict
 
 from . import models
 
-Pets: TypeAlias = List[models.Pet]
+Pets: TypeAlias = list[models.Pet]
 
 
-Users: TypeAlias = List[models.User]
+Users: TypeAlias = list[models.User]
 
 
-Rules: TypeAlias = List[str]
+Rules: TypeAlias = list[str]
 
 
 class Api(TypedDict):
@@ -25,4 +25,4 @@ class Api(TypedDict):
     stage: NotRequired[Literal['test', 'dev', 'stg', 'prod']]
 
 
-Apis: TypeAlias = List[Api]
+Apis: TypeAlias = list[Api]

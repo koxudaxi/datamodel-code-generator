@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, EmailStr, Field, conint, constr
 
@@ -84,7 +84,7 @@ class RefWithSchemaKeywords(BaseModel):
 
 
 class ArrayDatatype(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class RefToArrayAllOf(BaseModel):
@@ -100,7 +100,7 @@ class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
 
 
 class PatternPropsDatatype(BaseModel):
-    __root__: Dict[constr(regex=r'^S_'), str]
+    __root__: dict[constr(regex=r'^S_'), str]
 
 
 class RefToPatternPropsAllOf(BaseModel):

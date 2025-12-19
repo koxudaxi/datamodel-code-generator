@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Dict, List, TypeAlias, Union
+from typing import Annotated, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
@@ -50,7 +50,7 @@ class AnyOfArray1(Struct):
 AnyOfArray2: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
-AnyOfArray: TypeAlias = List[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
+AnyOfArray: TypeAlias = list[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
 
 
 class Error(Struct):
@@ -59,4 +59,4 @@ class Error(Struct):
 
 
 class Config(Struct):
-    setting: Union[Dict[str, Union[str, List[str]]], UnsetType] = UNSET
+    setting: Union[dict[str, Union[str, list[str]]], UnsetType] = UNSET

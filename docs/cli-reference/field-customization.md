@@ -243,7 +243,7 @@ providing fine-grained control over generated names independent of schema defini
             
             from __future__ import annotations
             
-            from typing import List, Optional
+            from typing import Optional
             
             from pydantic import AnyUrl, BaseModel, Field
             
@@ -255,7 +255,7 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Pets(BaseModel):
-                __root__: List[Pet]
+                __root__: list[Pet]
             
             
             class User(BaseModel):
@@ -265,7 +265,7 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Users(BaseModel):
-                __root__: List[User]
+                __root__: list[User]
             
             
             class Id(BaseModel):
@@ -273,7 +273,7 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Rules(BaseModel):
-                __root__: List[str]
+                __root__: list[str]
             
             
             class Error(BaseModel):
@@ -297,7 +297,7 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Apis(BaseModel):
-                __root__: List[Api]
+                __root__: list[Api]
             
             
             class Event(BaseModel):
@@ -317,7 +317,7 @@ providing fine-grained control over generated names independent of schema defini
             
             from __future__ import annotations
             
-            from typing import Annotated, List, TypeAlias, Union
+            from typing import Annotated, TypeAlias, Union
             
             from msgspec import UNSET, Meta, Struct, UnsetType, field
             
@@ -328,7 +328,7 @@ providing fine-grained control over generated names independent of schema defini
                 tag: Union[str, UnsetType] = UNSET
             
             
-            Pets: TypeAlias = List[Pet]
+            Pets: TypeAlias = list[Pet]
             
             
             class User(Struct):
@@ -337,13 +337,13 @@ providing fine-grained control over generated names independent of schema defini
                 tag: Union[str, UnsetType] = UNSET
             
             
-            Users: TypeAlias = List[User]
+            Users: TypeAlias = list[User]
             
             
             Id: TypeAlias = str
             
             
-            Rules: TypeAlias = List[str]
+            Rules: TypeAlias = list[str]
             
             
             class Error(Struct):
@@ -370,7 +370,7 @@ providing fine-grained control over generated names independent of schema defini
                 ] = UNSET
             
             
-            Apis: TypeAlias = List[Api]
+            Apis: TypeAlias = list[Api]
             
             
             class Event(Struct):
@@ -802,7 +802,7 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     from __future__ import annotations
     
-    from typing import List, Literal, Optional, TypeAlias
+    from typing import Literal, Optional, TypeAlias
     
     from pydantic import BaseModel, Extra, Field
     
@@ -834,23 +834,23 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         class Config:
             extra = Extra.allow
     
-        characters: List[Person]
-        characters_ids: List[ID]
+        characters: list[Person]
+        characters_ids: list[ID]
         director: String
         episode_id: Int
         id: ID
         opening_crawl: String
-        planets: List[Planet]
-        planets_ids: List[ID]
+        planets: list[Planet]
+        planets_ids: list[ID]
         producer: Optional[String] = None
         release_date: String
-        species: List[Species]
-        species_ids: List[ID]
-        starships: List[Starship]
-        starships_ids: List[ID]
+        species: list[Species]
+        species_ids: list[ID]
+        starships: list[Starship]
+        starships_ids: list[ID]
         title: String
-        vehicles: List[Vehicle]
-        vehicles_ids: List[ID]
+        vehicles: list[Vehicle]
+        vehicles_ids: list[ID]
         typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
     
     
@@ -860,8 +860,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
         birth_year: Optional[String] = None
         eye_color: Optional[String] = None
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         gender: Optional[String] = None
         hair_color: Optional[String] = None
         height: Optional[Int] = None
@@ -871,12 +871,12 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         mass: Optional[Int] = None
         name: String
         skin_color: Optional[String] = None
-        species: List[Species]
-        species_ids: List[ID]
-        starships: List[Starship]
-        starships_ids: List[ID]
-        vehicles: List[Vehicle]
-        vehicles_ids: List[ID]
+        species: list[Species]
+        species_ids: list[ID]
+        starships: list[Starship]
+        starships_ids: list[ID]
+        vehicles: list[Vehicle]
+        vehicles_ids: list[ID]
         typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
     
     
@@ -886,15 +886,15 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
         climate: Optional[String] = None
         diameter: Optional[String] = None
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         gravity: Optional[String] = None
         id: ID
         name: String
         orbital_period: Optional[String] = None
         population: Optional[String] = None
-        residents: List[Person]
-        residents_ids: List[ID]
+        residents: list[Person]
+        residents_ids: list[ID]
         rotation_period: Optional[String] = None
         surface_water: Optional[String] = None
         terrain: Optional[String] = None
@@ -910,14 +910,14 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         classification: Optional[String] = None
         designation: Optional[String] = None
         eye_colors: Optional[String] = None
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         hair_colors: Optional[String] = None
         id: ID
         language: Optional[String] = None
         name: String
-        people: List[Person]
-        people_ids: List[ID]
+        people: list[Person]
+        people_ids: list[ID]
         skin_colors: Optional[String] = None
         typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
     
@@ -931,8 +931,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         consumables: Optional[String] = None
         cost_in_credits: Optional[String] = None
         crew: Optional[String] = None
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         hyperdrive_rating: Optional[String] = None
         id: ID
         length: Optional[String] = None
@@ -941,8 +941,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         model: Optional[String] = None
         name: String
         passengers: Optional[String] = None
-        pilots: List[Person]
-        pilots_ids: List[ID]
+        pilots: list[Person]
+        pilots_ids: list[ID]
         starship_class: Optional[String] = None
         typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
     
@@ -955,8 +955,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         consumables: Optional[String] = None
         cost_in_credits: Optional[String] = None
         crew: Optional[String] = None
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         length: Optional[String] = None
         manufacturer: Optional[String] = None
@@ -964,8 +964,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         model: Optional[String] = None
         name: String
         passengers: Optional[String] = None
-        pilots: List[Person]
-        pilots_ids: List[ID]
+        pilots: list[Person]
+        pilots_ids: list[ID]
         vehicle_class: Optional[String] = None
         typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
     
@@ -1245,7 +1245,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             from __future__ import annotations
             
-            from typing import List, Optional, Union
+            from typing import Optional, Union
             
             from pydantic import AnyUrl, BaseModel, Field
             
@@ -1257,7 +1257,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Pets(BaseModel):
-                __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+                __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
             
             
             class UID(BaseModel):
@@ -1277,8 +1277,8 @@ Output differs between Pydantic v1 and v2 due to API changes.
                 name: str = Field(..., max_length=256)
                 tag: Optional[str] = Field(None, max_length=64)
                 uid: UID
-                phones: Optional[List[Phone]] = Field(None, max_items=10)
-                fax: Optional[List[FaxItem]] = None
+                phones: Optional[list[Phone]] = Field(None, max_items=10)
+                fax: Optional[list[FaxItem]] = None
                 height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
                 weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
                 age: Optional[int] = Field(None, gt=0, le=200)
@@ -1286,7 +1286,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Users(BaseModel):
-                __root__: List[User]
+                __root__: list[User]
             
             
             class Id(BaseModel):
@@ -1294,7 +1294,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Rules(BaseModel):
-                __root__: List[str]
+                __root__: list[str]
             
             
             class Error(BaseModel):
@@ -1318,7 +1318,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Apis(BaseModel):
-                __root__: List[Api]
+                __root__: list[Api]
             
             
             class Event(BaseModel):
@@ -1338,7 +1338,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             from __future__ import annotations
             
-            from typing import List, Optional, Union
+            from typing import Optional, Union
             
             from pydantic import AnyUrl, BaseModel, Field, RootModel
             
@@ -1349,8 +1349,8 @@ Output differs between Pydantic v1 and v2 due to API changes.
                 tag: Optional[str] = Field(None, max_length=64)
             
             
-            class Pets(RootModel[List[Pet]]):
-                root: List[Pet] = Field(..., max_length=10, min_length=1)
+            class Pets(RootModel[list[Pet]]):
+                root: list[Pet] = Field(..., max_length=10, min_length=1)
             
             
             class UID(RootModel[int]):
@@ -1370,24 +1370,24 @@ Output differs between Pydantic v1 and v2 due to API changes.
                 name: str = Field(..., max_length=256)
                 tag: Optional[str] = Field(None, max_length=64)
                 uid: UID
-                phones: Optional[List[Phone]] = Field(None, max_length=10)
-                fax: Optional[List[FaxItem]] = None
+                phones: Optional[list[Phone]] = Field(None, max_length=10)
+                fax: Optional[list[FaxItem]] = None
                 height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
                 weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
                 age: Optional[int] = Field(None, gt=0, le=200)
                 rating: Optional[float] = Field(None, gt=0.0, le=5.0)
             
             
-            class Users(RootModel[List[User]]):
-                root: List[User]
+            class Users(RootModel[list[User]]):
+                root: list[User]
             
             
             class Id(RootModel[str]):
                 root: str
             
             
-            class Rules(RootModel[List[str]]):
-                root: List[str]
+            class Rules(RootModel[list[str]]):
+                root: list[str]
             
             
             class Error(BaseModel):
@@ -1410,8 +1410,8 @@ Output differs between Pydantic v1 and v2 due to API changes.
                 )
             
             
-            class Apis(RootModel[List[Api]]):
-                root: List[Api]
+            class Apis(RootModel[list[Api]]):
+                root: list[Api]
             
             
             class Event(BaseModel):
@@ -1817,7 +1817,7 @@ The `--field-include-all-keys` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Any, List, Optional
+    from typing import Any, Optional
     
     from pydantic import BaseModel, Field, conint
     
@@ -1828,7 +1828,7 @@ The `--field-include-all-keys` flag configures the code generation behavior.
         age: Optional[conint(ge=0)] = Field(
             None, description='Age in years which must be equal to or greater than zero.'
         )
-        friends: Optional[List[Any]] = None
+        friends: Optional[list[Any]] = None
         comment: None = None
     ```
 
@@ -2133,7 +2133,7 @@ The `--set-default-enum-member` flag configures the code generation behavior.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import BaseModel, Field
     
@@ -2153,11 +2153,11 @@ The `--set-default-enum-member` flag configures the code generation behavior.
         name: Optional[str] = None
         animal: Optional[Animal] = Animal.dog
         pet: Optional[Animal] = Animal.cat
-        redistribute: Optional[List[RedistributeEnum]] = None
+        redistribute: Optional[list[RedistributeEnum]] = None
     
     
     class Redistribute(BaseModel):
-        __root__: List[RedistributeEnum] = Field(
+        __root__: list[RedistributeEnum] = Field(
             ..., description='Redistribute type for routes.'
         )
     ```
@@ -2680,7 +2680,7 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel
         
@@ -2692,7 +2692,7 @@ generated models, preserving documentation from the original schema.
         
         
         class Pets(BaseModel):
-            __root__: List[Pet]
+            __root__: list[Pet]
         
         
         class User(BaseModel):
@@ -2702,7 +2702,7 @@ generated models, preserving documentation from the original schema.
         
         
         class Users(BaseModel):
-            __root__: List[User]
+            __root__: list[User]
         
         
         class Id(BaseModel):
@@ -2710,7 +2710,7 @@ generated models, preserving documentation from the original schema.
         
         
         class Rules(BaseModel):
-            __root__: List[str]
+            __root__: list[str]
         
         
         class Error(BaseModel):
@@ -2739,7 +2739,7 @@ generated models, preserving documentation from the original schema.
         
         
         class Apis(BaseModel):
-            __root__: List[Api]
+            __root__: list[Api]
         
         
         class Event(BaseModel):
@@ -2801,7 +2801,7 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, List, Optional, TypeAlias, Union
+        from typing import Annotated, Any, Optional, TypeAlias, Union
         
         from pydantic import BaseModel, Field
         
@@ -2814,7 +2814,7 @@ generated models, preserving documentation from the original schema.
         UnionType: TypeAlias = Union[str, int]
         
         
-        ArrayType: TypeAlias = List[str]
+        ArrayType: TypeAlias = list[str]
         
         
         AnnotatedType: TypeAlias = Annotated[
@@ -3047,7 +3047,7 @@ documentation without using Field() wrappers.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -3059,7 +3059,7 @@ documentation without using Field() wrappers.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -3069,7 +3069,7 @@ documentation without using Field() wrappers.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -3077,7 +3077,7 @@ documentation without using Field() wrappers.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -3112,7 +3112,7 @@ documentation without using Field() wrappers.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -3338,7 +3338,7 @@ useful for preserving documentation from your schema in the generated code.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -3350,7 +3350,7 @@ useful for preserving documentation from your schema in the generated code.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -3360,7 +3360,7 @@ useful for preserving documentation from your schema in the generated code.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -3368,7 +3368,7 @@ useful for preserving documentation from your schema in the generated code.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -3398,7 +3398,7 @@ useful for preserving documentation from your schema in the generated code.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -3541,7 +3541,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import List, Optional, Union
+    from typing import Optional, Union
     
     from pydantic import BaseModel, Field
     
@@ -3566,7 +3566,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class ProcessingTasksTitle(BaseModel):
-        __root__: List[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
+        __root__: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
     
     
     class ExtendedProcessingTask(BaseModel):
@@ -3576,7 +3576,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class ExtendedProcessingTasksTitle(BaseModel):
-        __root__: List[ExtendedProcessingTask] = Field(
+        __root__: list[ExtendedProcessingTask] = Field(
             ..., title='Extended Processing Tasks Title'
         )
     

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Extra, constr
 
@@ -20,4 +20,4 @@ class Model(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    networks: Dict[constr(regex=r'^[a-zA-Z0-9._-]+$'), Optional[Network]]
+    networks: dict[constr(regex=r'^[a-zA-Z0-9._-]+$'), Optional[Network]]

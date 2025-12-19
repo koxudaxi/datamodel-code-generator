@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from enum import Enum
-from typing import Any, Mapping, Optional, Sequence, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 

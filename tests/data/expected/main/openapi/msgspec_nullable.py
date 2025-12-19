@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, TypeAlias, Union
+from typing import Annotated, Optional, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
 
@@ -47,7 +47,7 @@ class Api(Struct):
     ] = UNSET
 
 
-Apis: TypeAlias = Optional[List[Api]]
+Apis: TypeAlias = Optional[list[Api]]
 
 
 class EmailItem(Struct):
@@ -57,7 +57,7 @@ class EmailItem(Struct):
     tag: Union[str, UnsetType] = UNSET
 
 
-Email: TypeAlias = List[EmailItem]
+Email: TypeAlias = list[EmailItem]
 
 
 Id: TypeAlias = int
@@ -73,9 +73,9 @@ Tag: TypeAlias = str
 
 
 class Notes(Struct):
-    comments: Union[List[str], UnsetType] = field(default_factory=list)
+    comments: Union[list[str], UnsetType] = field(default_factory=list)
 
 
 class Options(Struct):
-    comments: List[str]
-    oneOfComments: List[Union[str, float]]
+    comments: list[str]
+    oneOfComments: list[Union[str, float]]

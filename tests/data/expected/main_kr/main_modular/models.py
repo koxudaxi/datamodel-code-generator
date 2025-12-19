@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -30,4 +30,4 @@ class User(BaseModel):
 
 
 class Event(BaseModel):
-    name: Optional[Union[str, float, int, bool, Dict[str, Any], List[str]]] = None
+    name: Optional[Union[str, float, int, bool, dict[str, Any], list[str]]] = None

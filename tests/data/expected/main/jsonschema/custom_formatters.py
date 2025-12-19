@@ -8,7 +8,7 @@
 #
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, conint
 
@@ -19,5 +19,5 @@ class Person(BaseModel):
     age: Optional[conint(ge=0)] = Field(
         None, description='Age in years which must be equal to or greater than zero.'
     )
-    friends: Optional[List[Any]] = None
+    friends: Optional[list[Any]] = None
     comment: None = None

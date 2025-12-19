@@ -507,7 +507,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     from __future__ import annotations
     
     from datetime import datetime
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import BaseModel
     
@@ -529,11 +529,11 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     
     class PetsGetResponse(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class FoodFoodIdGetResponse(BaseModel):
-        __root__: List[int]
+        __root__: list[int]
     
     
     class UserGetResponse(BaseModel):
@@ -555,7 +555,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     
     class UsersGetResponse(BaseModel):
-        __root__: List[UsersGetResponseItem]
+        __root__: list[UsersGetResponseItem]
     
     
     class UsersPostRequestItem(BaseModel):
@@ -565,7 +565,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     
     class UsersPostRequest(BaseModel):
-        __root__: List[UsersPostRequestItem]
+        __root__: list[UsersPostRequestItem]
     ```
 
 ---
@@ -864,7 +864,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -876,7 +876,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -886,7 +886,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -894,7 +894,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -918,7 +918,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -1242,7 +1242,7 @@ The `--validation` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -1254,7 +1254,7 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -1264,7 +1264,7 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -1272,7 +1272,7 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -1296,7 +1296,7 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):

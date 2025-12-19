@@ -244,7 +244,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, Extra, Field
         
@@ -262,7 +262,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             class Config:
                 extra = Extra.allow
         
-            __root__: List[Pet]
+            __root__: list[Pet]
         
         
         class User(BaseModel):
@@ -278,7 +278,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             class Config:
                 extra = Extra.allow
         
-            __root__: List[User]
+            __root__: list[User]
         
         
         class Id(BaseModel):
@@ -292,7 +292,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             class Config:
                 extra = Extra.allow
         
-            __root__: List[str]
+            __root__: list[str]
         
         
         class Error(BaseModel):
@@ -325,7 +325,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             class Config:
                 extra = Extra.allow
         
-            __root__: List[Api]
+            __root__: list[Api]
         
         
         class Event(BaseModel):
@@ -351,7 +351,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
         
@@ -365,8 +365,8 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             tag: Optional[str] = None
         
         
-        class Pets(RootModel[List[Pet]]):
-            root: List[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -378,16 +378,16 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             tag: Optional[str] = None
         
         
-        class Users(RootModel[List[User]]):
-            root: List[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
         class Id(RootModel[str]):
             root: str
         
         
-        class Rules(RootModel[List[str]]):
-            root: List[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -416,8 +416,8 @@ The `--allow-extra-fields` flag configures the code generation behavior.
             )
         
         
-        class Apis(RootModel[List[Api]]):
-            root: List[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -647,7 +647,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, Field
         
@@ -665,7 +665,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             class Config:
                 allow_population_by_field_name = True
         
-            __root__: List[Pet]
+            __root__: list[Pet]
         
         
         class User(BaseModel):
@@ -681,7 +681,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             class Config:
                 allow_population_by_field_name = True
         
-            __root__: List[User]
+            __root__: list[User]
         
         
         class Id(BaseModel):
@@ -695,7 +695,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             class Config:
                 allow_population_by_field_name = True
         
-            __root__: List[str]
+            __root__: list[str]
         
         
         class Error(BaseModel):
@@ -728,7 +728,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             class Config:
                 allow_population_by_field_name = True
         
-            __root__: List[Api]
+            __root__: list[Api]
         
         
         class Event(BaseModel):
@@ -754,7 +754,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
         
@@ -768,11 +768,11 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             tag: Optional[str] = None
         
         
-        class Pets(RootModel[List[Pet]]):
+        class Pets(RootModel[list[Pet]]):
             model_config = ConfigDict(
                 populate_by_name=True,
             )
-            root: List[Pet]
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -784,11 +784,11 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             tag: Optional[str] = None
         
         
-        class Users(RootModel[List[User]]):
+        class Users(RootModel[list[User]]):
             model_config = ConfigDict(
                 populate_by_name=True,
             )
-            root: List[User]
+            root: list[User]
         
         
         class Id(RootModel[str]):
@@ -798,11 +798,11 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             root: str
         
         
-        class Rules(RootModel[List[str]]):
+        class Rules(RootModel[list[str]]):
             model_config = ConfigDict(
                 populate_by_name=True,
             )
-            root: List[str]
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -831,11 +831,11 @@ The `--allow-population-by-field-name` flag configures the code generation behav
             )
         
         
-        class Apis(RootModel[List[Api]]):
+        class Apis(RootModel[list[Api]]):
             model_config = ConfigDict(
                 populate_by_name=True,
             )
-            root: List[Api]
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -1063,7 +1063,7 @@ The `--base-class` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, Field
     
@@ -1077,7 +1077,7 @@ The `--base-class` flag configures the code generation behavior.
     
     
     class Pets(Base):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(Base):
@@ -1087,7 +1087,7 @@ The `--base-class` flag configures the code generation behavior.
     
     
     class Users(Base):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(Base):
@@ -1095,7 +1095,7 @@ The `--base-class` flag configures the code generation behavior.
     
     
     class Rules(Base):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(Base):
@@ -1119,7 +1119,7 @@ The `--base-class` flag configures the code generation behavior.
     
     
     class Apis(Base):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(Base):
@@ -1191,7 +1191,7 @@ naming convention than what's in the schema.
     
     from __future__ import annotations
     
-    from typing import Any, List, Optional
+    from typing import Any, Optional
     
     from pydantic import BaseModel, Field, conint
     
@@ -1202,7 +1202,7 @@ naming convention than what's in the schema.
         age: Optional[conint(ge=0)] = Field(
             None, description='Age in years which must be equal to or greater than zero.'
         )
-        friends: Optional[List[Any]] = None
+        friends: Optional[list[Any]] = None
         comment: None = None
     ```
 
@@ -1584,7 +1584,7 @@ control over dataclass generation.
     from __future__ import annotations
     
     from dataclasses import dataclass
-    from typing import List, Literal, Optional, TypeAlias
+    from typing import Literal, Optional, TypeAlias
     
     Boolean: TypeAlias = bool
     """
@@ -1612,38 +1612,38 @@ control over dataclass generation.
     
     @dataclass(order=True, slots=True)
     class Film:
-        characters: List[Person]
-        characters_ids: List[ID]
+        characters: list[Person]
+        characters_ids: list[ID]
         director: String
         episode_id: Int
         id: ID
         opening_crawl: String
-        planets: List[Planet]
-        planets_ids: List[ID]
+        planets: list[Planet]
+        planets_ids: list[ID]
         release_date: String
-        species: List[Species]
-        species_ids: List[ID]
-        starships: List[Starship]
-        starships_ids: List[ID]
+        species: list[Species]
+        species_ids: list[ID]
+        starships: list[Starship]
+        starships_ids: list[ID]
         title: String
-        vehicles: List[Vehicle]
-        vehicles_ids: List[ID]
+        vehicles: list[Vehicle]
+        vehicles_ids: list[ID]
         producer: Optional[String] = None
         typename__: Optional[Literal['Film']] = 'Film'
     
     
     @dataclass(order=True, slots=True)
     class Person:
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         name: String
-        species: List[Species]
-        species_ids: List[ID]
-        starships: List[Starship]
-        starships_ids: List[ID]
-        vehicles: List[Vehicle]
-        vehicles_ids: List[ID]
+        species: list[Species]
+        species_ids: list[ID]
+        starships: list[Starship]
+        starships_ids: list[ID]
+        vehicles: list[Vehicle]
+        vehicles_ids: list[ID]
         birth_year: Optional[String] = None
         eye_color: Optional[String] = None
         gender: Optional[String] = None
@@ -1658,12 +1658,12 @@ control over dataclass generation.
     
     @dataclass(order=True, slots=True)
     class Planet:
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         name: String
-        residents: List[Person]
-        residents_ids: List[ID]
+        residents: list[Person]
+        residents_ids: list[ID]
         climate: Optional[String] = None
         diameter: Optional[String] = None
         gravity: Optional[String] = None
@@ -1677,12 +1677,12 @@ control over dataclass generation.
     
     @dataclass(order=True, slots=True)
     class Species:
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         name: String
-        people: List[Person]
-        people_ids: List[ID]
+        people: list[Person]
+        people_ids: list[ID]
         average_height: Optional[String] = None
         average_lifespan: Optional[String] = None
         classification: Optional[String] = None
@@ -1696,12 +1696,12 @@ control over dataclass generation.
     
     @dataclass(order=True, slots=True)
     class Starship:
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         name: String
-        pilots: List[Person]
-        pilots_ids: List[ID]
+        pilots: list[Person]
+        pilots_ids: list[ID]
         MGLT: Optional[String] = None
         cargo_capacity: Optional[String] = None
         consumables: Optional[String] = None
@@ -1719,12 +1719,12 @@ control over dataclass generation.
     
     @dataclass(order=True, slots=True)
     class Vehicle:
-        films: List[Film]
-        films_ids: List[ID]
+        films: list[Film]
+        films_ids: list[ID]
         id: ID
         name: String
-        pilots: List[Person]
-        pilots_ids: List[ID]
+        pilots: list[Person]
+        pilots_ids: list[ID]
         cargo_capacity: Optional[String] = None
         consumables: Optional[String] = None
         cost_in_credits: Optional[String] = None
@@ -1951,7 +1951,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, Field
         
@@ -1969,7 +1969,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             class Config:
                 allow_mutation = False
         
-            __root__: List[Pet]
+            __root__: list[Pet]
         
         
         class User(BaseModel):
@@ -1985,7 +1985,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             class Config:
                 allow_mutation = False
         
-            __root__: List[User]
+            __root__: list[User]
         
         
         class Id(BaseModel):
@@ -1999,7 +1999,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             class Config:
                 allow_mutation = False
         
-            __root__: List[str]
+            __root__: list[str]
         
         
         class Error(BaseModel):
@@ -2032,7 +2032,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             class Config:
                 allow_mutation = False
         
-            __root__: List[Api]
+            __root__: list[Api]
         
         
         class Event(BaseModel):
@@ -2058,7 +2058,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
         
@@ -2072,11 +2072,11 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             tag: Optional[str] = None
         
         
-        class Pets(RootModel[List[Pet]]):
+        class Pets(RootModel[list[Pet]]):
             model_config = ConfigDict(
                 frozen=True,
             )
-            root: List[Pet]
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -2088,11 +2088,11 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             tag: Optional[str] = None
         
         
-        class Users(RootModel[List[User]]):
+        class Users(RootModel[list[User]]):
             model_config = ConfigDict(
                 frozen=True,
             )
-            root: List[User]
+            root: list[User]
         
         
         class Id(RootModel[str]):
@@ -2102,11 +2102,11 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             root: str
         
         
-        class Rules(RootModel[List[str]]):
+        class Rules(RootModel[list[str]]):
             model_config = ConfigDict(
                 frozen=True,
             )
-            root: List[str]
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -2135,11 +2135,11 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
             )
         
         
-        class Apis(RootModel[List[Api]]):
+        class Apis(RootModel[list[Api]]):
             model_config = ConfigDict(
                 frozen=True,
             )
-            root: List[Api]
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -2367,7 +2367,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -2379,7 +2379,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     
     class Pets(BaseModel):
-        __root__: Optional[List[Pet]] = None
+        __root__: Optional[list[Pet]] = None
     
     
     class User(BaseModel):
@@ -2389,7 +2389,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     
     class Users(BaseModel):
-        __root__: Optional[List[User]] = None
+        __root__: Optional[list[User]] = None
     
     
     class Id(BaseModel):
@@ -2397,7 +2397,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     
     class Rules(BaseModel):
-        __root__: Optional[List[str]] = None
+        __root__: Optional[list[str]] = None
     
     
     class Error(BaseModel):
@@ -2421,7 +2421,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     
     class Apis(BaseModel):
-        __root__: Optional[List[Api]] = None
+        __root__: Optional[list[Api]] = None
     
     
     class Event(BaseModel):
@@ -2635,7 +2635,7 @@ of model definitions matters for documentation or readability.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import BaseModel, Field
     
@@ -2646,7 +2646,7 @@ of model definitions matters for documentation or readability.
     
     
     class DogRelationships(BaseModel):
-        people: Optional[List[Person]] = Field(None, title='People')
+        people: Optional[list[Person]] = Field(None, title='People')
     
     
     class Dog(DogBase, DogRelationships):
@@ -2658,7 +2658,7 @@ of model definitions matters for documentation or readability.
     
     
     class PersonRelationships(BaseModel):
-        people: Optional[List[Person]] = Field(None, title='People')
+        people: Optional[list[Person]] = Field(None, title='People')
     
     
     class Person(PersonBase, PersonRelationships):
@@ -2666,8 +2666,8 @@ of model definitions matters for documentation or readability.
     
     
     class PersonsBestFriend(BaseModel):
-        people: Optional[List[Person]] = Field(None, title='People')
-        dogs: Optional[List[Dog]] = Field(None, title='Dogs')
+        people: Optional[list[Person]] = Field(None, title='People')
+        dogs: Optional[list[Dog]] = Field(None, title='Dogs')
         dog_base: Optional[DogBase] = None
         dog_relationships: Optional[DogRelationships] = None
         person_base: Optional[PersonBase] = None
@@ -2750,7 +2750,7 @@ argument errors.
         from __future__ import annotations
         
         from dataclasses import dataclass
-        from typing import Any, List, Optional
+        from typing import Any, Optional
         
         
         @dataclass(frozen=True, kw_only=True)
@@ -2758,7 +2758,7 @@ argument errors.
             firstName: Optional[str] = None
             lastName: Optional[str] = None
             age: Optional[int] = None
-            friends: Optional[List[Any]] = None
+            friends: Optional[list[Any]] = None
             comment: None = None
         ```
 
@@ -2921,7 +2921,7 @@ argument errors.
         from __future__ import annotations
         
         from dataclasses import dataclass
-        from typing import List, Literal, Optional, TypeAlias
+        from typing import Literal, Optional, TypeAlias
         
         Boolean: TypeAlias = bool
         """
@@ -2949,38 +2949,38 @@ argument errors.
         
         @dataclass(frozen=True, kw_only=True)
         class Film:
-            characters: List[Person]
-            characters_ids: List[ID]
+            characters: list[Person]
+            characters_ids: list[ID]
             director: String
             episode_id: Int
             id: ID
             opening_crawl: String
-            planets: List[Planet]
-            planets_ids: List[ID]
+            planets: list[Planet]
+            planets_ids: list[ID]
             release_date: String
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
+            species: list[Species]
+            species_ids: list[ID]
+            starships: list[Starship]
+            starships_ids: list[ID]
             title: String
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
+            vehicles: list[Vehicle]
+            vehicles_ids: list[ID]
             producer: Optional[String] = None
             typename__: Optional[Literal['Film']] = 'Film'
         
         
         @dataclass(frozen=True, kw_only=True)
         class Person:
-            films: List[Film]
-            films_ids: List[ID]
+            films: list[Film]
+            films_ids: list[ID]
             id: ID
             name: String
-            species: List[Species]
-            species_ids: List[ID]
-            starships: List[Starship]
-            starships_ids: List[ID]
-            vehicles: List[Vehicle]
-            vehicles_ids: List[ID]
+            species: list[Species]
+            species_ids: list[ID]
+            starships: list[Starship]
+            starships_ids: list[ID]
+            vehicles: list[Vehicle]
+            vehicles_ids: list[ID]
             birth_year: Optional[String] = None
             eye_color: Optional[String] = None
             gender: Optional[String] = None
@@ -2995,12 +2995,12 @@ argument errors.
         
         @dataclass(frozen=True, kw_only=True)
         class Planet:
-            films: List[Film]
-            films_ids: List[ID]
+            films: list[Film]
+            films_ids: list[ID]
             id: ID
             name: String
-            residents: List[Person]
-            residents_ids: List[ID]
+            residents: list[Person]
+            residents_ids: list[ID]
             climate: Optional[String] = None
             diameter: Optional[String] = None
             gravity: Optional[String] = None
@@ -3014,12 +3014,12 @@ argument errors.
         
         @dataclass(frozen=True, kw_only=True)
         class Species:
-            films: List[Film]
-            films_ids: List[ID]
+            films: list[Film]
+            films_ids: list[ID]
             id: ID
             name: String
-            people: List[Person]
-            people_ids: List[ID]
+            people: list[Person]
+            people_ids: list[ID]
             average_height: Optional[String] = None
             average_lifespan: Optional[String] = None
             classification: Optional[String] = None
@@ -3033,12 +3033,12 @@ argument errors.
         
         @dataclass(frozen=True, kw_only=True)
         class Starship:
-            films: List[Film]
-            films_ids: List[ID]
+            films: list[Film]
+            films_ids: list[ID]
             id: ID
             name: String
-            pilots: List[Person]
-            pilots_ids: List[ID]
+            pilots: list[Person]
+            pilots_ids: list[ID]
             MGLT: Optional[String] = None
             cargo_capacity: Optional[String] = None
             consumables: Optional[String] = None
@@ -3056,12 +3056,12 @@ argument errors.
         
         @dataclass(frozen=True, kw_only=True)
         class Vehicle:
-            films: List[Film]
-            films_ids: List[ID]
+            films: list[Film]
+            films_ids: list[ID]
             id: ID
             name: String
-            pilots: List[Person]
-            pilots_ids: List[ID]
+            pilots: list[Person]
+            pilots_ids: list[ID]
             cargo_capacity: Optional[String] = None
             consumables: Optional[String] = None
             cost_in_credits: Optional[String] = None
@@ -3142,17 +3142,17 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             from __future__ import annotations
             
-            from typing import Any, List, Optional
+            from typing import Any, Optional
             
             from pydantic import BaseModel
             
             
             class MyObjItem(BaseModel):
-                items: Optional[List[Any]]
+                items: Optional[list[Any]]
             
             
             class Model(BaseModel):
-                my_obj: List[MyObjItem]
+                my_obj: list[MyObjItem]
             ```
 
         === "Pydantic v2"
@@ -3164,17 +3164,17 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             from __future__ import annotations
             
-            from typing import Any, List, Optional
+            from typing import Any, Optional
             
             from pydantic import BaseModel
             
             
             class MyObjItem(BaseModel):
-                items: Optional[List[Any]] = None
+                items: Optional[list[Any]] = None
             
             
             class Model(BaseModel):
-                my_obj: List[MyObjItem]
+                my_obj: list[MyObjItem]
             ```
 
     === "GraphQL"
@@ -3337,7 +3337,7 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             from __future__ import annotations
             
-            from typing import List, Literal, Optional, TypeAlias
+            from typing import Literal, Optional, TypeAlias
             
             from pydantic import BaseModel, Field
             
@@ -3366,31 +3366,31 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             
             class Film(BaseModel):
-                characters: List[Person]
-                characters_ids: List[ID]
+                characters: list[Person]
+                characters_ids: list[ID]
                 director: String
                 episode_id: Int
                 id: ID
                 opening_crawl: String
-                planets: List[Planet]
-                planets_ids: List[ID]
+                planets: list[Planet]
+                planets_ids: list[ID]
                 producer: Optional[String] = None
                 release_date: String
-                species: List[Species]
-                species_ids: List[ID]
-                starships: List[Starship]
-                starships_ids: List[ID]
+                species: list[Species]
+                species_ids: list[ID]
+                starships: list[Starship]
+                starships_ids: list[ID]
                 title: String
-                vehicles: List[Vehicle]
-                vehicles_ids: List[ID]
+                vehicles: list[Vehicle]
+                vehicles_ids: list[ID]
                 typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
             
             
             class Person(BaseModel):
                 birth_year: Optional[String] = None
                 eye_color: Optional[String] = None
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 gender: Optional[String] = None
                 hair_color: Optional[String] = None
                 height: Optional[Int] = None
@@ -3400,27 +3400,27 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 mass: Optional[Int] = None
                 name: String
                 skin_color: Optional[String] = None
-                species: List[Species]
-                species_ids: List[ID]
-                starships: List[Starship]
-                starships_ids: List[ID]
-                vehicles: List[Vehicle]
-                vehicles_ids: List[ID]
+                species: list[Species]
+                species_ids: list[ID]
+                starships: list[Starship]
+                starships_ids: list[ID]
+                vehicles: list[Vehicle]
+                vehicles_ids: list[ID]
                 typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
             
             
             class Planet(BaseModel):
                 climate: Optional[String] = None
                 diameter: Optional[String] = None
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 gravity: Optional[String] = None
                 id: ID
                 name: String
                 orbital_period: Optional[String] = None
                 population: Optional[String] = None
-                residents: List[Person]
-                residents_ids: List[ID]
+                residents: list[Person]
+                residents_ids: list[ID]
                 rotation_period: Optional[String] = None
                 surface_water: Optional[String] = None
                 terrain: Optional[String] = None
@@ -3433,14 +3433,14 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 classification: Optional[String] = None
                 designation: Optional[String] = None
                 eye_colors: Optional[String] = None
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 hair_colors: Optional[String] = None
                 id: ID
                 language: Optional[String] = None
                 name: String
-                people: List[Person]
-                people_ids: List[ID]
+                people: list[Person]
+                people_ids: list[ID]
                 skin_colors: Optional[String] = None
                 typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
             
@@ -3451,8 +3451,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 consumables: Optional[String] = None
                 cost_in_credits: Optional[String] = None
                 crew: Optional[String] = None
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 hyperdrive_rating: Optional[String] = None
                 id: ID
                 length: Optional[String] = None
@@ -3461,8 +3461,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 model: Optional[String] = None
                 name: String
                 passengers: Optional[String] = None
-                pilots: List[Person]
-                pilots_ids: List[ID]
+                pilots: list[Person]
+                pilots_ids: list[ID]
                 starship_class: Optional[String] = None
                 typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
             
@@ -3472,8 +3472,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 consumables: Optional[String] = None
                 cost_in_credits: Optional[String] = None
                 crew: Optional[String] = None
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 length: Optional[String] = None
                 manufacturer: Optional[String] = None
@@ -3481,8 +3481,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 model: Optional[String] = None
                 name: String
                 passengers: Optional[String] = None
-                pilots: List[Person]
-                pilots_ids: List[ID]
+                pilots: list[Person]
+                pilots_ids: list[ID]
                 vehicle_class: Optional[String] = None
                 typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
             
@@ -3501,7 +3501,7 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             from __future__ import annotations
             
             from dataclasses import dataclass
-            from typing import List, Literal, Optional, TypeAlias
+            from typing import Literal, Optional, TypeAlias
             
             Boolean: TypeAlias = bool
             """
@@ -3529,38 +3529,38 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             @dataclass
             class Film:
-                characters: List[Person]
-                characters_ids: List[ID]
+                characters: list[Person]
+                characters_ids: list[ID]
                 director: String
                 episode_id: Int
                 id: ID
                 opening_crawl: String
-                planets: List[Planet]
-                planets_ids: List[ID]
+                planets: list[Planet]
+                planets_ids: list[ID]
                 release_date: String
-                species: List[Species]
-                species_ids: List[ID]
-                starships: List[Starship]
-                starships_ids: List[ID]
+                species: list[Species]
+                species_ids: list[ID]
+                starships: list[Starship]
+                starships_ids: list[ID]
                 title: String
-                vehicles: List[Vehicle]
-                vehicles_ids: List[ID]
+                vehicles: list[Vehicle]
+                vehicles_ids: list[ID]
                 producer: Optional[String] = None
                 typename__: Optional[Literal['Film']] = 'Film'
             
             
             @dataclass
             class Person:
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 name: String
-                species: List[Species]
-                species_ids: List[ID]
-                starships: List[Starship]
-                starships_ids: List[ID]
-                vehicles: List[Vehicle]
-                vehicles_ids: List[ID]
+                species: list[Species]
+                species_ids: list[ID]
+                starships: list[Starship]
+                starships_ids: list[ID]
+                vehicles: list[Vehicle]
+                vehicles_ids: list[ID]
                 birth_year: Optional[String] = None
                 eye_color: Optional[String] = None
                 gender: Optional[String] = None
@@ -3575,12 +3575,12 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             @dataclass
             class Planet:
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 name: String
-                residents: List[Person]
-                residents_ids: List[ID]
+                residents: list[Person]
+                residents_ids: list[ID]
                 climate: Optional[String] = None
                 diameter: Optional[String] = None
                 gravity: Optional[String] = None
@@ -3594,12 +3594,12 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             @dataclass
             class Species:
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 name: String
-                people: List[Person]
-                people_ids: List[ID]
+                people: list[Person]
+                people_ids: list[ID]
                 average_height: Optional[String] = None
                 average_lifespan: Optional[String] = None
                 classification: Optional[String] = None
@@ -3613,12 +3613,12 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             @dataclass
             class Starship:
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 name: String
-                pilots: List[Person]
-                pilots_ids: List[ID]
+                pilots: list[Person]
+                pilots_ids: list[ID]
                 MGLT: Optional[String] = None
                 cargo_capacity: Optional[String] = None
                 consumables: Optional[String] = None
@@ -3636,12 +3636,12 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             @dataclass
             class Vehicle:
-                films: List[Film]
-                films_ids: List[ID]
+                films: list[Film]
+                films_ids: list[ID]
                 id: ID
                 name: String
-                pilots: List[Person]
-                pilots_ids: List[ID]
+                pilots: list[Person]
+                pilots_ids: list[ID]
                 cargo_capacity: Optional[String] = None
                 consumables: Optional[String] = None
                 cost_in_credits: Optional[String] = None
@@ -3893,7 +3893,7 @@ code duplication in the output.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import BaseModel, Field
     
@@ -3913,11 +3913,11 @@ code duplication in the output.
         name: Optional[str] = None
         animal: Optional[Animal] = 'dog'
         pet: Optional[Animal] = 'cat'
-        redistribute: Optional[List[RedistributeEnum]] = None
+        redistribute: Optional[list[RedistributeEnum]] = None
     
     
     class Redistribute(BaseModel):
-        __root__: List[RedistributeEnum] = Field(
+        __root__: list[RedistributeEnum] = Field(
             ..., description='Redistribute type for routes.'
         )
     ```
@@ -4256,7 +4256,7 @@ The `--strict-nullable` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional, Union
+    from typing import Optional, Union
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -4296,7 +4296,7 @@ The `--strict-nullable` flag configures the code generation behavior.
     
     
     class Apis(BaseModel):
-        __root__: Optional[List[Api]] = Field(...)
+        __root__: Optional[list[Api]] = Field(...)
     
     
     class EmailItem(BaseModel):
@@ -4307,7 +4307,7 @@ The `--strict-nullable` flag configures the code generation behavior.
     
     
     class Email(BaseModel):
-        __root__: List[EmailItem]
+        __root__: list[EmailItem]
     
     
     class Id(BaseModel):
@@ -4327,12 +4327,12 @@ The `--strict-nullable` flag configures the code generation behavior.
     
     
     class Notes(BaseModel):
-        comments: List[str] = Field(default_factory=list)
+        comments: list[str] = Field(default_factory=list)
     
     
     class Options(BaseModel):
-        comments: List[Optional[str]]
-        oneOfComments: List[Union[Optional[str], Optional[float]]]
+        comments: list[Optional[str]]
+        oneOfComments: list[Union[Optional[str], Optional[float]]]
     ```
 
 ---
@@ -4548,7 +4548,7 @@ default to None.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -4560,7 +4560,7 @@ default to None.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -4570,7 +4570,7 @@ default to None.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -4578,7 +4578,7 @@ default to None.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -4602,7 +4602,7 @@ default to None.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -4909,7 +4909,7 @@ default values.
     
     from __future__ import annotations
     
-    from typing import List, Literal, Optional, TypeAlias
+    from typing import Literal, Optional, TypeAlias
     
     from pydantic import BaseModel, Field
     
@@ -4927,12 +4927,12 @@ default values.
     
     class A(BaseModel):
         field: String
-        listField: List[String]
-        listListField: List[List[String]]
-        listOptionalField: List[Optional[String]]
+        listField: list[String]
+        listListField: list[list[String]]
+        listOptionalField: list[Optional[String]]
         optionalField: Optional[String] = None
-        optionalListField: Optional[List[String]] = None
-        optionalListOptionalField: Optional[List[Optional[String]]] = None
+        optionalListField: Optional[list[String]] = None
+        optionalListOptionalField: Optional[list[Optional[String]]] = None
         typename__: Optional[Literal['A']] = Field(default='A', alias='__typename')
     ```
 
@@ -5244,7 +5244,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import List, Literal, Optional, Union
+    from typing import Literal, Optional, Union
     
     from pydantic import BaseModel, Field
     
@@ -5265,7 +5265,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class Kind1(Enum):
@@ -5320,7 +5320,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     
     
     class ArrayEnum(BaseModel):
-        __root__: List[Union[Literal['cat'], Literal['dog']]]
+        __root__: list[Union[Literal['cat'], Literal['dog']]]
     
     
     class NestedVersionEnum(Enum):
@@ -5444,8 +5444,6 @@ polymorphic types and inheritance hierarchies.
     
     from __future__ import annotations
     
-    from typing import List
-    
     from pydantic import BaseModel, Field, SerializeAsAny
     
     
@@ -5464,7 +5462,7 @@ polymorphic types and inheritance hierarchies.
         user_field: SerializeAsAny[User] = Field(
             ..., description='Field that should use SerializeAsAny'
         )
-        user_list: List[SerializeAsAny[User]] = Field(
+        user_list: list[SerializeAsAny[User]] = Field(
             ..., description='List of users that should use SerializeAsAny'
         )
     ```

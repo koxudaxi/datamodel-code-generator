@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -28,6 +28,6 @@ class Color(Enum):
 
 
 class Car(BaseModel):
-    colorList: Optional[List[Color]] = [Color.RED]
+    colorList: Optional[list[Color]] = [Color.RED]
     colorOne: Optional[Color] = Color.GREEN
     typename__: Optional[Literal['Car']] = Field('Car', alias='__typename')

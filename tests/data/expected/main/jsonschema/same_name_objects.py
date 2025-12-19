@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel, Extra
 
@@ -21,7 +21,7 @@ class Friends(BaseModel):
 
 
 class FriendsModel(BaseModel):
-    __root__: List[Any]
+    __root__: list[Any]
 
 
 class Tst2(BaseModel):

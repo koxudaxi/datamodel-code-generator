@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, confloat, constr
 
@@ -52,4 +52,4 @@ class Item(ProjectedItem):
     code: StringConstraint
     score: confloat(ge=0.0, le=100.0)
     config: BaseConfig
-    metadata: Dict[str, str]
+    metadata: dict[str, str]

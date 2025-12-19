@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel, Extra, Field
 
 from . import food as food_1
@@ -17,8 +15,8 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: str | None = Field(None, example='(555) 555-1234')
-    food: List[food_1.Noodle | food_1.Soup] | None = None
+    food: list[food_1.Noodle | food_1.Soup] | None = None
 
 
 class Friends(BaseModel):
-    __root__: List[Friend] = Field(..., title='Friends')
+    __root__: list[Friend] = Field(..., title='Friends')

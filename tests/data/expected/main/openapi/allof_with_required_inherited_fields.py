@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -16,6 +16,6 @@ class ProjectedPet(BaseModel):
 
 class Pet(ProjectedPet):
     tag: Optional[str] = None
-    opts: List[str]
+    opts: list[str]
     id: int
     name: str
