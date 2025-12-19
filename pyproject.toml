@@ -207,7 +207,7 @@ lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests,docs/cli-reference'
+skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md'
 
 [tool.pytest.ini_options]
 filterwarnings = [
