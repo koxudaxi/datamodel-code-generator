@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -14,4 +14,4 @@ class Bar(BaseModel):
 
 
 class Foo(BaseModel):
-    bar: Dict[str, Bar]
+    bar: dict[str, Bar]

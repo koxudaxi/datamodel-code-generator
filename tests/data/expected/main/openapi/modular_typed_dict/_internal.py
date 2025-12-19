@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, NotRequired, TypeAlias, TypedDict
+from typing import NotRequired, TypeAlias, TypedDict
 
 from . import models
 
@@ -45,14 +45,14 @@ class Tea_1(TypedDict):
     flavour: NotRequired[str]
     id: NotRequired[Id]
     self: NotRequired[Tea_1]
-    optional: NotRequired[List[Optional]]
+    optional: NotRequired[list[Optional]]
 
 
 class TeaClone(TypedDict):
     flavour: NotRequired[str]
     id: NotRequired[Id]
     self: NotRequired[Tea_1]
-    optional: NotRequired[List[Optional]]
+    optional: NotRequired[list[Optional]]
 
 
-ListModel: TypeAlias = List[Tea_1]
+List: TypeAlias = list[Tea_1]

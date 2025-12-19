@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class Item(BaseModel):
-    oofield: Optional[List[int]]
+    oofield: Optional[list[int]]
 
 
 class Model(BaseModel):
-    items: List[Item]
+    items: list[Item]

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -32,12 +32,12 @@ class AllOfResult(User):
 class Model(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
-    result: Dict[str, int]
-    nested_object_result: Dict[str, NestedObjectResult]
-    nested_enum_result: Dict[str, Literal['red', 'green']]
-    all_of_result: Optional[Dict[str, AllOfResult]] = None
-    one_of_result: Optional[Dict[str, Union[User, OneOfResult]]] = None
-    any_of_result: Optional[Dict[str, Union[User, AnyOfResult]]] = None
-    all_of_with_unknown_object: Optional[Dict[str, User]] = None
-    objectRef: Optional[Dict[str, User]] = None
-    deepNestedObjectRef: Optional[Dict[str, Dict[str, Dict[str, User]]]] = None
+    result: dict[str, int]
+    nested_object_result: dict[str, NestedObjectResult]
+    nested_enum_result: dict[str, Literal['red', 'green']]
+    all_of_result: Optional[dict[str, AllOfResult]] = None
+    one_of_result: Optional[dict[str, Union[User, OneOfResult]]] = None
+    any_of_result: Optional[dict[str, Union[User, AnyOfResult]]] = None
+    all_of_with_unknown_object: Optional[dict[str, User]] = None
+    objectRef: Optional[dict[str, User]] = None
+    deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, User]]]] = None

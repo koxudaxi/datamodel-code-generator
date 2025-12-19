@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -30,7 +30,7 @@ class ProcessingStatusDetail(BaseModel):
 
 
 class ProcessingTasksTitle(BaseModel):
-    __root__: List[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
+    __root__: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
 
 
 class ExtendedProcessingTask(BaseModel):
@@ -40,7 +40,7 @@ class ExtendedProcessingTask(BaseModel):
 
 
 class ExtendedProcessingTasksTitle(BaseModel):
-    __root__: List[ExtendedProcessingTask] = Field(
+    __root__: list[ExtendedProcessingTask] = Field(
         ..., title='Extended Processing Tasks Title'
     )
 

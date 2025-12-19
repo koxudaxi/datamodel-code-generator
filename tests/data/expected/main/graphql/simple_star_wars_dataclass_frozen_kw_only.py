@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -33,38 +33,38 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 @dataclass(frozen=True, kw_only=True)
 class Film:
-    characters: List[Person]
-    characters_ids: List[ID]
+    characters: list[Person]
+    characters_ids: list[ID]
     director: String
     episode_id: Int
     id: ID
     opening_crawl: String
-    planets: List[Planet]
-    planets_ids: List[ID]
+    planets: list[Planet]
+    planets_ids: list[ID]
     release_date: String
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
     title: String
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
     producer: Optional[String] = None
     typename__: Optional[Literal['Film']] = 'Film'
 
 
 @dataclass(frozen=True, kw_only=True)
 class Person:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
     birth_year: Optional[String] = None
     eye_color: Optional[String] = None
     gender: Optional[String] = None
@@ -79,12 +79,12 @@ class Person:
 
 @dataclass(frozen=True, kw_only=True)
 class Planet:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    residents: List[Person]
-    residents_ids: List[ID]
+    residents: list[Person]
+    residents_ids: list[ID]
     climate: Optional[String] = None
     diameter: Optional[String] = None
     gravity: Optional[String] = None
@@ -98,12 +98,12 @@ class Planet:
 
 @dataclass(frozen=True, kw_only=True)
 class Species:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    people: List[Person]
-    people_ids: List[ID]
+    people: list[Person]
+    people_ids: list[ID]
     average_height: Optional[String] = None
     average_lifespan: Optional[String] = None
     classification: Optional[String] = None
@@ -117,12 +117,12 @@ class Species:
 
 @dataclass(frozen=True, kw_only=True)
 class Starship:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    pilots: List[Person]
-    pilots_ids: List[ID]
+    pilots: list[Person]
+    pilots_ids: list[ID]
     MGLT: Optional[String] = None
     cargo_capacity: Optional[String] = None
     consumables: Optional[String] = None
@@ -140,12 +140,12 @@ class Starship:
 
 @dataclass(frozen=True, kw_only=True)
 class Vehicle:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    pilots: List[Person]
-    pilots_ids: List[ID]
+    pilots: list[Person]
+    pilots_ids: list[ID]
     cargo_capacity: Optional[String] = None
     consumables: Optional[String] = None
     cost_in_credits: Optional[String] = None

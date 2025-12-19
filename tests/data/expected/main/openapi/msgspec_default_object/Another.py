@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, TypeAlias, Union
+from typing import TypeAlias, Union
 
 from msgspec import Struct, UnsetType, convert, field
 
@@ -18,6 +18,6 @@ class Bar(Struct):
     original_foo: Union[Foo_1, UnsetType] = field(
         default_factory=lambda: convert({'text': 'abc', 'number': 123}, type=Foo_1)
     )
-    nested_foo: Union[List[Nested.Foo], UnsetType] = field(
+    nested_foo: Union[list[Nested.Foo], UnsetType] = field(
         default_factory=lambda: convert(['abc', 'efg'], type=list[Nested.Foo])
     )

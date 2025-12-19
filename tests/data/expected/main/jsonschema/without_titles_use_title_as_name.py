@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel
 
@@ -30,7 +30,7 @@ class ProcessingStatusUnion(BaseModel):
 
 
 class Model(BaseModel):
-    __root__: List[ProcessingTask]
+    __root__: list[ProcessingTask]
 
 
 class ExtendedProcessingTask(BaseModel):
@@ -38,7 +38,7 @@ class ExtendedProcessingTask(BaseModel):
 
 
 class ExtendedProcessingTasks(BaseModel):
-    __root__: List[ExtendedProcessingTask]
+    __root__: list[ExtendedProcessingTask]
 
 
 class ProcessingTask(BaseModel):

@@ -6,7 +6,7 @@ This is a multi-line docstring used for testing.
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -52,18 +52,18 @@ class Tea_1(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
     self: Optional[Tea_1] = None
-    optional: Optional[List[OptionalModel]] = None
+    optional: Optional[list[OptionalModel]] = None
 
 
 class TeaClone(BaseModel):
     flavour: Optional[str] = None
     id: Optional[Id] = None
     self: Optional[Tea_1] = None
-    optional: Optional[List[OptionalModel]] = None
+    optional: Optional[list[OptionalModel]] = None
 
 
-class ListModel(BaseModel):
-    __root__: List[Tea_1]
+class List(BaseModel):
+    __root__: list[Tea_1]
 
 
 Tea_1.update_forward_refs()

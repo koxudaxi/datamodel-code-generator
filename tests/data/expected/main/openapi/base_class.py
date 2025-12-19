@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import AnyUrl, Field
 
@@ -18,7 +18,7 @@ class Pet(Base):
 
 
 class Pets(Base):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class User(Base):
@@ -28,7 +28,7 @@ class User(Base):
 
 
 class Users(Base):
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(Base):
@@ -36,7 +36,7 @@ class Id(Base):
 
 
 class Rules(Base):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(Base):
@@ -60,7 +60,7 @@ class Api(Base):
 
 
 class Apis(Base):
-    __root__: List[Api]
+    __root__: list[Api]
 
 
 class Event(Base):

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -14,4 +14,4 @@ class Model(BaseModel):
 
 
 class ForwardingArray(BaseModel):
-    __root__: List[Any]
+    __root__: list[Any]

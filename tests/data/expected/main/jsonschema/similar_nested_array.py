@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -19,7 +19,7 @@ class Datum(BaseModel):
 
 
 class ObjectA(BaseModel):
-    data: Optional[List[Datum]] = None
+    data: Optional[list[Datum]] = None
 
 
 class Datum1(BaseModel):
@@ -27,7 +27,7 @@ class Datum1(BaseModel):
 
 
 class ObjectB(BaseModel):
-    data: Optional[List[Datum1]] = None
+    data: Optional[list[Datum1]] = None
 
 
 class KeyC(BaseModel):
@@ -63,4 +63,4 @@ class KeyCEnum1(Enum):
 
 
 class ObjectD(BaseModel):
-    keyC: Optional[List[Union[KeyCItem, KeyCItem1, KeyCEnum, KeyCEnum1]]] = None
+    keyC: Optional[list[Union[KeyCItem, KeyCItem1, KeyCEnum, KeyCEnum1]]] = None

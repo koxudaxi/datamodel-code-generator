@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import Field, RootModel
 
 
-class Products(RootModel[List[str]]):
-    root: List[str] = Field(
+class Products(RootModel[list[str]]):
+    root: list[str] = Field(
         ...,
         description='The products in the catalog',
         max_length=100,

@@ -4,6 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, TypeAlias
+from typing import TypeAlias
 
-Item: TypeAlias = List["Item"]
+Item: TypeAlias = list["Item"]

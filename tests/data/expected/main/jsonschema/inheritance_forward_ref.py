@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,8 +19,8 @@ class PersonBase(BaseModel):
 
 
 class PersonsBestFriend(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
-    dogs: Optional[List[Dog]] = Field(None, title='Dogs')
+    people: Optional[list[Person]] = Field(None, title='People')
+    dogs: Optional[list[Dog]] = Field(None, title='Dogs')
     dog_base: Optional[DogBase] = None
     dog_relationships: Optional[DogRelationships] = None
     person_base: Optional[PersonBase] = None
@@ -28,11 +28,11 @@ class PersonsBestFriend(BaseModel):
 
 
 class DogRelationships(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
+    people: Optional[list[Person]] = Field(None, title='People')
 
 
 class PersonRelationships(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
+    people: Optional[list[Person]] = Field(None, title='People')
 
 
 class Dog(DogBase, DogRelationships):

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Extra, Field, conint
 
@@ -48,23 +48,23 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: Optional[str] = Field(None, example='(555) 555-1234')
-    food: Optional[List[Union[Noodle, Soup]]] = None
+    food: Optional[list[Union[Noodle, Soup]]] = None
 
 
 class Friends(BaseModel):
-    __root__: List[Friend] = Field(..., title='Friends')
+    __root__: list[Friend] = Field(..., title='Friends')
 
 
 class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
-    pets: Optional[List[Pet]] = None
+    pets: Optional[list[Pet]] = None
     friends: Optional[Friends] = None
     robot: Optional[Robot] = None
     comment: None = None
-    drink: Optional[List[Union[Coffee, Tea]]] = None
-    food: Optional[List[Union[Noodle, Soup]]] = None
+    drink: Optional[list[Union[Coffee, Tea]]] = None
+    food: Optional[list[Union[Noodle, Soup]]] = None
 
 
 class Robot(Pet):

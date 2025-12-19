@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field, conint
 
@@ -26,12 +26,12 @@ class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
     age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
-    pets: Optional[List[pet_1.Pet]] = None
+    pets: Optional[list[pet_1.Pet]] = None
     friends: Optional[friends_1.Friends] = None
     robot: Optional[Robot] = None
     comment: None = None
-    drink: Optional[List[Union[coffee.Coffee, tea.Tea]]] = None
-    food: Optional[List[Union[food_1.Noodle, food_1.Soup]]] = None
+    drink: Optional[list[Union[coffee.Coffee, tea.Tea]]] = None
+    food: Optional[list[Union[food_1.Noodle, food_1.Soup]]] = None
 
 
 Person.update_forward_refs()

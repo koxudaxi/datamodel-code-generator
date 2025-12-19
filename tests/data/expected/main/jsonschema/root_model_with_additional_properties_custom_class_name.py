@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -38,12 +38,12 @@ class CustomAllOfResult(CustomUser):
 class CustomModel(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
-    result: Dict[str, int]
-    nested_object_result: Dict[str, CustomNestedObjectResult]
-    nested_enum_result: Dict[str, CustomNestedEnumResult]
-    all_of_result: Optional[Dict[str, CustomAllOfResult]] = None
-    one_of_result: Optional[Dict[str, Union[CustomUser, CustomOneOfResult]]] = None
-    any_of_result: Optional[Dict[str, Union[CustomUser, CustomAnyOfResult]]] = None
-    all_of_with_unknown_object: Optional[Dict[str, CustomUser]] = None
-    objectRef: Optional[Dict[str, CustomUser]] = None
-    deepNestedObjectRef: Optional[Dict[str, Dict[str, Dict[str, CustomUser]]]] = None
+    result: dict[str, int]
+    nested_object_result: dict[str, CustomNestedObjectResult]
+    nested_enum_result: dict[str, CustomNestedEnumResult]
+    all_of_result: Optional[dict[str, CustomAllOfResult]] = None
+    one_of_result: Optional[dict[str, Union[CustomUser, CustomOneOfResult]]] = None
+    any_of_result: Optional[dict[str, Union[CustomUser, CustomAnyOfResult]]] = None
+    all_of_with_unknown_object: Optional[dict[str, CustomUser]] = None
+    objectRef: Optional[dict[str, CustomUser]] = None
+    deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, CustomUser]]]] = None

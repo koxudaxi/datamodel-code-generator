@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,11 +26,11 @@ class Pet(BaseModel):
 
 
 class Family(BaseModel):
-    __root__: List[ID]
+    __root__: list[ID]
 
 
 class FamilyPets(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Person(BaseModel):

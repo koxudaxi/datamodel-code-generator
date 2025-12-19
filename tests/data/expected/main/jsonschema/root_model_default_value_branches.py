@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional
+from typing import Annotated, Optional
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -20,6 +20,6 @@ class Model(BaseModel):
     ]
     count_no_default: Optional[CountType] = None
     count_list_default: Annotated[
-        Optional[List[CountType]],
+        Optional[list[CountType]],
         Field(default_factory=lambda: [CountType.model_validate(v) for v in [1, 2, 3]]),
     ]

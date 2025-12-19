@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ class Pet1(BaseModel):
 
 
 class Pet(BaseModel):
-    __root__: Union[List[Pet1], Pet1] = Field(..., title='Pet')
+    __root__: Union[list[Pet1], Pet1] = Field(..., title='Pet')
 
 
 class CombinedEnum1(Enum):
@@ -38,7 +38,7 @@ class CombinedSelf1(BaseModel):
 
 
 class CombinedSelf(BaseModel):
-    __root__: Union[List[CombinedSelf1], CombinedSelf1]
+    __root__: Union[list[CombinedSelf1], CombinedSelf1]
 
 
 class CombinedSelfEnum1(BaseModel):
@@ -52,7 +52,7 @@ class CombinedSelfEnum2(Enum):
 
 class CombinedSelfEnum(BaseModel):
     __root__: Union[
-        List[Union[CombinedSelfEnum1, CombinedSelfEnum2]],
+        list[Union[CombinedSelfEnum1, CombinedSelfEnum2]],
         CombinedSelfEnum1,
         CombinedSelfEnum2,
     ]
@@ -76,7 +76,7 @@ class CustomRootModel(BaseModel):
 
 
 class CombinedEnum(BaseModel):
-    __root__: Union[List[Kind], CombinedEnum1]
+    __root__: Union[list[Kind], CombinedEnum1]
 
 
 class CombinedAllOf1(Kind, Id):
@@ -84,7 +84,7 @@ class CombinedAllOf1(Kind, Id):
 
 
 class CombinedAllOf(BaseModel):
-    __root__: Union[List[Kind], CombinedAllOf1]
+    __root__: Union[list[Kind], CombinedAllOf1]
 
 
 class CombinedAllOfField(Kind, Id):
@@ -96,11 +96,11 @@ class CombinedAllOfObjectField(Kind, Id):
 
 
 class CombinedObjectField(BaseModel):
-    CombinedEnumField: Optional[Union[List[Kind], CombinedEnumField]] = None
-    CombinedAllOfField: Optional[Union[List[Kind], CombinedAllOfField]] = None
-    CombinedObjectField: Optional[Union[List[Kind], CombinedObjectField1]] = None
+    CombinedEnumField: Optional[Union[list[Kind], CombinedEnumField]] = None
+    CombinedAllOfField: Optional[Union[list[Kind], CombinedAllOfField]] = None
+    CombinedObjectField: Optional[Union[list[Kind], CombinedObjectField1]] = None
     CombinedAllOfObjectField: Optional[
-        Union[List[Kind], CombinedAllOfObjectField]
+        Union[list[Kind], CombinedAllOfObjectField]
     ] = None
 
 
@@ -110,7 +110,7 @@ class CombinedSelfAllOf1(Kind, Id):
 
 class CombinedSelfAllOf(BaseModel):
     __root__: Union[
-        List[Union[CombinedSelfAllOf1, CombinedSelfAllOf2]],
+        list[Union[CombinedSelfAllOf1, CombinedSelfAllOf2]],
         CombinedSelfAllOf1,
         CombinedSelfAllOf2,
     ]

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from custom.models import Animal, Person, Property
 
@@ -20,13 +20,13 @@ class Pet(Animal):
 class Child(Person):
     school: Optional[str] = None
     grade: Optional[float] = None
-    pets: Optional[List[Pet]] = None
+    pets: Optional[list[Pet]] = None
 
 
 class Owner(Person):
     job: Optional[str] = None
     spouse: Optional[Spouse] = None
-    children: Optional[List[Child]] = None
+    children: Optional[list[Child]] = None
 
 
 class House(Property):

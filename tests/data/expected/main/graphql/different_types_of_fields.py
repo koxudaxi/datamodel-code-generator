@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -22,18 +22,18 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class A(BaseModel):
     field: String
-    listField: List[String]
-    listListField: List[List[String]]
-    listListOptionalField: List[List[Optional[String]]]
-    listOptionalField: List[Optional[String]]
-    listOptionalListField: List[Optional[List[String]]]
-    listOptionalListOptionalField: List[Optional[List[Optional[String]]]]
+    listField: list[String]
+    listListField: list[list[String]]
+    listListOptionalField: list[list[Optional[String]]]
+    listOptionalField: list[Optional[String]]
+    listOptionalListField: list[Optional[list[String]]]
+    listOptionalListOptionalField: list[Optional[list[Optional[String]]]]
     optionalField: Optional[String] = None
-    optionalListListField: Optional[List[List[String]]] = None
-    optionalListListOptionalField: Optional[List[List[Optional[String]]]] = None
-    optionalListOptionalField: Optional[List[Optional[String]]] = None
-    optionalListOptionalListField: Optional[List[Optional[List[String]]]] = None
+    optionalListListField: Optional[list[list[String]]] = None
+    optionalListListOptionalField: Optional[list[list[Optional[String]]]] = None
+    optionalListOptionalField: Optional[list[Optional[String]]] = None
+    optionalListOptionalListField: Optional[list[Optional[list[String]]]] = None
     optionalListOptionalListOptionalField: Optional[
-        List[Optional[List[Optional[String]]]]
+        list[Optional[list[Optional[String]]]]
     ] = None
     typename__: Optional[Literal['A']] = Field('A', alias='__typename')

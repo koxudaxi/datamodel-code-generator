@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ class Bar(BaseModel):
     foo: Optional[Foo] = Field(
         default_factory=lambda: Foo.parse_obj({'text': 'abc', 'number': 123})
     )
-    baz: Optional[List[Foo]] = Field(
+    baz: Optional[list[Foo]] = Field(
         default_factory=lambda: [
             Foo.parse_obj(v)
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]

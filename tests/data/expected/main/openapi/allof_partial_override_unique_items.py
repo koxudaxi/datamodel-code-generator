@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Optional, Set
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class Thing(BaseModel):
-    tags: Optional[Set[str]] = Field(None, unique_items=True)
+    tags: Optional[set[str]] = Field(None, unique_items=True)
 
 
 class Person(Thing):
-    tags: Optional[Set[str]] = Field({'tag2'}, unique_items=True)
+    tags: Optional[set[str]] = Field({'tag2'}, unique_items=True)

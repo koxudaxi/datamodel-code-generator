@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Kind1(Enum):
@@ -81,7 +81,7 @@ class SingleEnum(BaseModel):
 
 
 class ArrayEnum(BaseModel):
-    __root__: List[Union[Literal['cat'], Literal['dog']]]
+    __root__: list[Union[Literal['cat'], Literal['dog']]]
 
 
 class NestedVersionEnum(Enum):

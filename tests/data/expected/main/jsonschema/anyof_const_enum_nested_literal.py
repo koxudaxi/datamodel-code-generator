@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
 
 class Config(BaseModel):
     mode: Optional[Literal['fast', 'slow']] = Field(None, title='Mode')
-    modes: Optional[List[Literal['a', 'b']]] = None
+    modes: Optional[list[Literal['a', 'b']]] = None

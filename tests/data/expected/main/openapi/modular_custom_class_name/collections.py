@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -13,15 +13,15 @@ from . import models
 
 
 class CustomPets(BaseModel):
-    __root__: List[models.CustomPet]
+    __root__: list[models.CustomPet]
 
 
 class CustomUsers(BaseModel):
-    __root__: List[models.CustomUser]
+    __root__: list[models.CustomUser]
 
 
 class CustomRules(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class CustomStage(Enum):
@@ -48,4 +48,4 @@ class CustomApi(BaseModel):
 
 
 class CustomApis(BaseModel):
-    __root__: List[CustomApi]
+    __root__: list[CustomApi]

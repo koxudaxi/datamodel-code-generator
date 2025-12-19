@@ -3,17 +3,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
 
 class Thing(BaseModel):
-    attributes: Optional[Dict[str, Any]] = None
+    attributes: Optional[dict[str, Any]] = None
 
 
 class Thang(BaseModel):
-    attributes: Optional[List[Dict[str, Any]]] = None
+    attributes: Optional[list[dict[str, Any]]] = None
 
 
 class Others(BaseModel):

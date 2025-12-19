@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -50,18 +50,18 @@ class CustomTea_1(BaseModel):
     flavour: Optional[str] = None
     id: Optional[CustomId] = None
     self: Optional[CustomTea_1] = None
-    optional: Optional[List[CustomOptional]] = None
+    optional: Optional[list[CustomOptional]] = None
 
 
 class CustomTeaClone(BaseModel):
     flavour: Optional[str] = None
     id: Optional[CustomId] = None
     self: Optional[CustomTea_1] = None
-    optional: Optional[List[CustomOptional]] = None
+    optional: Optional[list[CustomOptional]] = None
 
 
 class CustomList(BaseModel):
-    __root__: List[CustomTea_1]
+    __root__: list[CustomTea_1]
 
 
 CustomTea_1.update_forward_refs()

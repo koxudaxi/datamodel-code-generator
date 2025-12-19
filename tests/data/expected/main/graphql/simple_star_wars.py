@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -33,31 +33,31 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 
 class Film(BaseModel):
-    characters: List[Person]
-    characters_ids: List[ID]
+    characters: list[Person]
+    characters_ids: list[ID]
     director: String
     episode_id: Int
     id: ID
     opening_crawl: String
-    planets: List[Planet]
-    planets_ids: List[ID]
+    planets: list[Planet]
+    planets_ids: list[ID]
     producer: Optional[String] = None
     release_date: String
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
     title: String
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
     typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
 
 
 class Person(BaseModel):
     birth_year: Optional[String] = None
     eye_color: Optional[String] = None
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     gender: Optional[String] = None
     hair_color: Optional[String] = None
     height: Optional[Int] = None
@@ -67,27 +67,27 @@ class Person(BaseModel):
     mass: Optional[Int] = None
     name: String
     skin_color: Optional[String] = None
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
     typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
 
 
 class Planet(BaseModel):
     climate: Optional[String] = None
     diameter: Optional[String] = None
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     gravity: Optional[String] = None
     id: ID
     name: String
     orbital_period: Optional[String] = None
     population: Optional[String] = None
-    residents: List[Person]
-    residents_ids: List[ID]
+    residents: list[Person]
+    residents_ids: list[ID]
     rotation_period: Optional[String] = None
     surface_water: Optional[String] = None
     terrain: Optional[String] = None
@@ -100,14 +100,14 @@ class Species(BaseModel):
     classification: Optional[String] = None
     designation: Optional[String] = None
     eye_colors: Optional[String] = None
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     hair_colors: Optional[String] = None
     id: ID
     language: Optional[String] = None
     name: String
-    people: List[Person]
-    people_ids: List[ID]
+    people: list[Person]
+    people_ids: list[ID]
     skin_colors: Optional[String] = None
     typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
 
@@ -118,8 +118,8 @@ class Starship(BaseModel):
     consumables: Optional[String] = None
     cost_in_credits: Optional[String] = None
     crew: Optional[String] = None
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     hyperdrive_rating: Optional[String] = None
     id: ID
     length: Optional[String] = None
@@ -128,8 +128,8 @@ class Starship(BaseModel):
     model: Optional[String] = None
     name: String
     passengers: Optional[String] = None
-    pilots: List[Person]
-    pilots_ids: List[ID]
+    pilots: list[Person]
+    pilots_ids: list[ID]
     starship_class: Optional[String] = None
     typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
 
@@ -139,8 +139,8 @@ class Vehicle(BaseModel):
     consumables: Optional[String] = None
     cost_in_credits: Optional[String] = None
     crew: Optional[String] = None
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     length: Optional[String] = None
     manufacturer: Optional[String] = None
@@ -148,8 +148,8 @@ class Vehicle(BaseModel):
     model: Optional[String] = None
     name: String
     passengers: Optional[String] = None
-    pilots: List[Person]
-    pilots_ids: List[ID]
+    pilots: list[Person]
+    pilots_ids: list[ID]
     vehicle_class: Optional[String] = None
     typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
 

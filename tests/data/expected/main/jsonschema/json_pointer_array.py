@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Union
+from typing import Union
 
 from pydantic import BaseModel, EmailStr
 
@@ -18,11 +18,11 @@ class Error(BaseModel):
 
 
 class Model1(BaseModel):
-    emails: List[Email]
+    emails: list[Email]
 
 
 class Model2(BaseModel):
-    errors: List[Error]
+    errors: list[Error]
 
 
 class Model(BaseModel):
