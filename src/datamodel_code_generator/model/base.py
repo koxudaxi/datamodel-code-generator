@@ -248,6 +248,8 @@ class DataModelFieldBase(_BaseModel):
             )
         ]
 
+        if has_union:
+            imports.append((IMPORT_UNION,))
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.needs_annotated_import:

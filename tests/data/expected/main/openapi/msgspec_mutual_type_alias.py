@@ -9,4 +9,4 @@ from typing import TypeAlias, Union
 NodeA: TypeAlias = Union[int, "NodeB"]
 
 
-NodeB: TypeAlias = Union[str, NodeA]
+NodeB: TypeAlias = str | NodeA

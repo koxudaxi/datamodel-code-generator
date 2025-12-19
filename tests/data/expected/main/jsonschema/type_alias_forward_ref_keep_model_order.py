@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias, TypedDict, Union
+from typing import Literal, TypeAlias, TypedDict
 
 
 class BlobPart(TypedDict):
@@ -20,4 +20,4 @@ class TextPart(TypedDict):
     content: str
 
 
-SystemInstructions: TypeAlias = list[Union[TextPart, BlobPart]]
+SystemInstructions: TypeAlias = list[TextPart | BlobPart]
