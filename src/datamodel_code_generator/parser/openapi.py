@@ -214,6 +214,7 @@ class OpenAPIParser(JsonSchemaParser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
@@ -311,6 +312,7 @@ class OpenAPIParser(JsonSchemaParser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -520,7 +522,7 @@ class OpenAPIParser(JsonSchemaParser):
                 self.parse_object(name, obj, path)
         elif obj.is_object:
             data_type = self.parse_object(name, obj, path)
-        elif obj.enum:  # pragma: no cover
+        elif obj.enum and not self.ignore_enum_constraints:  # pragma: no cover
             data_type = self.parse_enum(name, obj, path)
         elif obj.ref:  # pragma: no cover
             data_type = self.get_ref_data_type(obj.ref)

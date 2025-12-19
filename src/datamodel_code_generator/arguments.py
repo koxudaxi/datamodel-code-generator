@@ -349,6 +349,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--ignore-enum-constraints",
+    help="Ignore enum constraints and use the base type (e.g., str, int) instead of generating Enum classes",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--field-constraints",
     help="Use field constraints and not con* annotations",
     action="store_true",
