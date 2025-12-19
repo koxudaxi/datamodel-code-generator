@@ -39,7 +39,7 @@ providing fine-grained control over generated names independent of schema defini
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --aliases openapi/aliases.json --target-python 3.10 # (1)!
+    datamodel-codegen --input schema.json --aliases openapi/aliases.json --target-python-version 3.10 # (1)!
     ```
 
     1. :material-arrow-left: `--aliases` - the option documented here

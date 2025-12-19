@@ -783,7 +783,7 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
 @pytest.mark.cli_doc(
     options=["--aliases"],
     input_schema="openapi/api.yaml",
-    cli_args=["--aliases", "openapi/aliases.json", "--target-python", "3.10"],
+    cli_args=["--aliases", "openapi/aliases.json", "--target-python-version", "3.10"],
     model_outputs={
         "pydantic_v1": "openapi/with_aliases.py",
         "msgspec": "openapi/with_aliases_msgspec.py",
@@ -805,7 +805,7 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
         extra_args=[
             "--aliases",
             str(OPEN_API_DATA_PATH / "aliases.json"),
-            "--target-python",
+            "--target-python-version",
             "3.10",
             "--output-model-type",
             output_model,
@@ -1476,7 +1476,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, output_fi
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=f"pattern/{expected_output}",
-        extra_args=["--target-python", "3.10", "--output-model-type", output_model],
+        extra_args=["--target-python-version", "3.10", "--output-model-type", output_model],
         transform=lambda s: s.replace("pattern.yaml", "pattern.json"),
     )
 
@@ -1505,7 +1505,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--target-python", "3.10", "--output-model-type", "pydantic_v2.BaseModel", *args],
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel", *args],
     )
 
 

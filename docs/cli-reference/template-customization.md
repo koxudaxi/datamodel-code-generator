@@ -2228,7 +2228,7 @@ the generated Python code. Available formatters are: black, isort,
 ruff, yapf, autopep8, autoflake. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.
 
-**See also:** [CI/CD Integration](../ci-cd.md), [Code Formatting](../formatting.md)
+**See also:** [Code Formatting](../formatting.md), [CI/CD Integration](../ci-cd.md)
 
 !!! tip "Usage"
 

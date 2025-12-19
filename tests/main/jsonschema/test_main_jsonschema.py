@@ -2956,7 +2956,7 @@ def test_main_jsonschema_discriminator_literals(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -2972,7 +2972,7 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="discriminator_no_mapping.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python", min_version],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python-version", min_version],
     )
 
 
@@ -3000,7 +3000,7 @@ def test_main_jsonschema_external_discriminator(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -3029,7 +3029,7 @@ def test_main_jsonschema_external_discriminator_folder(
         extra_args=[
             "--output-model-type",
             output_model,
-            "--target-python",
+            "--target-python-version",
             min_version,
         ],
     )
@@ -3208,7 +3208,7 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -3235,7 +3235,7 @@ def test_main_jsonschema_time_delta(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 

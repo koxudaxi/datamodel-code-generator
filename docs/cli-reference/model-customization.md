@@ -4626,7 +4626,7 @@ The `--target-python-version` flag controls Python version-specific syntax:
 
 This affects import statements and type annotation syntax in generated code.
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md), [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md)
+**See also:** [Python Version Compatibility](../python-version-compatibility.md), [CI/CD Integration](../ci-cd.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
