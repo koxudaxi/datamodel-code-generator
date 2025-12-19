@@ -19,13 +19,19 @@
 
 ## 📦 Installation
 
+=== "uv tool (Recommended)"
+
+    ```bash
+    uv tool install datamodel-code-generator
+    ```
+
 === "pip"
 
     ```bash
     pip install datamodel-code-generator
     ```
 
-=== "uv"
+=== "uv (project)"
 
     ```bash
     uv add datamodel-code-generator
@@ -37,13 +43,13 @@
     conda install -c conda-forge datamodel-code-generator
     ```
 
-=== "pipx (global)"
+=== "pipx"
 
     ```bash
     pipx install datamodel-code-generator
     ```
 
-=== "uvx (global)"
+=== "uvx (one-shot)"
 
     ```bash
     uvx datamodel-codegen --help

@@ -35,13 +35,18 @@
 ## 📦 Installation
 
 ```bash
-pip install datamodel-code-generator
+uv tool install datamodel-code-generator
 ```
 
 <details>
 <summary>Other installation methods</summary>
 
-**uv:**
+**pip:**
+```bash
+pip install datamodel-code-generator
+```
+
+**uv (add to project):**
 ```bash
 uv add datamodel-code-generator
 ```
