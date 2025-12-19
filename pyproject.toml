@@ -12,13 +12,12 @@ readme.content-type = "text/markdown"
 readme.file = "README.md"
 license = "MIT"
 authors = [ { name = "Koudai Aono", email = "koxudaxi@gmail.com" } ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
   "Natural Language :: English",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -82,7 +81,6 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
   "msgspec>=0.18",
   "pytest>=6.1",
@@ -93,8 +91,7 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.10'",
-  "time-machine>=3.1; python_version>='3.10'",
+  "time-machine>=3.1",
   "watchfiles>=1.1",
   { include-group = "coverage" },
 ]
@@ -107,7 +104,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "zensical>=0.0.11; python_version>='3.10'",
+  "zensical>=0.0.13; python_version>='3.10'",
 ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
@@ -116,7 +113,7 @@ isort5 = [ "isort>=5,<6" ]
 isort6 = [ "isort>=6,<7" ]
 isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
 pydantic1 = [ "pydantic<2" ]
-fix = [ "pre-commit-uv>=4.1.4" ]
+fix = [ "prek>=0.2.22" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
@@ -207,7 +204,7 @@ lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests,docs/cli-reference'
+skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md'
 
 [tool.pytest.ini_options]
 filterwarnings = [

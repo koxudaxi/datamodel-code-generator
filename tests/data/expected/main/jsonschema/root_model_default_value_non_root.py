@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -14,16 +14,16 @@ class CountType(RootModel[int]):
 
 
 class PersonType(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Model(BaseModel):
     root_model_field: Annotated[
-        Optional[CountType],
+        CountType | None,
         Field(default_factory=lambda: CountType.model_validate(CountType(10))),
     ]
     non_root_model_field: Annotated[
-        Optional[PersonType],
+        PersonType | None,
         Field(default_factory=lambda: PersonType.model_validate({'name': 'John'})),
     ]
-    primitive_field: Optional[str] = 'hello'
+    primitive_field: str | None = 'hello'

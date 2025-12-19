@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, NotRequired, TypedDict
+from typing import Any, NotRequired, TypedDict
 
 
 class Thing(TypedDict):
-    attributes: NotRequired[Dict[str, Any]]
+    attributes: NotRequired[dict[str, Any]]
 
 
 class Thang(TypedDict):
-    attributes: NotRequired[List[Dict[str, Any]]]
+    attributes: NotRequired[list[dict[str, Any]]]
 
 
 class Others(TypedDict):

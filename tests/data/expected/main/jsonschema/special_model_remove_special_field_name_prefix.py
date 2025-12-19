@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class Model(BaseModel):
     id: AnyUrl = Field(..., alias='@id', title='Id must be presesnt and must be a URI')
     type: str = Field(..., alias='@type')
-    type_1: Optional[str] = Field(None, alias='@+!type')
-    type_2: Optional[str] = Field(None, alias='@-!type')
-    profile: Optional[str] = None
+    type_1: str | None = Field(None, alias='@+!type')
+    type_2: str | None = Field(None, alias='@-!type')
+    profile: str | None = None

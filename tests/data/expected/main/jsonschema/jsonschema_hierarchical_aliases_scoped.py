@@ -4,22 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class User(BaseModel):
-    user_name: Optional[str] = Field(None, alias='name')
-    id: Optional[int] = None
+    user_name: str | None = Field(None, alias='name')
+    id: int | None = None
 
 
 class Address(BaseModel):
-    address_name: Optional[str] = Field(None, alias='name')
-    city: Optional[str] = None
+    address_name: str | None = Field(None, alias='name')
+    city: str | None = None
 
 
 class Root(BaseModel):
-    root_name: Optional[str] = Field(None, alias='name')
-    user: Optional[User] = Field(None, title='User')
-    address: Optional[Address] = Field(None, title='Address')
+    root_name: str | None = Field(None, alias='name')
+    user: User | None = Field(None, title='User')
+    address: Address | None = Field(None, title='Address')

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -12,5 +12,5 @@ from ... import schema
 
 
 class Input(BaseModel):
-    input: Optional[Any] = Field('input', title='Input')
-    extType: Optional[schema.ExtType] = None
+    input: Any | None = Field('input', title='Input')
+    extType: schema.ExtType | None = None

@@ -29,7 +29,10 @@ datamodel-codegen [OPTIONS]
 | [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) | Merge constraints from root model references in allOf schemas. |
 | [`--disable-future-imports`](typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
+| [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of Enum classes. |
 | [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code generation. |
+| [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
+| [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--output-datetime-class`](typing-customization.md#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](typing-customization.md#strict-types) | Enable strict type validation for specified Python types. |
 | [`--type-mappings`](typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
@@ -38,9 +41,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use typing.Dict/List instead of dict/list for container types. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date/time fields instead of datetime module. |
-| [`--use-standard-collections`](typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
 | [`--use-type-alias`](typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
-| [`--use-union-operator`](typing-customization.md#use-union-operator) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
 ### 🏷️ Field Customization
@@ -128,6 +129,7 @@ datamodel-codegen [OPTIONS]
 | [`--openapi-scopes`](openapi-only-options.md#openapi-scopes) | Specify OpenAPI scopes to generate (schemas, paths, parameters). |
 | [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) | Generate separate request and response models for readOnly/writeOnly fields. |
 | [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name) | Use OpenAPI operationId as the generated function/class name. |
+| [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name) | Include HTTP status code in response model names. |
 | [`--validation`](openapi-only-options.md#validation) | Enable validation constraints (deprecated, use --field-constraints). |
 
 ### ⚙️ General Options
@@ -209,6 +211,7 @@ All options sorted alphabetically:
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
+- [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) - Ignore enum constraints and use base string type instead of ...
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration file.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
 - [`--input`](base-options.md#input) - Specify the input schema file path.
@@ -219,6 +222,8 @@ All options sorted alphabetically:
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
 - [`--no-color`](utility-options.md#no-color) - Disable colorized output
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
+- [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) - Use built-in dict/list instead of typing.Dict/List.
+- [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) - Test GraphQL annotated types with standard collections and u...
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes) - Specify OpenAPI scopes to generate (schemas, paths, paramete...
 - [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) - Specify delimiter for original field names when using snake-...
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
@@ -261,11 +266,10 @@ All options sorted alphabetically:
 - [`--use-pendulum`](typing-customization.md#use-pendulum) - Use pendulum types for date/time fields instead of datetime ...
 - [`--use-schema-description`](field-customization.md#use-schema-description) - Use schema description as class docstring.
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) - Wrap fields with subtypes in Pydantic's SerializeAsAny.
-- [`--use-standard-collections`](typing-customization.md#use-standard-collections) - Use built-in dict/list instead of typing.Dict/List.
+- [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name) - Include HTTP status code in response model names.
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum) - Generate typed Enum subclasses for enums with specific field...
 - [`--use-title-as-name`](field-customization.md#use-title-as-name) - Use schema title as the generated class name.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
-- [`--use-union-operator`](typing-customization.md#use-union-operator) - Test GraphQL annotated types with standard collections and u...
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...
 - [`--version`](utility-options.md#version) - Show program version and exit

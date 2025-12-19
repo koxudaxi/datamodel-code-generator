@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 from . import Foo as Foo_1
@@ -17,9 +15,9 @@ class Foo(BaseModel):
 
 
 class Bar(BaseModel):
-    original_foo: Optional[Foo_1] = Field(
+    original_foo: Foo_1 | None = Field(
         default_factory=lambda: Foo_1.parse_obj({'text': 'abc', 'number': 123})
     )
-    nested_foo: Optional[List[Nested.Foo]] = Field(
+    nested_foo: list[Nested.Foo] | None = Field(
         default_factory=lambda: [Nested.Foo.parse_obj(v) for v in ['abc', 'efg']]
     )

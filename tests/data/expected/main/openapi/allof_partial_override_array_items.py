@@ -4,16 +4,14 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 
 class Thing(BaseModel):
-    type: Optional[str] = 'playground:Thing'
-    type_list: Optional[List[str]] = ['playground:Thing']
+    type: str | None = 'playground:Thing'
+    type_list: list[str] | None = ['playground:Thing']
 
 
 class Person(Thing):
-    type: Optional[str] = 'playground:Person'
-    type_list: Optional[List[str]] = ['playground:Person']
+    type: str | None = 'playground:Person'
+    type_list: list[str] | None = ['playground:Person']

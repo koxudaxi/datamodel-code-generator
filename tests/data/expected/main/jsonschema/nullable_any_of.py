@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Extra, Field
 
 
@@ -17,15 +15,15 @@ class In(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    input_dataset_path: Optional[str] = Field(
+    input_dataset_path: str | None = Field(
         None, description='d1', min_length=1, title='Path to the input dataset'
     )
-    config: Optional[Config] = None
+    config: Config | None = None
 
 
 class ValidatingSchemaId1(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    in_: Optional[In] = Field(None, alias='in')
-    n1: Optional[int] = None
+    in_: In | None = Field(None, alias='in')
+    n1: int | None = None

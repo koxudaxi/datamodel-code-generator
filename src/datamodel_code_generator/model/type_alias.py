@@ -11,7 +11,6 @@ from typing import ClassVar
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_TYPE_ALIAS,
-    IMPORT_TYPE_ALIAS_BACKPORT,
     IMPORT_TYPE_ALIAS_TYPE,
     Import,
 )
@@ -42,16 +41,8 @@ class TypeAlias(TypeAliasBase):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
 
 
-class TypeAliasBackport(TypeAliasBase):
-    """TypeAlias annotation for Python 3.9 (Name: TypeAlias = type) using typing_extensions."""
-
-    TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAliasAnnotation.jinja2"
-    BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT,)
-
-
 class TypeAliasTypeBackport(TypeAliasBase):
-    """TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))."""
+    """TypeAliasType for Python 3.10-3.11 (Name = TypeAliasType("Name", type))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "TypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""

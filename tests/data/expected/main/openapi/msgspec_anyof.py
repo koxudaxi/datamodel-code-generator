@@ -4,54 +4,53 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Dict, List, Union
+from typing import Annotated, TypeAlias
 
 from msgspec import UNSET, Meta, Struct, UnsetType
-from typing_extensions import TypeAlias
 
 
 class Pet(Struct):
     id: int
     name: str
-    tag: Union[str, UnsetType] = UNSET
+    tag: str | UnsetType = UNSET
 
 
 class Car(Struct):
     id: int
     name: str
-    tag: Union[str, UnsetType] = UNSET
+    tag: str | UnsetType = UNSET
 
 
 class AnyOfItem1(Struct):
-    name: Union[str, UnsetType] = UNSET
+    name: str | UnsetType = UNSET
 
 
 AnyOfItem2: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
-AnyOfItem: TypeAlias = Union[Pet, Car, AnyOfItem1, AnyOfItem2]
+AnyOfItem: TypeAlias = Pet | Car | AnyOfItem1 | AnyOfItem2
 
 
 class Item(Struct):
-    name: Union[str, UnsetType] = UNSET
+    name: str | UnsetType = UNSET
 
 
 Item1: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
 class AnyOfobj(Struct):
-    item: Union[Pet, Car, Item, Item1, UnsetType] = UNSET
+    item: Pet | Car | Item | Item1 | UnsetType = UNSET
 
 
 class AnyOfArray1(Struct):
-    name: Union[str, UnsetType] = UNSET
-    birthday: Union[str, UnsetType] = UNSET
+    name: str | UnsetType = UNSET
+    birthday: str | UnsetType = UNSET
 
 
 AnyOfArray2: TypeAlias = Annotated[str, Meta(max_length=5000)]
 
 
-AnyOfArray: TypeAlias = List[Union[Pet, Car, AnyOfArray1, AnyOfArray2]]
+AnyOfArray: TypeAlias = list[Pet | Car | AnyOfArray1 | AnyOfArray2]
 
 
 class Error(Struct):
@@ -60,4 +59,4 @@ class Error(Struct):
 
 
 class Config(Struct):
-    setting: Union[Dict[str, Union[str, List[str]]], UnsetType] = UNSET
+    setting: dict[str, str | list[str]] | UnsetType = UNSET

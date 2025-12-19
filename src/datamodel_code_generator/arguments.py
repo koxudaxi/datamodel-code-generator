@@ -343,8 +343,15 @@ typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "
-    "one: field type is Literal when an enum has only one possible value",
+    "one: field type is Literal when an enum has only one possible value. "
+    "none: always use Enum class (never convert to Literal)",
     choices=[lt.value for lt in LiteralType],
+    default=None,
+)
+typing_options.add_argument(
+    "--ignore-enum-constraints",
+    help="Ignore enum constraints and use the base type (e.g., str, int) instead of generating Enum classes",
+    action="store_true",
     default=None,
 )
 typing_options.add_argument(
@@ -411,8 +418,8 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-standard-collections",
-    help="Use standard collections for type hinting (list, dict)",
-    action="store_true",
+    help="Use standard collections for type hinting (list, dict). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
@@ -429,8 +436,8 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-union-operator",
-    help="Use | operator for Union type (PEP 604).",
-    action="store_true",
+    help="Use | operator for Union type (PEP 604). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
@@ -711,6 +718,12 @@ openapi_options.add_argument(
     "'request-response' = Request/Response models only (no base model), "
     "'all' = Base + Request + Response models.",
     choices=[e.value for e in ReadOnlyWriteOnlyModelType],
+    default=None,
+)
+openapi_options.add_argument(
+    "--use-status-code-in-response-name",
+    help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
+    action="store_true",
     default=None,
 )
 

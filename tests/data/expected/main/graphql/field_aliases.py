@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -27,6 +26,6 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 class DateTimePeriod(BaseModel):
     periodFrom: DateTime = Field(..., alias='from')
     periodTo: DateTime = Field(..., alias='to')
-    typename__: Optional[Literal['DateTimePeriod']] = Field(
+    typename__: Literal['DateTimePeriod'] | None = Field(
         'DateTimePeriod', alias='__typename'
     )

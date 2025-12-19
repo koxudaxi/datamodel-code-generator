@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, NotRequired, TypeAlias, TypedDict, Union
+from typing import Any, Literal, NotRequired, TypeAlias, TypedDict
 
 Species: TypeAlias = Literal['dog', 'cat', 'snake']
 
@@ -23,4 +23,4 @@ class User(TypedDict):
 
 
 class Event(TypedDict):
-    name: NotRequired[Union[str, float, int, bool, Dict[str, Any], List[str]]]
+    name: NotRequired[str | float | int | bool | dict[str, Any] | list[str]]

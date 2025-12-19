@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel, Field
 
 
@@ -19,4 +17,4 @@ class Number(BaseModel):
 
 
 class TestSchema(BaseModel):
-    numbers: List[Number] = Field(..., description='A list of numbers')
+    numbers: list[Number] = Field(..., description='A list of numbers')

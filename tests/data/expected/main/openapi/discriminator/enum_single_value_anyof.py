@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -23,5 +23,5 @@ class CustomToolCall(BaseModel):
     type: Literal['CustomToolCall']
 
 
-class ToolCallUnion(RootModel[Union[FunctionToolCall, CustomToolCall]]):
-    root: Union[FunctionToolCall, CustomToolCall] = Field(..., discriminator='type')
+class ToolCallUnion(RootModel[FunctionToolCall | CustomToolCall]):
+    root: FunctionToolCall | CustomToolCall = Field(..., discriminator='type')

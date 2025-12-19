@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, Field
 
 
 class SomeType(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class MixedUnion(BaseModel):
-    __root__: Union[str, SomeType] = Field(..., title='MixedUnion')
+    __root__: str | SomeType = Field(..., title='MixedUnion')

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Union
 
 from pydantic import BaseModel, Extra, Field
 
@@ -58,4 +57,4 @@ class V2Test(BaseModel):
     class Config:
         extra = Extra.allow
 
-    __root__: Union[V2Test1, Union[V2Test2, V2Test3]] = Field(..., title='v2_test')
+    __root__: V2Test1 | V2Test2 | V2Test3 = Field(..., title='v2_test')

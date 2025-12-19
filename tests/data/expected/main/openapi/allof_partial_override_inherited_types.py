@@ -4,17 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Thing(BaseModel):
-    type: Optional[str] = None
-    name: Optional[str] = Field(None, description='First and Last name')
+    type: str | None = None
+    name: str | None = Field(None, description='First and Last name')
 
 
 class Person(Thing):
-    type: Optional[str] = 'playground:Person'
+    type: str | None = 'playground:Person'
     name: str = Field(..., description='First and Last name')
-    age: Optional[int] = None
+    age: int | None = None

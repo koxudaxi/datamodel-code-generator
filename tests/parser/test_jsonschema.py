@@ -393,6 +393,8 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
         ("string", "date-time", "DateTime", "pendulum", "DateTime", True),
         ("string", "duration", "timedelta", "datetime", "timedelta", False),
         ("string", "duration", "Duration", "pendulum", "Duration", True),
+        ("number", "time-delta", "timedelta", "datetime", "timedelta", False),
+        ("number", "time-delta", "Duration", "pendulum", "Duration", True),
         ("string", "path", "Path", "pathlib", "Path", False),
         ("string", "password", "SecretStr", "pydantic", "SecretStr", False),
         ("string", "email", "EmailStr", "pydantic", "EmailStr", False),

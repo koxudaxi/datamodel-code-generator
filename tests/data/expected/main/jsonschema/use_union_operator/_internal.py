@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel, Field, conint
 
 from .definitions import food as food_1
@@ -26,12 +24,12 @@ class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
     age: conint(ge=0) | None = Field(None, description='Age in years.')
-    pets: List[pet_1.Pet] | None = None
+    pets: list[pet_1.Pet] | None = None
     friends: friends_1.Friends | None = None
     robot: Robot | None = None
     comment: None = None
-    drink: List[coffee.Coffee | tea.Tea] | None = None
-    food: List[food_1.Noodle | food_1.Soup] | None = None
+    drink: list[coffee.Coffee | tea.Tea] | None = None
+    food: list[food_1.Noodle | food_1.Soup] | None = None
 
 
 Person.update_forward_refs()

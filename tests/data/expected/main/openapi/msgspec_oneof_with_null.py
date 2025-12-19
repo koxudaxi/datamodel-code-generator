@@ -4,26 +4,25 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated, TypeAlias
 
 from msgspec import UNSET, Meta, Struct, UnsetType
-from typing_extensions import TypeAlias
 
 OptionalOneofWithNullAndConstraint: TypeAlias = Annotated[str, Meta(max_length=100)]
 
 
 class Model(Struct):
     required_field: str
-    optional_oneof_with_null: Union[str, None, UnsetType] = UNSET
-    optional_anyof_with_null: Union[str, None, UnsetType] = UNSET
-    optional_field_not_nullable: Union[str, UnsetType] = UNSET
-    optional_oneof_with_null_and_constraint: Union[
-        OptionalOneofWithNullAndConstraint, None, UnsetType
-    ] = UNSET
-    optional_nullable_field: Union[str, UnsetType] = UNSET
-    optional_nullable_with_constraint: Union[
-        Annotated[str, Meta(max_length=50)], UnsetType
-    ] = UNSET
-    optional_nullable_with_min_length: Union[
-        Annotated[str, Meta(min_length=5)], UnsetType
-    ] = UNSET
+    optional_oneof_with_null: str | None | UnsetType = UNSET
+    optional_anyof_with_null: str | None | UnsetType = UNSET
+    optional_field_not_nullable: str | UnsetType = UNSET
+    optional_oneof_with_null_and_constraint: (
+        OptionalOneofWithNullAndConstraint | None | UnsetType
+    ) = UNSET
+    optional_nullable_field: str | UnsetType = UNSET
+    optional_nullable_with_constraint: (
+        Annotated[str, Meta(max_length=50)] | UnsetType
+    ) = UNSET
+    optional_nullable_with_min_length: (
+        Annotated[str, Meta(min_length=5)] | UnsetType
+    ) = UNSET

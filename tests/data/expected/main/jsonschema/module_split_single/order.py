@@ -3,13 +3,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .user import User
 
 
 class Order(BaseModel):
-    id: Optional[int] = None
-    user: Optional[User] = None
+    id: int | None = None
+    user: User | None = None

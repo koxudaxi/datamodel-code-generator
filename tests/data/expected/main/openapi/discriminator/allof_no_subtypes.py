@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -14,11 +12,11 @@ class BaseItem(BaseModel):
 
 
 class FooItem(BaseModel):
-    fooValue: Optional[str] = None
+    fooValue: str | None = None
 
 
 class BarItem(BaseModel):
-    barValue: Optional[int] = None
+    barValue: int | None = None
 
 
 class ItemContainer(BaseModel):

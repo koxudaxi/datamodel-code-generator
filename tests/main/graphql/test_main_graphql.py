@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import black
 import pytest
 
-from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
+from tests.main.conftest import GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
 from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -56,6 +56,7 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
@@ -233,6 +234,31 @@ def test_main_graphql_enums_to_typed_dict(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="enums_typed_dict.py",
         extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--ignore-enum-constraints"],
+    input_schema="graphql/enums.graphql",
+    cli_args=["--ignore-enum-constraints"],
+    golden_output="graphql/enums_ignore_enum_constraints.py",
+    comparison_output="graphql/enums.py",
+)
+def test_main_graphql_enums_ignore_enum_constraints(output_file: Path) -> None:
+    """Ignore enum constraints and use base string type instead of Enum classes.
+
+    The `--ignore-enum-constraints` flag ignores enum constraints and uses
+    the base type (str) instead of generating Enum classes. This is useful
+    when you need flexibility in the values a field can accept beyond the
+    defined enum members.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_ignore_enum_constraints.py",
+        extra_args=["--ignore-enum-constraints"],
     )
 
 
@@ -434,7 +460,7 @@ def test_main_graphql_type_alias(output_file: Path) -> None:
     """Use TypeAlias instead of root models for type definitions (experimental).
 
     The `--use-type-alias` flag generates TypeAlias declarations instead of
-    root model classes for certain type definitions. For Python 3.9-3.11, it
+    root model classes for certain type definitions. For Python 3.10-3.11, it
     generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
     syntax. This feature is experimental.
     """

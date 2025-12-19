@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -16,5 +14,5 @@ class Address(BaseModel):
 
 
 class Model(BaseModel):
-    billing_address: Optional[Address] = None
-    shipping_address: Optional[Address] = None
+    billing_address: Address | None = None
+    shipping_address: Address | None = None

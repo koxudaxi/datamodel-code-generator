@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -14,7 +12,7 @@ class MyModel(BaseModel):
     A model that has a description.
     """
 
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class MyOtherModel(MyModel):

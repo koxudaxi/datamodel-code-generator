@@ -214,9 +214,25 @@ class DataModelFieldBase(_BaseModel):
         return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
 
     @property
+    def _use_union_operator(self) -> bool:
+        """Get effective use_union_operator considering parent model's forward reference."""
+        if self.parent and self.parent.has_forward_reference:
+            return False
+        return self.data_type.use_union_operator
+
+    def _build_union_type_hint(self) -> str | None:
+        """Build Union[] type hint from data_type.data_types if forward reference requires it."""
+        if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
+            return None
+        parts = [dt.type_hint for dt in self.data_type.data_types if dt.type_hint]
+        if len(parts) > 1:
+            return f"Union[{', '.join(parts)}]"
+        return None  # pragma: no cover
+
+    @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
-        type_hint = self.data_type.type_hint
+        type_hint = self._build_union_type_hint() or self.data_type.type_hint
 
         if not type_hint:
             return NONE
@@ -224,21 +240,21 @@ class DataModelFieldBase(_BaseModel):
             return type_hint
         if self.nullable is not None:
             if self.nullable:
-                return get_optional_type(type_hint, self.data_type.use_union_operator)
+                return get_optional_type(type_hint, self._use_union_operator)
             return type_hint
         if self.required:
             if self.type_has_null:
-                return get_optional_type(type_hint, self.data_type.use_union_operator)
+                return get_optional_type(type_hint, self._use_union_operator)
             return type_hint
         if self.fall_back_to_nullable:
-            return get_optional_type(type_hint, self.data_type.use_union_operator)
+            return get_optional_type(type_hint, self._use_union_operator)
         return type_hint
 
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all imports required for this field's type hint."""
         type_hint = self.type_hint
-        has_union = not self.data_type.use_union_operator and UNION_PREFIX in type_hint
+        has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
         imports: list[tuple[Import] | Iterator[Import]] = [
             iter(
@@ -248,6 +264,8 @@ class DataModelFieldBase(_BaseModel):
             )
         ]
 
+        if has_union:
+            imports.append((IMPORT_UNION,))
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
         if self.use_annotated and self.needs_annotated_import:
@@ -328,9 +346,12 @@ class DataModelFieldBase(_BaseModel):
         """Create a deep copy of this field to avoid mutating the original."""
         copied = self.copy()
         copied.parent = None
+        copied.extras = deepcopy(self.extras)
         copied.data_type = self.data_type.copy()
         if self.data_type.data_types:
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+        if self.data_type.dict_key:
+            copied.data_type.dict_key = self.data_type.dict_key.copy()
         return copied
 
     def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
@@ -427,6 +448,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     IS_ALIAS: bool = False
+    has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913
         self,
@@ -549,6 +571,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 path=self.reference.path + "/reuse",
             ),
             custom_template_dir=self._custom_template_dir,
+            custom_base_class=self.custom_base_class,
+            keyword_only=self.keyword_only,
+            treat_dot_as_module=self._treat_dot_as_module,
         )
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:

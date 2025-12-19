@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List, TypedDict
+from typing import TypeAlias, TypedDict
 
-from typing_extensions import NotRequired, TypeAlias
+from typing_extensions import NotRequired
 
 
 class Pet(TypedDict):
@@ -15,7 +15,7 @@ class Pet(TypedDict):
     tag: NotRequired[str]
 
 
-Pets: TypeAlias = List[Pet]
+Pets: TypeAlias = list[Pet]
 
 
 class User(TypedDict):
@@ -24,13 +24,13 @@ class User(TypedDict):
     tag: NotRequired[str]
 
 
-Users: TypeAlias = List[User]
+Users: TypeAlias = list[User]
 
 
 Id: TypeAlias = str
 
 
-Rules: TypeAlias = List[str]
+Rules: TypeAlias = list[str]
 
 
 class Error(TypedDict):
@@ -45,7 +45,7 @@ class Api(TypedDict):
     apiDocumentationUrl: NotRequired[str]
 
 
-Apis: TypeAlias = List[Api]
+Apis: TypeAlias = list[Api]
 
 
 class Event(TypedDict):

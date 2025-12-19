@@ -311,11 +311,19 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--keyword-only"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen", "--keyword-only"],
+    golden_output="main/jsonschema/general_dataclass_frozen_kw_only.py",
+    related_options=["--frozen-dataclasses", "--output-model-type"],
+)
 def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> None:
-    """Test JSON Schema code generation with frozen and keyword-only dataclass.
+    """Generate dataclass fields as keyword-only arguments.
 
-    This tests the 'if existing:' False branch in _create_data_model when
-    no --dataclass-arguments is provided but --frozen and --keyword-only are set.
+    The `--keyword-only` flag generates all dataclass fields as keyword-only,
+    requiring explicit parameter names when instantiating models. Combined with
+    `--frozen`, creates immutable models with keyword-only constructors.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
@@ -1096,7 +1104,7 @@ def test_main_root_model_with_additional_properties_use_standard_collections(out
 
     The `--use-standard-collections` flag generates built-in container types
     (dict, list) instead of typing module equivalents. This produces cleaner
-    code for Python 3.9+ where built-in types support subscripting.
+    code for Python 3.10+ where built-in types support subscripting.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
@@ -1241,6 +1249,7 @@ def test_main_combined_array(output_file: Path) -> None:
         )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.cli_doc(
     options=["--disable-timestamp"],
     input_schema="jsonschema/pattern.json",
@@ -2173,6 +2182,7 @@ def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> N
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_jsonschema_titles(output_file: Path) -> None:
     """Test JSON Schema title handling."""
     run_main_and_assert(
@@ -2184,6 +2194,7 @@ def test_jsonschema_titles(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.cli_doc(
     options=["--use-title-as-name"],
     input_schema="jsonschema/titles.json",
@@ -2208,6 +2219,7 @@ def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_jsonschema_without_titles_use_title_as_name(output_file: Path) -> None:
     """Test title as name without titles present."""
     run_main_and_assert(
@@ -2633,6 +2645,7 @@ def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: 
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_jsonschema_pattern_properties_by_reference(output_file: Path) -> None:
     """Test pattern properties by reference."""
     run_main_and_assert(
@@ -2641,6 +2654,23 @@ def test_main_jsonschema_pattern_properties_by_reference(output_file: Path) -> N
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pattern_properties_by_reference.py",
+    )
+
+
+def test_main_jsonschema_copy_deep_pattern_properties(output_file: Path) -> None:
+    """Test copy_deep properly preserves dict_key from patternProperties during allOf inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "copy_deep_pattern_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="copy_deep_pattern_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
     )
 
 
@@ -2688,7 +2718,7 @@ def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
             "--use-title-as-name",
             "--field-constraints",
             "--target-python-version",
-            "3.9",
+            "3.10",
             "--allow-population-by-field-name",
             "--strip-default-none",
             "--use-default",
@@ -2841,6 +2871,75 @@ def test_main_typed_dict_additional_properties(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_none(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=none."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_none.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "none",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_one(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=one."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_one.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "one",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_all.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "all",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
 def test_main_dataclass_const(output_file: Path) -> None:
     """Test main function writing to dataclass with const fields."""
     run_main_and_assert(
@@ -2879,7 +2978,7 @@ def test_main_jsonschema_discriminator_literals(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -2944,7 +3043,7 @@ def test_main_jsonschema_discriminator_literals_with_no_mapping(min_version: str
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="discriminator_no_mapping.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python", min_version],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python-version", min_version],
     )
 
 
@@ -2972,7 +3071,7 @@ def test_main_jsonschema_external_discriminator(
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -3001,7 +3100,7 @@ def test_main_jsonschema_external_discriminator_folder(
         extra_args=[
             "--output-model-type",
             output_model,
-            "--target-python",
+            "--target-python-version",
             min_version,
         ],
     )
@@ -3180,7 +3279,34 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "time_delta_pydantic_v2.py",
+        ),
+        (
+            "msgspec.Struct",
+            "time_delta_msgspec.py",
+        ),
+    ],
+)
+def test_main_jsonschema_time_delta(
+    output_model: str, expected_output: str, min_version: str, output_file: Path
+) -> None:
+    """Test time-delta type handling for number format."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "time_delta.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model, "--target-python-version", min_version],
     )
 
 
@@ -3415,13 +3541,12 @@ def test_main_json_pointer_escaped_segments(tmp_path: Path) -> None:
         "#   filename: input.json\n"
         "#   timestamp: 2019-07-26T00:00:00+00:00\n\n"
         "from __future__ import annotations\n\n"
-        "from typing import Optional\n\n"
         "from pydantic import BaseModel\n\n"
-        "class FooBar(BaseModel):\n    value: Optional[str] = None\n\n"
-        "class BazQux(BaseModel):\n    value: Optional[int] = None\n\n"
-        "class Baz0qux(BaseModel):\n    value: Optional[int] = None\n\n"
-        "class Foo1bar(BaseModel):\n    value: Optional[str] = None\n\n"
-        "class Model(BaseModel):\n    foo_bar: Optional[Foo1bar] = None\n    baz_qux: Optional[Baz0qux] = None\n"
+        "class FooBar(BaseModel):\n    value: str | None = None\n\n"
+        "class BazQux(BaseModel):\n    value: int | None = None\n\n"
+        "class Baz0qux(BaseModel):\n    value: int | None = None\n\n"
+        "class Foo1bar(BaseModel):\n    value: str | None = None\n\n"
+        "class Model(BaseModel):\n    foo_bar: Foo1bar | None = None\n    baz_qux: Baz0qux | None = None\n"
     )
 
     input_file = tmp_path / "input.json"
@@ -3456,17 +3581,16 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
         "#   filename: input.json\n"
         "#   timestamp: 2019-07-26T00:00:00+00:00\n\n"
         "from __future__ import annotations\n\n"
-        "from typing import Optional\n\n"
         "from pydantic import BaseModel\n\n"
-        "class FooBar(BaseModel):\n    value: Optional[str] = None\n\n"
-        "class BazQux(BaseModel):\n    value: Optional[int] = None\n\n"
-        "class SpaceKey(BaseModel):\n    value: Optional[bool] = None\n\n"
-        "class Baz7Equx(BaseModel):\n    value: Optional[int] = None\n\n"
-        "class Foo2Fbar(BaseModel):\n    value: Optional[str] = None\n\n"
-        "class Space20key(BaseModel):\n    value: Optional[bool] = None\n\n"
-        "class Model(BaseModel):\n    foo_bar: Optional[Foo2Fbar] = None\n"
-        "    baz_qux: Optional[Baz7Equx] = None\n"
-        "    space_key: Optional[Space20key] = None\n"
+        "class FooBar(BaseModel):\n    value: str | None = None\n\n"
+        "class BazQux(BaseModel):\n    value: int | None = None\n\n"
+        "class SpaceKey(BaseModel):\n    value: bool | None = None\n\n"
+        "class Baz7Equx(BaseModel):\n    value: int | None = None\n\n"
+        "class Foo2Fbar(BaseModel):\n    value: str | None = None\n\n"
+        "class Space20key(BaseModel):\n    value: bool | None = None\n\n"
+        "class Model(BaseModel):\n    foo_bar: Foo2Fbar | None = None\n"
+        "    baz_qux: Baz7Equx | None = None\n"
+        "    space_key: Space20key | None = None\n"
     )
 
     input_file = tmp_path / "input.json"
@@ -3868,6 +3992,24 @@ def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
     )
 
 
+def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with frozen dataclasses preserves frozen in inherited models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass_frozen",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen",
+        ],
+    )
+
+
 def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
     """Test --reuse-scope=tree with TypedDict output type (no inheritance, direct reference)."""
     run_main_and_assert(
@@ -4015,13 +4157,12 @@ def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
         "# generated by datamodel-codegen:\n"
         "#   filename:  main.json\n\n"
         "from __future__ import annotations\n\n"
-        "from typing import Optional\n\n"
         "from pydantic import BaseModel\n\n\n"
         "class Pet(BaseModel):\n"
         "    name: str\n"
-        "    age: Optional[int] = None\n\n\n"
+        "    age: int | None = None\n\n\n"
         "class Model(BaseModel):\n"
-        "    pet: Optional[Pet] = None\n"
+        "    pet: Pet | None = None\n"
     )
     run_main_and_assert(
         input_path=main_file,
@@ -4058,12 +4199,11 @@ def test_main_jsonschema_file_url_ref_percent_encoded(tmp_path: Path) -> None:
         "# generated by datamodel-codegen:\n"
         "#   filename:  main.json\n\n"
         "from __future__ import annotations\n\n"
-        "from typing import Optional\n\n"
         "from pydantic import BaseModel\n\n\n"
         "class Pet(BaseModel):\n"
-        "    name: Optional[str] = None\n\n\n"
+        "    name: str | None = None\n\n\n"
         "class Model(BaseModel):\n"
-        "    pet: Optional[Pet] = None\n"
+        "    pet: Pet | None = None\n"
     )
     run_main_and_assert(
         input_path=main_file,

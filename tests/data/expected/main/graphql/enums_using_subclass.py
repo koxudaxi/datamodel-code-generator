@@ -5,8 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-
-from typing_extensions import TypeAlias
+from typing import TypeAlias
 
 Boolean: TypeAlias = bool
 """

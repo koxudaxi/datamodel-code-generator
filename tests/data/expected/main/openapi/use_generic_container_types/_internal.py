@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence
+from collections.abc import Sequence
 
 from pydantic import BaseModel
 
 from . import models
 
 
-class OptionalModel(BaseModel):
+class Optional(BaseModel):
     __root__: str
 
 
@@ -25,39 +25,39 @@ class Error(BaseModel):
 
 
 class Result(BaseModel):
-    event: Optional[models.Event] = None
+    event: models.Event | None = None
 
 
 class Source(BaseModel):
-    country: Optional[str] = None
+    country: str | None = None
 
 
 class DifferentTea(BaseModel):
-    foo: Optional[Tea] = None
-    nested: Optional[Tea_1] = None
+    foo: Tea | None = None
+    nested: Tea_1 | None = None
 
 
 class Tea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
+    flavour: str | None = None
+    id: Id | None = None
 
 
 class Cocoa(BaseModel):
-    quality: Optional[int] = None
+    quality: int | None = None
 
 
 class Tea_1(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea_1] = None
-    optional: Optional[Sequence[OptionalModel]] = None
+    flavour: str | None = None
+    id: Id | None = None
+    self: Tea_1 | None = None
+    optional: Sequence[Optional] | None = None
 
 
 class TeaClone(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea_1] = None
-    optional: Optional[Sequence[OptionalModel]] = None
+    flavour: str | None = None
+    id: Id | None = None
+    self: Tea_1 | None = None
+    optional: Sequence[Optional] | None = None
 
 
 class List(BaseModel):

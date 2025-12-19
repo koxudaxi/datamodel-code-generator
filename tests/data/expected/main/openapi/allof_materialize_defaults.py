@@ -4,16 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, conint, constr
 
 
 class Parent(BaseModel):
-    name: Optional[constr(min_length=1)] = 'parent_default'
-    count: Optional[conint(ge=0)] = 10
+    name: constr(min_length=1) | None = 'parent_default'
+    count: conint(ge=0) | None = 10
 
 
 class Child(Parent):
-    name: Optional[constr(min_length=1, max_length=100)] = 'parent_default'
-    count: Optional[conint(ge=0, le=1000)] = 10
+    name: constr(min_length=1, max_length=100) | None = 'parent_default'
+    count: conint(ge=0, le=1000) | None = 10

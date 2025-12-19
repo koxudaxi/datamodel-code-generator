@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from typing import NotRequired, Optional, TypedDict
+from typing import NotRequired, TypedDict
 
 
 class Person(TypedDict):
     name: str
-    null_name: NotRequired[Optional[str]]
+    null_name: NotRequired[str | None]
     age: NotRequired[int]
-    null_age: Optional[int]
+    null_age: int | None

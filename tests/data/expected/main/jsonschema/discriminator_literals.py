@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,11 +18,11 @@ class Type2(BaseModel):
 
 
 class UnrelatedType(BaseModel):
-    info: Optional[str] = Field(
+    info: str | None = Field(
         'Unrelated type, not involved in the discriminated union',
         title='A way to check for side effects',
     )
 
 
 class Response(BaseModel):
-    inner: Union[Type1, Type2] = Field(..., discriminator='type_', title='Inner')
+    inner: Type1 | Type2 = Field(..., discriminator='type_', title='Inner')

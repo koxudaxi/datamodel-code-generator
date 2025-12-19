@@ -4,19 +4,17 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
-
 from pydantic import AnyUrl, BaseModel, Field, confloat, conint, constr
 
 
 class Pet(BaseModel):
     id: conint(ge=0, le=9223372036854775807)
     name: constr(max_length=256)
-    tag: Optional[constr(max_length=64)] = None
+    tag: constr(max_length=64) | None = None
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+    __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
 
 
 class UID(BaseModel):
@@ -30,18 +28,18 @@ class Phone(BaseModel):
 class User(BaseModel):
     id: conint(ge=0)
     name: constr(max_length=256)
-    tag: Optional[constr(max_length=64)] = None
+    tag: constr(max_length=64) | None = None
     uid: UID
-    phones: Optional[List[Phone]] = Field(None, max_items=10)
-    fax: Optional[List[constr(min_length=3)]] = None
-    height: Optional[Union[conint(ge=1, le=300), confloat(ge=1.0, le=300.0)]] = None
-    weight: Optional[Union[confloat(ge=1.0, le=1000.0), conint(ge=1, le=1000)]] = None
-    age: Optional[conint(le=200, gt=0)] = None
-    rating: Optional[confloat(le=5.0, gt=0.0)] = None
+    phones: list[Phone] | None = Field(None, max_items=10)
+    fax: list[constr(min_length=3)] | None = None
+    height: conint(ge=1, le=300) | confloat(ge=1.0, le=300.0) | None = None
+    weight: confloat(ge=1.0, le=1000.0) | conint(ge=1, le=1000) | None = None
+    age: conint(le=200, gt=0) | None = None
+    rating: confloat(le=5.0, gt=0.0) | None = None
 
 
 class Users(BaseModel):
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(BaseModel):
@@ -49,7 +47,7 @@ class Id(BaseModel):
 
 
 class Rules(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(BaseModel):
@@ -58,27 +56,27 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = Field(
+    apiKey: str | None = Field(
         None, description='To be used as a dataset parameter value'
     )
-    apiVersionNumber: Optional[str] = Field(
+    apiVersionNumber: str | None = Field(
         None, description='To be used as a version parameter value'
     )
-    apiUrl: Optional[AnyUrl] = Field(
+    apiUrl: AnyUrl | None = Field(
         None, description="The URL describing the dataset's fields"
     )
-    apiDocumentationUrl: Optional[AnyUrl] = Field(
+    apiDocumentationUrl: AnyUrl | None = Field(
         None, description='A URL to the API console for each API'
     )
 
 
 class Apis(BaseModel):
-    __root__: List[Api]
+    __root__: list[Api]
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

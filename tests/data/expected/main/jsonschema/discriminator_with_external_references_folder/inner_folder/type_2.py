@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,4 +13,4 @@ from .artificial_folder import type_1
 
 class Type2(BaseModel):
     type_: Literal['b'] = Field(..., const=True, title='Type ')
-    ref_type: Optional[type_1.Type1] = Field(None, description='A referenced type.')
+    ref_type: type_1.Type1 | None = Field(None, description='A referenced type.')

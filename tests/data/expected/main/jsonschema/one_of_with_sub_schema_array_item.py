@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class SpatialPlan(BaseModel):
-    officialDocument: Optional[Union[str, List[AnyUrl]]] = Field(
+    officialDocument: str | list[AnyUrl] | None = Field(
         None,
         description='Link to the official documents that relate to the spatial plan.',
         title='officialDocument',

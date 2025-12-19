@@ -13,15 +13,14 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -475,7 +474,7 @@ def relative(
         return "", ""
 
     i = 0
-    for x, y in zip(current_module_path, reference_path):
+    for x, y in zip(current_module_path, reference_path, strict=False):
         if x != y:
             break
         i += 1
@@ -683,6 +682,7 @@ class Parser(ABC):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -783,6 +783,7 @@ class Parser(ABC):
         self.shared_module_name: str = shared_module_name
         self.encoding: str = encoding
         self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
+        self.ignore_enum_constraints: bool = ignore_enum_constraints
         self.set_default_enum_member: bool = set_default_enum_member
         self.use_subclass_enum: bool = use_subclass_enum
         self.use_specialized_enum: bool = use_specialized_enum
@@ -924,23 +925,26 @@ class Parser(ABC):
     @property
     def iter_source(self) -> Iterator[Source]:
         """Iterate over all source files to be parsed."""
-        if isinstance(self.source, str):
-            yield Source(path=Path(), text=self.source)
-        elif isinstance(self.source, Path):  # pragma: no cover
-            if self.source.is_dir():
-                for path in sorted(self.source.rglob("*"), key=lambda p: p.name):
-                    if path.is_file():
-                        yield Source.from_path(path, self.base_path, self.encoding)
-            else:
-                yield Source.from_path(self.source, self.base_path, self.encoding)
-        elif isinstance(self.source, list):  # pragma: no cover
-            for path in self.source:
-                yield Source.from_path(path, self.base_path, self.encoding)
-        else:
-            yield Source(
-                path=Path(self.source.path),
-                text=self.remote_text_cache.get_or_put(self.source.geturl(), default_factory=self._get_text_from_url),
-            )
+        match self.source:
+            case str():
+                yield Source(path=Path(), text=self.source)
+            case Path() as path:  # pragma: no cover
+                if path.is_dir():
+                    for p in sorted(path.rglob("*"), key=lambda p: p.name):
+                        if p.is_file():
+                            yield Source.from_path(p, self.base_path, self.encoding)
+                else:
+                    yield Source.from_path(path, self.base_path, self.encoding)
+            case list() as paths:  # pragma: no cover
+                for path in paths:
+                    yield Source.from_path(path, self.base_path, self.encoding)
+            case _:
+                yield Source(
+                    path=Path(self.source.path),
+                    text=self.remote_text_cache.get_or_put(
+                        self.source.geturl(), default_factory=self._get_text_from_url
+                    ),
+                )
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
         if additional_imports is None:
@@ -1893,6 +1897,7 @@ class Parser(ABC):
             if isinstance(model, TypeStatement):
                 continue
 
+            has_forward_ref = False
             for field in model.fields:
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
@@ -1908,6 +1913,10 @@ class Parser(ABC):
                     source_index = model_index.get(name)
                     if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
+                        has_forward_ref = True
+
+            if has_forward_ref:
+                model.has_forward_reference = True
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
@@ -2569,6 +2578,7 @@ class Parser(ABC):
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
             self.__fix_dataclass_field_ordering(models)
+            self.__update_type_aliases(models)
 
             processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
 
@@ -2635,7 +2645,6 @@ class Parser(ABC):
                             export_imports.add_export(m.reference.short_name)
                     result += [export_imports.dump_all(multiline=True) + "\n"]
 
-                self.__update_type_aliases(models)
                 code = dump_templates(models)
                 result += [code]
 

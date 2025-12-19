@@ -14,12 +14,11 @@ from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -83,6 +82,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
 
 BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
     "use_specialized_enum",
+    "use_standard_collections",
 })
 
 
@@ -394,7 +394,7 @@ class Config(BaseModel):
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None  # noqa: UP045
-    use_standard_collections: bool = False
+    use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
     use_attribute_docstrings: bool = False
@@ -405,6 +405,7 @@ class Config(BaseModel):
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
+    ignore_enum_constraints: bool = False
     use_one_literal_as_default: bool = False
     use_enum_values_in_discriminator: bool = False
     set_default_enum_member: bool = False
@@ -412,7 +413,7 @@ class Config(BaseModel):
     use_specialized_enum: bool = True
     strict_nullable: bool = False
     use_generic_container_types: bool = False
-    use_union_operator: bool = False
+    use_union_operator: bool = True
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None  # noqa: UP045
     disable_appending_item_suffix: bool = False
@@ -463,6 +464,7 @@ class Config(BaseModel):
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
+    use_status_code_in_response_name: bool = False
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
     all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
     module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
@@ -526,7 +528,7 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
     return {}
 
 
-TomlValue: TypeAlias = Union[str, bool, list["TomlValue"], tuple["TomlValue", ...]]
+TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
 
 
 def _format_toml_value(value: TomlValue) -> str:
@@ -707,6 +709,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         shared_module_name=config.shared_module_name,
         encoding=config.encoding,
         enum_field_as_literal=config.enum_field_as_literal,
+        ignore_enum_constraints=config.ignore_enum_constraints,
         use_one_literal_as_default=config.use_one_literal_as_default,
         use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
         set_default_enum_member=config.set_default_enum_member,
@@ -765,6 +768,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         disable_future_imports=config.disable_future_imports,
         type_mappings=config.type_mappings,
         read_only_write_only_model_type=config.read_only_write_only_model_type,
+        use_status_code_in_response_name=config.use_status_code_in_response_name,
         all_exports_scope=config.all_exports_scope,
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         module_split_mode=config.module_split_mode,

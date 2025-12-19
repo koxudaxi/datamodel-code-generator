@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any
 
 
 @dataclass(frozen=True, kw_only=True)
 class Person:
-    firstName: Optional[str] = None
-    lastName: Optional[str] = None
-    age: Optional[int] = None
-    friends: Optional[List[Any]] = None
+    firstName: str | None = None
+    lastName: str | None = None
+    age: int | None = None
+    friends: list[Any] | None = None
     comment: None = None

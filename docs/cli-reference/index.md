@@ -9,11 +9,11 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 16 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
-| 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
+| 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
@@ -92,6 +92,7 @@ This documentation is auto-generated from test cases.
 
 ### I {#i}
 
+- [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints)
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject)
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters)
 - [`--input`](base-options.md#input)
@@ -111,6 +112,8 @@ This documentation is auto-generated from test cases.
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
+- [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+- [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
 
 ### O {#o}
 
@@ -171,11 +174,10 @@ This documentation is auto-generated from test cases.
 - [`--use-pendulum`](typing-customization.md#use-pendulum)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
-- [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+- [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
-- [`--use-union-operator`](typing-customization.md#use-union-operator)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
 
 ### V {#v}

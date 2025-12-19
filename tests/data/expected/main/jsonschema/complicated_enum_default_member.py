@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -21,7 +20,7 @@ class Kind(BaseModel):
 
 
 class ProcessingTask(BaseModel):
-    processing_status_union: Optional[ProcessingStatus] = ProcessingStatus.COMPLETED
-    processing_status: Optional[ProcessingStatus] = ProcessingStatus.COMPLETED
-    name: Optional[str] = None
-    kind: Optional[Kind] = None
+    processing_status_union: ProcessingStatus | None = ProcessingStatus.COMPLETED
+    processing_status: ProcessingStatus | None = ProcessingStatus.COMPLETED
+    name: str | None = None
+    kind: Kind | None = None

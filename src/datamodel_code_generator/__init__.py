@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -17,18 +17,17 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     TextIO,
+    TypeAlias,
     TypeVar,
-    Union,
     cast,
 )
 from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
-from typing_extensions import TypeAlias, TypeAliasType, TypedDict
+from typing_extensions import TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -48,10 +47,10 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
 
-    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
-    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+    YamlScalar: TypeAlias = str | int | float | bool | None
+    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
-MIN_VERSION: Final[int] = 9
+MIN_VERSION: Final[int] = 10
 MAX_VERSION: Final[int] = 13
 DEFAULT_SHARED_MODULE_NAME: Final[str] = "shared"
 
@@ -74,12 +73,12 @@ class DataclassArguments(TypedDict, total=False):
 
 
 if not TYPE_CHECKING:
-    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    YamlScalar: TypeAlias = str | int | float | bool | None
     if PYDANTIC_V2:
-        YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+        YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
     else:
         # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
-        YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]
+        YamlValue: TypeAlias = dict[str, Any] | list[Any] | YamlScalar
 
 try:
     import pysnooper
@@ -406,7 +405,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: str | None = None,
-    use_standard_collections: bool = False,
+    use_standard_collections: bool = True,
     use_schema_description: bool = False,
     use_field_description: bool = False,
     use_attribute_docstrings: bool = False,
@@ -417,6 +416,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
+    ignore_enum_constraints: bool = False,
     use_one_literal_as_default: bool = False,
     use_enum_values_in_discriminator: bool = False,
     set_default_enum_member: bool = False,
@@ -448,7 +448,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_decimal_for_multiple_of: bool = False,
     original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
-    use_union_operator: bool = False,
+    use_union_operator: bool = True,
     collapse_root_models: bool = False,
     skip_root_model: bool = False,
     use_type_alias: bool = False,
@@ -477,6 +477,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+    use_status_code_in_response_name: bool = False,
     all_exports_scope: AllExportsScope | None = None,
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
     module_split_mode: ModuleSplitMode | None = None,
@@ -487,17 +488,18 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
     """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
-    if isinstance(input_, str):
-        input_text: str | None = input_
-    elif isinstance(input_, ParseResult):
-        from datamodel_code_generator.http import get_body  # noqa: PLC0415
+    match input_:
+        case str():
+            input_text: str | None = input_
+        case ParseResult():
+            from datamodel_code_generator.http import get_body  # noqa: PLC0415
 
-        input_text = remote_text_cache.get_or_put(
-            input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
-        )
-    else:
-        input_text = None
+            input_text = remote_text_cache.get_or_put(
+                input_.geturl(),
+                default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
+            )
+        case _:
+            input_text = None
 
     if dataclass_arguments is None:
         dataclass_arguments = {}
@@ -536,6 +538,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         parser_class: type[Parser] = OpenAPIParser
         kwargs["openapi_scopes"] = openapi_scopes
         kwargs["include_path_parameters"] = include_path_parameters
+        kwargs["use_status_code_in_response_name"] = use_status_code_in_response_name
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -559,7 +562,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                     def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
                         assert csv_reader.fieldnames is not None
-                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))
+                        return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
 
                     if isinstance(input_, Path):
                         with input_.open(encoding=encoding) as f:
@@ -658,9 +661,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         reuse_model=reuse_model,
         reuse_scope=reuse_scope,
         shared_module_name=shared_module_name,
-        enum_field_as_literal=LiteralType.All
-        if output_model_type == DataModelType.TypingTypedDict
-        else enum_field_as_literal,
+        enum_field_as_literal=enum_field_as_literal
+        if enum_field_as_literal is not None
+        else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
+        ignore_enum_constraints=ignore_enum_constraints,
         use_one_literal_as_default=use_one_literal_as_default,
         use_enum_values_in_discriminator=use_enum_values_in_discriminator,
         set_default_enum_member=True
@@ -731,16 +735,16 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             module_split_mode=module_split_mode,
         )
     if not input_filename:  # pragma: no cover
-        if isinstance(input_, str):
-            input_filename = "<stdin>"
-        elif isinstance(input_, ParseResult):
-            input_filename = input_.geturl()
-        elif input_file_type == InputFileType.Dict:
-            # input_ might be a dict object provided directly, and missing a name field
-            input_filename = getattr(input_, "name", "<dict>")
-        else:
-            assert isinstance(input_, Path)
-            input_filename = input_.name
+        match input_:
+            case str():
+                input_filename = "<stdin>"
+            case ParseResult():
+                input_filename = input_.geturl()
+            case Path():
+                input_filename = input_.name
+            case _:
+                # input_ might be a dict object provided directly, and missing a name field
+                input_filename = getattr(input_, "name", "<dict>")
     if not results:
         msg = "Models not found in the input data"
         raise Error(msg)

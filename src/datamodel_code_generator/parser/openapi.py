@@ -12,7 +12,7 @@ from contextlib import nullcontext
 from enum import Enum
 from pathlib import Path
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
 from pydantic import Field
@@ -51,7 +51,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from urllib.parse import ParseResult
 
     from datamodel_code_generator.parser import DefaultPutDict
@@ -214,6 +214,7 @@ class OpenAPIParser(JsonSchemaParser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
@@ -272,6 +273,7 @@ class OpenAPIParser(JsonSchemaParser):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         use_frozen_field: bool = False,
+        use_status_code_in_response_name: bool = False,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -310,6 +312,7 @@ class OpenAPIParser(JsonSchemaParser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -369,6 +372,7 @@ class OpenAPIParser(JsonSchemaParser):
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
+        self.use_status_code_in_response_name: bool = use_status_code_in_response_name
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
@@ -518,7 +522,7 @@ class OpenAPIParser(JsonSchemaParser):
                 self.parse_object(name, obj, path)
         elif obj.is_object:
             data_type = self.parse_object(name, obj, path)
-        elif obj.enum:  # pragma: no cover
+        elif obj.enum and not self.ignore_enum_constraints:  # pragma: no cover
             data_type = self.parse_enum(name, obj, path)
         elif obj.ref:  # pragma: no cover
             data_type = self.get_ref_data_type(obj.ref)
@@ -550,6 +554,8 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse response objects into data types by status code and content type."""
         data_types: defaultdict[str | int, dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
+            response_name = f"{name}{str(status_code).capitalize()}" if self.use_status_code_in_response_name else name
+
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
                     continue
@@ -563,7 +569,7 @@ class OpenAPIParser(JsonSchemaParser):
 
             for content_type, obj in content.items():
                 response_path: list[str] = [*path, str(status_code), str(content_type)]
-                data_type = self._parse_schema_or_ref(name, obj.schema_, response_path)
+                data_type = self._parse_schema_or_ref(response_name, obj.schema_, response_path)
                 if data_type:
                     data_types[status_code][content_type] = data_type  # pyright: ignore[reportArgumentType]
 

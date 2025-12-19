@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, conint
 
 
 class BaseRef(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class StatusEnum(Enum):
@@ -40,7 +40,7 @@ class AllofUniqueItems(BaseModel):
 
 
 class ObjectWithoutAdditional(BaseModel):
-    nested: Optional[str] = None
+    nested: str | None = None
 
 
 class MultipleAdditionalProps(BaseModel):
@@ -48,51 +48,51 @@ class MultipleAdditionalProps(BaseModel):
 
 
 class L3(BaseModel):
-    l4: Optional[str] = None
+    l4: str | None = None
 
 
 class L2(BaseModel):
-    l3: Optional[L3] = None
+    l3: L3 | None = None
 
 
 class L1(BaseModel):
-    l2: Optional[L2] = None
+    l2: L2 | None = None
 
 
 class DepthLimitTest(BaseModel):
-    l1: Optional[L1] = None
+    l1: L1 | None = None
 
 
 class ProjectedEdgeCases(BaseModel):
-    single_allof_primitive: Optional[SingleAllofPrimitive] = None
-    single_allof_ref: Optional[BaseRef] = None
-    allof_with_enum: Optional[StatusEnum] = None
-    allof_nested_anyof: Optional[AllofNestedAnyof] = None
-    allof_constraint_only: Optional[AllofConstraintOnly] = None
-    allof_max_constraints: Optional[AllofMaxConstraints] = None
-    allof_unique_items: Optional[AllofUniqueItems] = None
-    object_without_additional: Optional[ObjectWithoutAdditional] = None
-    object_only_type: Optional[Dict[str, Any]] = None
-    multiple_additional_props: Optional[MultipleAdditionalProps] = None
-    depth_limit_test: Optional[DepthLimitTest] = None
-    cycle_detection: Optional[BaseRef] = None
-    type_list_field: Optional[Union[str, int]] = None
-    allof_multiple_refs_only: Optional[BaseRef] = None
+    single_allof_primitive: SingleAllofPrimitive | None = None
+    single_allof_ref: BaseRef | None = None
+    allof_with_enum: StatusEnum | None = None
+    allof_nested_anyof: AllofNestedAnyof | None = None
+    allof_constraint_only: AllofConstraintOnly | None = None
+    allof_max_constraints: AllofMaxConstraints | None = None
+    allof_unique_items: AllofUniqueItems | None = None
+    object_without_additional: ObjectWithoutAdditional | None = None
+    object_only_type: dict[str, Any] | None = None
+    multiple_additional_props: MultipleAdditionalProps | None = None
+    depth_limit_test: DepthLimitTest | None = None
+    cycle_detection: BaseRef | None = None
+    type_list_field: str | int | None = None
+    allof_multiple_refs_only: BaseRef | None = None
 
 
 class EdgeCases(ProjectedEdgeCases):
-    extra: Optional[str] = None
+    extra: str | None = None
     single_allof_primitive: str
     single_allof_ref: BaseRef
     allof_with_enum: StatusEnum
-    allof_nested_anyof: Union[str, int]
+    allof_nested_anyof: str | int
     allof_constraint_only: Any
     allof_max_constraints: conint(le=50)
-    allof_unique_items: List[str]
-    object_without_additional: Dict[str, Any]
-    object_only_type: Dict[str, Any]
-    multiple_additional_props: Dict[str, BaseRef]
-    depth_limit_test: Dict[str, Any]
+    allof_unique_items: list[str]
+    object_without_additional: dict[str, Any]
+    object_only_type: dict[str, Any]
+    multiple_additional_props: dict[str, BaseRef]
+    depth_limit_test: dict[str, Any]
     cycle_detection: BaseRef
-    type_list_field: Union[str, int]
+    type_list_field: str | int
     allof_multiple_refs_only: BaseRef

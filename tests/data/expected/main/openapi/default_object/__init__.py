@@ -4,21 +4,19 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class Foo(BaseModel):
-    text: Optional[str] = '987'
-    number: Optional[float] = None
+    text: str | None = '987'
+    number: float | None = None
 
 
 class Bar(BaseModel):
-    foo: Optional[Foo] = Field(
+    foo: Foo | None = Field(
         default_factory=lambda: Foo.parse_obj({'text': 'abc', 'number': 123})
     )
-    baz: Optional[List[Foo]] = Field(
+    baz: list[Foo] | None = Field(
         default_factory=lambda: [
             Foo.parse_obj(v)
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]

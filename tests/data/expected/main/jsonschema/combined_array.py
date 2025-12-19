@@ -5,18 +5,17 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 
 
 class Pet1(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
+    name: str | None = None
+    age: int | None = None
 
 
 class Pet(BaseModel):
-    __root__: Union[List[Pet1], Pet1] = Field(..., title='Pet')
+    __root__: list[Pet1] | Pet1 = Field(..., title='Pet')
 
 
 class CombinedEnum1(Enum):
@@ -30,19 +29,19 @@ class CombinedEnumField(Enum):
 
 
 class CombinedObjectField1(BaseModel):
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class CombinedSelf1(BaseModel):
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class CombinedSelf(BaseModel):
-    __root__: Union[List[CombinedSelf1], CombinedSelf1]
+    __root__: list[CombinedSelf1] | CombinedSelf1
 
 
 class CombinedSelfEnum1(BaseModel):
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class CombinedSelfEnum2(Enum):
@@ -51,11 +50,9 @@ class CombinedSelfEnum2(Enum):
 
 
 class CombinedSelfEnum(BaseModel):
-    __root__: Union[
-        List[Union[CombinedSelfEnum1, CombinedSelfEnum2]],
-        CombinedSelfEnum1,
-        CombinedSelfEnum2,
-    ]
+    __root__: list[
+        CombinedSelfEnum1 | CombinedSelfEnum2
+    ] | CombinedSelfEnum1 | CombinedSelfEnum2
 
 
 class CombinedSelfAllOf2(Enum):
@@ -64,11 +61,11 @@ class CombinedSelfAllOf2(Enum):
 
 
 class Kind(BaseModel):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class Id(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class CustomRootModel(BaseModel):
@@ -76,7 +73,7 @@ class CustomRootModel(BaseModel):
 
 
 class CombinedEnum(BaseModel):
-    __root__: Union[List[Kind], CombinedEnum1]
+    __root__: list[Kind] | CombinedEnum1
 
 
 class CombinedAllOf1(Kind, Id):
@@ -84,7 +81,7 @@ class CombinedAllOf1(Kind, Id):
 
 
 class CombinedAllOf(BaseModel):
-    __root__: Union[List[Kind], CombinedAllOf1]
+    __root__: list[Kind] | CombinedAllOf1
 
 
 class CombinedAllOfField(Kind, Id):
@@ -92,25 +89,21 @@ class CombinedAllOfField(Kind, Id):
 
 
 class CombinedAllOfObjectField(Kind, Id):
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class CombinedObjectField(BaseModel):
-    CombinedEnumField: Optional[Union[List[Kind], CombinedEnumField]] = None
-    CombinedAllOfField: Optional[Union[List[Kind], CombinedAllOfField]] = None
-    CombinedObjectField: Optional[Union[List[Kind], CombinedObjectField1]] = None
-    CombinedAllOfObjectField: Optional[
-        Union[List[Kind], CombinedAllOfObjectField]
-    ] = None
+    CombinedEnumField: list[Kind] | CombinedEnumField | None = None
+    CombinedAllOfField: list[Kind] | CombinedAllOfField | None = None
+    CombinedObjectField: list[Kind] | CombinedObjectField1 | None = None
+    CombinedAllOfObjectField: list[Kind] | CombinedAllOfObjectField | None = None
 
 
 class CombinedSelfAllOf1(Kind, Id):
-    color: Optional[str] = None
+    color: str | None = None
 
 
 class CombinedSelfAllOf(BaseModel):
-    __root__: Union[
-        List[Union[CombinedSelfAllOf1, CombinedSelfAllOf2]],
-        CombinedSelfAllOf1,
-        CombinedSelfAllOf2,
-    ]
+    __root__: list[
+        CombinedSelfAllOf1 | CombinedSelfAllOf2
+    ] | CombinedSelfAllOf1 | CombinedSelfAllOf2

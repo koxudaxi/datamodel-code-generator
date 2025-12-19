@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Sequence, Union
+from collections.abc import Sequence
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 
@@ -12,7 +12,7 @@ from pydantic import AnyUrl, BaseModel, Field, RootModel
 class Pet(BaseModel):
     id: int = Field(..., ge=0, le=9223372036854775807)
     name: str = Field(..., max_length=256)
-    tag: Optional[str] = Field(None, max_length=64)
+    tag: str | None = Field(None, max_length=64)
 
 
 class Pets(RootModel[Sequence[Pet]]):
@@ -34,14 +34,14 @@ class FaxItem(RootModel[str]):
 class User(BaseModel):
     id: int = Field(..., ge=0)
     name: str = Field(..., max_length=256)
-    tag: Optional[str] = Field(None, max_length=64)
+    tag: str | None = Field(None, max_length=64)
     uid: UID
-    phones: Optional[Sequence[Phone]] = Field(None, max_length=10)
-    fax: Optional[Sequence[FaxItem]] = None
-    height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-    weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-    age: Optional[int] = Field(None, gt=0, le=200)
-    rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+    phones: Sequence[Phone] | None = Field(None, max_length=10)
+    fax: Sequence[FaxItem] | None = None
+    height: int | float | None = Field(None, ge=1.0, le=300.0)
+    weight: float | int | None = Field(None, ge=1.0, le=1000.0)
+    age: int | None = Field(None, gt=0, le=200)
+    rating: float | None = Field(None, gt=0.0, le=5.0)
 
 
 class Users(RootModel[Sequence[User]]):
@@ -62,16 +62,16 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = Field(
+    apiKey: str | None = Field(
         None, description='To be used as a dataset parameter value'
     )
-    apiVersionNumber: Optional[str] = Field(
+    apiVersionNumber: str | None = Field(
         None, description='To be used as a version parameter value'
     )
-    apiUrl: Optional[AnyUrl] = Field(
+    apiUrl: AnyUrl | None = Field(
         None, description="The URL describing the dataset's fields"
     )
-    apiDocumentationUrl: Optional[AnyUrl] = Field(
+    apiDocumentationUrl: AnyUrl | None = Field(
         None, description='A URL to the API console for each API'
     )
 
@@ -81,8 +81,8 @@ class Apis(RootModel[Sequence[Api]]):
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

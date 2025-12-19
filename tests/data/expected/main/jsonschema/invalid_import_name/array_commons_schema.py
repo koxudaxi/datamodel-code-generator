@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import Field, RootModel
 
@@ -13,5 +13,5 @@ class Commons(RootModel[Any]):
     root: Any = Field(..., description='Commons objects', title='Commons')
 
 
-class DefaultArray(RootModel[List[Any]]):
-    root: List[Any] = Field(..., max_length=100, min_length=1)
+class DefaultArray(RootModel[list[Any]]):
+    root: list[Any] = Field(..., max_length=100, min_length=1)

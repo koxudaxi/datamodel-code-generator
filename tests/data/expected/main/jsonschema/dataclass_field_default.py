@@ -5,19 +5,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
-
-from typing_extensions import TypeAlias
+from typing import Any, TypeAlias
 
 Model: TypeAlias = Any
 
 
 @dataclass
 class User:
-    name: Optional[str] = None
-    pets: Optional[List[User]] = field(default_factory=lambda: ['dog', 'cat'])
+    name: str | None = None
+    pets: list[User] | None = field(default_factory=lambda: ['dog', 'cat'])
 
 
 @dataclass
 class Pet:
-    name: Optional[str] = 'dog'
+    name: str | None = 'dog'

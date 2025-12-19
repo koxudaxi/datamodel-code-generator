@@ -4,14 +4,10 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Extra
 
 
 class Pets(BaseModel):
-    pass
-
     class Config:
         extra = Extra.forbid
 
@@ -19,7 +15,7 @@ class Pets(BaseModel):
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Error(BaseModel):
@@ -28,11 +24,11 @@ class Error(BaseModel):
 
 
 class Resolved(BaseModel):
-    resolved: Optional[List[str]] = None
+    resolved: list[str] | None = None
 
 
 class PetsModel(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Friends2(BaseModel):

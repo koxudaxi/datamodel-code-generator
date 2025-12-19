@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 from pydantic import BaseModel
 
 
 class MyJsonOfListOfString(BaseModel):
-    __root__: Dict[str, List[str]]
+    __root__: dict[str, list[str]]

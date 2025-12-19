@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class Defaults(BaseModel):
-    a: List[Any] = Field(..., max_length=3, min_length=1)
+    a: list[Any] = Field(..., max_length=3, min_length=1)
 
 
 class Span(BaseModel):

@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Union
-
 from msgspec import UNSET, Struct, UnsetType
 
 
@@ -18,4 +16,4 @@ class UserMessage(Struct, tag_field='role', tag='user'):
 
 
 class Model(Struct):
-    message: Union[SystemMessage, UserMessage, UnsetType] = UNSET
+    message: SystemMessage | UserMessage | UnsetType = UNSET

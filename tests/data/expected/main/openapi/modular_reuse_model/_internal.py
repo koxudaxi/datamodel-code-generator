@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 from . import models
 
 
-class OptionalModel(BaseModel):
+class Optional(BaseModel):
     __root__: str
 
 
-class Id(OptionalModel):
+class Id(Optional):
     pass
 
 
@@ -25,40 +23,40 @@ class Error(BaseModel):
 
 
 class Result(BaseModel):
-    event: Optional[models.Event] = None
+    event: models.Event | None = None
 
 
 class Source(BaseModel):
-    country: Optional[str] = None
+    country: str | None = None
 
 
 class DifferentTea(BaseModel):
-    foo: Optional[Tea] = None
-    nested: Optional[Tea_1] = None
+    foo: Tea | None = None
+    nested: Tea_1 | None = None
 
 
 class Tea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
+    flavour: str | None = None
+    id: Id | None = None
 
 
 class Cocoa(BaseModel):
-    quality: Optional[int] = None
+    quality: int | None = None
 
 
 class Tea_1(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[Id] = None
-    self: Optional[Tea_1] = None
-    optional: Optional[List[OptionalModel]] = None
+    flavour: str | None = None
+    id: Id | None = None
+    self: Tea_1 | None = None
+    optional: list[Optional] | None = None
 
 
 class TeaClone(Tea_1):
     pass
 
 
-class ListModel(BaseModel):
-    __root__: List[Tea_1]
+class List(BaseModel):
+    __root__: list[Tea_1]
 
 
 Tea_1.update_forward_refs()

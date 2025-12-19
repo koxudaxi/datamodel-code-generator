@@ -133,8 +133,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     # Typing Customization
     # ==========================================================================
-    "--use-union-operator": CLIOptionMeta(name="--use-union-operator", category=OptionCategory.TYPING),
-    "--use-standard-collections": CLIOptionMeta(name="--use-standard-collections", category=OptionCategory.TYPING),
+    "--no-use-union-operator": CLIOptionMeta(name="--no-use-union-operator", category=OptionCategory.TYPING),
+    "--no-use-standard-collections": CLIOptionMeta(
+        name="--no-use-standard-collections", category=OptionCategory.TYPING
+    ),
     "--use-generic-container-types": CLIOptionMeta(
         name="--use-generic-container-types", category=OptionCategory.TYPING
     ),
@@ -142,6 +144,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-type-alias": CLIOptionMeta(name="--use-type-alias", category=OptionCategory.TYPING),
     "--strict-types": CLIOptionMeta(name="--strict-types", category=OptionCategory.TYPING),
     "--enum-field-as-literal": CLIOptionMeta(name="--enum-field-as-literal", category=OptionCategory.TYPING),
+    "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
     "--disable-future-imports": CLIOptionMeta(name="--disable-future-imports", category=OptionCategory.TYPING),
     "--use-pendulum": CLIOptionMeta(name="--use-pendulum", category=OptionCategory.TYPING),
     "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
@@ -181,6 +184,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     "--openapi-scopes": CLIOptionMeta(name="--openapi-scopes", category=OptionCategory.OPENAPI),
     "--use-operation-id-as-name": CLIOptionMeta(name="--use-operation-id-as-name", category=OptionCategory.OPENAPI),
+    "--use-status-code-in-response-name": CLIOptionMeta(
+        name="--use-status-code-in-response-name", category=OptionCategory.OPENAPI
+    ),
     "--read-only-write-only-model-type": CLIOptionMeta(
         name="--read-only-write-only-model-type", category=OptionCategory.OPENAPI
     ),

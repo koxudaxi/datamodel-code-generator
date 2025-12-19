@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, RootModel
 
 
@@ -19,7 +17,7 @@ class WriteOnlySecret(RootModel[str]):
 
 class UserRequest(BaseModel):
     name: str
-    secret: Optional[WriteOnlySecret] = None
+    secret: WriteOnlySecret | None = None
 
 
 class UserResponse(BaseModel):
@@ -30,4 +28,4 @@ class UserResponse(BaseModel):
 class User(BaseModel):
     id: ReadOnlyId
     name: str
-    secret: Optional[WriteOnlySecret] = None
+    secret: WriteOnlySecret | None = None

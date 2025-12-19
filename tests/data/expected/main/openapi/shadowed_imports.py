@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from datetime import date as date_aliased
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class MarketingOptIn(BaseModel):
-    optedIn: Optional[bool] = Field(None, examples=[False])
-    date: Optional[date_aliased] = Field(None, examples=['2018-04-26T17:03:25.155Z'])
+    optedIn: bool | None = Field(None, examples=[False])
+    date: date_aliased | None = Field(None, examples=['2018-04-26T17:03:25.155Z'])

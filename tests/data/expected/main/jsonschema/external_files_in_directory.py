@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
 
 from pydantic import BaseModel, Extra, Field, conint
 
@@ -37,9 +36,9 @@ class Tea(Enum):
 
 
 class Pet(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
-    fur: Optional[Fur] = None
+    name: str | None = None
+    age: int | None = None
+    fur: Fur | None = None
 
 
 class Friend(BaseModel):
@@ -47,31 +46,31 @@ class Friend(BaseModel):
         extra = Extra.allow
 
     name: str = Field(..., example='John Doe')
-    phone_number: Optional[str] = Field(None, example='(555) 555-1234')
-    food: Optional[List[Union[Noodle, Soup]]] = None
+    phone_number: str | None = Field(None, example='(555) 555-1234')
+    food: list[Noodle | Soup] | None = None
 
 
 class Friends(BaseModel):
-    __root__: List[Friend] = Field(..., title='Friends')
+    __root__: list[Friend] = Field(..., title='Friends')
 
 
 class Person(BaseModel):
     first_name: str = Field(..., description="The person's first name.")
     last_name: str = Field(..., description="The person's last name.")
-    age: Optional[conint(ge=0)] = Field(None, description='Age in years.')
-    pets: Optional[List[Pet]] = None
-    friends: Optional[Friends] = None
-    robot: Optional[Robot] = None
+    age: conint(ge=0) | None = Field(None, description='Age in years.')
+    pets: list[Pet] | None = None
+    friends: Friends | None = None
+    robot: Robot | None = None
     comment: None = None
-    drink: Optional[List[Union[Coffee, Tea]]] = None
-    food: Optional[List[Union[Noodle, Soup]]] = None
+    drink: list[Coffee | Tea] | None = None
+    food: list[Noodle | Soup] | None = None
 
 
 class Robot(Pet):
-    friends: Optional[Person] = None
-    drink: Optional[Coffee] = None
-    food: Optional[Noodle] = None
-    pet: Optional[Pet] = None
+    friends: Person | None = None
+    drink: Coffee | None = None
+    food: Noodle | None = None
+    pet: Pet | None = None
 
 
 Person.update_forward_refs()

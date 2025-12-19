@@ -4,17 +4,15 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class Tweet(BaseModel):
-    author_id: Optional[str] = None
+    author_id: str | None = None
 
 
 class Users(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class FileHash(BaseModel):
@@ -38,7 +36,7 @@ class FileRequest(BaseModel):
 
 
 class ImageRequest(BaseModel):
-    image_hash: Optional[str] = Field(
+    image_hash: str | None = Field(
         None,
         description='For image',
         max_length=64,
@@ -48,4 +46,4 @@ class ImageRequest(BaseModel):
 
 
 class FileHashes(BaseModel):
-    __root__: List[FileHash]
+    __root__: list[FileHash]

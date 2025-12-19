@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Extra
 
 
@@ -13,21 +11,21 @@ class Foo(BaseModel):
     class Config:
         extra = Extra.ignore
 
-    x: Optional[int] = None
+    x: int | None = None
 
 
 class Bar(BaseModel):
     class Config:
         extra = Extra.ignore
 
-    y: Optional[int] = None
+    y: int | None = None
 
 
 class Baz(BaseModel):
     class Config:
         extra = Extra.ignore
 
-    z: Optional[int] = None
+    z: int | None = None
 
 
 class Test(BaseModel):
@@ -35,5 +33,5 @@ class Test(BaseModel):
         extra = Extra.ignore
 
     foo: Foo
-    bar: Optional[Bar] = None
-    baz: Optional[Baz] = None
+    bar: Bar | None = None
+    baz: Baz | None = None

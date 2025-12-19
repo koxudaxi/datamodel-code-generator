@@ -4,19 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Extras(BaseModel):
-    name: Optional[str] = Field(
+    name: str | None = Field(
         None,
         description='normal key',
         examples=['example'],
         json_schema_extra={'key2': 456, 'invalid-key-1': 'abc'},
         repr=True,
     )
-    age: Optional[int] = Field(
-        None, examples=[13, 20], json_schema_extra={'example': 12}
-    )
+    age: int | None = Field(None, examples=[13, 20], json_schema_extra={'example': 12})

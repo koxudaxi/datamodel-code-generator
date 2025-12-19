@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import (
     BaseModel,
     Field,
@@ -20,16 +18,14 @@ from pydantic import (
 
 
 class User(BaseModel):
-    name: Optional[StrictStr] = Field(None, example='ken')
-    age: Optional[StrictInt] = None
-    salary: Optional[conint(ge=0, strict=True)] = None
-    debt: Optional[conint(le=0, strict=True)] = None
-    loan: Optional[confloat(le=0.0, strict=True)] = None
-    tel: Optional[
-        constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True)
-    ] = None
-    height: Optional[confloat(ge=0.0, strict=True)] = None
-    weight: Optional[confloat(ge=0.0, strict=True)] = None
-    score: Optional[confloat(ge=1e-08, strict=True)] = None
-    active: Optional[StrictBool] = None
-    photo: Optional[StrictBytes] = None
+    name: StrictStr | None = Field(None, example='ken')
+    age: StrictInt | None = None
+    salary: conint(ge=0, strict=True) | None = None
+    debt: conint(le=0, strict=True) | None = None
+    loan: confloat(le=0.0, strict=True) | None = None
+    tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True) | None = None
+    height: confloat(ge=0.0, strict=True) | None = None
+    weight: confloat(ge=0.0, strict=True) | None = None
+    score: confloat(ge=1e-08, strict=True) | None = None
+    active: StrictBool | None = None
+    photo: StrictBytes | None = None

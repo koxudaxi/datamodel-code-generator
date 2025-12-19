@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class DogBase(BaseModel):
-    name: Optional[str] = Field(None, title='Name')
-    woof: Optional[bool] = Field(True, title='Woof')
+    name: str | None = Field(None, title='Name')
+    woof: bool | None = Field(True, title='Woof')
 
 
 class DogRelationships(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
+    people: list[Person] | None = Field(None, title='People')
 
 
 class Dog(DogBase, DogRelationships):
@@ -23,11 +21,11 @@ class Dog(DogBase, DogRelationships):
 
 
 class PersonBase(BaseModel):
-    name: Optional[str] = Field(None, title='Name')
+    name: str | None = Field(None, title='Name')
 
 
 class PersonRelationships(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
+    people: list[Person] | None = Field(None, title='People')
 
 
 class Person(PersonBase, PersonRelationships):
@@ -35,12 +33,12 @@ class Person(PersonBase, PersonRelationships):
 
 
 class PersonsBestFriend(BaseModel):
-    people: Optional[List[Person]] = Field(None, title='People')
-    dogs: Optional[List[Dog]] = Field(None, title='Dogs')
-    dog_base: Optional[DogBase] = None
-    dog_relationships: Optional[DogRelationships] = None
-    person_base: Optional[PersonBase] = None
-    person_relationships: Optional[PersonRelationships] = None
+    people: list[Person] | None = Field(None, title='People')
+    dogs: list[Dog] | None = Field(None, title='Dogs')
+    dog_base: DogBase | None = None
+    dog_relationships: DogRelationships | None = None
+    person_base: PersonBase | None = None
+    person_relationships: PersonRelationships | None = None
 
 
 DogRelationships.update_forward_refs()

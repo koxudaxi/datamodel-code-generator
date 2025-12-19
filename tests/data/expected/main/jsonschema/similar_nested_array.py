@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -15,39 +15,39 @@ class Model(BaseModel):
 
 
 class Datum(BaseModel):
-    keyA: Optional[str] = None
+    keyA: str | None = None
 
 
 class ObjectA(BaseModel):
-    data: Optional[List[Datum]] = None
+    data: list[Datum] | None = None
 
 
 class Datum1(BaseModel):
-    keyB: Optional[str] = None
+    keyB: str | None = None
 
 
 class ObjectB(BaseModel):
-    data: Optional[List[Datum1]] = None
+    data: list[Datum1] | None = None
 
 
 class KeyC(BaseModel):
-    nestedA: Optional[str] = None
+    nestedA: str | None = None
 
 
 class KeyC1(BaseModel):
-    nestedB: Optional[str] = None
+    nestedB: str | None = None
 
 
 class ObjectC(BaseModel):
-    keyC: Optional[Union[KeyC, KeyC1]] = None
+    keyC: KeyC | KeyC1 | None = None
 
 
 class KeyCItem(BaseModel):
-    nestedA: Optional[str] = None
+    nestedA: str | None = None
 
 
 class KeyCItem1(BaseModel):
-    nestedB: Optional[str] = None
+    nestedB: str | None = None
 
 
 class KeyCEnum(Enum):
@@ -63,4 +63,4 @@ class KeyCEnum1(Enum):
 
 
 class ObjectD(BaseModel):
-    keyC: Optional[List[Union[KeyCItem, KeyCItem1, KeyCEnum, KeyCEnum1]]] = None
+    keyC: list[KeyCItem | KeyCItem1 | KeyCEnum | KeyCEnum1] | None = None

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field, conint, constr
 
@@ -44,11 +44,11 @@ class FormattedStringDatatype(BaseModel):
 
 
 class ObjectBase(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class ObjectWithAllOf(ObjectBase):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class MultiRefAllOf(BaseModel):
@@ -64,7 +64,7 @@ class IncompatibleTypeAllOf(BaseModel):
 
 
 class ConstraintWithProperties(BaseModel):
-    extra: Optional[str] = None
+    extra: str | None = None
 
 
 class ConstraintWithItems(BaseModel):
@@ -84,7 +84,7 @@ class RefWithSchemaKeywords(BaseModel):
 
 
 class ArrayDatatype(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class RefToArrayAllOf(BaseModel):
@@ -100,7 +100,7 @@ class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
 
 
 class PatternPropsDatatype(BaseModel):
-    __root__: Dict[constr(regex=r'^S_'), str]
+    __root__: dict[constr(regex=r'^S_'), str]
 
 
 class RefToPatternPropsAllOf(BaseModel):
@@ -140,23 +140,23 @@ class ConflictingFormatAllOf(BaseModel):
 
 
 class Model(BaseModel):
-    name: Optional[ConstrainedStringDatatype] = None
-    count: Optional[NonNegativeIntegerDatatype] = None
-    percentage: Optional[BoundedIntegerDatatype] = None
-    email: Optional[EmailDatatype] = None
-    obj: Optional[ObjectWithAllOf] = None
-    multi: Optional[MultiRefAllOf] = None
-    noconstraint: Optional[NoConstraintAllOf] = None
-    incompatible: Optional[IncompatibleTypeAllOf] = None
-    withprops: Optional[ConstraintWithProperties] = None
-    withitems: Optional[ConstraintWithItems] = None
-    numint: Optional[NumberIntegerCompatible] = None
-    refwithkw: Optional[RefWithSchemaKeywords] = None
-    refarr: Optional[RefToArrayAllOf] = None
-    refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
-    refpatternprops: Optional[RefToPatternPropsAllOf] = None
-    refnestedallof: Optional[RefToNestedAllOfAllOf] = None
-    refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
-    nodescription: Optional[NoDescriptionAllOf] = None
-    emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
-    conflictingformat: Optional[ConflictingFormatAllOf] = None
+    name: ConstrainedStringDatatype | None = None
+    count: NonNegativeIntegerDatatype | None = None
+    percentage: BoundedIntegerDatatype | None = None
+    email: EmailDatatype | None = None
+    obj: ObjectWithAllOf | None = None
+    multi: MultiRefAllOf | None = None
+    noconstraint: NoConstraintAllOf | None = None
+    incompatible: IncompatibleTypeAllOf | None = None
+    withprops: ConstraintWithProperties | None = None
+    withitems: ConstraintWithItems | None = None
+    numint: NumberIntegerCompatible | None = None
+    refwithkw: RefWithSchemaKeywords | None = None
+    refarr: RefToArrayAllOf | None = None
+    refobjnoprops: RefToObjectNoPropsAllOf | None = None
+    refpatternprops: RefToPatternPropsAllOf | None = None
+    refnestedallof: RefToNestedAllOfAllOf | None = None
+    refconstraintsonly: RefToConstraintsOnlyAllOf | None = None
+    nodescription: NoDescriptionAllOf | None = None
+    emptyconstraint: EmptyConstraintItemAllOf | None = None
+    conflictingformat: ConflictingFormatAllOf | None = None

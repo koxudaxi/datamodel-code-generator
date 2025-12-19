@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class TestNestedNested(BaseModel):
-    test_nested_nested_string: Optional[str] = None
+    test_nested_nested_string: str | None = None
 
 
 class TestNested(BaseModel):
-    test_string: Optional[str] = None
-    nested_nested: Optional[TestNestedNested] = None
+    test_string: str | None = None
+    nested_nested: TestNestedNested | None = None
 
 
 class Test(TestNested):

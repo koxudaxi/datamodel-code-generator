@@ -4,17 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Union
-
 from msgspec import UNSET, Struct, UnsetType
 
 
 class Base(Struct, kw_only=True):
     id: str
-    createdAt: Union[str, UnsetType] = UNSET
-    version: Union[float, UnsetType] = 1
+    createdAt: str | UnsetType = UNSET
+    version: float | UnsetType = 1
 
 
 class Child(Base, kw_only=True):
     title: str
-    url: Union[str, UnsetType] = 'https://example.com'
+    url: str | UnsetType = 'https://example.com'

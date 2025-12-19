@@ -4,22 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel
 
 
 class Foo(BaseModel):
     bar: int
     baz: int
-    qux: Optional[int] = None
+    qux: int | None = None
 
 
 class Foo1(BaseModel):
     bar: int
-    baz: Optional[int] = None
+    baz: int | None = None
     qux: int
 
 
 class Model(BaseModel):
-    foo: Union[Foo, Foo1]
+    foo: Foo | Foo1

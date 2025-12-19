@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from msgspec import Meta, Struct
 
@@ -20,6 +20,6 @@ class Type3(Struct, tag_field='type_', tag='c'):
 
 class Response(Struct):
     inner: Annotated[
-        Union[type_1.Type1, type_2.Type2, Type3, type_4.Type4, type_5.Type5],
+        type_1.Type1 | type_2.Type2 | Type3 | type_4.Type4 | type_5.Type5,
         Meta(title='Inner'),
     ]

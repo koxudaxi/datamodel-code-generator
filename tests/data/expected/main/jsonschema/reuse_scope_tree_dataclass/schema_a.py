@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .shared import SharedModel as SharedModel_1
 
@@ -17,4 +16,4 @@ class SharedModel(SharedModel_1):
 
 @dataclass
 class Model:
-    data: Optional[SharedModel] = None
+    data: SharedModel | None = None

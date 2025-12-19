@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 
 class Pet(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
 
 
 class PetsGetResponse(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]

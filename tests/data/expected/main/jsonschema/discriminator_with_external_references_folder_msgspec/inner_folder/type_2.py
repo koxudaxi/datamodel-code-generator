@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
@@ -12,6 +12,6 @@ from .artificial_folder import type_1
 
 
 class Type2(Struct, tag_field='type_', tag='b'):
-    ref_type: Union[
-        Annotated[type_1.Type1, Meta(description='A referenced type.')], UnsetType
-    ] = UNSET
+    ref_type: (
+        Annotated[type_1.Type1, Meta(description='A referenced type.')] | UnsetType
+    ) = UNSET

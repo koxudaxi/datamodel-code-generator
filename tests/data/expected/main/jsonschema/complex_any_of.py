@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, Union
-
 from pydantic import BaseModel, Extra
 
 
@@ -26,4 +24,4 @@ class ModelItem(BaseModel):
 
 
 class Model(BaseModel):
-    __root__: Union[int, List[ModelItem]]
+    __root__: int | list[ModelItem]

@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from enum import Enum
-from typing import Mapping, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -20,19 +20,19 @@ class NestedEnumResult(Enum):
 
 
 class OneOfResult(BaseModel):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class AnyOfResult(BaseModel):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class User(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class AllOfResult(User):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class Model(BaseModel):
@@ -41,9 +41,9 @@ class Model(BaseModel):
     result: Mapping[str, int]
     nested_object_result: Mapping[str, NestedObjectResult]
     nested_enum_result: Mapping[str, NestedEnumResult]
-    all_of_result: Optional[Mapping[str, AllOfResult]] = None
-    one_of_result: Optional[Mapping[str, Union[User, OneOfResult]]] = None
-    any_of_result: Optional[Mapping[str, Union[User, AnyOfResult]]] = None
-    all_of_with_unknown_object: Optional[Mapping[str, User]] = None
-    objectRef: Optional[Mapping[str, User]] = None
-    deepNestedObjectRef: Optional[Mapping[str, Mapping[str, Mapping[str, User]]]] = None
+    all_of_result: Mapping[str, AllOfResult] | None = None
+    one_of_result: Mapping[str, User | OneOfResult] | None = None
+    any_of_result: Mapping[str, User | AnyOfResult] | None = None
+    all_of_with_unknown_object: Mapping[str, User] | None = None
+    objectRef: Mapping[str, User] | None = None
+    deepNestedObjectRef: Mapping[str, Mapping[str, Mapping[str, User]]] | None = None

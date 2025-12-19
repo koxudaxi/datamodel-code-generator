@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 from . import models
@@ -25,43 +23,43 @@ class CustomError(BaseModel):
 
 
 class CustomResult(BaseModel):
-    event: Optional[models.CustomEvent] = None
+    event: models.CustomEvent | None = None
 
 
 class CustomSource(BaseModel):
-    country: Optional[str] = None
+    country: str | None = None
 
 
 class CustomDifferentTea(BaseModel):
-    foo: Optional[CustomTea] = None
-    nested: Optional[CustomTea_1] = None
+    foo: CustomTea | None = None
+    nested: CustomTea_1 | None = None
 
 
 class CustomTea(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[CustomId] = None
+    flavour: str | None = None
+    id: CustomId | None = None
 
 
 class CustomCocoa(BaseModel):
-    quality: Optional[int] = None
+    quality: int | None = None
 
 
 class CustomTea_1(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[CustomId] = None
-    self: Optional[CustomTea_1] = None
-    optional: Optional[List[CustomOptional]] = None
+    flavour: str | None = None
+    id: CustomId | None = None
+    self: CustomTea_1 | None = None
+    optional: list[CustomOptional] | None = None
 
 
 class CustomTeaClone(BaseModel):
-    flavour: Optional[str] = None
-    id: Optional[CustomId] = None
-    self: Optional[CustomTea_1] = None
-    optional: Optional[List[CustomOptional]] = None
+    flavour: str | None = None
+    id: CustomId | None = None
+    self: CustomTea_1 | None = None
+    optional: list[CustomOptional] | None = None
 
 
 class CustomList(BaseModel):
-    __root__: List[CustomTea_1]
+    __root__: list[CustomTea_1]
 
 
 CustomTea_1.update_forward_refs()

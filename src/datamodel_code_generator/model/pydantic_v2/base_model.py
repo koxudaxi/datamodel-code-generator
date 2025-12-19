@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field
-from typing_extensions import Literal
 
 from datamodel_code_generator.model.base import UNDEFINED, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (

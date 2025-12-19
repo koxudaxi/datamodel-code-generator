@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Thing(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Person(Thing):
-    tags: Optional[List[Any]] = ['tag1']
+    tags: list[Any] | None = ['tag1']

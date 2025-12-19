@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel
 
 
@@ -14,4 +12,4 @@ class Apple(BaseModel):
 
 
 class Basket(BaseModel):
-    apples: List[Apple] | None
+    apples: list[Apple] | None

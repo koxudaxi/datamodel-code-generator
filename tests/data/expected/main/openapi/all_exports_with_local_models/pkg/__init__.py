@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .sub import ChildModel
@@ -17,8 +15,8 @@ __all__ = [
 
 
 class LocalModel(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class AnotherLocal(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None

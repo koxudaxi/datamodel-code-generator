@@ -23,25 +23,9 @@ Sets the minimum Python version for the generated code. This automatically adjus
 
 | Version | Union Syntax | Collection Syntax | Notes |
 |---------|--------------|-------------------|-------|
-| 3.8 | `Union[X, Y]` | `List[T]`, `Dict[K, V]` | Requires `typing` imports |
-| 3.9 | `Union[X, Y]` | `list[T]`, `dict[K, V]` | Built-in generics available |
-| 3.10+ | `X \| Y` | `list[T]`, `dict[K, V]` | Union operator available |
-
-### Example: Python 3.8
-
-```bash
-datamodel-codegen --input schema.json --output models.py \
-  --target-python-version 3.8
-```
-
-```python
-from typing import List, Optional, Union
-
-class User(BaseModel):
-    id: int
-    tags: List[str]
-    metadata: Optional[Union[str, int]] = None
-```
+| 3.10 | `X \| Y` | `list[T]`, `dict[K, V]` | Union operator available |
+| 3.11 | `X \| Y` | `list[T]`, `dict[K, V]` | `Self` type available |
+| 3.12+ | `X \| Y` | `list[T]`, `dict[K, V]` | `type` statement available |
 
 ### Example: Python 3.10+
 
@@ -126,8 +110,8 @@ class Data(BaseModel):
 ### Compatibility Note
 
 Built-in generic syntax requires:
-- Python 3.9+ at runtime, OR
-- `from __future__ import annotations` (Python 3.7+)
+- Python 3.10+ at runtime, OR
+- `from __future__ import annotations`
 
 ---
 
@@ -186,7 +170,6 @@ class Data(BaseModel):
 ```
 
 This is useful when:
-- Targeting Python 3.8 or earlier
 - Working with tools that require explicit `typing` imports
 - Maintaining compatibility with legacy codebases
 
@@ -256,38 +239,34 @@ class User(BaseModel):
     metadata: dict[str, str] | None = None
 ```
 
-### Pattern 2: Legacy Python (3.8)
+### Pattern 2: Minimum Supported Python (3.10)
 
-For projects requiring Python 3.8 compatibility:
+For projects targeting Python 3.10 (minimum supported version):
 
 ```bash
 datamodel-codegen --input schema.json --output models.py \
-  --target-python-version 3.8 \
-  --use-generic-container-types \
-  --disable-future-imports
+  --target-python-version 3.10
 ```
 
 Output:
 ```python
-from typing import Dict, List, Optional, Union
-
 class User(BaseModel):
     id: int
     name: str
-    tags: List[str]
-    metadata: Optional[Dict[str, str]] = None
+    tags: list[str]
+    metadata: dict[str, str] | None = None
 ```
 
 ### Pattern 3: Maximum compatibility
 
-For libraries that need to work across multiple Python versions:
+For libraries that need to work across multiple Python versions (3.10+):
 
 ```bash
 datamodel-codegen --input schema.json --output models.py \
-  --target-python-version 3.8
+  --target-python-version 3.10
 ```
 
-The generator will use `from __future__ import annotations` to enable modern syntax while maintaining runtime compatibility.
+The generator will use modern Python 3.10+ syntax including union operators and built-in generic types.
 
 ### Pattern 4: CI/CD consistency
 
@@ -305,13 +284,14 @@ use-annotated = true
 
 ## Version Feature Matrix
 
-| Feature | 3.8 | 3.9 | 3.10 | 3.11+ |
-|---------|-----|-----|------|-------|
-| `list[T]` syntax | via `__future__` | native | native | native |
-| `X \| Y` union | via `__future__` | via `__future__` | native | native |
-| `Annotated` | `typing_extensions` | native | native | native |
-| `TypeAlias` | `typing_extensions` | native | native | native |
-| `Self` | `typing_extensions` | `typing_extensions` | `typing_extensions` | native |
+| Feature | 3.10 | 3.11 | 3.12+ |
+|---------|------|------|-------|
+| `list[T]` syntax | native | native | native |
+| `X \| Y` union | native | native | native |
+| `Annotated` | native | native | native |
+| `TypeAlias` | native | native | native |
+| `Self` | `typing_extensions` | native | native |
+| `type` statement | N/A | N/A | native |
 
 ---
 
@@ -319,9 +299,9 @@ use-annotated = true
 
 ### TypeError: 'type' object is not subscriptable
 
-This occurs when using `list[T]` syntax on Python < 3.9 without `__future__` imports.
+This occurs when using `list[T]` syntax on older Python versions without `__future__` imports.
 
-**Solution:** Either use `--target-python-version 3.8` or ensure `from __future__ import annotations` is present.
+**Solution:** Ensure you are running Python 3.10+ or use `from __future__ import annotations`.
 
 ### Pydantic validation fails with forward references
 

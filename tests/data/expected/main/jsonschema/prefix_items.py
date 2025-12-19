@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
 from pydantic import BaseModel
 
 
@@ -14,4 +12,4 @@ class Span(BaseModel):
 
 
 class Defaults(BaseModel):
-    a: Tuple[Span, str]
+    a: tuple[Span, str]

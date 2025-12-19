@@ -4,24 +4,22 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Pet(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
+    name: str | None = None
+    age: int | None = None
 
 
 class Parent(BaseModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
-    pet: Optional[Pet] = None
+    id: str | None = None
+    name: str | None = None
+    pet: Pet | None = None
 
 
 class Child(BaseModel):
-    id: Optional[str] = None
-    parent_id: Optional[str] = None
-    name: Optional[str] = None
-    pet: Optional[Pet] = None
+    id: str | None = None
+    parent_id: str | None = None
+    name: str | None = None
+    pet: Pet | None = None

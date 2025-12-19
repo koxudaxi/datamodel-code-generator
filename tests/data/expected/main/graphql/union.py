@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
+from typing import Literal, TypeAlias, Union
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -35,20 +34,20 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class IResource(BaseModel):
     id: ID
-    typename__: Optional[Literal['IResource']] = Field('IResource', alias='__typename')
+    typename__: Literal['IResource'] | None = Field('IResource', alias='__typename')
 
 
 class Car(IResource):
     id: ID
     passengerCapacity: Int
-    typename__: Optional[Literal['Car']] = Field('Car', alias='__typename')
+    typename__: Literal['Car'] | None = Field('Car', alias='__typename')
 
 
 class Employee(IResource):
-    firstName: Optional[String] = None
+    firstName: String | None = None
     id: ID
-    lastName: Optional[String] = None
-    typename__: Optional[Literal['Employee']] = Field('Employee', alias='__typename')
+    lastName: String | None = None
+    typename__: Literal['Employee'] | None = Field('Employee', alias='__typename')
 
 
 Resource: TypeAlias = Union[

@@ -4,66 +4,64 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):
-    id: Optional[int] = 1
-    name: Optional[str] = None
-    tag: Optional[str] = None
+    id: int | None = 1
+    name: str | None = None
+    tag: str | None = None
 
 
 class Pets(BaseModel):
-    __root__: Optional[List[Pet]] = None
+    __root__: list[Pet] | None = None
 
 
 class User(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
-    tag: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
+    tag: str | None = None
 
 
 class Users(BaseModel):
-    __root__: Optional[List[User]] = None
+    __root__: list[User] | None = None
 
 
 class Id(BaseModel):
-    __root__: Optional[str] = None
+    __root__: str | None = None
 
 
 class Rules(BaseModel):
-    __root__: Optional[List[str]] = None
+    __root__: list[str] | None = None
 
 
 class Error(BaseModel):
-    code: Optional[int] = None
-    message: Optional[str] = None
+    code: int | None = None
+    message: str | None = None
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = Field(
+    apiKey: str | None = Field(
         None, description='To be used as a dataset parameter value'
     )
-    apiVersionNumber: Optional[str] = Field(
+    apiVersionNumber: str | None = Field(
         None, description='To be used as a version parameter value'
     )
-    apiUrl: Optional[AnyUrl] = Field(
+    apiUrl: AnyUrl | None = Field(
         None, description="The URL describing the dataset's fields"
     )
-    apiDocumentationUrl: Optional[AnyUrl] = Field(
+    apiDocumentationUrl: AnyUrl | None = Field(
         None, description='A URL to the API console for each API'
     )
 
 
 class Apis(BaseModel):
-    __root__: Optional[List[Api]] = None
+    __root__: list[Api] | None = None
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

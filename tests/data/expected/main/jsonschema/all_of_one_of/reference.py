@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -34,4 +34,4 @@ class Target9(Second, Target):
 
 
 class Target6(BaseModel):
-    __root__: Union[Target8, Target9]
+    __root__: Target8 | Target9

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
@@ -14,9 +14,9 @@ class Type1(Struct, tag_field='type_', tag='a'):
 
 
 class Type2(Struct, tag_field='type_', tag='b'):
-    ref_type: Union[
-        Annotated[Type1, Meta(description='A referenced type.')], UnsetType
-    ] = UNSET
+    ref_type: Annotated[Type1, Meta(description='A referenced type.')] | UnsetType = (
+        UNSET
+    )
 
 
 class Type4(Struct, tag_field='type_', tag='d'):
@@ -32,4 +32,4 @@ class Type3(Struct, tag_field='type_', tag='c'):
 
 
 class Response(Struct):
-    inner: Annotated[Union[Type1, Type2, Type3, Type4, Type5], Meta(title='Inner')]
+    inner: Annotated[Type1 | Type2 | Type3 | Type4 | Type5, Meta(title='Inner')]

@@ -4,11 +4,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Literal, Union
-
-from typing_extensions import TypeAlias
+from typing import Literal, TypeAlias
 
 
 class RequestVersionEnum(Enum):
@@ -23,7 +21,7 @@ class RequestBase:
 
 @dataclass
 class RequestV1(RequestBase):
-    request_id: str
+    request_id: str = field(kw_only=True)
     version: Literal['v1'] = 'v1'
 
 
@@ -32,4 +30,4 @@ class RequestV2(RequestBase):
     version: Literal['v2'] = 'v2'
 
 
-Request: TypeAlias = Union[RequestV1, RequestV2]
+Request: TypeAlias = RequestV1 | RequestV2

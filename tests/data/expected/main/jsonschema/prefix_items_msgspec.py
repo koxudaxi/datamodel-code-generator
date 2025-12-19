@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Tuple
-
 from msgspec import Struct
 
 
@@ -14,4 +12,4 @@ class Span(Struct):
 
 
 class Defaults(Struct):
-    a: Tuple[Span, str]
+    a: tuple[Span, str]

@@ -4,56 +4,54 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class SharedBaseRequest(BaseModel):
-    shared_name: Optional[str] = None
+    shared_name: str | None = None
 
 
 class SharedBase(BaseModel):
-    shared_id: Optional[int] = None
-    shared_name: Optional[str] = None
+    shared_id: int | None = None
+    shared_name: str | None = None
 
 
 class Parent1Request(BaseModel):
-    shared_name: Optional[str] = None
-    parent1_field: Optional[str] = None
+    shared_name: str | None = None
+    parent1_field: str | None = None
 
 
 class Parent1(SharedBase):
-    parent1_field: Optional[str] = None
+    parent1_field: str | None = None
 
 
 class Parent2Request(BaseModel):
-    shared_name: Optional[str] = None
-    parent2_field: Optional[str] = None
+    shared_name: str | None = None
+    parent2_field: str | None = None
 
 
 class Parent2Response(BaseModel):
-    shared_id: Optional[int] = None
-    shared_name: Optional[str] = None
+    shared_id: int | None = None
+    shared_name: str | None = None
 
 
 class Parent2(SharedBase):
-    parent2_field: Optional[str] = None
+    parent2_field: str | None = None
 
 
 class ChildRequest(BaseModel):
-    shared_name: Optional[str] = None
-    parent1_field: Optional[str] = None
-    parent2_field: Optional[str] = None
-    child_field: Optional[str] = None
+    shared_name: str | None = None
+    parent1_field: str | None = None
+    parent2_field: str | None = None
+    child_field: str | None = None
 
 
 class ChildResponse(BaseModel):
-    shared_id: Optional[int] = None
-    shared_name: Optional[str] = None
-    parent1_field: Optional[str] = None
-    child_field: Optional[str] = None
+    shared_id: int | None = None
+    shared_name: str | None = None
+    parent1_field: str | None = None
+    child_field: str | None = None
 
 
 class Child(Parent1, Parent2):
-    child_field: Optional[str] = None
+    child_field: str | None = None

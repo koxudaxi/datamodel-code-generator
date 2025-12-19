@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    field: Optional[str] = None
+    field: str | None = None

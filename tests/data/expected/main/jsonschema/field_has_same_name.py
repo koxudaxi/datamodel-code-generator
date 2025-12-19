@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class TestObject(BaseModel):
-    test_string: Optional[str] = None
+    test_string: str | None = None
 
 
 class Test(BaseModel):
-    TestObject: Optional[TestObject] = Field(None, title='TestObject')
+    TestObject: TestObject | None = Field(None, title='TestObject')

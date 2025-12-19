@@ -19,7 +19,6 @@ from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     NamedTuple,
     Optional,
@@ -39,7 +38,7 @@ from datamodel_code_generator import Error
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, camel_to_snake, model_validator
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Extra, Field
 
@@ -38,5 +38,5 @@ class Person(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    name: Optional[str] = Field(None, title='name')
-    pet: Optional[Union[Cat, Dog]] = Field(None, title='pet')
+    name: str | None = Field(None, title='name')
+    pet: Cat | Dog | None = Field(None, title='pet')

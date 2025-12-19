@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, Union
+from typing import Annotated
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 
@@ -12,11 +12,11 @@ from pydantic import AnyUrl, BaseModel, Field, RootModel
 class Pet(BaseModel):
     id: Annotated[int, Field(ge=0, le=9223372036854775807)]
     name: Annotated[str, Field(max_length=256)]
-    tag: Annotated[Optional[str], Field(max_length=64)] = None
+    tag: Annotated[str | None, Field(max_length=64)] = None
 
 
-class Pets(RootModel[List[Pet]]):
-    root: Annotated[List[Pet], Field(max_length=10, min_length=1)]
+class Pets(RootModel[list[Pet]]):
+    root: Annotated[list[Pet], Field(max_length=10, min_length=1)]
 
 
 class UID(RootModel[int]):
@@ -34,26 +34,26 @@ class FaxItem(RootModel[str]):
 class User(BaseModel):
     id: Annotated[int, Field(ge=0)]
     name: Annotated[str, Field(max_length=256)]
-    tag: Annotated[Optional[str], Field(max_length=64)] = None
+    tag: Annotated[str | None, Field(max_length=64)] = None
     uid: UID
-    phones: Annotated[Optional[List[Phone]], Field(max_length=10)] = None
-    fax: Optional[List[FaxItem]] = None
-    height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
-    weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
-    age: Annotated[Optional[int], Field(gt=0, le=200)] = None
-    rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
+    phones: Annotated[list[Phone] | None, Field(max_length=10)] = None
+    fax: list[FaxItem] | None = None
+    height: Annotated[int | float | None, Field(ge=1.0, le=300.0)] = None
+    weight: Annotated[float | int | None, Field(ge=1.0, le=1000.0)] = None
+    age: Annotated[int | None, Field(gt=0, le=200)] = None
+    rating: Annotated[float | None, Field(gt=0.0, le=5.0)] = None
 
 
-class Users(RootModel[List[User]]):
-    root: List[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
 class Id(RootModel[str]):
     root: str
 
 
-class Rules(RootModel[List[str]]):
-    root: List[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
@@ -63,26 +63,26 @@ class Error(BaseModel):
 
 class Api(BaseModel):
     apiKey: Annotated[
-        Optional[str], Field(description='To be used as a dataset parameter value')
+        str | None, Field(description='To be used as a dataset parameter value')
     ] = None
     apiVersionNumber: Annotated[
-        Optional[str], Field(description='To be used as a version parameter value')
+        str | None, Field(description='To be used as a version parameter value')
     ] = None
     apiUrl: Annotated[
-        Optional[AnyUrl], Field(description="The URL describing the dataset's fields")
+        AnyUrl | None, Field(description="The URL describing the dataset's fields")
     ] = None
     apiDocumentationUrl: Annotated[
-        Optional[AnyUrl], Field(description='A URL to the API console for each API')
+        AnyUrl | None, Field(description='A URL to the API console for each API')
     ] = None
 
 
-class Apis(RootModel[List[Api]]):
-    root: List[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

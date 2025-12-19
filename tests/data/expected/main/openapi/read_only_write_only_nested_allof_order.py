@@ -4,31 +4,29 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class ChildRequest(BaseModel):
     id: int
-    parent_field: Optional[str] = None
-    child_field: Optional[str] = None
+    parent_field: str | None = None
+    child_field: str | None = None
 
 
 class ChildResponse(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
-    child_field: Optional[str] = None
+    created_at: AwareDatetime | None = None
+    child_field: str | None = None
 
 
 class ParentRequest(BaseModel):
     id: int
-    parent_field: Optional[str] = None
+    parent_field: str | None = None
 
 
 class ParentResponse(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class GrandParentRequest(BaseModel):
@@ -37,12 +35,12 @@ class GrandParentRequest(BaseModel):
 
 class GrandParent(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class Parent(GrandParent):
-    parent_field: Optional[str] = None
+    parent_field: str | None = None
 
 
 class Child(Parent):
-    child_field: Optional[str] = None
+    child_field: str | None = None

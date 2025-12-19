@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,22 +21,22 @@ class ID(BaseModel):
 
 
 class Pet(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Family(BaseModel):
-    __root__: List[ID]
+    __root__: list[ID]
 
 
 class FamilyPets(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Person(BaseModel):
-    id: Optional[ID] = Field(default_factory=lambda: ID.parse_obj('abc'))
-    user: Optional[Pet] = None
-    firstName: Optional[str] = Field(None, description="The person's first name.")
-    team: Optional[TeamType] = 'Department'
-    anotherTeam: Optional[TeamType] = 'Department'
-    Family: Optional[Family] = None
-    FamilyPets: Optional[FamilyPets] = None
+    id: ID | None = Field(default_factory=lambda: ID.parse_obj('abc'))
+    user: Pet | None = None
+    firstName: str | None = Field(None, description="The person's first name.")
+    team: TeamType | None = 'Department'
+    anotherTeam: TeamType | None = 'Department'
+    Family: Family | None = None
+    FamilyPets: FamilyPets | None = None

@@ -720,7 +720,7 @@ def test_pyproject_with_profile(output_file: Path, tmp_path: Path) -> None:
     """Test loading a named profile from pyproject.toml."""
     pyproject_toml = """
 [tool.datamodel-codegen]
-target-python-version = "3.9"
+target-python-version = "3.10"
 enable-version-header = false
 
 [tool.datamodel-codegen.profiles.api]
@@ -756,7 +756,7 @@ def test_pyproject_profile_not_found(tmp_path: Path, capsys: pytest.CaptureFixtu
     """Test error when profile is not found."""
     pyproject_toml = """
 [tool.datamodel-codegen]
-target-python-version = "3.9"
+target-python-version = "3.10"
 """
     (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
@@ -815,7 +815,7 @@ def test_profile_overrides_base_config_shallow_merge(output_file: Path, tmp_path
     pyproject_toml = """
 [tool.datamodel-codegen]
 strict-types = ["str", "int"]
-target-python-version = "3.9"
+target-python-version = "3.10"
 enable-version-header = false
 
 [tool.datamodel-codegen.profiles.api]
@@ -849,7 +849,7 @@ def test_generate_cli_command_with_profile(tmp_path: Path, capsys: pytest.Captur
     """Test --generate-cli-command reflects merged profile settings."""
     pyproject_toml = """
 [tool.datamodel-codegen]
-target-python-version = "3.9"
+target-python-version = "3.10"
 snake-case-field = true
 
 [tool.datamodel-codegen.profiles.api]
@@ -927,11 +927,11 @@ def test_cli_args_override_profile_and_base(output_file: Path, tmp_path: Path) -
     """Test that CLI arguments take precedence over profile and base settings."""
     pyproject_toml = """
 [tool.datamodel-codegen]
-target-python-version = "3.9"
+target-python-version = "3.10"
 enable-version-header = false
 
 [tool.datamodel-codegen.profiles.api]
-target-python-version = "3.10"
+target-python-version = "3.11"
 """
     (tmp_path / "pyproject.toml").write_text(pyproject_toml)
 
@@ -1284,7 +1284,9 @@ def test_encoding_option(output_file: Path) -> None:
     The `--encoding` flag sets the character encoding used when reading
     the schema file and writing the generated Python code. This is useful
     for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
-    Default is utf-8.
+    Default is the system's preferred encoding (via `locale.getpreferredencoding()`),
+    which is typically UTF-8 on Linux/macOS but may differ on Windows (e.g., cp1252).
+    For consistent cross-platform behavior, explicitly specify `--encoding utf-8`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "encoding_test.json",
@@ -1530,9 +1532,8 @@ def test_use_exact_imports(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--target-python-version"],
     input_schema="jsonschema/person.json",
-    cli_args=["--target-python-version", "3.9", "--use-standard-collections"],
+    cli_args=["--target-python-version", "3.10", "--use-standard-collections"],
     version_outputs={
-        "3.9": "main_kr/target_python_version/py39.py",
         "3.10": "main_kr/target_python_version/py310.py",
     },
     primary=True,
@@ -1543,16 +1544,16 @@ def test_target_python_version_outputs(output_file: Path) -> None:
 
     The `--target-python-version` flag controls Python version-specific syntax:
 
-    - **Python 3.9**: Uses `Optional[X]` for optional types, `typing.Dict/List`
-    - **Python 3.10+**: Can use `X | None` union operator, built-in `dict/list`
+    - **Python 3.10-3.11**: Uses `X | None` union operator, `TypeAlias` annotation
+    - **Python 3.12+**: Uses `type` statement for type aliases
 
     This affects import statements and type annotation syntax in generated code.
     """
-    # Test with Python 3.9 style
+    # Test with Python 3.10 style
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=output_file,
         assert_func=assert_file_content,
-        expected_file=EXPECTED_MAIN_KR_PATH / "target_python_version" / "py39.py",
-        extra_args=["--target-python-version", "3.9", "--use-standard-collections"],
+        expected_file=EXPECTED_MAIN_KR_PATH / "target_python_version" / "py310.py",
+        extra_args=["--target-python-version", "3.10", "--use-standard-collections"],
     )

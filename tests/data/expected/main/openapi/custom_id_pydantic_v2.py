@@ -4,7 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, RootModel
@@ -15,4 +14,4 @@ class CustomId(RootModel[UUID]):
 
 
 class Model(BaseModel):
-    custom_id: Optional[CustomId] = None
+    custom_id: CustomId | None = None

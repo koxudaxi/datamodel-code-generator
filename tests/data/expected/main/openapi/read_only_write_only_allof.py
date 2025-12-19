@@ -4,37 +4,35 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class Timestamps(BaseModel):
-    created_at: Optional[AwareDatetime] = None
-    updated_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
 
 
 class Credentials(BaseModel):
-    password: Optional[str] = None
-    api_key: Optional[str] = None
+    password: str | None = None
+    api_key: str | None = None
 
 
 class UserRequest(BaseModel):
-    password: Optional[str] = None
-    api_key: Optional[str] = None
+    password: str | None = None
+    api_key: str | None = None
     name: str
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class UserResponse(BaseModel):
-    created_at: Optional[AwareDatetime] = None
-    updated_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
     id: int
     name: str
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class User(Timestamps, Credentials):
     id: int
     name: str
-    email: Optional[str] = None
+    email: str | None = None

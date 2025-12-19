@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -15,4 +15,4 @@ class Model(RootModel[Any]):
 
 
 class Test(BaseModel):
-    s_duration: Optional[timedelta] = Field(None, examples=['PT2H33M3S'])
+    s_duration: timedelta | None = Field(None, examples=['PT2H33M3S'])
