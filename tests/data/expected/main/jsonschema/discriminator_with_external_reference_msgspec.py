@@ -14,9 +14,9 @@ class Type1(Struct, tag_field='type_', tag='a'):
 
 
 class Type2(Struct, tag_field='type_', tag='b'):
-    ref_type: Annotated[
-        Type1, Meta(description='A referenced type.')
-    ] | UnsetType = UNSET
+    ref_type: Annotated[Type1, Meta(description='A referenced type.')] | UnsetType = (
+        UNSET
+    )
 
 
 class Type4(Struct, tag_field='type_', tag='d'):

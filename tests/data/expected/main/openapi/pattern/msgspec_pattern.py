@@ -11,12 +11,16 @@ from msgspec import UNSET, Meta, Struct, UnsetType
 
 class Info(Struct):
     hostName: str | UnsetType = UNSET
-    arn: Annotated[
-        str, Meta(pattern='(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}):(.+)$)|^\\*$')
-    ] | UnsetType = UNSET
-    tel: Annotated[
-        str, Meta(pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
-    ] | UnsetType = UNSET
-    comment: Annotated[
-        str, Meta(pattern='[^\\b\\f\\n\\r\\t\\\\a+.?\'"|()]+$')
-    ] | UnsetType = UNSET
+    arn: (
+        Annotated[
+            str,
+            Meta(pattern='(^arn:([^:]*):([^:]*):([^:]*):(|\\*|[\\d]{12}):(.+)$)|^\\*$'),
+        ]
+        | UnsetType
+    ) = UNSET
+    tel: (
+        Annotated[str, Meta(pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')] | UnsetType
+    ) = UNSET
+    comment: (
+        Annotated[str, Meta(pattern='[^\\b\\f\\n\\r\\t\\\\a+.?\'"|()]+$')] | UnsetType
+    ) = UNSET

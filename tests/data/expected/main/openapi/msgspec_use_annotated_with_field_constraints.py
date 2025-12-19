@@ -55,18 +55,25 @@ class Error(Struct):
 
 
 class Api(Struct):
-    apiKey: Annotated[
-        str, Meta(description='To be used as a dataset parameter value')
-    ] | UnsetType = UNSET
-    apiVersionNumber: Annotated[
-        str, Meta(description='To be used as a version parameter value')
-    ] | UnsetType = UNSET
-    apiUrl: Annotated[
-        str, Meta(description="The URL describing the dataset's fields", min_length=1)
-    ] | UnsetType = UNSET
-    apiDocumentationUrl: Annotated[
-        str, Meta(description='A URL to the API console for each API')
-    ] | UnsetType = UNSET
+    apiKey: (
+        Annotated[str, Meta(description='To be used as a dataset parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiVersionNumber: (
+        Annotated[str, Meta(description='To be used as a version parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiUrl: (
+        Annotated[
+            str,
+            Meta(description="The URL describing the dataset's fields", min_length=1),
+        ]
+        | UnsetType
+    ) = UNSET
+    apiDocumentationUrl: (
+        Annotated[str, Meta(description='A URL to the API console for each API')]
+        | UnsetType
+    ) = UNSET
 
 
 Apis: TypeAlias = list[Api]

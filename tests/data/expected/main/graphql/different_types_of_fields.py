@@ -33,7 +33,7 @@ class A(BaseModel):
     optionalListListOptionalField: list[list[String | None]] | None = None
     optionalListOptionalField: list[String | None] | None = None
     optionalListOptionalListField: list[list[String] | None] | None = None
-    optionalListOptionalListOptionalField: list[
-        list[String | None] | None
-    ] | None = None
+    optionalListOptionalListOptionalField: list[list[String | None] | None] | None = (
+        None
+    )
     typename__: Literal['A'] | None = Field('A', alias='__typename')
