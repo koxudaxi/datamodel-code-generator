@@ -17,11 +17,19 @@ jobs:
         github.event.sender.login == 'ilovelinux'))
     runs-on: ubuntu-latest
     steps:
+      # Checkout for forks (no PAT available, auto-commit won't run anyway)
       - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         with:
-          token: ${{ secrets.PAT || github.token }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      # Checkout for same-repo PRs, pushes, and pull_request_target (PAT for auto-commit and workflow retrigger)
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+        with:
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          token: ${{ secrets.PAT }}
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
