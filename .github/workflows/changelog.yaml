@@ -37,15 +37,15 @@ jobs:
 
           # Initialize CHANGELOG.md if it doesn't exist
           if [ ! -f CHANGELOG.md ]; then
-            cat > CHANGELOG.md << 'EOF'
-# Changelog
-
-All notable changes to this project are documented in this file.
-This changelog is automatically generated from GitHub Releases.
-
----
-
-EOF
+            {
+              echo "# Changelog"
+              echo ""
+              echo "All notable changes to this project are documented in this file."
+              echo "This changelog is automatically generated from GitHub Releases."
+              echo ""
+              echo "---"
+              echo ""
+            } > CHANGELOG.md
           fi
 
           # Split CHANGELOG.md at first "---" separator (content-based, not line-number based)
