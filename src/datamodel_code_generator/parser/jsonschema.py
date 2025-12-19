@@ -131,6 +131,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "decimal": Types.decimal,
         "date-time": Types.date_time,
         "time": Types.time,
+        "time-delta": Types.timedelta,
         "default": Types.number,
     },
     "string": {

@@ -3135,6 +3135,33 @@ def test_main_jsonschema_duration(output_model: str, expected_output: str, min_v
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "time_delta_pydantic_v2.py",
+        ),
+        (
+            "msgspec.Struct",
+            "time_delta_msgspec.py",
+        ),
+    ],
+)
+def test_main_jsonschema_time_delta(
+    output_model: str, expected_output: str, min_version: str, output_file: Path
+) -> None:
+    """Test time-delta type handling for number format."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "time_delta.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model, "--target-python", min_version],
+    )
+
+
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",
