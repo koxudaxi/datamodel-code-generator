@@ -2645,6 +2645,7 @@ def test_main_disable_warnings(capsys: pytest.CaptureFixture[str], output_file: 
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_jsonschema_pattern_properties_by_reference(output_file: Path) -> None:
     """Test pattern properties by reference."""
     run_main_and_assert(
