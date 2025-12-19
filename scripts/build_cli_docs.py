@@ -22,6 +22,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,113 @@ from datamodel_code_generator.cli_options import (
     get_option_meta,
     is_manual_doc,
 )
+
+
+@dataclass
+class CLIDocExample:
+    """Represents a single CLI documentation example from a test."""
+
+    node_id: str
+    docstring: str
+    input_schema: str | None = None
+    config_content: str | None = None
+    cli_args: list[str] = field(default_factory=list)
+    golden_output: str | None = None
+    comparison_output: str | None = None
+    version_outputs: dict[str, str] | None = None
+    model_outputs: dict[str, str] | None = None
+    expected_stdout: str | None = None
+    aliases: list[str] = field(default_factory=list)
+    related_options: list[str] = field(default_factory=list)
+    is_primary: bool = False
+
+    @classmethod
+    def from_item(cls, item: dict[str, Any]) -> CLIDocExample:
+        """Create CLIDocExample from collected test item."""
+        kwargs = item.get("marker_kwargs", {})
+        return cls(
+            node_id=item.get("node_id", ""),
+            docstring=item.get("docstring", ""),
+            input_schema=kwargs.get("input_schema"),
+            config_content=kwargs.get("config_content"),
+            cli_args=kwargs.get("cli_args", []),
+            golden_output=kwargs.get("golden_output"),
+            comparison_output=kwargs.get("comparison_output"),
+            version_outputs=kwargs.get("version_outputs"),
+            model_outputs=kwargs.get("model_outputs"),
+            expected_stdout=kwargs.get("expected_stdout"),
+            aliases=kwargs.get("aliases", []),
+            related_options=kwargs.get("related_options", []),
+            is_primary=kwargs.get("primary", False),
+        )
+
+    def get_schema_type(self) -> str:
+        """Determine schema type from input_schema path."""
+        if not self.input_schema:
+            return "config" if self.config_content else "unknown"
+        path_lower = self.input_schema.lower()
+        if path_lower.endswith(".graphql"):
+            return "GraphQL"
+        prefix_map = {
+            "graphql/": "GraphQL",
+            "openapi/": "OpenAPI",
+            "jsonschema/": "JSON Schema",
+            "json/": "JSON",
+            "yaml/": "YAML",
+            "csv/": "CSV",
+        }
+        for prefix, schema_type in prefix_map.items():
+            if path_lower.startswith(prefix):
+                return schema_type
+        return "Schema"
+
+
+@dataclass
+class CLIDocOption:
+    """Represents a CLI option with all its documentation examples."""
+
+    option_name: str
+    examples: list[CLIDocExample] = field(default_factory=list)
+
+    def add_example(self, example: CLIDocExample) -> None:
+        """Add an example, maintaining primary example priority."""
+        self.examples.append(example)
+
+    def get_primary(self) -> CLIDocExample | None:
+        """Get the primary example for this option."""
+        for ex in self.examples:
+            if ex.is_primary:
+                return ex
+        return self.examples[0] if self.examples else None
+
+    def get_docstring(self) -> str:
+        """Get docstring from primary example."""
+        primary = self.get_primary()
+        return primary.docstring if primary else ""
+
+    def get_aliases(self) -> list[str]:
+        """Get all aliases from all examples."""
+        aliases: set[str] = set()
+        for ex in self.examples:
+            aliases.update(ex.aliases)
+        return sorted(aliases)
+
+    def get_related_options(self) -> list[str]:
+        """Get all related options from all examples."""
+        related: set[str] = set()
+        for ex in self.examples:
+            related.update(ex.related_options)
+        return sorted(related)
+
+    def get_unique_schema_types(self) -> list[str]:
+        """Get unique schema types across all examples."""
+        types: dict[str, CLIDocExample] = {}
+        for ex in self.examples:
+            schema_type = ex.get_schema_type()
+            if schema_type not in types:
+                types[schema_type] = ex
+        return list(types.keys())
+
 
 COLLECTION_PATH = Path(__file__).parent.parent / "tests" / "cli_doc" / ".cli_doc_collection.json"
 DATA_PATH = Path(__file__).parent.parent / "tests" / "data"
@@ -192,14 +300,6 @@ def read_expected_file(relative_path: str) -> str:
         return safe_read_file(EXPECTED_BASE_PATH, relative_path)
 
 
-def select_primary_test(tests: list[dict[str, Any]]) -> dict[str, Any]:
-    """Select the primary test for documentation."""
-    for test in tests:
-        if test["marker_kwargs"].get("primary", False):
-            return test
-    return tests[0]
-
-
 def indent_code_block(content: str, prefix: str) -> str:
     """Indent a code block for MkDocs Material tabs."""
     lines = content.strip().split("\n")
@@ -228,32 +328,183 @@ def format_cli_args(cli_args: list[str]) -> list[str]:
     return formatted
 
 
+def _get_schema_lang(schema_path: str) -> str:
+    """Get language identifier for schema file."""
+    path_lower = schema_path.lower()
+    if path_lower.endswith((".yaml", ".yml")):
+        return "yaml"
+    if path_lower.endswith(".graphql"):
+        return "graphql"
+    return "json"
+
+
+def _generate_single_example_output(example: CLIDocExample, prefix: str = "    ") -> str:
+    """Generate output section for a single example."""
+    md = ""
+    if example.expected_stdout:
+        stdout_value = example.expected_stdout
+        if "/" in stdout_value or stdout_value.endswith((".py", ".txt")):
+            try:
+                content = read_expected_file(stdout_value)
+                md += f"{prefix}```\n"
+                for line in content.strip().split("\n"):
+                    md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+                md += f"{prefix}```\n\n"
+            except (FileNotFoundError, ValueError) as e:
+                md += f"{prefix}> **Error:** {e}\n\n"
+        else:
+            md += f"{prefix}```\n"
+            for line in stdout_value.strip().split("\n"):
+                md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+            md += f"{prefix}```\n\n"
+    elif example.comparison_output and example.model_outputs:
+        model_labels = {
+            "pydantic_v1": "Pydantic v1",
+            "pydantic_v2": "Pydantic v2",
+            "dataclass": "dataclass",
+            "typeddict": "TypedDict",
+            "msgspec": "msgspec",
+        }
+        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
+        sorted_models = sorted(
+            example.model_outputs.items(),
+            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
+        )
+        for model_key, output_file in sorted_models:
+            label = model_labels.get(model_key, model_key)
+            md += f'{prefix}=== "{label}"\n\n'
+            try:
+                content = read_expected_file(output_file)
+                md += indent_code_block(content, prefix + "    ")
+            except (FileNotFoundError, ValueError) as e:
+                md += f"{prefix}    > **Error:** {e}\n\n"
+        md += f'{prefix}=== "Without Option (Baseline)"\n\n'
+        try:
+            content = read_expected_file(example.comparison_output)
+            md += indent_code_block(content, prefix + "    ")
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}    > **Error:** {e}\n\n"
+    elif example.comparison_output and example.golden_output:
+        md += f'{prefix}=== "With Option"\n\n'
+        try:
+            content = read_expected_file(example.golden_output)
+            md += indent_code_block(content, prefix + "    ")
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}    > **Error:** {e}\n\n"
+        md += f'{prefix}=== "Without Option"\n\n'
+        try:
+            content = read_expected_file(example.comparison_output)
+            md += indent_code_block(content, prefix + "    ")
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}    > **Error:** {e}\n\n"
+    elif example.version_outputs:
+        sorted_versions = sorted(
+            example.version_outputs.items(),
+            key=lambda x: tuple(map(int, x[0].split("."))),
+        )
+        for version, output_file in sorted_versions:
+            md += f'{prefix}=== "Python {version}"\n\n'
+            try:
+                content = read_expected_file(output_file)
+                md += indent_code_block(content, prefix + "    ")
+            except (FileNotFoundError, ValueError) as e:
+                md += f"{prefix}    > **Error:** {e}\n\n"
+    elif example.model_outputs:
+        model_labels = {
+            "pydantic_v1": "Pydantic v1",
+            "pydantic_v2": "Pydantic v2",
+            "dataclass": "dataclass",
+            "typeddict": "TypedDict",
+            "msgspec": "msgspec",
+        }
+        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
+        sorted_models = sorted(
+            example.model_outputs.items(),
+            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
+        )
+        for model_key, output_file in sorted_models:
+            label = model_labels.get(model_key, model_key)
+            md += f'{prefix}=== "{label}"\n\n'
+            try:
+                content = read_expected_file(output_file)
+                md += indent_code_block(content, prefix + "    ")
+            except (FileNotFoundError, ValueError) as e:
+                md += f"{prefix}    > **Error:** {e}\n\n"
+    elif example.golden_output:
+        try:
+            content = read_expected_file(example.golden_output)
+            md += f"{prefix}```python\n"
+            for line in content.strip().split("\n"):
+                md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+            md += f"{prefix}```\n\n"
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}> **Error:** {e}\n\n"
+    return md
+
+
+def _generate_example_with_input_output(example: CLIDocExample, prefix: str = "    ") -> str:
+    """Generate combined input schema and output for an example."""
+    md = ""
+
+    # Input schema section
+    if example.config_content:
+        md += f"{prefix}**Configuration (pyproject.toml):**\n\n"
+        md += f"{prefix}```toml\n"
+        for line in example.config_content.strip().split("\n"):
+            md += f"{prefix}{line}\n"
+        md += f"{prefix}```\n\n"
+    elif example.input_schema:
+        md += f"{prefix}**Input Schema:**\n\n"
+        try:
+            schema_content = safe_read_file(
+                DATA_PATH, example.input_schema, file_types=("*.json", "*.yaml", "*.yml", "*.graphql")
+            )
+            lang = _get_schema_lang(example.input_schema)
+            md += f"{prefix}```{lang}\n"
+            for line in schema_content.strip().split("\n"):
+                md += f"{prefix}{line}\n"
+            md += f"{prefix}```\n\n"
+        except (FileNotFoundError, ValueError) as e:
+            md += f"{prefix}> **Error:** {e}\n\n"
+
+    # Output section
+    md += f"{prefix}**Output:**\n\n"
+    md += _generate_single_example_output(example, prefix)
+
+    return md
+
+
 def generate_option_section(
     option: str,
-    primary: dict[str, Any],
+    cli_doc_option: CLIDocOption,
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
 ) -> str:
     """Generate Markdown section for a single CLI option."""
-    kwargs = primary["marker_kwargs"]
     meta = get_option_meta(option)
+    primary = cli_doc_option.get_primary()
+    if not primary:
+        return ""
 
     md = f"## `{option}` {{#{slugify(option)}}}\n\n"
 
-    if primary["docstring"]:
-        md += f"{primary['docstring'].strip()}\n\n"
+    docstring = cli_doc_option.get_docstring()
+    if docstring:
+        md += f"{docstring.strip()}\n\n"
 
     meta_parts = []
-    if kwargs.get("aliases"):
-        aliases_str = ", ".join(f"`{a}`" for a in kwargs["aliases"])
+    aliases = cli_doc_option.get_aliases()
+    if aliases:
+        aliases_str = ", ".join(f"`{a}`" for a in aliases)
         meta_parts.append(f"**Aliases:** {aliases_str}")
     if meta and meta.since_version:
         meta_parts.append(f"**Since:** {meta.since_version}")
     if meta and meta.deprecated:
         msg = meta.deprecated_message or "Deprecated"
         meta_parts.append(f"**Deprecated:** {msg}")
-    if kwargs.get("related_options"):
+    related_options = cli_doc_option.get_related_options()
+    if related_options:
         related_links = []
-        for r in kwargs["related_options"]:
+        for r in related_options:
             canonical = get_canonical_option(r)
             r_meta = get_option_meta(canonical)
             if r_meta:
@@ -272,143 +523,69 @@ def generate_option_section(
             related_page_links.append(f"[{page_title}](../{page_path})")
         md += f"**See also:** {', '.join(related_page_links)}\n\n"
 
+    # Usage section (from primary example)
     md += '!!! tip "Usage"\n\n'
     md += "    ```bash\n"
-    if "config_content" in kwargs:
+    if primary.config_content:
         md += "    datamodel-codegen "
     else:
         md += "    datamodel-codegen --input schema.json "
-    formatted_args = format_cli_args(kwargs.get("cli_args", []))
+    formatted_args = format_cli_args(primary.cli_args)
     md += " ".join(formatted_args)
     md += " # (1)!\n"
     md += "    ```\n\n"
     md += f"    1. :material-arrow-left: `{option}` - the option documented here\n\n"
 
-    if "config_content" in kwargs:
-        md += '??? example "Configuration (pyproject.toml)"\n\n'
-        md += "    ```toml\n"
-        for line in kwargs["config_content"].strip().split("\n"):
-            md += f"    {line}\n"
-        md += "    ```\n\n"
-    elif "input_schema" in kwargs:
-        md += '??? example "Input Schema"\n\n'
-        try:
-            schema_content = safe_read_file(
-                DATA_PATH, kwargs["input_schema"], file_types=("*.json", "*.yaml", "*.yml", "*.graphql")
-            )
-            schema_path = kwargs["input_schema"].lower()
-            if schema_path.endswith((".yaml", ".yml")):
-                lang = "yaml"
-            elif schema_path.endswith(".graphql"):
-                lang = "graphql"
-            else:
-                lang = "json"
-            md += f"    ```{lang}\n"
-            for line in schema_content.strip().split("\n"):
+    # Group examples by schema type
+    examples_by_type: dict[str, list[CLIDocExample]] = defaultdict(list)
+    for example in cli_doc_option.examples:
+        schema_type = example.get_schema_type()
+        examples_by_type[schema_type].append(example)
+
+    # Determine if we need tabs (multiple schema types)
+    schema_types = list(examples_by_type.keys())
+    use_tabs = len(schema_types) > 1
+
+    md += '??? example "Examples"\n\n'
+
+    if use_tabs:
+        # Multiple schema types - use tabs with input+output together
+        schema_type_order = ["OpenAPI", "JSON Schema", "GraphQL", "JSON", "YAML", "CSV", "config", "Schema", "unknown"]
+        sorted_types = sorted(schema_types, key=lambda t: schema_type_order.index(t) if t in schema_type_order else 999)
+
+        for schema_type in sorted_types:
+            examples = examples_by_type[schema_type]
+            # Use first example of this type (or primary if it's of this type)
+            example = next((ex for ex in examples if ex.is_primary), examples[0])
+
+            md += f'    === "{schema_type}"\n\n'
+            md += _generate_example_with_input_output(example, "        ")
+    else:
+        # Single schema type - show input schema and output separately (original behavior)
+        example = primary
+
+        if example.config_content:
+            md += "    **Configuration (pyproject.toml):**\n\n"
+            md += "    ```toml\n"
+            for line in example.config_content.strip().split("\n"):
                 md += f"    {line}\n"
             md += "    ```\n\n"
-        except (FileNotFoundError, ValueError) as e:
-            md += f"    > **Error:** {e}\n\n"
-
-    md += '??? example "Output"\n\n'
-    if "expected_stdout" in kwargs:
-        stdout_value = kwargs["expected_stdout"]
-        if "/" in stdout_value or stdout_value.endswith((".py", ".txt")):
+        elif example.input_schema:
+            md += "    **Input Schema:**\n\n"
             try:
-                content = read_expected_file(stdout_value)
-                md += "    ```\n"
-                for line in content.strip().split("\n"):
-                    md += f"    {line}\n" if line else "    \n"
+                schema_content = safe_read_file(
+                    DATA_PATH, example.input_schema, file_types=("*.json", "*.yaml", "*.yml", "*.graphql")
+                )
+                lang = _get_schema_lang(example.input_schema)
+                md += f"    ```{lang}\n"
+                for line in schema_content.strip().split("\n"):
+                    md += f"    {line}\n"
                 md += "    ```\n\n"
             except (FileNotFoundError, ValueError) as e:
                 md += f"    > **Error:** {e}\n\n"
-        else:
-            md += "    ```\n"
-            for line in stdout_value.strip().split("\n"):
-                md += f"    {line}\n" if line else "    \n"
-            md += "    ```\n\n"
-    elif "comparison_output" in kwargs and "model_outputs" in kwargs:
-        model_labels = {
-            "pydantic_v1": "Pydantic v1",
-            "pydantic_v2": "Pydantic v2",
-            "dataclass": "dataclass",
-            "typeddict": "TypedDict",
-            "msgspec": "msgspec",
-        }
-        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
-        sorted_models = sorted(
-            kwargs["model_outputs"].items(),
-            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
-        )
-        for model_key, output_file in sorted_models:
-            label = model_labels.get(model_key, model_key)
-            md += f'    === "{label}"\n\n'
-            try:
-                content = read_expected_file(output_file)
-                md += indent_code_block(content, "        ")
-            except (FileNotFoundError, ValueError) as e:
-                md += f"        > **Error:** {e}\n\n"
-        md += '    === "Without Option (Baseline)"\n\n'
-        try:
-            content = read_expected_file(kwargs["comparison_output"])
-            md += indent_code_block(content, "        ")
-        except (FileNotFoundError, ValueError) as e:
-            md += f"        > **Error:** {e}\n\n"
-    elif "comparison_output" in kwargs and "golden_output" in kwargs:
-        md += '    === "With Option"\n\n'
-        try:
-            content = read_expected_file(kwargs["golden_output"])
-            md += indent_code_block(content, "        ")
-        except (FileNotFoundError, ValueError) as e:
-            md += f"        > **Error:** {e}\n\n"
-        md += '    === "Without Option"\n\n'
-        try:
-            content = read_expected_file(kwargs["comparison_output"])
-            md += indent_code_block(content, "        ")
-        except (FileNotFoundError, ValueError) as e:
-            md += f"        > **Error:** {e}\n\n"
-    elif kwargs.get("version_outputs"):
-        sorted_versions = sorted(
-            kwargs["version_outputs"].items(),
-            key=lambda x: tuple(map(int, x[0].split("."))),
-        )
-        for version, output_file in sorted_versions:
-            md += f'    === "Python {version}"\n\n'
-            try:
-                content = read_expected_file(output_file)
-                md += indent_code_block(content, "        ")
-            except (FileNotFoundError, ValueError) as e:
-                md += f"        > **Error:** {e}\n\n"
-    elif kwargs.get("model_outputs"):
-        model_labels = {
-            "pydantic_v1": "Pydantic v1",
-            "pydantic_v2": "Pydantic v2",
-            "dataclass": "dataclass",
-            "typeddict": "TypedDict",
-            "msgspec": "msgspec",
-        }
-        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
-        sorted_models = sorted(
-            kwargs["model_outputs"].items(),
-            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
-        )
-        for model_key, output_file in sorted_models:
-            label = model_labels.get(model_key, model_key)
-            md += f'    === "{label}"\n\n'
-            try:
-                content = read_expected_file(output_file)
-                md += indent_code_block(content, "        ")
-            except (FileNotFoundError, ValueError) as e:
-                md += f"        > **Error:** {e}\n\n"
-    elif "golden_output" in kwargs:
-        try:
-            content = read_expected_file(kwargs["golden_output"])
-            md += "    ```python\n"
-            for line in content.strip().split("\n"):
-                md += f"    {line}\n" if line else "    \n"
-            md += "    ```\n\n"
-        except (FileNotFoundError, ValueError) as e:
-            md += f"    > **Error:** {e}\n\n"
+
+        md += "    **Output:**\n\n"
+        md += _generate_single_example_output(example, "    ")
 
     md += "---\n\n"
     return md
@@ -416,7 +593,7 @@ def generate_option_section(
 
 def generate_category_page(
     category: OptionCategory,
-    options: dict[str, dict[str, Any]],
+    options: dict[str, CLIDocOption],
     option_related_pages: dict[str, list[tuple[str, str]]] | None = None,
 ) -> str:
     """Generate a category page with all options."""
@@ -426,22 +603,23 @@ def generate_category_page(
     md += "| Option | Description |\n"
     md += "|--------|-------------|\n"
     for option in sorted(options.keys()):
-        primary = options[option]
-        desc = primary["docstring"].split("\n")[0][:DESC_LENGTH_SHORT] if primary["docstring"] else ""
+        cli_doc_option = options[option]
+        docstring = cli_doc_option.get_docstring()
+        desc = docstring.split("\n")[0][:DESC_LENGTH_SHORT] if docstring else ""
         if len(desc) == DESC_LENGTH_SHORT:
             desc += "..."
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
     md += "\n---\n\n"
 
     for option in sorted(options.keys()):
-        primary = options[option]
-        md += generate_option_section(option, primary, option_related_pages)
+        cli_doc_option = options[option]
+        md += generate_option_section(option, cli_doc_option, option_related_pages)
 
     return md
 
 
 def generate_quick_reference(
-    categories: dict[OptionCategory, dict[str, Any]],
+    categories: dict[OptionCategory, dict[str, CLIDocOption]],
     manual_docs: dict[str, str] | None = None,
 ) -> str:
     """Generate a quick reference page with all options in CLI format for easy searching."""
@@ -452,8 +630,9 @@ def generate_quick_reference(
     # Collect all options with their descriptions
     all_options: list[tuple[str, str, OptionCategory | None]] = []
     for category, options in categories.items():
-        for option, primary in options.items():
-            desc = primary["docstring"].split("\n")[0] if primary["docstring"] else ""
+        for option, cli_doc_option in options.items():
+            docstring = cli_doc_option.get_docstring()
+            desc = docstring.split("\n")[0] if docstring else ""
             all_options.append((option, desc, category))
     if manual_docs:
         for option in manual_docs:
@@ -485,8 +664,9 @@ def generate_quick_reference(
         md += "|--------|-------------|\n"
 
         for option in sorted(options.keys()):
-            primary = options[option]
-            desc = primary["docstring"].split("\n")[0][:DESC_LENGTH_LONG] if primary["docstring"] else ""
+            cli_doc_option = options[option]
+            docstring = cli_doc_option.get_docstring()
+            desc = docstring.split("\n")[0][:DESC_LENGTH_LONG] if docstring else ""
             if len(desc) == DESC_LENGTH_LONG:
                 desc += "..."
             slug_opt = slugify(option)
@@ -522,7 +702,7 @@ def generate_quick_reference(
 
 
 def generate_index_page(
-    categories: dict[OptionCategory, dict[str, Any]],
+    categories: dict[OptionCategory, dict[str, CLIDocOption]],
     manual_docs: dict[str, str] | None = None,
 ) -> str:
     """Generate the index page with overview of all categories."""
@@ -664,27 +844,26 @@ def build_docs(*, check: bool = False) -> int:
     if not items and not manual_docs:
         return 0
 
-    # Group by canonical option
-    options_map: dict[str, dict[str, Any]] = {}
+    # Group by canonical option - collect ALL examples per option
+    options_map: dict[str, CLIDocOption] = {}
     for item in items:
+        example = CLIDocExample.from_item(item)
         for opt in item["marker_kwargs"].get("options", []):
             canonical = get_canonical_option(opt)
             if is_manual_doc(canonical):
                 continue
             if canonical not in options_map:
-                options_map[canonical] = select_primary_test([item])
-            # If already exists, keep existing (first one wins unless primary)
-            elif item["marker_kwargs"].get("primary", False):
-                options_map[canonical] = item
+                options_map[canonical] = CLIDocOption(option_name=canonical)
+            options_map[canonical].add_example(example)
 
-    categories: dict[OptionCategory, dict[str, Any]] = defaultdict(dict)
+    categories: dict[OptionCategory, dict[str, CLIDocOption]] = defaultdict(dict)
 
-    for option, primary in options_map.items():
+    for option, cli_doc_option in options_map.items():
         meta = get_option_meta(option)
         if meta:
-            categories[meta.category][option] = primary
+            categories[meta.category][option] = cli_doc_option
         else:
-            categories[OptionCategory.GENERAL][option] = primary
+            categories[OptionCategory.GENERAL][option] = cli_doc_option
 
     # Scan markdown files for CLI option tags
     option_related_pages = scan_docs_for_cli_option_tags()

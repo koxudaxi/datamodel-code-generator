@@ -44,338 +44,463 @@ providing fine-grained control over generated names independent of schema defini
 
     1. :material-arrow-left: `--aliases` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
 
-    ```yaml
-    openapi: "3.0.0"
-    info:
-      version: 1.0.0
-      title: Swagger Petstore
-      license:
-        name: MIT
-    servers:
-      - url: http://petstore.swagger.io/v1
-    paths:
-      /pets:
-        get:
-          summary: List all pets
-          operationId: listPets
-          tags:
-            - pets
-          parameters:
-            - name: limit
-              in: query
-              description: How many items to return at one time (max 100)
-              required: false
-              schema:
-                type: integer
-                format: int32
-          responses:
-            '200':
-              description: A paged array of pets
-              headers:
-                x-next:
-                  description: A link to the next page of responses
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+            post:
+              summary: Create a pet
+              operationId: createPets
+              tags:
+                - pets
+              responses:
+                '201':
+                  description: Null response
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+          /pets/{petId}:
+            get:
+              summary: Info for a specific pet
+              operationId: showPetById
+              tags:
+                - pets
+              parameters:
+                - name: petId
+                  in: path
+                  required: true
+                  description: The id of the pet to retrieve
                   schema:
                     type: string
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Pets"
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-                    x-amazon-apigateway-integration:
-                      uri:
-                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-                      passthroughBehavior: when_no_templates
-                      httpMethod: POST
-                      type: aws_proxy
-        post:
-          summary: Create a pet
-          operationId: createPets
-          tags:
-            - pets
-          responses:
-            '201':
-              description: Null response
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-                    x-amazon-apigateway-integration:
-                      uri:
-                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-                      passthroughBehavior: when_no_templates
-                      httpMethod: POST
-                      type: aws_proxy
-      /pets/{petId}:
-        get:
-          summary: Info for a specific pet
-          operationId: showPetById
-          tags:
-            - pets
-          parameters:
-            - name: petId
-              in: path
-              required: true
-              description: The id of the pet to retrieve
-              schema:
-                type: string
-          responses:
-            '200':
-              description: Expected response to a valid request
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Pets"
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-        x-amazon-apigateway-integration:
-          uri:
-            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-          passthroughBehavior: when_no_templates
-          httpMethod: POST
-          type: aws_proxy
-    components:
-      schemas:
-        Pet:
-          required:
-            - id
-            - name
-          properties:
-            id:
-              type: integer
-              format: int64
-              default: 1
-            name:
+              responses:
+                '200':
+                  description: Expected response to a valid request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+            x-amazon-apigateway-integration:
+              uri:
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+              passthroughBehavior: when_no_templates
+              httpMethod: POST
+              type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  default: 1
+                name:
+                  type: string
+                tag:
+                  type: string
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+            Users:
+              type: array
+              items:
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  name:
+                    type: string
+                  tag:
+                    type: string
+            Id:
               type: string
-            tag:
-              type: string
-        Pets:
-          type: array
-          items:
-            $ref: "#/components/schemas/Pet"
-        Users:
-          type: array
-          items:
-            required:
-              - id
-              - name
-            properties:
-              id:
-                type: integer
-                format: int64
-              name:
+            Rules:
+              type: array
+              items:
                 type: string
-              tag:
-                type: string
-        Id:
-          type: string
-        Rules:
-          type: array
-          items:
-            type: string
-        Error:
-          description: error result
-          required:
-            - code
-            - message
-          properties:
-            code:
-              type: integer
-              format: int32
-            message:
-              type: string
-        apis:
-          type: array
-          items:
-            type: object
-            properties:
-              apiKey:
-                type: string
-                description: To be used as a dataset parameter value
-              apiVersionNumber:
-                type: string
-                description: To be used as a version parameter value
-              apiUrl:
-                type: string
-                format: uri
-                description: "The URL describing the dataset's fields"
-              apiDocumentationUrl:
-                type: string
-                format: uri
-                description: A URL to the API console for each API
-        Event:
-          type: object
-          description: Event object
-          properties:
-            name:
-              type: string
-        Result:
-            type: object
-            properties:
-              event:
-                $ref: '#/components/schemas/Event'
-    ```
+            Error:
+              description: error result
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
+                  type: string
+            apis:
+              type: array
+              items:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    description: To be used as a dataset parameter value
+                  apiVersionNumber:
+                    type: string
+                    description: To be used as a version parameter value
+                  apiUrl:
+                    type: string
+                    format: uri
+                    description: "The URL describing the dataset's fields"
+                  apiDocumentationUrl:
+                    type: string
+                    format: uri
+                    description: A URL to the API console for each API
+            Event:
+              type: object
+              description: Event object
+              properties:
+                name:
+                  type: string
+            Result:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
+        ```
 
-??? example "Output"
+        **Output:**
 
-    === "Pydantic v1"
+        === "Pydantic v1"
+
+            ```python
+            # generated by datamodel-codegen:
+            #   filename:  api.yaml
+            #   timestamp: 2019-07-26T00:00:00+00:00
+            
+            from __future__ import annotations
+            
+            from typing import List, Optional
+            
+            from pydantic import AnyUrl, BaseModel, Field
+            
+            
+            class Pet(BaseModel):
+                id_: int = Field(..., alias='id')
+                name_: str = Field(..., alias='name')
+                tag: Optional[str] = None
+            
+            
+            class Pets(BaseModel):
+                __root__: List[Pet]
+            
+            
+            class User(BaseModel):
+                id_: int = Field(..., alias='id')
+                name_: str = Field(..., alias='name')
+                tag: Optional[str] = None
+            
+            
+            class Users(BaseModel):
+                __root__: List[User]
+            
+            
+            class Id(BaseModel):
+                __root__: str
+            
+            
+            class Rules(BaseModel):
+                __root__: List[str]
+            
+            
+            class Error(BaseModel):
+                code: int
+                message: str
+            
+            
+            class Api(BaseModel):
+                apiKey: Optional[str] = Field(
+                    None, description='To be used as a dataset parameter value'
+                )
+                apiVersionNumber: Optional[str] = Field(
+                    None, description='To be used as a version parameter value'
+                )
+                apiUrl: Optional[AnyUrl] = Field(
+                    None, description="The URL describing the dataset's fields"
+                )
+                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                    None, description='A URL to the API console for each API'
+                )
+            
+            
+            class Apis(BaseModel):
+                __root__: List[Api]
+            
+            
+            class Event(BaseModel):
+                name_: Optional[str] = Field(None, alias='name')
+            
+            
+            class Result(BaseModel):
+                event: Optional[Event] = None
+            ```
+
+        === "msgspec"
+
+            ```python
+            # generated by datamodel-codegen:
+            #   filename:  api.yaml
+            #   timestamp: 2019-07-26T00:00:00+00:00
+            
+            from __future__ import annotations
+            
+            from typing import Annotated, List, Union
+            
+            from msgspec import UNSET, Meta, Struct, UnsetType, field
+            from typing_extensions import TypeAlias
+            
+            
+            class Pet(Struct):
+                id_: int = field(name='id')
+                name_: str = field(name='name')
+                tag: Union[str, UnsetType] = UNSET
+            
+            
+            Pets: TypeAlias = List[Pet]
+            
+            
+            class User(Struct):
+                id_: int = field(name='id')
+                name_: str = field(name='name')
+                tag: Union[str, UnsetType] = UNSET
+            
+            
+            Users: TypeAlias = List[User]
+            
+            
+            Id: TypeAlias = str
+            
+            
+            Rules: TypeAlias = List[str]
+            
+            
+            class Error(Struct):
+                code: int
+                message: str
+            
+            
+            class Api(Struct):
+                apiKey: Union[
+                    Annotated[str, Meta(description='To be used as a dataset parameter value')],
+                    UnsetType,
+                ] = UNSET
+                apiVersionNumber: Union[
+                    Annotated[str, Meta(description='To be used as a version parameter value')],
+                    UnsetType,
+                ] = UNSET
+                apiUrl: Union[
+                    Annotated[str, Meta(description="The URL describing the dataset's fields")],
+                    UnsetType,
+                ] = UNSET
+                apiDocumentationUrl: Union[
+                    Annotated[str, Meta(description='A URL to the API console for each API')],
+                    UnsetType,
+                ] = UNSET
+            
+            
+            Apis: TypeAlias = List[Api]
+            
+            
+            class Event(Struct):
+                name_: Union[str, UnsetType] = field(name='name', default=UNSET)
+            
+            
+            class Result(Struct):
+                event: Union[Event, UnsetType] = UNSET
+            ```
+
+    === "JSON Schema"
+
+        **Input Schema:**
+
+        ```json
+        {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "title": "Root",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "user": {
+              "type": "object",
+              "title": "User",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "integer"
+                }
+              }
+            },
+            "address": {
+              "type": "object",
+              "title": "Address",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "city": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+        ```
+
+        **Output:**
 
         ```python
         # generated by datamodel-codegen:
-        #   filename:  api.yaml
+        #   filename:  hierarchical_aliases.json
         #   timestamp: 2019-07-26T00:00:00+00:00
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):
-            id_: int = Field(..., alias='id')
-            name_: str = Field(..., alias='name')
-            tag: Optional[str] = None
-        
-        
-        class Pets(BaseModel):
-            __root__: List[Pet]
+        from pydantic import BaseModel, Field
         
         
         class User(BaseModel):
-            id_: int = Field(..., alias='id')
-            name_: str = Field(..., alias='name')
-            tag: Optional[str] = None
+            user_name: Optional[str] = Field(None, alias='name')
+            id: Optional[int] = None
         
         
-        class Users(BaseModel):
-            __root__: List[User]
+        class Address(BaseModel):
+            address_name: Optional[str] = Field(None, alias='name')
+            city: Optional[str] = None
         
         
-        class Id(BaseModel):
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            __root__: List[str]
-        
-        
-        class Error(BaseModel):
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            apiKey: Optional[str] = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: Optional[str] = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: Optional[AnyUrl] = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: Optional[AnyUrl] = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            __root__: List[Api]
-        
-        
-        class Event(BaseModel):
-            name_: Optional[str] = Field(None, alias='name')
-        
-        
-        class Result(BaseModel):
-            event: Optional[Event] = None
+        class Root(BaseModel):
+            root_name: Optional[str] = Field(None, alias='name')
+            user: Optional[User] = Field(None, title='User')
+            address: Optional[Address] = Field(None, title='Address')
         ```
 
-    === "msgspec"
+    === "GraphQL"
+
+        **Input Schema:**
+
+        ```graphql
+        scalar DateTime
+        
+        type DateTimePeriod {
+            from: DateTime!
+            to: DateTime!
+        }
+        ```
+
+        **Output:**
 
         ```python
         # generated by datamodel-codegen:
-        #   filename:  api.yaml
+        #   filename:  field-aliases.graphql
         #   timestamp: 2019-07-26T00:00:00+00:00
         
         from __future__ import annotations
         
-        from typing import Annotated, List, Union
+        from typing import Annotated, Literal, Optional
         
-        from msgspec import UNSET, Meta, Struct, UnsetType, field
-        from typing_extensions import TypeAlias
+        from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        
-        class Pet(Struct):
-            id_: int = field(name='id')
-            name_: str = field(name='name')
-            tag: Union[str, UnsetType] = UNSET
-        
-        
-        Pets: TypeAlias = List[Pet]
+        Boolean = TypeAliasType("Boolean", bool)
+        """
+        The `Boolean` scalar type represents `true` or `false`.
+        """
         
         
-        class User(Struct):
-            id_: int = field(name='id')
-            name_: str = field(name='name')
-            tag: Union[str, UnsetType] = UNSET
+        DateTime = TypeAliasType("DateTime", str)
         
         
-        Users: TypeAlias = List[User]
+        String = TypeAliasType("String", str)
+        """
+        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+        """
         
         
-        Id: TypeAlias = str
-        
-        
-        Rules: TypeAlias = List[str]
-        
-        
-        class Error(Struct):
-            code: int
-            message: str
-        
-        
-        class Api(Struct):
-            apiKey: Union[
-                Annotated[str, Meta(description='To be used as a dataset parameter value')],
-                UnsetType,
-            ] = UNSET
-            apiVersionNumber: Union[
-                Annotated[str, Meta(description='To be used as a version parameter value')],
-                UnsetType,
-            ] = UNSET
-            apiUrl: Union[
-                Annotated[str, Meta(description="The URL describing the dataset's fields")],
-                UnsetType,
-            ] = UNSET
-            apiDocumentationUrl: Union[
-                Annotated[str, Meta(description='A URL to the API console for each API')],
-                UnsetType,
-            ] = UNSET
-        
-        
-        Apis: TypeAlias = List[Api]
-        
-        
-        class Event(Struct):
-            name_: Union[str, UnsetType] = field(name='name', default=UNSET)
-        
-        
-        class Result(Struct):
-            event: Union[Event, UnsetType] = UNSET
+        class DateTimePeriod(BaseModel):
+            periodFrom: Annotated[DateTime, Field(alias='from')]
+            periodTo: Annotated[DateTime, Field(alias='to')]
+            typename__: Annotated[
+                Optional[Literal['DateTimePeriod']], Field(alias='__typename')
+            ] = 'DateTimePeriod'
         ```
 
 ---
@@ -398,7 +523,9 @@ naming conventions for constants.
 
     1. :material-arrow-left: `--capitalize-enum-members` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -413,7 +540,7 @@ naming conventions for constants.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -448,7 +575,9 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
 
     1. :material-arrow-left: `--empty-enum-field-name` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -468,7 +597,7 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -516,7 +645,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
 
     1. :material-arrow-left: `--extra-fields` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```graphql
     type Person {
@@ -663,7 +794,7 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -855,6 +986,8 @@ The `--field-constraints` flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
 Output differs between Pydantic v1 and v2 due to API changes.
 
+**Related:** [`--strict-types`](typing-customization.md#strict-types)
+
 **See also:** [Field Constraints](../field-constraints.md)
 
 !!! tip "Usage"
@@ -865,426 +998,523 @@ Output differs between Pydantic v1 and v2 due to API changes.
 
     1. :material-arrow-left: `--field-constraints` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
 
-    ```yaml
-    openapi: "3.0.0"
-    info:
-      version: 1.0.0
-      title: Swagger Petstore
-      license:
-        name: MIT
-    servers:
-      - url: http://petstore.swagger.io/v1
-    paths:
-      /pets:
-        get:
-          summary: List all pets
-          operationId: listPets
-          tags:
-            - pets
-          parameters:
-            - name: limit
-              in: query
-              description: How many items to return at one time (max 100)
-              required: false
-              schema:
-                type: integer
-                format: int32
-                minimum: 0
-                maximum: 100
-          responses:
-            '200':
-              description: A paged array of pets
-              headers:
-                x-next:
-                  description: A link to the next page of responses
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+                    minimum: 0
+                    maximum: 100
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+            post:
+              summary: Create a pet
+              operationId: createPets
+              tags:
+                - pets
+              responses:
+                '201':
+                  description: Null response
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+          /pets/{petId}:
+            get:
+              summary: Info for a specific pet
+              operationId: showPetById
+              tags:
+                - pets
+              parameters:
+                - name: petId
+                  in: path
+                  required: true
+                  description: The id of the pet to retrieve
                   schema:
                     type: string
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Pets"
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-                    x-amazon-apigateway-integration:
-                      uri:
-                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-                      passthroughBehavior: when_no_templates
-                      httpMethod: POST
-                      type: aws_proxy
-        post:
-          summary: Create a pet
-          operationId: createPets
-          tags:
-            - pets
-          responses:
-            '201':
-              description: Null response
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-                    x-amazon-apigateway-integration:
-                      uri:
-                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-                      passthroughBehavior: when_no_templates
-                      httpMethod: POST
-                      type: aws_proxy
-      /pets/{petId}:
-        get:
-          summary: Info for a specific pet
-          operationId: showPetById
-          tags:
-            - pets
-          parameters:
-            - name: petId
-              in: path
-              required: true
-              description: The id of the pet to retrieve
-              schema:
-                type: string
-          responses:
-            '200':
-              description: Expected response to a valid request
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Pets"
-            default:
-              description: unexpected error
-              content:
-                application/json:
-                  schema:
-                    $ref: "#/components/schemas/Error"
-        x-amazon-apigateway-integration:
-          uri:
-            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
-          passthroughBehavior: when_no_templates
-          httpMethod: POST
-          type: aws_proxy
-    components:
-      schemas:
-        Pet:
-          required:
-            - id
-            - name
-          properties:
-            id:
+              responses:
+                '200':
+                  description: Expected response to a valid request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+            x-amazon-apigateway-integration:
+              uri:
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+              passthroughBehavior: when_no_templates
+              httpMethod: POST
+              type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  maximum: 9223372036854775807
+                name:
+                  type: string
+                  maxLength: 256
+                tag:
+                  type: string
+                  maxLength: 64
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+              maxItems: 10
+              minItems: 1
+              uniqueItems: true
+            UID:
               type: integer
-              format: int64
               minimum: 0
-              maximum: 9223372036854775807
-            name:
+            Users:
+              type: array
+              items:
+                required:
+                  - id
+                  - name
+                  - uid
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  name:
+                    type: string
+                    maxLength: 256
+                  tag:
+                    type: string
+                    maxLength: 64
+                  uid:
+                    $ref: '#/components/schemas/UID'
+                  phones:
+                    type: array
+                    items:
+                      type: string
+                      minLength: 3
+                    maxItems: 10
+                  fax:
+                    type: array
+                    items:
+                      type: string
+                      minLength: 3
+                  height:
+                    type:
+                      - integer
+                      - number
+                    minimum: 1
+                    maximum: 300
+                  weight:
+                    type:
+                      - number
+                      - integer
+                    minimum: 1.0
+                    maximum: 1000.0
+                  age:
+                    type: integer
+                    minimum: 0.0
+                    maximum: 200.0
+                    exclusiveMinimum: true
+                  rating:
+                    type: number
+                    minimum: 0
+                    exclusiveMinimum: True
+                    maximum: 5
+        
+            Id:
               type: string
-              maxLength: 256
-            tag:
-              type: string
-              maxLength: 64
-        Pets:
-          type: array
-          items:
-            $ref: "#/components/schemas/Pet"
-          maxItems: 10
-          minItems: 1
-          uniqueItems: true
-        UID:
-          type: integer
-          minimum: 0
-        Users:
-          type: array
-          items:
-            required:
-              - id
-              - name
-              - uid
-            properties:
-              id:
-                type: integer
-                format: int64
-                minimum: 0
-              name:
+            Rules:
+              type: array
+              items:
                 type: string
-                maxLength: 256
-              tag:
-                type: string
-                maxLength: 64
-              uid:
-                $ref: '#/components/schemas/UID'
-              phones:
-                type: array
-                items:
+            Error:
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
                   type: string
-                  minLength: 3
-                maxItems: 10
-              fax:
-                type: array
-                items:
+            apis:
+              type: array
+              items:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    description: To be used as a dataset parameter value
+                  apiVersionNumber:
+                    type: string
+                    description: To be used as a version parameter value
+                  apiUrl:
+                    type: string
+                    format: uri
+                    minLength: 1
+                    description: "The URL describing the dataset's fields"
+                  apiDocumentationUrl:
+                    type: string
+                    format: uri
+                    description: A URL to the API console for each API
+            Event:
+              type: object
+              properties:
+                name:
                   type: string
-                  minLength: 3
-              height:
-                type:
-                  - integer
-                  - number
-                minimum: 1
-                maximum: 300
-              weight:
-                type:
-                  - number
-                  - integer
-                minimum: 1.0
-                maximum: 1000.0
-              age:
-                type: integer
-                minimum: 0.0
-                maximum: 200.0
-                exclusiveMinimum: true
-              rating:
-                type: number
-                minimum: 0
-                exclusiveMinimum: True
-                maximum: 5
-    
-        Id:
-          type: string
-        Rules:
-          type: array
-          items:
-            type: string
-        Error:
-          required:
-            - code
-            - message
-          properties:
-            code:
-              type: integer
-              format: int32
-            message:
-              type: string
-        apis:
-          type: array
-          items:
-            type: object
-            properties:
-              apiKey:
-                type: string
-                description: To be used as a dataset parameter value
-              apiVersionNumber:
-                type: string
-                description: To be used as a version parameter value
-              apiUrl:
-                type: string
-                format: uri
-                minLength: 1
-                description: "The URL describing the dataset's fields"
-              apiDocumentationUrl:
-                type: string
-                format: uri
-                description: A URL to the API console for each API
-        Event:
-          type: object
-          properties:
-            name:
-              type: string
-        Result:
-            type: object
-            properties:
-              event:
-                $ref: '#/components/schemas/Event'
-    ```
-
-??? example "Output"
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api_constrained.yaml
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from typing import List, Optional, Union
-        
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):
-            id: int = Field(..., ge=0, le=9223372036854775807)
-            name: str = Field(..., max_length=256)
-            tag: Optional[str] = Field(None, max_length=64)
-        
-        
-        class Pets(BaseModel):
-            __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
-        
-        
-        class UID(BaseModel):
-            __root__: int = Field(..., ge=0)
-        
-        
-        class Phone(BaseModel):
-            __root__: str = Field(..., min_length=3)
-        
-        
-        class FaxItem(BaseModel):
-            __root__: str = Field(..., min_length=3)
-        
-        
-        class User(BaseModel):
-            id: int = Field(..., ge=0)
-            name: str = Field(..., max_length=256)
-            tag: Optional[str] = Field(None, max_length=64)
-            uid: UID
-            phones: Optional[List[Phone]] = Field(None, max_items=10)
-            fax: Optional[List[FaxItem]] = None
-            height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-            weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-            age: Optional[int] = Field(None, gt=0, le=200)
-            rating: Optional[float] = Field(None, gt=0.0, le=5.0)
-        
-        
-        class Users(BaseModel):
-            __root__: List[User]
-        
-        
-        class Id(BaseModel):
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            __root__: List[str]
-        
-        
-        class Error(BaseModel):
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            apiKey: Optional[str] = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: Optional[str] = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: Optional[AnyUrl] = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: Optional[AnyUrl] = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            __root__: List[Api]
-        
-        
-        class Event(BaseModel):
-            name: Optional[str] = None
-        
-        
-        class Result(BaseModel):
-            event: Optional[Event] = None
+            Result:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
         ```
 
-    === "Pydantic v2"
+        **Output:**
+
+        === "Pydantic v1"
+
+            ```python
+            # generated by datamodel-codegen:
+            #   filename:  api_constrained.yaml
+            #   timestamp: 2019-07-26T00:00:00+00:00
+            
+            from __future__ import annotations
+            
+            from typing import List, Optional, Union
+            
+            from pydantic import AnyUrl, BaseModel, Field
+            
+            
+            class Pet(BaseModel):
+                id: int = Field(..., ge=0, le=9223372036854775807)
+                name: str = Field(..., max_length=256)
+                tag: Optional[str] = Field(None, max_length=64)
+            
+            
+            class Pets(BaseModel):
+                __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+            
+            
+            class UID(BaseModel):
+                __root__: int = Field(..., ge=0)
+            
+            
+            class Phone(BaseModel):
+                __root__: str = Field(..., min_length=3)
+            
+            
+            class FaxItem(BaseModel):
+                __root__: str = Field(..., min_length=3)
+            
+            
+            class User(BaseModel):
+                id: int = Field(..., ge=0)
+                name: str = Field(..., max_length=256)
+                tag: Optional[str] = Field(None, max_length=64)
+                uid: UID
+                phones: Optional[List[Phone]] = Field(None, max_items=10)
+                fax: Optional[List[FaxItem]] = None
+                height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
+                weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
+                age: Optional[int] = Field(None, gt=0, le=200)
+                rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+            
+            
+            class Users(BaseModel):
+                __root__: List[User]
+            
+            
+            class Id(BaseModel):
+                __root__: str
+            
+            
+            class Rules(BaseModel):
+                __root__: List[str]
+            
+            
+            class Error(BaseModel):
+                code: int
+                message: str
+            
+            
+            class Api(BaseModel):
+                apiKey: Optional[str] = Field(
+                    None, description='To be used as a dataset parameter value'
+                )
+                apiVersionNumber: Optional[str] = Field(
+                    None, description='To be used as a version parameter value'
+                )
+                apiUrl: Optional[AnyUrl] = Field(
+                    None, description="The URL describing the dataset's fields"
+                )
+                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                    None, description='A URL to the API console for each API'
+                )
+            
+            
+            class Apis(BaseModel):
+                __root__: List[Api]
+            
+            
+            class Event(BaseModel):
+                name: Optional[str] = None
+            
+            
+            class Result(BaseModel):
+                event: Optional[Event] = None
+            ```
+
+        === "Pydantic v2"
+
+            ```python
+            # generated by datamodel-codegen:
+            #   filename:  api_constrained.yaml
+            #   timestamp: 2019-07-26T00:00:00+00:00
+            
+            from __future__ import annotations
+            
+            from typing import List, Optional, Union
+            
+            from pydantic import AnyUrl, BaseModel, Field, RootModel
+            
+            
+            class Pet(BaseModel):
+                id: int = Field(..., ge=0, le=9223372036854775807)
+                name: str = Field(..., max_length=256)
+                tag: Optional[str] = Field(None, max_length=64)
+            
+            
+            class Pets(RootModel[List[Pet]]):
+                root: List[Pet] = Field(..., max_length=10, min_length=1)
+            
+            
+            class UID(RootModel[int]):
+                root: int = Field(..., ge=0)
+            
+            
+            class Phone(RootModel[str]):
+                root: str = Field(..., min_length=3)
+            
+            
+            class FaxItem(RootModel[str]):
+                root: str = Field(..., min_length=3)
+            
+            
+            class User(BaseModel):
+                id: int = Field(..., ge=0)
+                name: str = Field(..., max_length=256)
+                tag: Optional[str] = Field(None, max_length=64)
+                uid: UID
+                phones: Optional[List[Phone]] = Field(None, max_length=10)
+                fax: Optional[List[FaxItem]] = None
+                height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
+                weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
+                age: Optional[int] = Field(None, gt=0, le=200)
+                rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+            
+            
+            class Users(RootModel[List[User]]):
+                root: List[User]
+            
+            
+            class Id(RootModel[str]):
+                root: str
+            
+            
+            class Rules(RootModel[List[str]]):
+                root: List[str]
+            
+            
+            class Error(BaseModel):
+                code: int
+                message: str
+            
+            
+            class Api(BaseModel):
+                apiKey: Optional[str] = Field(
+                    None, description='To be used as a dataset parameter value'
+                )
+                apiVersionNumber: Optional[str] = Field(
+                    None, description='To be used as a version parameter value'
+                )
+                apiUrl: Optional[AnyUrl] = Field(
+                    None, description="The URL describing the dataset's fields"
+                )
+                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                    None, description='A URL to the API console for each API'
+                )
+            
+            
+            class Apis(RootModel[List[Api]]):
+                root: List[Api]
+            
+            
+            class Event(BaseModel):
+                name: Optional[str] = None
+            
+            
+            class Result(BaseModel):
+                event: Optional[Event] = None
+            ```
+
+    === "JSON Schema"
+
+        **Input Schema:**
+
+        ```json
+        {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "title": "User",
+          "type": "object",
+          "properties": {
+                "name": {
+                  "type": "string",
+                  "example": "ken"
+                },
+                "age": {
+                  "type": "integer"
+                },
+                "salary": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "debt" : {
+                  "type": "integer",
+                  "maximum": 0
+                },
+                "loan" : {
+                  "type": "number",
+                  "maximum": 0
+                },
+                "tel": {
+                  "type": "string",
+                  "pattern": "^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$"
+                },
+                "height": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "weight": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "score": {
+                  "type": "number",
+                  "minimum": 1e-08
+                },
+                "active": {
+                  "type": "boolean"
+                },
+                "photo": {
+                  "type": "string",
+                  "format": "binary",
+                  "minLength": 100
+                }
+              }
+        }
+        ```
+
+        **Output:**
 
         ```python
         # generated by datamodel-codegen:
-        #   filename:  api_constrained.yaml
+        #   filename:  strict_types.json
         #   timestamp: 2019-07-26T00:00:00+00:00
         
         from __future__ import annotations
         
-        from typing import List, Optional, Union
+        from typing import Optional
         
-        from pydantic import AnyUrl, BaseModel, Field, RootModel
-        
-        
-        class Pet(BaseModel):
-            id: int = Field(..., ge=0, le=9223372036854775807)
-            name: str = Field(..., max_length=256)
-            tag: Optional[str] = Field(None, max_length=64)
-        
-        
-        class Pets(RootModel[List[Pet]]):
-            root: List[Pet] = Field(..., max_length=10, min_length=1)
-        
-        
-        class UID(RootModel[int]):
-            root: int = Field(..., ge=0)
-        
-        
-        class Phone(RootModel[str]):
-            root: str = Field(..., min_length=3)
-        
-        
-        class FaxItem(RootModel[str]):
-            root: str = Field(..., min_length=3)
+        from pydantic import (
+            BaseModel,
+            Field,
+            StrictBool,
+            StrictBytes,
+            StrictFloat,
+            StrictInt,
+            StrictStr,
+        )
         
         
         class User(BaseModel):
-            id: int = Field(..., ge=0)
-            name: str = Field(..., max_length=256)
-            tag: Optional[str] = Field(None, max_length=64)
-            uid: UID
-            phones: Optional[List[Phone]] = Field(None, max_length=10)
-            fax: Optional[List[FaxItem]] = None
-            height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-            weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-            age: Optional[int] = Field(None, gt=0, le=200)
-            rating: Optional[float] = Field(None, gt=0.0, le=5.0)
-        
-        
-        class Users(RootModel[List[User]]):
-            root: List[User]
-        
-        
-        class Id(RootModel[str]):
-            root: str
-        
-        
-        class Rules(RootModel[List[str]]):
-            root: List[str]
-        
-        
-        class Error(BaseModel):
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            apiKey: Optional[str] = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: Optional[str] = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: Optional[AnyUrl] = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: Optional[AnyUrl] = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(RootModel[List[Api]]):
-            root: List[Api]
-        
-        
-        class Event(BaseModel):
-            name: Optional[str] = None
-        
-        
-        class Result(BaseModel):
-            event: Optional[Event] = None
+            name: Optional[StrictStr] = Field(None, example='ken')
+            age: Optional[StrictInt] = None
+            salary: Optional[StrictInt] = Field(None, ge=0)
+            debt: Optional[StrictInt] = Field(None, le=0)
+            loan: Optional[StrictFloat] = Field(None, le=0.0)
+            tel: Optional[StrictStr] = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+            height: Optional[StrictFloat] = Field(None, ge=0.0)
+            weight: Optional[StrictFloat] = Field(None, ge=0.0)
+            score: Optional[StrictFloat] = Field(None, ge=1e-08)
+            active: Optional[StrictBool] = None
+            photo: Optional[StrictBytes] = Field(None, min_length=100)
         ```
 
 ---
@@ -1303,7 +1533,9 @@ The `--field-extra-keys` flag configures the code generation behavior.
 
     1. :material-arrow-left: `--field-extra-keys` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1341,7 +1573,7 @@ The `--field-extra-keys` flag configures the code generation behavior.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     === "Pydantic v1"
 
@@ -1415,7 +1647,9 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
 
     1. :material-arrow-left: `--field-extra-keys-without-x-prefix` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1453,7 +1687,7 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     === "Pydantic v1"
 
@@ -1543,7 +1777,9 @@ The `--field-include-all-keys` flag configures the code generation behavior.
 
     1. :material-arrow-left: `--field-include-all-keys` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1574,7 +1810,7 @@ The `--field-include-all-keys` flag configures the code generation behavior.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -1619,7 +1855,9 @@ With this flag, only Python-safe names are used without aliases.
 
     1. :material-arrow-left: `--no-alias` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1641,7 +1879,7 @@ With this flag, only Python-safe names are used without aliases.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     === "With Option"
 
@@ -1702,7 +1940,9 @@ snake_case conversion.
 
     1. :material-arrow-left: `--original-field-name-delimiter` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1724,7 +1964,7 @@ snake_case conversion.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -1763,7 +2003,9 @@ The `--remove-special-field-name-prefix` flag configures the code generation beh
 
     1. :material-arrow-left: `--remove-special-field-name-prefix` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1787,7 +2029,7 @@ The `--remove-special-field-name-prefix` flag configures the code generation beh
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -1825,7 +2067,9 @@ The `--set-default-enum-member` flag configures the code generation behavior.
 
     1. :material-arrow-left: `--set-default-enum-member` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1881,7 +2125,7 @@ The `--set-default-enum-member` flag configures the code generation behavior.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -1940,7 +2184,9 @@ conventions (PEP 8).
 
     1. :material-arrow-left: `--snake-case-field` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -1958,7 +2204,7 @@ conventions (PEP 8).
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -1995,7 +2241,9 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
 
     1. :material-arrow-left: `--special-field-name-prefix` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -2015,7 +2263,7 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -2066,7 +2314,9 @@ This provides better IDE support for hovering over attributes. Requires
 
     1. :material-arrow-left: `--use-attribute-docstrings` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -2087,7 +2337,7 @@ This provides better IDE support for hovering over attributes. Requires
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -2131,7 +2381,9 @@ The `--use-enum-values-in-discriminator` flag configures the code generation beh
 
     1. :material-arrow-left: `--use-enum-values-in-discriminator` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```yaml
     openapi: "3.0.0"
@@ -2176,7 +2428,7 @@ The `--use-enum-values-in-discriminator` flag configures the code generation beh
             - $ref: '#/components/schemas/RequestBase'
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -2223,6 +2475,8 @@ The `--use-field-description` flag extracts the `description` property from
 schema fields and includes them as docstrings or Field descriptions in the
 generated models, preserving documentation from the original schema.
 
+**Related:** [`--use-inline-field-description`](field-customization.md#use-inline-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
+
 !!! tip "Usage"
 
     ```bash
@@ -2231,86 +2485,355 @@ generated models, preserving documentation from the original schema.
 
     1. :material-arrow-left: `--use-field-description` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
 
-    ```json
-    {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "definitions": {
-        "SimpleString": {
-          "type": "string"
-        },
-        "UnionType": {
-          "anyOf": [
-            {"type": "string"},
-            {"type": "integer"}
-          ]
-        },
-        "ArrayType": {
-          "type": "array",
-          "items": {"type": "string"}
-        },
-        "AnnotatedType": {
-          "title": "MyAnnotatedType",
-          "description": "An annotated union type",
-          "anyOf": [
-            {"type": "string"},
-            {"type": "boolean"}
-          ]
-        },
-        "ModelWithTypeAliasField": {
-          "type": "object",
-          "properties": {
-            "simple_field": {"$ref": "#/definitions/SimpleString"},
-            "union_field": {"$ref": "#/definitions/UnionType"},
-            "array_field": {"$ref": "#/definitions/ArrayType"},
-            "annotated_field": {"$ref": "#/definitions/AnnotatedType"}
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+            post:
+              summary: Create a pet
+              operationId: createPets
+              tags:
+                - pets
+              responses:
+                '201':
+                  description: Null response
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+          /pets/{petId}:
+            get:
+              summary: Info for a specific pet
+              operationId: showPetById
+              tags:
+                - pets
+              parameters:
+                - name: petId
+                  in: path
+                  required: true
+                  description: The id of the pet to retrieve
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Expected response to a valid request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+            x-amazon-apigateway-integration:
+              uri:
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+              passthroughBehavior: when_no_templates
+              httpMethod: POST
+              type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  default: 1
+                name:
+                  type: string
+                tag:
+                  type: string
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+            Users:
+              type: array
+              items:
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  name:
+                    type: string
+                  tag:
+                    type: string
+            Id:
+              type: string
+            Rules:
+              type: array
+              items:
+                type: string
+            Error:
+              description: "error result.\nNow with multi-line docstrings."
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
+                  type: string
+            apis:
+              type: array
+              items:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    description: "To be used as a dataset parameter value.\nNow also with multi-line docstrings."
+                  apiVersionNumber:
+                    type: string
+                    description: To be used as a version parameter value
+                  apiUrl:
+                    type: string
+                    format: uri
+                    description: "The URL describing the dataset's fields"
+                  apiDocumentationUrl:
+                    type: string
+                    format: uri
+                    description: A URL to the API console for each API
+            Event:
+              type: object
+              description: Event object
+              properties:
+                name:
+                  type: string
+            Result:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
+        ```
+
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api_multiline_docstrings.yaml
+        #   timestamp: 2022-11-11T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import List, Optional
+        
+        from pydantic import AnyUrl, BaseModel
+        
+        
+        class Pet(BaseModel):
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Pets(BaseModel):
+            __root__: List[Pet]
+        
+        
+        class User(BaseModel):
+            id: int
+            name: str
+            tag: Optional[str] = None
+        
+        
+        class Users(BaseModel):
+            __root__: List[User]
+        
+        
+        class Id(BaseModel):
+            __root__: str
+        
+        
+        class Rules(BaseModel):
+            __root__: List[str]
+        
+        
+        class Error(BaseModel):
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            apiKey: Optional[str] = None
+            """
+            To be used as a dataset parameter value.
+            Now also with multi-line docstrings.
+            """
+            apiVersionNumber: Optional[str] = None
+            """
+            To be used as a version parameter value
+            """
+            apiUrl: Optional[AnyUrl] = None
+            """
+            The URL describing the dataset's fields
+            """
+            apiDocumentationUrl: Optional[AnyUrl] = None
+            """
+            A URL to the API console for each API
+            """
+        
+        
+        class Apis(BaseModel):
+            __root__: List[Api]
+        
+        
+        class Event(BaseModel):
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            event: Optional[Event] = None
+        ```
+
+    === "JSON Schema"
+
+        **Input Schema:**
+
+        ```json
+        {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "definitions": {
+            "SimpleString": {
+              "type": "string"
+            },
+            "UnionType": {
+              "anyOf": [
+                {"type": "string"},
+                {"type": "integer"}
+              ]
+            },
+            "ArrayType": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "AnnotatedType": {
+              "title": "MyAnnotatedType",
+              "description": "An annotated union type",
+              "anyOf": [
+                {"type": "string"},
+                {"type": "boolean"}
+              ]
+            },
+            "ModelWithTypeAliasField": {
+              "type": "object",
+              "properties": {
+                "simple_field": {"$ref": "#/definitions/SimpleString"},
+                "union_field": {"$ref": "#/definitions/UnionType"},
+                "array_field": {"$ref": "#/definitions/ArrayType"},
+                "annotated_field": {"$ref": "#/definitions/AnnotatedType"}
+              }
+            }
           }
         }
-      }
-    }
-    ```
+        ```
 
-??? example "Output"
+        **Output:**
 
-    ```python
-    # generated by datamodel-codegen:
-    #   filename:  type_alias.json
-    #   timestamp: 2019-07-26T00:00:00+00:00
-    
-    from __future__ import annotations
-    
-    from typing import Annotated, Any, List, Optional, Union
-    
-    from pydantic import BaseModel, Field
-    from typing_extensions import TypeAlias
-    
-    Model: TypeAlias = Any
-    
-    
-    SimpleString: TypeAlias = str
-    
-    
-    UnionType: TypeAlias = Union[str, int]
-    
-    
-    ArrayType: TypeAlias = List[str]
-    
-    
-    AnnotatedType: TypeAlias = Annotated[
-        Union[str, bool], Field(..., title='MyAnnotatedType')
-    ]
-    """
-    An annotated union type
-    """
-    
-    
-    class ModelWithTypeAliasField(BaseModel):
-        simple_field: Optional[SimpleString] = None
-        union_field: Optional[UnionType] = None
-        array_field: Optional[ArrayType] = None
-        annotated_field: Optional[AnnotatedType] = None
-    ```
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  type_alias.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Annotated, Any, List, Optional, Union
+        
+        from pydantic import BaseModel, Field
+        from typing_extensions import TypeAlias
+        
+        Model: TypeAlias = Any
+        
+        
+        SimpleString: TypeAlias = str
+        
+        
+        UnionType: TypeAlias = Union[str, int]
+        
+        
+        ArrayType: TypeAlias = List[str]
+        
+        
+        AnnotatedType: TypeAlias = Annotated[
+            Union[str, bool], Field(..., title='MyAnnotatedType')
+        ]
+        """
+        An annotated union type
+        """
+        
+        
+        class ModelWithTypeAliasField(BaseModel):
+            simple_field: Optional[SimpleString] = None
+            union_field: Optional[UnionType] = None
+            array_field: Optional[ArrayType] = None
+            annotated_field: Optional[AnnotatedType] = None
+        ```
 
 ---
 
@@ -2332,7 +2855,9 @@ documentation without using Field() wrappers.
 
     1. :material-arrow-left: `--use-inline-field-description` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```yaml
     openapi: "3.0.0"
@@ -2516,7 +3041,7 @@ documentation without using Field() wrappers.
                 $ref: '#/components/schemas/Event'
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -2621,7 +3146,9 @@ useful for preserving documentation from your schema in the generated code.
 
     1. :material-arrow-left: `--use-schema-description` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```yaml
     openapi: "3.0.0"
@@ -2805,7 +3332,7 @@ useful for preserving documentation from your schema in the generated code.
                 $ref: '#/components/schemas/Event'
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
@@ -2909,7 +3436,9 @@ This is useful when schemas have descriptive titles that should be preserved.
 
     1. :material-arrow-left: `--use-title-as-name` - the option documented here
 
-??? example "Input Schema"
+??? example "Examples"
+
+    **Input Schema:**
 
     ```json
     {
@@ -3005,7 +3534,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     }
     ```
 
-??? example "Output"
+    **Output:**
 
     ```python
     # generated by datamodel-codegen:
