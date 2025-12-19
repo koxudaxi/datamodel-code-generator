@@ -1249,6 +1249,7 @@ def test_main_combined_array(output_file: Path) -> None:
         )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.cli_doc(
     options=["--disable-timestamp"],
     input_schema="jsonschema/pattern.json",
@@ -2181,6 +2182,7 @@ def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> N
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_jsonschema_titles(output_file: Path) -> None:
     """Test JSON Schema title handling."""
     run_main_and_assert(
@@ -2192,6 +2194,7 @@ def test_jsonschema_titles(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.cli_doc(
     options=["--use-title-as-name"],
     input_schema="jsonschema/titles.json",
@@ -2216,6 +2219,7 @@ def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_jsonschema_without_titles_use_title_as_name(output_file: Path) -> None:
     """Test title as name without titles present."""
     run_main_and_assert(
