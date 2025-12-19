@@ -96,3 +96,62 @@ def test_extract_future_with_alias() -> None:
     assert "annotations as ann" in str(future)
     assert "__future__" not in imports
     assert "__future__" not in imports.alias
+
+
+def test_remove_nonexistent_import() -> None:
+    """Test that removing non-existent import doesn't crash."""
+    imports = Imports()
+    imports.append(Import(from_="typing", import_="Optional"))
+
+    imports.remove(Import(from_="typing", import_="List"))
+
+    assert str(imports) == "from typing import Optional"
+
+
+def test_remove_double_removal() -> None:
+    """Test that double removal of same import doesn't crash."""
+    imports = Imports()
+    imports.append(Import(from_="typing", import_="Optional"))
+
+    imports.remove(Import(from_="typing", import_="Optional"))
+    imports.remove(Import(from_="typing", import_="Optional"))
+
+    assert not str(imports)
+
+
+def test_remove_cleans_up_counter() -> None:
+    """Test that remove() properly cleans up counter entries."""
+    imports = Imports()
+    imports.append(Import(from_="typing", import_="Optional"))
+
+    assert imports.counter.get(("typing", "Optional")) == 1
+
+    imports.remove(Import(from_="typing", import_="Optional"))
+
+    assert ("typing", "Optional") not in imports.counter
+
+
+def test_remove_cleans_up_reference_paths() -> None:
+    """Test that remove() properly cleans up reference_paths."""
+    imports = Imports()
+    imports.append(Import(from_="typing", import_="Optional", reference_path="/test/path"))
+
+    assert "/test/path" in imports.reference_paths
+
+    imports.remove(Import(from_="typing", import_="Optional", reference_path="/test/path"))
+
+    assert "/test/path" not in imports.reference_paths
+
+
+def test_extract_future_moves_reference_paths() -> None:
+    """Test that extract_future() moves reference_paths for __future__ imports."""
+    imports = Imports()
+    imports.append(Import(from_="__future__", import_="annotations", reference_path="/future/ref"))
+    imports.append(Import(from_="typing", import_="Optional", reference_path="/typing/ref"))
+
+    future = imports.extract_future()
+
+    assert "/future/ref" in future.reference_paths
+    assert "/future/ref" not in imports.reference_paths
+    assert "/typing/ref" in imports.reference_paths
+    assert "/typing/ref" not in future.reference_paths
