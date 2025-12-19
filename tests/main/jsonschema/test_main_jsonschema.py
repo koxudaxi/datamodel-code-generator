@@ -311,11 +311,19 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--keyword-only"],
+    input_schema="jsonschema/person.json",
+    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen", "--keyword-only"],
+    golden_output="main/jsonschema/general_dataclass_frozen_kw_only.py",
+    related_options=["--frozen-dataclasses", "--output-model-type"],
+)
 def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> None:
-    """Test JSON Schema code generation with frozen and keyword-only dataclass.
+    """Generate dataclass fields as keyword-only arguments.
 
-    This tests the 'if existing:' False branch in _create_data_model when
-    no --dataclass-arguments is provided but --frozen and --keyword-only are set.
+    The `--keyword-only` flag generates all dataclass fields as keyword-only,
+    requiring explicit parameter names when instantiating models. Combined with
+    `--frozen`, creates immutable models with keyword-only constructors.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",

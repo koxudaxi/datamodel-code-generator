@@ -744,6 +744,294 @@ of Enum classes for all enumerations.
 
 ??? example "Examples"
 
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+                - number
+                - boolean
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                name:
+                  type: string
+                tag:
+                  type: string
+                kind:
+                  type: string
+                  enum: ['dog', 'cat']
+                type:
+                  type: string
+                  enum: [ 'animal' ]
+                number:
+                  type: integer
+                  enum: [ 1 ]
+                boolean:
+                  type: boolean
+                  enum: [ true ]
+        
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+            animal:
+              type: object
+              properties:
+                kind:
+                  type: string
+                  enum: ['snake', 'rabbit']
+            Error:
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
+                  type: string
+            EnumObject:
+              type: object
+              properties:
+                type:
+                  enum: ['a', 'b']
+                  type: string
+            EnumRoot:
+              enum: ['a', 'b']
+              type: string
+            IntEnum:
+              enum: [1,2]
+              type: number
+            AliasEnum:
+              enum: [1,2,3]
+              type: number
+              x-enum-varnames: ['a', 'b', 'c']
+            MultipleTypeEnum:
+              enum: [ "red", "amber", "green", null, 42 ]
+            singleEnum:
+              enum: [ "pet" ]
+              type: string
+            arrayEnum:
+              type: array
+              items: [
+                { enum: [ "cat" ] },
+                { enum: [ "dog"]}
+              ]
+            nestedNullableEnum:
+              type: object
+              properties:
+                nested_version:
+                  type: string
+                  nullable: true
+                  default: RC1
+                  description: nullable enum
+                  example: RC2
+                  enum:
+                    - RC1
+                    - RC1N
+                    - RC2
+                    - RC2N
+                    - RC3
+                    - RC4
+                    - null
+            version:
+              type: string
+              nullable: true
+              default: RC1
+              description: nullable enum
+              example: RC2
+              enum:
+              - RC1
+              - RC1N
+              - RC2
+              - RC2N
+              - RC3
+              - RC4
+              - null
+        ```
+
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  enum_models.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from enum import Enum
+        from typing import List, Literal, Optional, Union
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class Kind(Enum):
+            dog = 'dog'
+            cat = 'cat'
+        
+        
+        class Pet(BaseModel):
+            id: int
+            name: str
+            tag: Optional[str] = None
+            kind: Optional[Kind] = None
+            type: Optional[Literal['animal']] = None
+            number: Literal[1]
+            boolean: Literal[True]
+        
+        
+        class Pets(BaseModel):
+            __root__: List[Pet]
+        
+        
+        class Kind1(Enum):
+            snake = 'snake'
+            rabbit = 'rabbit'
+        
+        
+        class Animal(BaseModel):
+            kind: Optional[Kind1] = None
+        
+        
+        class Error(BaseModel):
+            code: int
+            message: str
+        
+        
+        class Type(Enum):
+            a = 'a'
+            b = 'b'
+        
+        
+        class EnumObject(BaseModel):
+            type: Optional[Type] = None
+        
+        
+        class EnumRoot(Enum):
+            a = 'a'
+            b = 'b'
+        
+        
+        class IntEnum(Enum):
+            number_1 = 1
+            number_2 = 2
+        
+        
+        class AliasEnum(Enum):
+            a = 1
+            b = 2
+            c = 3
+        
+        
+        class MultipleTypeEnum(Enum):
+            red = 'red'
+            amber = 'amber'
+            green = 'green'
+            NoneType_None = None
+            int_42 = 42
+        
+        
+        class SingleEnum(BaseModel):
+            __root__: Literal['pet']
+        
+        
+        class ArrayEnum(BaseModel):
+            __root__: List[Union[Literal['cat'], Literal['dog']]]
+        
+        
+        class NestedVersionEnum(Enum):
+            RC1 = 'RC1'
+            RC1N = 'RC1N'
+            RC2 = 'RC2'
+            RC2N = 'RC2N'
+            RC3 = 'RC3'
+            RC4 = 'RC4'
+        
+        
+        class NestedVersion(BaseModel):
+            __root__: Optional[NestedVersionEnum] = Field(
+                'RC1', description='nullable enum', example='RC2'
+            )
+        
+        
+        class NestedNullableEnum(BaseModel):
+            nested_version: Optional[NestedVersion] = Field(
+                default_factory=lambda: NestedVersion.parse_obj('RC1'),
+                description='nullable enum',
+                example='RC2',
+            )
+        
+        
+        class VersionEnum(Enum):
+            RC1 = 'RC1'
+            RC1N = 'RC1N'
+            RC2 = 'RC2'
+            RC2N = 'RC2N'
+            RC3 = 'RC3'
+            RC4 = 'RC4'
+        
+        
+        class Version(BaseModel):
+            __root__: Optional[VersionEnum] = Field(
+                'RC1', description='nullable enum', example='RC2'
+            )
+        ```
+
     === "JSON Schema"
 
         **Input Schema:**
@@ -922,6 +1210,77 @@ Python 3.11+, falling back to standard Enum classes instead.
     1. :material-arrow-left: `--no-use-specialized-enum` - the option documented here
 
 ??? example "Examples"
+
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```json
+        {
+          "openapi": "3.0.2",
+          "components": {
+            "schemas": {
+              "ProcessingStatus": {
+                "title": "ProcessingStatus",
+                "enum": [
+                  "COMPLETED",
+                  "PENDING",
+                  "FAILED"
+                ],
+                "type": "string",
+                "description": "The processing status"
+              },
+              "ProcessingTask": {
+                "title": "ProcessingTask",
+                "type": "object",
+                "properties": {
+                  "processing_status": {
+                    "title": "Status of the task",
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/ProcessingStatus"
+                      }
+                    ],
+                    "default": "COMPLETED"
+                  }
+                }
+              },
+            }
+          },
+          "info": {
+            "title": "",
+            "version": ""
+          },
+          "paths": {}
+        }
+        ```
+
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  subclass_enum.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from enum import Enum
+        from typing import Optional
+        
+        from pydantic import BaseModel, Field
+        
+        
+        class ProcessingStatus(Enum):
+            COMPLETED = 'COMPLETED'
+            PENDING = 'PENDING'
+            FAILED = 'FAILED'
+        
+        
+        class ProcessingTask(BaseModel):
+            processing_status: Optional[ProcessingStatus] = Field(
+                'COMPLETED', title='Status of the task'
+            )
+        ```
 
     === "JSON Schema"
 
@@ -1361,7 +1720,7 @@ The `--type-mappings` flag configures the code generation behavior.
 
 Test GraphQL annotated types with standard collections and union operator.
 
-**Related:** [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+**Related:** [`--field-constraints`](field-customization.md#field-constraints), [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -1375,56 +1734,387 @@ Test GraphQL annotated types with standard collections and union operator.
 
 ??? example "Examples"
 
-    **Input Schema:**
+    === "OpenAPI"
 
-    ```graphql
-    type A {
-        field: String!
-        optionalField: String
-        listField: [String!]!
-        listOptionalField: [String]!
-        optionalListField: [String!]
-        optionalListOptionalField: [String]
-        listListField:[[String!]!]!
-    }
-    ```
+        **Input Schema:**
 
-    **Output:**
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+                    minimum: 0
+                    maximum: 100
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+            post:
+              summary: Create a pet
+              operationId: createPets
+              tags:
+                - pets
+              responses:
+                '201':
+                  description: Null response
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+          /pets/{petId}:
+            get:
+              summary: Info for a specific pet
+              operationId: showPetById
+              tags:
+                - pets
+              parameters:
+                - name: petId
+                  in: path
+                  required: true
+                  description: The id of the pet to retrieve
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Expected response to a valid request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+            x-amazon-apigateway-integration:
+              uri:
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+              passthroughBehavior: when_no_templates
+              httpMethod: POST
+              type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  minimum: 0
+                  maximum: 9223372036854775807
+                name:
+                  type: string
+                  maxLength: 256
+                tag:
+                  type: string
+                  maxLength: 64
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+              maxItems: 10
+              minItems: 1
+              uniqueItems: true
+            UID:
+              type: integer
+              minimum: 0
+            Users:
+              type: array
+              items:
+                required:
+                  - id
+                  - name
+                  - uid
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                    minimum: 0
+                  name:
+                    type: string
+                    maxLength: 256
+                  tag:
+                    type: string
+                    maxLength: 64
+                  uid:
+                    $ref: '#/components/schemas/UID'
+                  phones:
+                    type: array
+                    items:
+                      type: string
+                      minLength: 3
+                    maxItems: 10
+                  fax:
+                    type: array
+                    items:
+                      type: string
+                      minLength: 3
+                  height:
+                    type:
+                      - integer
+                      - number
+                    minimum: 1
+                    maximum: 300
+                  weight:
+                    type:
+                      - number
+                      - integer
+                    minimum: 1.0
+                    maximum: 1000.0
+                  age:
+                    type: integer
+                    minimum: 0.0
+                    maximum: 200.0
+                    exclusiveMinimum: true
+                  rating:
+                    type: number
+                    minimum: 0
+                    exclusiveMinimum: True
+                    maximum: 5
+        
+            Id:
+              type: string
+            Rules:
+              type: array
+              items:
+                type: string
+            Error:
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
+                  type: string
+            apis:
+              type: array
+              items:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    description: To be used as a dataset parameter value
+                  apiVersionNumber:
+                    type: string
+                    description: To be used as a version parameter value
+                  apiUrl:
+                    type: string
+                    format: uri
+                    minLength: 1
+                    description: "The URL describing the dataset's fields"
+                  apiDocumentationUrl:
+                    type: string
+                    format: uri
+                    description: A URL to the API console for each API
+            Event:
+              type: object
+              properties:
+                name:
+                  type: string
+            Result:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
+        ```
 
-    ```python
-    # generated by datamodel-codegen:
-    #   filename:  annotated.graphql
-    #   timestamp: 2019-07-26T00:00:00+00:00
-    
-    from __future__ import annotations
-    
-    from typing import Annotated, Literal
-    
-    from pydantic import BaseModel, Field
-    from typing_extensions import TypeAliasType
-    
-    Boolean = TypeAliasType("Boolean", bool)
-    """
-    The `Boolean` scalar type represents `true` or `false`.
-    """
-    
-    
-    String = TypeAliasType("String", str)
-    """
-    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
-    """
-    
-    
-    class A(BaseModel):
-        field: String
-        listField: list[String]
-        listListField: list[list[String]]
-        listOptionalField: list[String | None]
-        optionalField: String | None = None
-        optionalListField: list[String] | None = None
-        optionalListOptionalField: list[String | None] | None = None
-        typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
-    ```
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  api_constrained.yaml
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Annotated, List, Optional, Union
+        
+        from pydantic import AnyUrl, BaseModel, Field
+        
+        
+        class Pet(BaseModel):
+            id: Annotated[int, Field(ge=0, le=9223372036854775807)]
+            name: Annotated[str, Field(max_length=256)]
+            tag: Annotated[Optional[str], Field(max_length=64)] = None
+        
+        
+        class Pets(BaseModel):
+            __root__: Annotated[List[Pet], Field(max_items=10, min_items=1, unique_items=True)]
+        
+        
+        class UID(BaseModel):
+            __root__: Annotated[int, Field(ge=0)]
+        
+        
+        class Phone(BaseModel):
+            __root__: Annotated[str, Field(min_length=3)]
+        
+        
+        class FaxItem(BaseModel):
+            __root__: Annotated[str, Field(min_length=3)]
+        
+        
+        class User(BaseModel):
+            id: Annotated[int, Field(ge=0)]
+            name: Annotated[str, Field(max_length=256)]
+            tag: Annotated[Optional[str], Field(max_length=64)] = None
+            uid: UID
+            phones: Annotated[Optional[List[Phone]], Field(max_items=10)] = None
+            fax: Optional[List[FaxItem]] = None
+            height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
+            weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
+            age: Annotated[Optional[int], Field(gt=0, le=200)] = None
+            rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
+        
+        
+        class Users(BaseModel):
+            __root__: List[User]
+        
+        
+        class Id(BaseModel):
+            __root__: str
+        
+        
+        class Rules(BaseModel):
+            __root__: List[str]
+        
+        
+        class Error(BaseModel):
+            code: int
+            message: str
+        
+        
+        class Api(BaseModel):
+            apiKey: Annotated[
+                Optional[str], Field(description='To be used as a dataset parameter value')
+            ] = None
+            apiVersionNumber: Annotated[
+                Optional[str], Field(description='To be used as a version parameter value')
+            ] = None
+            apiUrl: Annotated[
+                Optional[AnyUrl], Field(description="The URL describing the dataset's fields")
+            ] = None
+            apiDocumentationUrl: Annotated[
+                Optional[AnyUrl], Field(description='A URL to the API console for each API')
+            ] = None
+        
+        
+        class Apis(BaseModel):
+            __root__: List[Api]
+        
+        
+        class Event(BaseModel):
+            name: Optional[str] = None
+        
+        
+        class Result(BaseModel):
+            event: Optional[Event] = None
+        ```
+
+    === "GraphQL"
+
+        **Input Schema:**
+
+        ```graphql
+        type A {
+            field: String!
+            optionalField: String
+            listField: [String!]!
+            listOptionalField: [String]!
+            optionalListField: [String!]
+            optionalListOptionalField: [String]
+            listListField:[[String!]!]!
+        }
+        ```
+
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  annotated.graphql
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Annotated, Literal
+        
+        from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
+        
+        Boolean = TypeAliasType("Boolean", bool)
+        """
+        The `Boolean` scalar type represents `true` or `false`.
+        """
+        
+        
+        String = TypeAliasType("String", str)
+        """
+        The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+        """
+        
+        
+        class A(BaseModel):
+            field: String
+            listField: list[String]
+            listListField: list[list[String]]
+            listOptionalField: list[String | None]
+            optionalField: String | None = None
+            optionalListField: list[String] | None = None
+            optionalListOptionalField: list[String | None] | None = None
+            typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
+        ```
 
 ---
 
