@@ -22,7 +22,6 @@ class TypeAliasBase(DataModel):
     """Base class for all type alias implementations."""
 
     IS_ALIAS: bool = True
-    has_forward_reference: bool = False
 
     @property
     def imports(self) -> tuple[Import, ...]:

@@ -216,37 +216,39 @@ class DataModelFieldBase(_BaseModel):
     @property
     def _use_union_operator(self) -> bool:
         """Get effective use_union_operator considering parent model's forward reference."""
-        if self.parent and getattr(self.parent, "has_forward_reference", False):
+        if self.parent and self.parent.has_forward_reference:
             return False
         return self.data_type.use_union_operator
 
-    def _convert_to_union_if_needed(self, type_hint: str) -> str:
-        """Convert union operator syntax to Union[] if parent has forward references."""
-        if self._use_union_operator != self.data_type.use_union_operator and " | " in type_hint:
-            parts = [p.strip() for p in type_hint.split(" | ")]
+    def _build_union_type_hint(self) -> str | None:
+        """Build Union[] type hint from data_type.data_types if forward reference requires it."""
+        if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
+            return None
+        parts = [dt.type_hint for dt in self.data_type.data_types if dt.type_hint]
+        if len(parts) > 1:
             return f"Union[{', '.join(parts)}]"
-        return type_hint
+        return None
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
-        type_hint = self.data_type.type_hint
+        type_hint = self._build_union_type_hint() or self.data_type.type_hint
 
         if not type_hint:
             return NONE
         if self.has_default_factory or (self.data_type.is_optional and self.data_type.type != ANY):
-            return self._convert_to_union_if_needed(type_hint)
+            return type_hint
         if self.nullable is not None:
             if self.nullable:
                 return get_optional_type(type_hint, self._use_union_operator)
-            return self._convert_to_union_if_needed(type_hint)
+            return type_hint
         if self.required:
             if self.type_has_null:
                 return get_optional_type(type_hint, self._use_union_operator)
-            return self._convert_to_union_if_needed(type_hint)
+            return type_hint
         if self.fall_back_to_nullable:
             return get_optional_type(type_hint, self._use_union_operator)
-        return self._convert_to_union_if_needed(type_hint)
+        return type_hint
 
     @property
     def imports(self) -> tuple[Import, ...]:
@@ -443,6 +445,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     IS_ALIAS: bool = False
+    has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913
         self,
