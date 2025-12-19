@@ -1916,8 +1916,7 @@ class Parser(ABC):
                         has_forward_ref = True
 
             if has_forward_ref:
-                for field in model.fields:
-                    field.data_type.use_union_operator = False
+                model.has_forward_reference = True
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
