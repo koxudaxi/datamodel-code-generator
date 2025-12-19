@@ -37,7 +37,6 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
-    IMPORT_ABC_SET,
     IMPORT_ANY,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
@@ -77,6 +76,7 @@ LIST = "List"
 STANDARD_DICT = "dict"
 STANDARD_LIST = "list"
 STANDARD_SET = "set"
+STANDARD_FROZEN_SET = "frozenset"
 STR = "str"
 
 NOT_REQUIRED = "NotRequired"
@@ -458,10 +458,10 @@ class DataType(_BaseModel):
 
         if self.use_generic_container:
             if self.use_standard_collections:
+                # frozenset is builtin, no import needed for is_set
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_ABC_SEQUENCE),
-                    (self.is_set, IMPORT_ABC_SET),
                     (self.is_dict, IMPORT_ABC_MAPPING),
                 )
             else:
@@ -578,7 +578,7 @@ class DataType(_BaseModel):
             type_ = f"{list_}[{type_}]" if type_ else list_
         elif self.is_set:
             if self.use_generic_container:
-                set_ = FROZEN_SET
+                set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
             elif self.use_standard_collections:
                 set_ = STANDARD_SET
             else:
