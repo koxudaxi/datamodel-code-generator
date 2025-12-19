@@ -487,17 +487,18 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
     """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
-    if isinstance(input_, str):
-        input_text: str | None = input_
-    elif isinstance(input_, ParseResult):
-        from datamodel_code_generator.http import get_body  # noqa: PLC0415
+    match input_:
+        case str():
+            input_text: str | None = input_
+        case ParseResult():
+            from datamodel_code_generator.http import get_body  # noqa: PLC0415
 
-        input_text = remote_text_cache.get_or_put(
-            input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
-        )
-    else:
-        input_text = None
+            input_text = remote_text_cache.get_or_put(
+                input_.geturl(),
+                default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
+            )
+        case _:
+            input_text = None
 
     if dataclass_arguments is None:
         dataclass_arguments = {}
@@ -732,16 +733,16 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             module_split_mode=module_split_mode,
         )
     if not input_filename:  # pragma: no cover
-        if isinstance(input_, str):
-            input_filename = "<stdin>"
-        elif isinstance(input_, ParseResult):
-            input_filename = input_.geturl()
-        elif input_file_type == InputFileType.Dict:
-            # input_ might be a dict object provided directly, and missing a name field
-            input_filename = getattr(input_, "name", "<dict>")
-        else:
-            assert isinstance(input_, Path)
-            input_filename = input_.name
+        match input_:
+            case str():
+                input_filename = "<stdin>"
+            case ParseResult():
+                input_filename = input_.geturl()
+            case Path():
+                input_filename = input_.name
+            case _:
+                # input_ might be a dict object provided directly, and missing a name field
+                input_filename = getattr(input_, "name", "<dict>")
     if not results:
         msg = "Models not found in the input data"
         raise Error(msg)

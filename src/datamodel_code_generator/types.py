@@ -712,21 +712,20 @@ class DataTypeManager(ABC):
         """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
-    def get_data_type_from_value(self, value: Any) -> DataType:
+    def get_data_type_from_value(self, value: Any) -> DataType:  # noqa: PLR0911
         """Infer a DataType from a Python value."""
-        type_: Types | None = None
-        if isinstance(value, str):
-            type_ = Types.string
-        elif isinstance(value, bool):
-            type_ = Types.boolean
-        elif isinstance(value, int):
-            type_ = Types.integer
-        elif isinstance(value, float):
-            type_ = Types.float
-        elif isinstance(value, dict):
-            return self.data_type.from_import(IMPORT_DICT)
-        elif isinstance(value, list):
-            return self.data_type.from_import(IMPORT_LIST)
-        else:
-            type_ = Types.any
-        return self.get_data_type(type_)
+        match value:
+            case str():
+                return self.get_data_type(Types.string)
+            case bool():  # bool must come before int (bool is subclass of int)
+                return self.get_data_type(Types.boolean)
+            case int():
+                return self.get_data_type(Types.integer)
+            case float():
+                return self.get_data_type(Types.float)
+            case dict():
+                return self.data_type.from_import(IMPORT_DICT)
+            case list():
+                return self.data_type.from_import(IMPORT_LIST)
+            case _:
+                return self.get_data_type(Types.any)
