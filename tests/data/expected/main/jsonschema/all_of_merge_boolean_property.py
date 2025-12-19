@@ -4,22 +4,22 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    data: Optional[Any] = None
+    data: Any | None = None
 
 
 class Data(BaseModel):
-    value: Optional[str] = None
+    value: str | None = None
 
 
 class Base1(BaseModel):
-    data: Optional[Data] = None
+    data: Data | None = None
 
 
 class Base2(BaseModel):
-    data: Optional[Any] = None
+    data: Any | None = None

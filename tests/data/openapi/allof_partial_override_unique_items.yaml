@@ -1,0 +1,24 @@
+openapi: "3.0.0"
+info:
+  title: Test uniqueItems inheritance in allOf
+  version: "1.0.0"
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        tags:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/Thing"
+        - type: object
+          properties:
+            tags:
+              default:
+                - tag2
+              items:
+                title: A tag entry

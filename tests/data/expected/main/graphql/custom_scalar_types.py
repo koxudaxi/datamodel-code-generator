@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -33,4 +32,4 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 class A(BaseModel):
     duration: Long
     id: ID
-    typename__: Optional[Literal['A']] = Field('A', alias='__typename')
+    typename__: Literal['A'] | None = Field('A', alias='__typename')

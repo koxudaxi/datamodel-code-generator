@@ -1,0 +1,20 @@
+openapi: "3.0.0"
+info:
+  title: Test allof-merge-mode none
+  version: "1.0.0"
+components:
+  schemas:
+    Parent:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          default: "parent_default"
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Parent"
+        - type: object
+          properties:
+            name:
+              maxLength: 100

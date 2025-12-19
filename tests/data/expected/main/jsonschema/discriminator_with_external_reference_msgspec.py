@@ -4,43 +4,32 @@
 
 from __future__ import annotations
 
-from typing import Annotated, ClassVar, Literal, Union
+from typing import Annotated
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
 
 class Type1(Struct, tag_field='type_', tag='a'):
-    type_: ClassVar[Annotated[Union[Literal['a'], UnsetType], Meta(title='Type ')]] = (
-        'a'
-    )
+    pass
 
 
 class Type2(Struct, tag_field='type_', tag='b'):
-    type_: ClassVar[Annotated[Union[Literal['b'], UnsetType], Meta(title='Type ')]] = (
-        'b'
+    ref_type: Annotated[Type1, Meta(description='A referenced type.')] | UnsetType = (
+        UNSET
     )
-    ref_type: Union[
-        Annotated[Type1, Meta(description='A referenced type.')], UnsetType
-    ] = UNSET
 
 
 class Type4(Struct, tag_field='type_', tag='d'):
-    type_: ClassVar[Annotated[Union[Literal['d'], UnsetType], Meta(title='Type ')]] = (
-        'd'
-    )
+    pass
 
 
 class Type5(Struct, tag_field='type_', tag='e'):
-    type_: ClassVar[Annotated[Union[Literal['e'], UnsetType], Meta(title='Type ')]] = (
-        'e'
-    )
+    pass
 
 
 class Type3(Struct, tag_field='type_', tag='c'):
-    type_: ClassVar[Annotated[Union[Literal['c'], UnsetType], Meta(title='Type ')]] = (
-        'c'
-    )
+    pass
 
 
 class Response(Struct):
-    inner: Annotated[Union[Type1, Type2, Type3, Type4, Type5], Meta(title='Inner')]
+    inner: Annotated[Type1 | Type2 | Type3 | Type4 | Type5, Meta(title='Inner')]

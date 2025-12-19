@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +17,7 @@ class Type(Enum):
 
 
 class ObjectBase(BaseModel):
-    name: Optional[str] = Field(None, description='Name of the object')
+    name: str | None = Field(None, description='Name of the object')
     type: Literal['ObjectBase'] = Field(..., description='Object type')
 
 
@@ -31,6 +31,6 @@ class UpdateObjectRequest(ObjectBase):
 
 
 class Demo(BaseModel):
-    __root__: Union[ObjectBase, CreateObjectRequest, UpdateObjectRequest] = Field(
+    __root__: ObjectBase | CreateObjectRequest | UpdateObjectRequest = Field(
         ..., discriminator='type'
     )

@@ -4,17 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import RootModel
 
 
 class ChildModel(BaseModel):
-    id: Optional[str] = None
-    parent: Optional[RootModel] = None
+    id: str | None = None
+    parent: RootModel | None = None
 
 
 class AnotherChild(BaseModel):
-    sibling: Optional[ChildModel] = None
+    sibling: ChildModel | None = None

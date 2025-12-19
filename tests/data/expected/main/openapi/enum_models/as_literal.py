@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -12,19 +12,19 @@ from pydantic import BaseModel, Field
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
-    kind: Optional[Literal['dog', 'cat']] = None
-    type: Optional[Literal['animal']] = None
+    tag: str | None = None
+    kind: Literal['dog', 'cat'] | None = None
+    type: Literal['animal'] | None = None
     number: Literal[1]
     boolean: Literal[True]
 
 
 class Pets(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Animal(BaseModel):
-    kind: Optional[Literal['snake', 'rabbit']] = None
+    kind: Literal['snake', 'rabbit'] | None = None
 
 
 class Error(BaseModel):
@@ -33,7 +33,7 @@ class Error(BaseModel):
 
 
 class EnumObject(BaseModel):
-    type: Optional[Literal['a', 'b']] = None
+    type: Literal['a', 'b'] | None = None
 
 
 class EnumRoot(BaseModel):
@@ -57,16 +57,16 @@ class SingleEnum(BaseModel):
 
 
 class ArrayEnum(BaseModel):
-    __root__: List[Union[Literal['cat'], Literal['dog']]]
+    __root__: list[Literal['cat'] | Literal['dog']]
 
 
 class NestedNullableEnum(BaseModel):
-    nested_version: Optional[
-        Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4']
-    ] = Field('RC1', description='nullable enum', example='RC2')
+    nested_version: Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None = Field(
+        'RC1', description='nullable enum', example='RC2'
+    )
 
 
 class Version(BaseModel):
-    __root__: Optional[Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4']] = Field(
+    __root__: Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None = Field(
         'RC1', description='nullable enum', example='RC2'
     )

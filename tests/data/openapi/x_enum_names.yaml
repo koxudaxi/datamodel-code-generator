@@ -1,0 +1,45 @@
+openapi: 3.0.0
+info:
+  title: Test x-enumNames
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    # Integer enum with x-enumNames
+    CustomerColor:
+      type: integer
+      enum: [1, 2, 3, 4, 5]
+      x-enumNames:
+        - BloodOrange
+        - Sunflower
+        - LightGreen
+        - SkyBlue
+        - Purple
+
+    # String enum with x-enumNames
+    StringStatus:
+      type: string
+      enum: ['pending', 'active', 'closed']
+      x-enumNames:
+        - Pending
+        - Active
+        - Closed
+
+    # x-enum-varnames takes priority over x-enumNames
+    PriorityTest:
+      type: integer
+      enum: [1, 2]
+      x-enum-varnames:
+        - VarnameOne
+        - VarnameTwo
+      x-enumNames:
+        - EnumNameOne
+        - EnumNameTwo
+
+    # x-enumNames shorter than enum (graceful fallback)
+    ShortNames:
+      type: integer
+      enum: [1, 2, 3, 4]
+      x-enumNames:
+        - First
+        - Second

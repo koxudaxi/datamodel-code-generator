@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class ConstWithProps1(BaseModel):
-    invalid: Optional[Any] = None
+    invalid: Any | None = None
 
 
 class ConstWithProps(BaseModel):
-    __root__: Union[ConstWithProps1, str] = Field(..., title='ConstWithProps')
+    __root__: ConstWithProps1 | str = Field(..., title='ConstWithProps')

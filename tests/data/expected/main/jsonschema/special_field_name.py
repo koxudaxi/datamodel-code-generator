@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class SpecialField(BaseModel):
-    global_: Optional[str] = Field(None, alias='global')
-    with_: Optional[str] = Field(None, alias='with')
-    class_: Optional[int] = Field(None, alias='class')
-    class_s: Optional[int] = Field(None, alias="class's")
-    class_s_1: Optional[str] = Field(None, alias='class-s')
-    field_: Optional[str] = Field(None, alias='#')
+    global_: str | None = Field(None, alias='global')
+    with_: str | None = Field(None, alias='with')
+    class_: int | None = Field(None, alias='class')
+    class_s: int | None = Field(None, alias="class's")
+    class_s_1: str | None = Field(None, alias='class-s')
+    field_: str | None = Field(None, alias='#')

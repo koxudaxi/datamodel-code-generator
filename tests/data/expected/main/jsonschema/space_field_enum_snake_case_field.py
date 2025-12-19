@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,4 +14,4 @@ class SpaceIF(Enum):
 
 
 class Model(BaseModel):
-    space_if: Optional[SpaceIF] = Field(None, alias='SpaceIF')
+    space_if: SpaceIF | None = Field(None, alias='SpaceIF')

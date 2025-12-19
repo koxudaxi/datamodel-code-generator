@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -14,12 +12,12 @@ class EmptyBase(BaseModel):
 
 
 class HasFieldBase(BaseModel):
-    base_field: Optional[str] = None
+    base_field: str | None = None
 
 
 class ChildRequest(BaseModel):
-    base_field: Optional[str] = None
+    base_field: str | None = None
 
 
 class Child(EmptyBase, HasFieldBase):
-    id: Optional[int] = None
+    id: int | None = None

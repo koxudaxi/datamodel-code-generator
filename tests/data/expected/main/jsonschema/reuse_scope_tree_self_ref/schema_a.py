@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .shared import Node as Node_1
@@ -16,7 +14,7 @@ class Node(Node_1):
 
 
 class Model(BaseModel):
-    node: Optional[Node] = None
+    node: Node | None = None
 
 
 Node.update_forward_refs()

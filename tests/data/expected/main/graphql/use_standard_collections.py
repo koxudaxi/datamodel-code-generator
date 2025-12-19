@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -25,4 +24,4 @@ class A(BaseModel):
     field: String
     listField: list[String]
     listListField: list[list[String]]
-    typename__: Optional[Literal['A']] = Field('A', alias='__typename')
+    typename__: Literal['A'] | None = Field('A', alias='__typename')

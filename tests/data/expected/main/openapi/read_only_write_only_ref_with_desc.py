@@ -4,31 +4,29 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class AddressRequest(BaseModel):
-    street: Optional[str] = None
+    street: str | None = None
 
 
 class Address(BaseModel):
-    street: Optional[str] = None
-    city: Optional[str] = None
+    street: str | None = None
+    city: str | None = None
 
 
 class Base(BaseModel):
-    base_id: Optional[int] = None
+    base_id: int | None = None
 
 
 class UserRequest(BaseModel):
-    base_id: Optional[int] = None
+    base_id: int | None = None
     name: str
-    home_address: Optional[Address] = Field(None, description="User's home address")
+    home_address: Address | None = Field(None, description="User's home address")
 
 
 class User(Base):
     name: str
-    home_address: Optional[Address] = Field(None, description="User's home address")
-    work_address: Optional[Address] = None
+    home_address: Address | None = Field(None, description="User's home address")
+    work_address: Address | None = None

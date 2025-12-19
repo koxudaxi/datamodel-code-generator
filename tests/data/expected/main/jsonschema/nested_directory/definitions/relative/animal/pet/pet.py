@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .. import fur as fur_1
 
 
 class Pet(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
-    fur: Optional[fur_1.Fur] = None
+    name: str | None = None
+    age: int | None = None
+    fur: fur_1.Fur | None = None

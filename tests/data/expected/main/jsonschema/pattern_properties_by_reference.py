@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from pydantic import BaseModel, Extra, Field, constr
 
@@ -13,22 +13,22 @@ class Stt(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    timeout: Optional[float] = Field(None, title='STT Timeout')
+    timeout: float | None = Field(None, title='STT Timeout')
 
 
 class TextResponse(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: Dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any]
+    __root__: dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any]
 
 
 class SomeschemaSchema(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    KeyWithExplicitPatternProperties: Optional[
-        Dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any]
-    ] = None
-    KeyWithPatternPropertiesByReference: Optional[TextResponse] = None
-    SomeOtherBoringReference: Optional[Stt] = None
+    KeyWithExplicitPatternProperties: (
+        dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any] | None
+    ) = None
+    KeyWithPatternPropertiesByReference: TextResponse | None = None
+    SomeOtherBoringReference: Stt | None = None

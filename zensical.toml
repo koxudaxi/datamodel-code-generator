@@ -1,0 +1,122 @@
+[project]
+site_name = "datamodel-code-generator"
+site_description = "This code generator creates pydantic model from an openapi file and others."
+site_url = "https://koxudaxi.github.io/datamodel-code-generator"
+repo_name = "koxudaxi/datamodel-code-generator"
+repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
+
+nav = [
+  { "Overview" = "index.md" },
+  { "CLI Reference" = [
+    { "Overview" = "cli-reference/index.md" },
+    { "Base Options" = "cli-reference/base-options.md" },
+    { "Model Customization" = "cli-reference/model-customization.md" },
+    { "Field Customization" = "cli-reference/field-customization.md" },
+    { "Typing Customization" = "cli-reference/typing-customization.md" },
+    { "Template Customization" = "cli-reference/template-customization.md" },
+    { "OpenAPI Options" = "cli-reference/openapi-only-options.md" },
+    { "General Options" = "cli-reference/general-options.md" },
+    { "Utility Options" = "cli-reference/utility-options.md" },
+    { "Quick Reference" = "cli-reference/quick-reference.md" }
+  ]},
+  { "Support data types" = "supported-data-types.md" },
+  { "Usage" = [
+    { "Input Formats" = [
+      { "OpenAPI" = "openapi.md" },
+      { "JSON Schema" = "jsonschema.md" },
+      { "JSON Data" = "jsondata.md" },
+      { "GraphQL" = "graphql.md" }
+    ]},
+    { "Output Customization" = [
+      { "Output Model Types" = "what_is_the_difference_between_v1_and_v2.md" },
+      { "Model Reuse and Deduplication" = "model-reuse.md" },
+      { "Module Structure and Exports" = "module-exports.md" },
+      { "Type Mappings and Custom Types" = "type-mappings.md" },
+      { "Python Version Compatibility" = "python-version-compatibility.md" },
+      { "Root Models and Type Aliases" = "root-model-and-type-alias.md" },
+      { "Field Constraints" = "field-constraints.md" },
+      { "Field Aliases" = "aliases.md" },
+      { "OpenAPI-Specific Options" = "openapi-options.md" }
+    ]},
+    { "Templates and Formatting" = [
+      { "Custom Templates" = "custom_template.md" },
+      { "Custom Formatters" = "custom-formatters.md" },
+      { "Code Formatting" = "formatting.md" }
+    ]},
+    { "Integration" = [
+      { "One-liner Usage" = "oneliner.md" },
+      { "Using as Module" = "using_as_module.md" },
+      { "pyproject.toml" = "pyproject_toml.md" },
+      { "CI/CD Integration" = "ci-cd.md" }
+    ]}
+  ]},
+  { "FAQ" = "faq.md" },
+  { "Development-Contributing" = "development-contributing.md" },
+  { "Changelog" = "changelog.md" }
+]
+
+[project.theme]
+features = [
+  "content.code.copy",
+  "content.code.annotate",
+  "content.tabs.link",
+  "navigation.instant",
+  "navigation.tracking",
+  "navigation.sections",
+  "navigation.expand",
+  "search.highlight",
+  "search.share",
+  "toc.follow"
+]
+
+[project.theme.icon]
+annotation = "material/arrow-right-circle"
+
+[project.theme.analytics]
+gtag = "G-0QSKK66WX4"
+
+[[project.theme.palette]]
+scheme = "slate"
+primary = "light blue"
+accent = "light blue"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+scheme = "default"
+primary = "light blue"
+accent = "light blue"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.inlinehilite]
+
+[project.markdown_extensions.pymdownx.snippets]
+base_path = "."
+
+[project.markdown_extensions.pymdownx.superfences]
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.emoji]
+emoji_index = "zensical.extensions.emoji.twemoji"
+emoji_generator = "zensical.extensions.emoji.to_svg"
+
+[project.markdown_extensions.admonition]
+
+[project.markdown_extensions.attr_list]
+
+[project.markdown_extensions.md_in_html]
+
+[project.markdown_extensions.toc]
+permalink = true
+
+[project.plugins.search]

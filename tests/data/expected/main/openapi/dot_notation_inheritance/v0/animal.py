@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from . import Animal
 
 
 class Dog(Animal):
-    breed: Optional[str] = None
+    breed: str | None = None

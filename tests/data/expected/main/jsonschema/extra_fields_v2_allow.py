@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -13,21 +11,21 @@ class Foo(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    x: Optional[int] = None
+    x: int | None = None
 
 
 class Bar(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    y: Optional[int] = None
+    y: int | None = None
 
 
 class Baz(BaseModel):
     model_config = ConfigDict(
         extra='allow',
     )
-    z: Optional[int] = None
+    z: int | None = None
 
 
 class Test(BaseModel):
@@ -35,5 +33,5 @@ class Test(BaseModel):
         extra='allow',
     )
     foo: Foo
-    bar: Optional[Bar] = None
-    baz: Optional[Baz] = None
+    bar: Bar | None = None
+    baz: Baz | None = None

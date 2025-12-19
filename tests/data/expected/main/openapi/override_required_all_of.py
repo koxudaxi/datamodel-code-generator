@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -16,17 +15,17 @@ class Type(Enum):
 
 
 class ObjectBase(BaseModel):
-    name: Optional[str] = Field(None, description='Name of the object')
-    type: Optional[Type] = Field(None, description='Object type')
-    rank: Optional[Union[int, float]] = Field(None, description='User rank')
-    allIn: Optional[Union[Type, str, Union[int, float]]] = None
+    name: str | None = Field(None, description='Name of the object')
+    type: Type | None = Field(None, description='Object type')
+    rank: int | float | None = Field(None, description='User rank')
+    allIn: Type | str | int | float | None = None
 
 
 class CreateObjectRequest(ObjectBase):
     name: str = Field(..., description='Name of the object')
     type: Type = Field(..., description='Object type')
-    rank: Union[int, float] = Field(..., description='User rank')
-    allIn: Union[Type, str, Union[int, float]]
+    rank: int | float = Field(..., description='User rank')
+    allIn: Type | str | int | float
 
 
 class UpdateObjectRequest(ObjectBase):

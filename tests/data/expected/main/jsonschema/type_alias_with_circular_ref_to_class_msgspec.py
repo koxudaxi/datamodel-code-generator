@@ -4,22 +4,21 @@
 
 from __future__ import annotations
 
-from typing import List, Union
+from typing import TypeAlias, Union
 
 from msgspec import Struct
-from typing_extensions import TypeAlias
 
 
 class Defaults(Struct):
-    a: List[Span]
+    a: list[Span]
 
 
 class SpanB(Struct):
-    recur: List[Span]
+    recur: list[Span]
 
 
 Either: TypeAlias = Union[SpanB, "Span"]
 
 
 class Span(Struct):
-    recur: List[Either]
+    recur: list[Either]

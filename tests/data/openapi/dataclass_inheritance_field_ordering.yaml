@@ -1,0 +1,25 @@
+openapi: "3.0.0"
+info:
+  title: Dataclass Inheritance Field Ordering Test
+  version: "1.0"
+components:
+  schemas:
+    ParentWithDefault:
+      type: object
+      properties:
+        name:
+          type: string
+          default: "default_name"
+        read_only_field:
+          type: string
+          readOnly: true
+
+    ChildWithRequired:
+      allOf:
+        - $ref: '#/components/schemas/ParentWithDefault'
+        - type: object
+          properties:
+            child_id:
+              type: string
+          required:
+            - child_id

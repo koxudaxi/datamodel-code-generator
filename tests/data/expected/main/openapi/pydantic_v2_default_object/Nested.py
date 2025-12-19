@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field, RootModel
 
 from . import Foo as Foo_1
@@ -16,15 +14,15 @@ class Foo(RootModel[str]):
 
 
 class Bar(BaseModel):
-    foo: Optional[Foo_1] = Field(
+    foo: Foo_1 | None = Field(
         default_factory=lambda: Foo_1.model_validate({'text': 'abc', 'number': 123})
     )
-    baz: Optional[List[Foo_1]] = Field(
+    baz: list[Foo_1] | None = Field(
         default_factory=lambda: [
             Foo_1.model_validate(v)
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
         ]
     )
-    nested_foo: Optional[Foo] = Field(
+    nested_foo: Foo | None = Field(
         default_factory=lambda: Foo.model_validate('default foo')
     )

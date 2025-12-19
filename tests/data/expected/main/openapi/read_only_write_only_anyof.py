@@ -4,22 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel
 
 
 class PetRequest(BaseModel):
     id: int
-    token: Optional[Union[str, int]] = None
+    token: str | int | None = None
 
 
 class PetResponse(BaseModel):
     id: int
-    status: Optional[Union[str, int]] = None
+    status: str | int | None = None
 
 
 class Pet(BaseModel):
     id: int
-    status: Optional[Union[str, int]] = None
-    token: Optional[Union[str, int]] = None
+    status: str | int | None = None
+    token: str | int | None = None

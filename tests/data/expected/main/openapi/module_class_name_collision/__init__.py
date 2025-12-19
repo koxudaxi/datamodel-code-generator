@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import RootModel
 
 from .A import A
 
 
-class AGetResponse(RootModel[List[A]]):
-    root: List[A]
+class AGetResponse(RootModel[list[A]]):
+    root: list[A]

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -16,4 +15,4 @@ class OptionalModeEnum(Enum):
 
 
 class OptionalMode(BaseModel):
-    __root__: Optional[OptionalModeEnum] = Field(None, title='Optional Mode')
+    __root__: OptionalModeEnum | None = Field(None, title='Optional Mode')

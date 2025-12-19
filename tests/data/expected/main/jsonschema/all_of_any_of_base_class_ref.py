@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, Field, confloat
 
 
@@ -16,10 +14,10 @@ class MapState1(BaseModel):
 class MapState2(BaseModel):
     latitude: Latitude
     longitude: Longitude
-    zoom: Optional[Zoom] = 0
-    bearing: Optional[Bearing] = None
+    zoom: Zoom | None = Field(default_factory=lambda: Zoom.parse_obj(0))
+    bearing: Bearing | None = None
     pitch: Pitch
-    drag_rotate: Optional[DragRotate] = Field(None, alias="dragRotate")
+    drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
     map_split_mode: str = Field("SWIPE_COMPARE", alias="mapSplitMode", const=True)
     is_split: bool = Field(True, alias="isSplit", const=True)
 
@@ -45,7 +43,7 @@ class MapState7(MapState5):
 
 
 class MapState(BaseModel):
-    __root__: Union[MapState4, MapState5, MapState6, MapState7] = Field(
+    __root__: MapState4 | MapState5 | MapState6 | MapState7 = Field(
         ..., title="MapState"
     )
 

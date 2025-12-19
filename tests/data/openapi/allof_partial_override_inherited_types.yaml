@@ -1,0 +1,24 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    Thing:
+      type: object
+      properties:
+        type:
+          type: string
+        name:
+          type: string
+          description: First and Last name
+    Person:
+      allOf:
+        - $ref: "#/components/schemas/Thing"
+        - type: object
+          properties:
+            type:
+              default: playground:Person
+            name:
+              description: First and Last name
+            age:
+              type: integer
+          required:
+            - name

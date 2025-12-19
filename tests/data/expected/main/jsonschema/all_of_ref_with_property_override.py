@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
-
 from pydantic import BaseModel, constr
 
 
@@ -15,6 +13,6 @@ class Thing(BaseModel):
 
 
 class Person(Thing):
-    type: Optional[Any] = 'playground:Person'
-    name: Optional[Any] = None
-    age: Optional[int] = None
+    type: str | None = 'playground:Person'
+    name: constr(min_length=1) | None = None
+    age: int | None = None

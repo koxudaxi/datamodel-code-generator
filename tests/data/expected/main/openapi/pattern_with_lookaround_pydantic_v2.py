@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict, constr
 
 
@@ -13,4 +11,4 @@ class Info(BaseModel):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    name: Optional[constr(pattern=r'.*foo.*(?<!baz)bar.*')] = None
+    name: constr(pattern=r'.*foo.*(?<!baz)bar.*') | None = None

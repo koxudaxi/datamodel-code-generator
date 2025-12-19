@@ -5,9 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Literal, Optional
-
-from typing_extensions import TypeAlias
+from typing import Literal, TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -35,127 +33,127 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 @dataclass(order=True, slots=True)
 class Film:
-    characters: List[Person]
-    characters_ids: List[ID]
+    characters: list[Person]
+    characters_ids: list[ID]
     director: String
     episode_id: Int
     id: ID
     opening_crawl: String
-    planets: List[Planet]
-    planets_ids: List[ID]
+    planets: list[Planet]
+    planets_ids: list[ID]
     release_date: String
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
     title: String
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
-    producer: Optional[String] = None
-    typename__: Optional[Literal['Film']] = 'Film'
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
+    producer: String | None = None
+    typename__: Literal['Film'] | None = 'Film'
 
 
 @dataclass(order=True, slots=True)
 class Person:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    species: List[Species]
-    species_ids: List[ID]
-    starships: List[Starship]
-    starships_ids: List[ID]
-    vehicles: List[Vehicle]
-    vehicles_ids: List[ID]
-    birth_year: Optional[String] = None
-    eye_color: Optional[String] = None
-    gender: Optional[String] = None
-    hair_color: Optional[String] = None
-    height: Optional[Int] = None
-    homeworld: Optional[Planet] = None
-    homeworld_id: Optional[ID] = None
-    mass: Optional[Int] = None
-    skin_color: Optional[String] = None
-    typename__: Optional[Literal['Person']] = 'Person'
+    species: list[Species]
+    species_ids: list[ID]
+    starships: list[Starship]
+    starships_ids: list[ID]
+    vehicles: list[Vehicle]
+    vehicles_ids: list[ID]
+    birth_year: String | None = None
+    eye_color: String | None = None
+    gender: String | None = None
+    hair_color: String | None = None
+    height: Int | None = None
+    homeworld: Planet | None = None
+    homeworld_id: ID | None = None
+    mass: Int | None = None
+    skin_color: String | None = None
+    typename__: Literal['Person'] | None = 'Person'
 
 
 @dataclass(order=True, slots=True)
 class Planet:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    residents: List[Person]
-    residents_ids: List[ID]
-    climate: Optional[String] = None
-    diameter: Optional[String] = None
-    gravity: Optional[String] = None
-    orbital_period: Optional[String] = None
-    population: Optional[String] = None
-    rotation_period: Optional[String] = None
-    surface_water: Optional[String] = None
-    terrain: Optional[String] = None
-    typename__: Optional[Literal['Planet']] = 'Planet'
+    residents: list[Person]
+    residents_ids: list[ID]
+    climate: String | None = None
+    diameter: String | None = None
+    gravity: String | None = None
+    orbital_period: String | None = None
+    population: String | None = None
+    rotation_period: String | None = None
+    surface_water: String | None = None
+    terrain: String | None = None
+    typename__: Literal['Planet'] | None = 'Planet'
 
 
 @dataclass(order=True, slots=True)
 class Species:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    people: List[Person]
-    people_ids: List[ID]
-    average_height: Optional[String] = None
-    average_lifespan: Optional[String] = None
-    classification: Optional[String] = None
-    designation: Optional[String] = None
-    eye_colors: Optional[String] = None
-    hair_colors: Optional[String] = None
-    language: Optional[String] = None
-    skin_colors: Optional[String] = None
-    typename__: Optional[Literal['Species']] = 'Species'
+    people: list[Person]
+    people_ids: list[ID]
+    average_height: String | None = None
+    average_lifespan: String | None = None
+    classification: String | None = None
+    designation: String | None = None
+    eye_colors: String | None = None
+    hair_colors: String | None = None
+    language: String | None = None
+    skin_colors: String | None = None
+    typename__: Literal['Species'] | None = 'Species'
 
 
 @dataclass(order=True, slots=True)
 class Starship:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    pilots: List[Person]
-    pilots_ids: List[ID]
-    MGLT: Optional[String] = None
-    cargo_capacity: Optional[String] = None
-    consumables: Optional[String] = None
-    cost_in_credits: Optional[String] = None
-    crew: Optional[String] = None
-    hyperdrive_rating: Optional[String] = None
-    length: Optional[String] = None
-    manufacturer: Optional[String] = None
-    max_atmosphering_speed: Optional[String] = None
-    model: Optional[String] = None
-    passengers: Optional[String] = None
-    starship_class: Optional[String] = None
-    typename__: Optional[Literal['Starship']] = 'Starship'
+    pilots: list[Person]
+    pilots_ids: list[ID]
+    MGLT: String | None = None
+    cargo_capacity: String | None = None
+    consumables: String | None = None
+    cost_in_credits: String | None = None
+    crew: String | None = None
+    hyperdrive_rating: String | None = None
+    length: String | None = None
+    manufacturer: String | None = None
+    max_atmosphering_speed: String | None = None
+    model: String | None = None
+    passengers: String | None = None
+    starship_class: String | None = None
+    typename__: Literal['Starship'] | None = 'Starship'
 
 
 @dataclass(order=True, slots=True)
 class Vehicle:
-    films: List[Film]
-    films_ids: List[ID]
+    films: list[Film]
+    films_ids: list[ID]
     id: ID
     name: String
-    pilots: List[Person]
-    pilots_ids: List[ID]
-    cargo_capacity: Optional[String] = None
-    consumables: Optional[String] = None
-    cost_in_credits: Optional[String] = None
-    crew: Optional[String] = None
-    length: Optional[String] = None
-    manufacturer: Optional[String] = None
-    max_atmosphering_speed: Optional[String] = None
-    model: Optional[String] = None
-    passengers: Optional[String] = None
-    vehicle_class: Optional[String] = None
-    typename__: Optional[Literal['Vehicle']] = 'Vehicle'
+    pilots: list[Person]
+    pilots_ids: list[ID]
+    cargo_capacity: String | None = None
+    consumables: String | None = None
+    cost_in_credits: String | None = None
+    crew: String | None = None
+    length: String | None = None
+    manufacturer: String | None = None
+    max_atmosphering_speed: String | None = None
+    model: String | None = None
+    passengers: String | None = None
+    vehicle_class: String | None = None
+    typename__: Literal['Vehicle'] | None = 'Vehicle'

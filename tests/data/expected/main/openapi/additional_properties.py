@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
-
 from pydantic import BaseModel, Extra, Field
 
 
@@ -15,14 +13,14 @@ class Pet(BaseModel):
 
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Pets(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class User(BaseModel):
@@ -31,14 +29,14 @@ class User(BaseModel):
 
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Users(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(BaseModel):
@@ -52,7 +50,7 @@ class Rules(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(BaseModel):
@@ -67,37 +65,37 @@ class Event(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    event: Optional[Event] = None
+    event: Event | None = None
 
 
 class Broken(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    foo: Optional[str] = None
-    bar: Optional[int] = None
+    foo: str | None = None
+    bar: int | None = None
 
 
 class BrokenArray(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    broken: Optional[Dict[str, List[Broken]]] = None
+    broken: dict[str, list[Broken]] | None = None
 
 
 class FileSetUpload(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    task_id: Optional[str] = Field(None, title='task id')
-    tags: Dict[str, List[str]] = Field(
+    task_id: str | None = Field(None, title='task id')
+    tags: dict[str, list[str]] = Field(
         ..., title='Dict of tags, each containing a list of file names'
     )
 
@@ -106,5 +104,5 @@ class Test(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    broken: Optional[Dict[str, Broken]] = None
-    failing: Optional[Dict[str, str]] = {}
+    broken: dict[str, Broken] | None = None
+    failing: dict[str, str] | None = {}

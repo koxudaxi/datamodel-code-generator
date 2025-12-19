@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
 
@@ -23,6 +23,7 @@ from pydantic import (
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfMergeMode,
     DataclassArguments,
     InvalidClassNameError,
     ReadOnlyWriteOnlyModelType,
@@ -59,7 +60,7 @@ from datamodel_code_generator.parser.base import (
     get_special_path,
     title_to_class_name,
 )
-from datamodel_code_generator.reference import ModelType, Reference, is_url
+from datamodel_code_generator.reference import SPECIAL_PATH_MARKER, ModelType, Reference, is_url
 from datamodel_code_generator.types import (
     ANY,
     DataType,
@@ -80,7 +81,7 @@ if PYDANTIC_V2:
     from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -130,6 +131,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "decimal": Types.decimal,
         "date-time": Types.date_time,
         "time": Types.time,
+        "time-delta": Types.timedelta,
         "default": Types.number,
     },
     "string": {
@@ -333,7 +335,8 @@ class JsonSchemaObject(BaseModel):
     required: list[str] = []  # noqa: RUF012
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
     nullable: Optional[bool] = False  # noqa: UP045
-    x_enum_varnames: list[str] = Field(default=[], alias="x-enum-varnames")
+    x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
+    x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
     example: Any = None
@@ -541,6 +544,7 @@ class JsonSchemaParser(Parser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
@@ -561,11 +565,13 @@ class JsonSchemaParser(Parser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
+        use_decimal_for_multiple_of: bool = False,
         original_field_name_delimiter: str | None = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
@@ -633,6 +639,7 @@ class JsonSchemaParser(Parser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -653,11 +660,13 @@ class JsonSchemaParser(Parser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
             use_serialize_as_any=use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
@@ -760,9 +769,11 @@ class JsonSchemaParser(Parser):
 
     def should_parse_enum_as_literal(self, obj: JsonSchemaObject) -> bool:
         """Determine if an enum should be parsed as a literal type."""
-        return self.enum_field_as_literal == LiteralType.All or (
-            self.enum_field_as_literal == LiteralType.One and len(obj.enum) == 1
-        )
+        if self.enum_field_as_literal == LiteralType.All:
+            return True
+        if self.enum_field_as_literal == LiteralType.One:
+            return len(obj.enum) == 1
+        return False
 
     @classmethod
     def _extract_const_enum_from_combined(  # noqa: PLR0912
@@ -794,28 +805,30 @@ class JsonSchemaParser(Parser):
                 varnames.append(str(const_value))
 
             if inferred_type is None and const_value is not None:
-                if isinstance(const_value, str):
-                    inferred_type = "string"
-                elif isinstance(const_value, bool):
-                    inferred_type = "boolean"
-                elif isinstance(const_value, int):
-                    inferred_type = "integer"
-                elif isinstance(const_value, float):
-                    inferred_type = "number"
+                match const_value:
+                    case str():
+                        inferred_type = "string"
+                    case bool():  # bool must come before int (bool is subclass of int)
+                        inferred_type = "boolean"
+                    case int():
+                        inferred_type = "integer"
+                    case float():
+                        inferred_type = "number"
 
         if not enum_values:  # pragma: no cover
             return None
 
         final_type: str | None
-        if isinstance(parent_type, str):
-            final_type = parent_type
-        elif isinstance(parent_type, list):
-            non_null_types = [t for t in parent_type if t != "null"]
-            final_type = non_null_types[0] if non_null_types else inferred_type
-            if "null" in parent_type:
-                nullable = True
-        else:
-            final_type = inferred_type
+        match parent_type:
+            case str():
+                final_type = parent_type
+            case list():
+                non_null_types = [t for t in parent_type if t != "null"]
+                final_type = non_null_types[0] if non_null_types else inferred_type
+                if "null" in parent_type:
+                    nullable = True
+            case _:
+                final_type = inferred_type
 
         return (enum_values, varnames, final_type, nullable)
 
@@ -843,7 +856,15 @@ class JsonSchemaParser(Parser):
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
         """Check if a field should include constraints."""
         return obj.is_array or (
-            self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
+            self.field_constraints
+            and not (
+                obj.ref
+                or obj.anyOf
+                or obj.oneOf
+                or obj.allOf
+                or obj.is_object
+                or (obj.enum and not self.ignore_enum_constraints)
+            )
         )
 
     def _resolve_field_flag(self, obj: JsonSchemaObject, flag: Literal["readOnly", "writeOnly"]) -> bool:
@@ -1156,6 +1177,43 @@ class JsonSchemaParser(Parser):
 
         return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
 
+    def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
+        """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
+        if len(items) == 1:
+            return items[0]  # pragma: no cover
+
+        formats = {item.format for item in items if item.format}
+        if len(formats) > 1:
+            return None
+
+        merged_format = formats.pop() if formats else None
+
+        if self.allof_merge_mode != AllOfMergeMode.NoMerge:
+            merged = self._merge_primitive_schemas(items)
+            merged_dict = merged.dict(exclude_unset=True, by_alias=True)
+            if merged_format:
+                merged_dict["format"] = merged_format
+            return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        base_dict: dict[str, Any] = {}
+        for item in items:
+            if item.type:
+                base_dict = item.dict(exclude_unset=True, by_alias=True)
+                break
+
+        for item in items:
+            for constraint_field in JsonSchemaObject.__constraint_fields__:
+                value = getattr(item, constraint_field, None)
+                if value is None:
+                    value = item.extras.get(constraint_field)
+                if value is not None:
+                    base_dict[constraint_field] = value
+
+        if merged_format:
+            base_dict["format"] = merged_format
+
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
+
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
@@ -1341,6 +1399,89 @@ class JsonSchemaParser(Parser):
 
         return None
 
+    def _is_list_with_any_item_type(self, data_type: DataType | None) -> bool:  # noqa: PLR6301
+        """Return True when data_type represents List[Any] (including nested lists)."""
+        if not data_type:  # pragma: no cover
+            return False
+
+        candidate = data_type
+        if not candidate.is_list and len(candidate.data_types) == 1 and candidate.data_types[0].is_list:
+            candidate = candidate.data_types[0]
+
+        if not candidate.is_list or len(candidate.data_types) != 1:
+            return False
+
+        item_type = candidate.data_types[0]
+        while len(item_type.data_types) == 1:
+            inner = item_type.data_types[0]
+            if (not item_type.is_list and inner.is_list) or item_type.is_list:
+                item_type = inner
+            else:
+                break
+        return item_type.type == ANY
+
+    def _merge_property_schemas(self, parent_dict: dict[str, Any], child_dict: dict[str, Any]) -> dict[str, Any]:
+        """Merge parent and child property schemas for allOf."""
+        if self.allof_merge_mode == AllOfMergeMode.NoMerge:
+            return child_dict.copy()
+
+        non_merged_fields: set[str] = set()
+        if self.allof_merge_mode == AllOfMergeMode.Constraints:
+            non_merged_fields = {"default", "examples", "example"}
+
+        result = {key: value for key, value in parent_dict.items() if key not in non_merged_fields}
+
+        for key, value in child_dict.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                result[key] = self._merge_property_schemas(result[key], value)
+            else:
+                result[key] = value
+        return result
+
+    def _merge_properties_with_parent_constraints(
+        self, child_obj: JsonSchemaObject, parent_refs: list[str]
+    ) -> JsonSchemaObject:
+        """Merge child properties with parent property constraints for allOf inheritance."""
+        if not child_obj.properties:
+            return child_obj
+
+        parent_properties: dict[str, JsonSchemaObject] = {}
+        for ref in parent_refs:
+            try:
+                parent_schema = self._load_ref_schema_object(ref)
+            except Exception:  # pragma: no cover  # noqa: BLE001, S112
+                continue
+            if parent_schema.properties:
+                for prop_name, prop_schema in parent_schema.properties.items():
+                    if isinstance(prop_schema, JsonSchemaObject) and prop_name not in parent_properties:
+                        parent_properties[prop_name] = prop_schema
+
+        if not parent_properties:
+            return child_obj
+
+        merged_properties: dict[str, JsonSchemaObject | bool] = {}
+        for prop_name, child_prop in child_obj.properties.items():
+            if not isinstance(child_prop, JsonSchemaObject):
+                merged_properties[prop_name] = child_prop
+                continue
+
+            parent_prop = parent_properties.get(prop_name)
+            if parent_prop is None:
+                merged_properties[prop_name] = child_prop
+                continue
+
+            parent_dict = parent_prop.dict(exclude_unset=True, by_alias=True)
+            child_dict = child_prop.dict(exclude_unset=True, by_alias=True)
+            merged_dict = self._merge_property_schemas(parent_dict, child_dict)
+            merged_properties[prop_name] = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        merged_obj_dict = child_obj.dict(exclude_unset=True, by_alias=True)
+        merged_obj_dict["properties"] = {
+            k: v.dict(exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
+            for k, v in merged_properties.items()
+        }
+        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_obj_dict)
+
     def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
         """Get the data type for an inherited property from parent schemas."""
         for base in base_classes:
@@ -1370,6 +1511,89 @@ class JsonSchemaParser(Parser):
         if isinstance(prop_schema, bool):
             return prop_schema
         return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+
+    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:
+        """Check if schema represents a root model (primitive type with constraints).
+
+        Based on parse_raw_obj() else branch conditions. Returns True when
+        the schema would be processed by parse_root_type().
+        """
+        if obj.is_array:
+            return False
+        if obj.allOf or obj.oneOf or obj.anyOf:
+            return False
+        if obj.properties:
+            return False
+        if obj.patternProperties:
+            return False
+        if obj.type == "object":
+            return False
+        return not obj.enum or self.ignore_enum_constraints
+
+    def _handle_allof_root_model_with_constraints(  # noqa: PLR0911, PLR0912
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType | None:
+        """Handle allOf that combines a root model $ref with additional constraints.
+
+        This handler is for generating a root model from a root model reference.
+        Object inheritance (with properties) is handled by existing _parse_all_of_item() path.
+        Only applies to named schema definitions, not inline properties.
+        """
+        for path_element in path:
+            if SPECIAL_PATH_MARKER in path_element:
+                return None  # pragma: no cover
+
+        ref_items = [item for item in obj.allOf if item.ref]
+
+        if len(ref_items) != 1:
+            return None
+
+        ref_item = ref_items[0]
+        ref_value = ref_item.ref
+        if ref_value is None:
+            return None  # pragma: no cover
+
+        if ref_item.has_ref_with_schema_keywords:
+            ref_schema = self._merge_ref_with_schema(ref_item)
+        else:
+            ref_schema = self._load_ref_schema_object(ref_value)
+
+        if not self._is_root_model_schema(ref_schema):
+            return None
+
+        constraint_items: list[JsonSchemaObject] = []
+        for item in obj.allOf:
+            if item.ref:
+                continue
+            if item.properties or item.items:
+                return None
+            if item.has_constraint or item.type or item.format:
+                if item.type and ref_schema.type:
+                    compatible_type_pairs = {
+                        ("integer", "number"),
+                        ("number", "integer"),
+                    }
+                    if item.type != ref_schema.type and (item.type, ref_schema.type) not in compatible_type_pairs:
+                        return None
+                constraint_items.append(item)
+
+        if not constraint_items:
+            return None
+
+        all_items = [ref_schema, *constraint_items]
+        merged_schema = self._merge_primitive_schemas_for_allof(all_items)
+        if merged_schema is None:
+            return None
+
+        if obj.description:
+            merged_dict = merged_schema.dict(exclude_unset=True, by_alias=True)
+            merged_dict["description"] = obj.description
+            merged_schema = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+
+        return self.parse_root_type(name, merged_schema, path)
 
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models.
@@ -1494,7 +1718,7 @@ class JsonSchemaParser(Parser):
             kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
-    def _parse_object_common_part(  # noqa: PLR0912, PLR0913
+    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -1518,6 +1742,55 @@ class JsonSchemaParser(Parser):
                     class_name=name,
                 )
             )
+        if base_classes:
+            for field in fields:
+                current_type = field.data_type
+                field_name = field.original_name or field.name
+                if current_type and current_type.type == ANY and field_name:
+                    inherited_type = self._get_inherited_field_type(field_name, base_classes)
+                    if inherited_type is not None:
+                        if PYDANTIC_V2:
+                            new_type = inherited_type.model_copy(deep=True)
+                        else:
+                            new_type = inherited_type.copy(deep=True)
+                        new_type.is_optional = new_type.is_optional or current_type.is_optional
+                        new_type.is_dict = new_type.is_dict or current_type.is_dict
+                        new_type.is_list = new_type.is_list or current_type.is_list
+                        new_type.is_set = new_type.is_set or current_type.is_set
+                        if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
+                            new_type.kwargs = current_type.kwargs
+                        field.data_type = new_type
+                # Handle List[Any] case: inherit item type from parent if items have Any type
+                elif field_name and self._is_list_with_any_item_type(current_type):
+                    inherited_type = self._get_inherited_field_type(field_name, base_classes)
+                    if inherited_type is None or not inherited_type.is_list or not inherited_type.data_types:
+                        continue
+
+                    new_type = inherited_type.model_copy(deep=True) if PYDANTIC_V2 else inherited_type.copy(deep=True)
+
+                    # Preserve modifiers coming from the overriding schema.
+                    if current_type is not None:  # pragma: no branch
+                        new_type.is_optional = new_type.is_optional or current_type.is_optional
+                        new_type.is_dict = new_type.is_dict or current_type.is_dict
+                        new_type.is_list = new_type.is_list or current_type.is_list
+                        new_type.is_set = new_type.is_set or current_type.is_set
+                        if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
+                            new_type.kwargs = current_type.kwargs
+
+                    # Some code paths represent the list type inside an outer container.
+                    is_wrapped = (
+                        current_type is not None
+                        and not current_type.is_list
+                        and len(current_type.data_types) == 1
+                        and current_type.data_types[0].is_list
+                    )
+                    if is_wrapped:
+                        wrapper = current_type.model_copy(deep=True) if PYDANTIC_V2 else current_type.copy(deep=True)
+                        wrapper.data_types[0] = new_type
+                        field.data_type = wrapper
+                        continue
+
+                    field.data_type = new_type  # pragma: no cover
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
@@ -1589,6 +1862,8 @@ class JsonSchemaParser(Parser):
         required: list[str],
         union_models: list[Reference],
     ) -> None:
+        parent_refs = [item.ref for item in obj.allOf if item.ref]
+
         for all_of_item in obj.allOf:  # noqa: PLR1702
             if all_of_item.ref:  # $ref
                 ref_schema = self._load_ref_schema_object(all_of_item.ref)
@@ -1608,9 +1883,11 @@ class JsonSchemaParser(Parser):
                     if ref.path not in {b.path for b in base_classes}:
                         base_classes.append(ref)
             else:
+                # Merge child properties with parent constraints before processing
+                merged_item = self._merge_properties_with_parent_constraints(all_of_item, parent_refs)
                 module_name = get_module_name(name, None, treat_dot_as_module=self.treat_dot_as_module)
                 object_fields = self.parse_object_fields(
-                    all_of_item,
+                    merged_item,
                     path,
                     module_name,
                     class_name=name,
@@ -1727,6 +2004,11 @@ class JsonSchemaParser(Parser):
                 base_classes=[],
                 required=[],
             )
+
+        root_model_result = self._handle_allof_root_model_with_constraints(name, obj, path)
+        if root_model_result is not None:
+            return root_model_result
+
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []
         required: list[str] = []
@@ -2058,7 +2340,7 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(
                 Types.object,
             )
-        if item.enum:
+        if item.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(item):
                 return self.parse_enum_as_literal(item)
             return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
@@ -2102,12 +2384,13 @@ class JsonSchemaParser(Parser):
             else:
                 required = not obj.nullable and required
                 nullable = None
-        if isinstance(obj.items, JsonSchemaObject):
-            items: list[JsonSchemaObject] = [obj.items]
-        elif isinstance(obj.items, list):
-            items = obj.items
-        else:
-            items = []
+        match obj.items:
+            case JsonSchemaObject():
+                items: list[JsonSchemaObject] = [obj.items]
+            case list():
+                items = obj.items
+            case _:
+                items = []
 
         if items:
             item_data_types = self.parse_list_item(
@@ -2131,7 +2414,7 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_all_of(name, obj, get_special_path("allOf", path)))
         elif obj.is_object:
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
-        if obj.enum:
+        if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
@@ -2240,7 +2523,7 @@ class JsonSchemaParser(Parser):
                     data_type = data_types[0]
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
-        elif obj.enum:
+        elif obj.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(obj):
                 data_type = self.parse_enum_as_literal(obj)
             else:  # pragma: no cover
@@ -2390,14 +2673,16 @@ class JsonSchemaParser(Parser):
 
         exclude_field_names: set[str] = set()
 
+        enum_names = obj.x_enum_varnames or obj.x_enum_names
+
         for i, enum_part in enumerate(enum_times):
             if obj.type == "string" or isinstance(enum_part, str):
                 default = f"'{enum_part.translate(escape_characters)}'" if isinstance(enum_part, str) else enum_part
-                field_name = obj.x_enum_varnames[i] if obj.x_enum_varnames else str(enum_part)
+                field_name = enum_names[i] if enum_names and i < len(enum_names) and enum_names[i] else str(enum_part)
             else:
                 default = enum_part
-                if obj.x_enum_varnames:
-                    field_name = obj.x_enum_varnames[i]
+                if enum_names and i < len(enum_names) and enum_names[i]:
+                    field_name = enum_names[i]
                 elif isinstance(enum_part, dict):
                     field_name = self._get_field_name_from_dict_enum(enum_part, i)
                 else:
@@ -2422,6 +2707,46 @@ class JsonSchemaParser(Parser):
                     original_name=None,
                 )
             )
+
+        if not enum_fields:
+            if not nullable:
+                return self.data_type_manager.get_data_type(Types.null)
+            name = self._apply_title_as_name(name, obj)
+            reference = self.model_resolver.add(
+                path,
+                name,
+                class_name=True,
+                singular_name=singular_name,
+                singular_name_suffix="Enum",
+                loaded=True,
+            )
+            data_model_root_type = self.data_model_root_type(
+                reference=reference,
+                fields=[
+                    self.data_model_field_type(
+                        data_type=self.data_type_manager.get_data_type(Types.null),
+                        default=obj.default,
+                        required=False,
+                        nullable=True,
+                        strip_default_none=self.strip_default_none,
+                        extras=self.get_field_extras(obj),
+                        use_annotated=self.use_annotated,
+                        has_default=obj.has_default,
+                        use_field_description=self.use_field_description,
+                        use_inline_field_description=self.use_inline_field_description,
+                        original_name=None,
+                    )
+                ],
+                custom_base_class=obj.custom_base_path or self.base_class,
+                custom_template_dir=self.custom_template_dir,
+                extra_template_data=self.extra_template_data,
+                path=self.current_source_path,
+                default=obj.default if obj.has_default else UNDEFINED,
+                nullable=obj.type_has_null,
+                treat_dot_as_module=self.treat_dot_as_module,
+            )
+            self.results.append(data_model_root_type)
+            return self.data_type(reference=reference)
 
         def create_enum(reference_: Reference) -> DataType:
             type_: Types | None = (
@@ -2590,11 +2915,11 @@ class JsonSchemaParser(Parser):
     ) -> None:
         """Traverse schema objects recursively and apply callback."""
         callback(obj, path)
-        if obj.items:
-            if isinstance(obj.items, JsonSchemaObject):
-                self._traverse_schema_objects(obj.items, path, callback, include_one_of=include_one_of)
-            elif isinstance(obj.items, list):
-                for item in obj.items:
+        match obj.items:
+            case JsonSchemaObject() as item:
+                self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
+            case list() as items:
+                for item in items:
                     self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self._traverse_schema_objects(obj.additionalProperties, path, callback, include_one_of=include_one_of)
@@ -2688,7 +3013,7 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         elif obj.type == "object":
             self.parse_object(name, obj, path)
-        elif obj.enum and not self.should_parse_enum_as_literal(obj):
+        elif obj.enum and not self.ignore_enum_constraints and not self.should_parse_enum_as_literal(obj):
             self.parse_enum(name, obj, path)
         else:
             self.parse_root_type(name, obj, path)

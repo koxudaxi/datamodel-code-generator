@@ -4,22 +4,23 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Thing(BaseModel):
-    attributes: Optional[Mapping[str, Any]] = None
+    attributes: Mapping[str, Any] | None = None
 
 
 class Thang(BaseModel):
-    attributes: Optional[Sequence[Mapping[str, Any]]] = None
+    attributes: Sequence[Mapping[str, Any]] | None = None
 
 
 class Others(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Clone(Thing):
-    others: Optional[Others] = None
+    others: Others | None = None

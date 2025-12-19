@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel, Field
 
 
@@ -13,4 +11,4 @@ class User(BaseModel):
     id: int = Field(..., description='Server-generated ID', frozen=True)
     name: str
     password: str = Field(..., description='User password')
-    created_at: Optional[AwareDatetime] = Field(None, frozen=True)
+    created_at: AwareDatetime | None = Field(None, frozen=True)

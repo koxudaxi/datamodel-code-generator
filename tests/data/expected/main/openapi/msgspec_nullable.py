@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, TypeAlias, Union
+from typing import Annotated, TypeAlias
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
 
@@ -12,8 +12,8 @@ from msgspec import UNSET, Meta, Struct, UnsetType, field
 class Cursors(Struct):
     prev: str
     index: float
-    next: Union[str, UnsetType] = 'last'
-    tag: Union[str, UnsetType] = UNSET
+    next: str | UnsetType = 'last'
+    tag: str | UnsetType = UNSET
 
 
 class TopLevel(Struct):
@@ -29,53 +29,53 @@ class User(Struct):
 
 
 class Api(Struct):
-    apiKey: Union[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')],
-        UnsetType,
-    ] = UNSET
-    apiVersionNumber: Union[
-        Annotated[str, Meta(description='To be used as a version parameter value')],
-        UnsetType,
-    ] = UNSET
-    apiUrl: Union[
-        Annotated[str, Meta(description="The URL describing the dataset's fields")],
-        UnsetType,
-    ] = UNSET
-    apiDocumentationUrl: Union[
-        Annotated[str, Meta(description='A URL to the API console for each API')],
-        UnsetType,
-    ] = UNSET
+    apiKey: (
+        Annotated[str, Meta(description='To be used as a dataset parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiVersionNumber: (
+        Annotated[str, Meta(description='To be used as a version parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiUrl: (
+        Annotated[str, Meta(description="The URL describing the dataset's fields")]
+        | UnsetType
+    ) = UNSET
+    apiDocumentationUrl: (
+        Annotated[str, Meta(description='A URL to the API console for each API')]
+        | UnsetType
+    ) = UNSET
 
 
-Apis: TypeAlias = Optional[List[Api]]
+Apis: TypeAlias = list[Api] | None
 
 
 class EmailItem(Struct):
     author: str
     address: Annotated[str, Meta(description='email address')]
-    description: Union[str, UnsetType] = 'empty'
-    tag: Union[str, UnsetType] = UNSET
+    description: str | UnsetType = 'empty'
+    tag: str | UnsetType = UNSET
 
 
-Email: TypeAlias = List[EmailItem]
+Email: TypeAlias = list[EmailItem]
 
 
 Id: TypeAlias = int
 
 
-Description: TypeAlias = Annotated[Optional[str], 'example']
+Description: TypeAlias = Annotated[str | None, 'example']
 
 
-Name: TypeAlias = Optional[str]
+Name: TypeAlias = str | None
 
 
 Tag: TypeAlias = str
 
 
 class Notes(Struct):
-    comments: Union[List[str], UnsetType] = field(default_factory=list)
+    comments: list[str] | UnsetType = field(default_factory=list)
 
 
 class Options(Struct):
-    comments: List[str]
-    oneOfComments: List[Union[str, float]]
+    comments: list[str]
+    oneOfComments: list[str | float]

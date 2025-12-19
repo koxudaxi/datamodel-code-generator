@@ -12,13 +12,12 @@ readme.content-type = "text/markdown"
 readme.file = "README.md"
 license = "MIT"
 authors = [ { name = "Koudai Aono", email = "koxudaxi@gmail.com" } ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
   "Natural Language :: English",
   "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
@@ -47,6 +46,7 @@ optional-dependencies.all = [
   "datamodel-code-generator[http]",
   "datamodel-code-generator[ruff]",
   "datamodel-code-generator[validation]",
+  "datamodel-code-generator[watch]",
 ]
 optional-dependencies.debug = [
   "pysnooper>=0.4.1,<2",
@@ -64,6 +64,9 @@ optional-dependencies.validation = [
   "openapi-spec-validator>=0.2.8,<0.8",
   "prance>=0.18.2",
 ]
+optional-dependencies.watch = [
+  "watchfiles>=1.1",
+]
 urls.Homepage = "https://github.com/koxudaxi/datamodel-code-generator"
 urls.Source = "https://github.com/koxudaxi/datamodel-code-generator"
 scripts.datamodel-codegen = "datamodel_code_generator.__main__:main"
@@ -78,8 +81,8 @@ dev = [
   { include-group = "type" },
 ]
 test = [
-  "freezegun; python_version<'3.10'",
   "inline-snapshot>=0.31.1",
+  "msgspec>=0.18",
   "pytest>=6.1",
   "pytest>=8.3.4",
   "pytest-benchmark",
@@ -88,8 +91,8 @@ test = [
   "pytest-cov>=5",
   "pytest-mock>=3.14",
   "pytest-xdist>=3.3.1",
-  "setuptools; python_version<'3.10'",         # PyCharm debugger needs it
-  "time-machine>=3.1; python_version>='3.10'",
+  "time-machine>=3.1",
+  "watchfiles>=1.1",
   { include-group = "coverage" },
 ]
 type = [
@@ -101,8 +104,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "mkdocs>=1.6",
-  "mkdocs-material>=9.5.31",
+  "zensical>=0.0.13; python_version>='3.10'",
 ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
@@ -111,7 +113,7 @@ isort5 = [ "isort>=5,<6" ]
 isort6 = [ "isort>=6,<7" ]
 isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
 pydantic1 = [ "pydantic<2" ]
-fix = [ "pre-commit-uv>=4.1.4" ]
+fix = [ "prek>=0.2.22" ]
 pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
@@ -144,6 +146,7 @@ conflicts = [
   [
     { group = "pydantic1" },
     { group = "pkg-meta" },
+    { group = "dev" },
   ],
 ]
 
@@ -170,9 +173,18 @@ lint.ignore = [
   "TD003",  # missing to do link
   "TD004",  # missing colon in to do
 ]
+lint.per-file-ignores."scripts/*.py" = [
+  "INP001",  # no implicit namespace
+  "PLR0912", # too many branches
+  "PLR0914", # too many local variables
+  "PLR0915", # too many statements
+  "S",       # subprocess security is fine for build scripts
+  "T201",    # print is fine for CLI scripts
+]
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
   "INP001",  # no implicit namespace
+  "PLC0415", # local imports in tests are fine
   "PLC2701", # private import is fine
   "PLR0913", # as many arguments as want
   "PLR0915", # can have longer test methods
@@ -192,7 +204,7 @@ lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests'
+skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md'
 
 [tool.pytest.ini_options]
 filterwarnings = [
@@ -209,8 +221,9 @@ filterwarnings = [
   "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
   "ignore:^.*No schemas found in components/schemas.*",
+  "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
 ]
-norecursedirs = "tests/data/*"
+norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
 
 [tool.coverage]

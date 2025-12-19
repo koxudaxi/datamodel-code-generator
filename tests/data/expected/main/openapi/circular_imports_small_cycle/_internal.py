@@ -4,19 +4,17 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Parent(BaseModel):
-    id: Optional[str] = None
-    child: Optional[Child] = None
+    id: str | None = None
+    child: Child | None = None
 
 
 class Child(BaseModel):
-    id: Optional[str] = None
-    parent: Optional[Parent] = None
+    id: str | None = None
+    parent: Parent | None = None
 
 
 Parent.update_forward_refs()

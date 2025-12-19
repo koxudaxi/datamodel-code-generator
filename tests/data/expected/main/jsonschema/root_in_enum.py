@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -13,12 +13,12 @@ class Model(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    order_reference: Optional[str] = Field(
+    order_reference: str | None = Field(
         None,
         alias='orderReference',
         description='Reference number of the order',
         examples=['27378669'],
     )
-    brand: Optional[Literal['OPUS', 'someday']] = Field(
+    brand: Literal['OPUS', 'someday'] | None = Field(
         None, description='purchased brand'
     )

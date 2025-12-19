@@ -4,31 +4,29 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from custom.models import Animal, Person, Property
 
 
 class Spouse(Person):
-    job: Optional[str] = None
+    job: str | None = None
 
 
 class Pet(Animal):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Child(Person):
-    school: Optional[str] = None
-    grade: Optional[float] = None
-    pets: Optional[List[Pet]] = None
+    school: str | None = None
+    grade: float | None = None
+    pets: list[Pet] | None = None
 
 
 class Owner(Person):
-    job: Optional[str] = None
-    spouse: Optional[Spouse] = None
-    children: Optional[List[Child]] = None
+    job: str | None = None
+    spouse: Spouse | None = None
+    children: list[Child] | None = None
 
 
 class House(Property):
     address: str
-    owner: Optional[Owner] = None
+    owner: Owner | None = None

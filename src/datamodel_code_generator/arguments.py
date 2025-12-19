@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import locale
-from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, HelpFormatter, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
@@ -18,9 +18,11 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfMergeMode,
     DataclassArguments,
     DataModelType,
     InputFileType,
+    ModuleSplitMode,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -61,8 +63,8 @@ def _dataclass_arguments(value: str) -> DataclassArguments:
     return cast("DataclassArguments", result)
 
 
-class SortingHelpFormatter(HelpFormatter):
-    """Help formatter that sorts arguments and adds color to section headers."""
+class SortingHelpFormatter(RawDescriptionHelpFormatter):
+    """Help formatter that sorts arguments, adds color to section headers, and preserves epilog formatting."""
 
     def _bold_cyan(self, text: str) -> str:  # noqa: PLR6301
         """Wrap text in ANSI bold cyan escape codes."""
@@ -80,7 +82,10 @@ class SortingHelpFormatter(HelpFormatter):
 
 arg_parser = ArgumentParser(
     usage="\n  datamodel-codegen [options]",
-    description="Generate Python data models from schema definitions or structured data",
+    description="Generate Python data models from schema definitions or structured data\n\n"
+    "For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator",
+    epilog="Documentation: https://koxudaxi.github.io/datamodel-code-generator\n"
+    "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
 )
@@ -191,6 +196,12 @@ model_options.add_argument(
 model_options.add_argument(
     "--enable-version-header",
     help="Enable package version on file headers",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--enable-command-header",
+    help="Enable command-line options on file headers for reproducibility",
     action="store_true",
     default=None,
 )
@@ -313,6 +324,12 @@ model_options.add_argument(
     choices=[s.value for s in AllExportsCollisionStrategy],
     default=None,
 )
+model_options.add_argument(
+    "--module-split-mode",
+    help="Split generated models into separate files. 'single': generate one file per model class.",
+    choices=[m.value for m in ModuleSplitMode],
+    default=None,
+)
 
 # ======================================================================================
 # Typing options for generated models
@@ -326,8 +343,15 @@ typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "
-    "one: field type is Literal when an enum has only one possible value",
+    "one: field type is Literal when an enum has only one possible value. "
+    "none: always use Enum class (never convert to Literal)",
     choices=[lt.value for lt in LiteralType],
+    default=None,
+)
+typing_options.add_argument(
+    "--ignore-enum-constraints",
+    help="Ignore enum constraints and use the base type (e.g., str, int) instead of generating Enum classes",
+    action="store_true",
     default=None,
 )
 typing_options.add_argument(
@@ -374,6 +398,13 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-decimal-for-multiple-of",
+    help="Use condecimal instead of confloat for float/number fields with multipleOf constraint "
+    "(Pydantic only). Avoids floating-point precision issues in validation.",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-one-literal-as-default",
     help="Use one literal as default value for one literal field",
     action="store_true",
@@ -387,8 +418,8 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-standard-collections",
-    help="Use standard collections for type hinting (list, dict)",
-    action="store_true",
+    help="Use standard collections for type hinting (list, dict). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
@@ -405,14 +436,23 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-union-operator",
-    help="Use | operator for Union type (PEP 604).",
-    action="store_true",
+    help="Use | operator for Union type (PEP 604). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(
     "--use-unique-items-as-set",
     help="define field type as `set` when the field attribute has `uniqueItems`",
     action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--allof-merge-mode",
+    help="Mode for field merging in allOf schemas. "
+    "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "
+    "'all': merge constraints plus annotations (default, examples) from parent. "
+    "'none': do not merge any fields from parent properties.",
+    choices=[m.value for m in AllOfMergeMode],
     default=None,
 )
 typing_options.add_argument(
@@ -680,6 +720,12 @@ openapi_options.add_argument(
     choices=[e.value for e in ReadOnlyWriteOnlyModelType],
     default=None,
 )
+openapi_options.add_argument(
+    "--use-status-code-in-response-name",
+    help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # General options
@@ -739,6 +785,18 @@ general_options.add_argument(
     "--profile",
     help="Use a named profile from pyproject.toml [tool.datamodel-codegen.profiles.<name>]",
     default=None,
+)
+general_options.add_argument(
+    "--watch",
+    action="store_true",
+    default=None,
+    help="Watch input file(s) for changes and regenerate output automatically",
+)
+general_options.add_argument(
+    "--watch-delay",
+    type=float,
+    default=None,
+    help="Debounce delay in seconds for watch mode (default: 0.5)",
 )
 general_options.add_argument(
     "--version",

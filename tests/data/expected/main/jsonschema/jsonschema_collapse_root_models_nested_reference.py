@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import BaseModel
 
 
@@ -14,4 +12,4 @@ class SomeRef(BaseModel):
 
 
 class Model(BaseModel):
-    refs: List[SomeRef]
+    refs: list[SomeRef]

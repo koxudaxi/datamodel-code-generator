@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import (
     IMPORT_TYPE_ALIAS,
-    IMPORT_TYPE_ALIAS_BACKPORT,
     IMPORT_TYPE_ALIAS_TYPE,
     Import,
 )
@@ -100,16 +99,8 @@ class DataTypeScalar(_DataTypeScalarBase):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS,)
 
 
-class DataTypeScalarBackport(_DataTypeScalarBase):
-    """GraphQL scalar using TypeAlias annotation for Python 3.9 (Name: TypeAlias = type)."""
-
-    TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasAnnotation.jinja2"
-    BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_TYPE_ALIAS_BACKPORT,)
-
-
 class DataTypeScalarTypeBackport(_DataTypeScalarBase):
-    """GraphQL scalar using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", type))."""
+    """GraphQL scalar using TypeAliasType for Python 3.10-3.11 (Name = TypeAliasType("Name", type))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "ScalarTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""

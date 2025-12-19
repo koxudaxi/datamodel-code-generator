@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List
+from typing import Any
 
 from pydantic import BaseModel, Extra
 
@@ -14,14 +14,12 @@ class Model(BaseModel):
 
 
 class Friends(BaseModel):
-    pass
-
     class Config:
         extra = Extra.forbid
 
 
 class FriendsModel(BaseModel):
-    __root__: List[Any]
+    __root__: list[Any]
 
 
 class Tst2(BaseModel):

@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class ChildRequest(BaseModel):
-    id: Optional[int] = None
-    child_field: Optional[str] = None
+    id: int | None = None
+    child_field: str | None = None
 
 
 class ParentRequest(BaseModel):
@@ -20,8 +18,8 @@ class ParentRequest(BaseModel):
 
 class Parent(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class Child(Parent):
-    child_field: Optional[str] = None
+    child_field: str | None = None

@@ -1,4 +1,4 @@
-# Supported Input Formats
+# 📚 Supported Input Formats
 
 This code generator supports the following input formats:
 
@@ -8,11 +8,13 @@ This code generator supports the following input formats:
 - Python dictionary (it will be converted to JSON Schema);
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
 
-## Implemented data types and features
+## 📘 OpenAPI 3 and JSON Schema {#openapi-3-and-json-schema}
 
 Below are the data types and features recognized by datamodel-code-generator for OpenAPI 3 and JSON Schema.
 
-### Data Types
+## ✅ Implemented data types and features
+
+### 📊 Data Types
 - string (supported keywords: pattern/minLength/maxLength)
 - number (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)
 - integer (supported keywords: maximum/exclusiveMaximum/minimum/exclusiveMinimum/multipleOf)
@@ -20,7 +22,7 @@ Below are the data types and features recognized by datamodel-code-generator for
 - array
 - object
 
-### String Formats 
+### 📝 String Formats
 - date
 - datetime
 - time
@@ -35,10 +37,10 @@ Below are the data types and features recognized by datamodel-code-generator for
 - decimal
 - uri
 
-### Other schema
+### 🔗 Other schema
 - enum (as enum.Enum or typing.Literal)
 - allOf (as Multiple inheritance)
 - anyOf (as typing.Union)
 - oneOf (as typing.Union)
-- $ref ([http extra](../#http-extra-option) is required when resolving $ref for remote files.)
+- $ref ([http extra](index.md#http-extra-option) is required when resolving $ref for remote files.)
 - $id (for [JSONSchema](https://json-schema.org/understanding-json-schema/structuring.html#id))

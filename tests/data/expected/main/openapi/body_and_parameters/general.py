@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -13,7 +12,7 @@ from pydantic import BaseModel
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Error(BaseModel):
@@ -22,45 +21,45 @@ class Error(BaseModel):
 
 
 class PetForm(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
+    name: str | None = None
+    age: int | None = None
 
 
 class PetsGetResponse(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class FoodFoodIdGetResponse(BaseModel):
-    __root__: List[int]
+    __root__: list[int]
 
 
 class UserGetResponse(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UserPostRequest(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersGetResponseItem(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersGetResponse(BaseModel):
-    __root__: List[UsersGetResponseItem]
+    __root__: list[UsersGetResponseItem]
 
 
 class UsersPostRequestItem(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersPostRequest(BaseModel):
-    __root__: List[UsersPostRequestItem]
+    __root__: list[UsersPostRequestItem]

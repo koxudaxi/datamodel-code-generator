@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Metadata": {
+      "type": "object",
+      "properties": {
+        "tags": {
+          "type": "object",
+          "description": "Dynamic key-value metadata",
+          "patternProperties": {
+            "^[a-z][a-z0-9_]*$": {
+              "type": "string"
+            }
+          }
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "readOnly": true
+        }
+      }
+    },
+    "ExtendedMetadata": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Metadata"
+        },
+        {
+          "type": "object",
+          "required": ["id"],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "readOnly": true
+            },
+            "owner": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "metadata": {
+      "$ref": "#/definitions/ExtendedMetadata"
+    }
+  }
+}

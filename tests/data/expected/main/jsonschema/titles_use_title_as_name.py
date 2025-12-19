@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -21,37 +20,37 @@ class Kind(BaseModel):
 
 
 class NestedCommentTitle(BaseModel):
-    comment: Optional[str] = None
+    comment: str | None = None
 
 
 class ProcessingStatusDetail(BaseModel):
-    id: Optional[int] = None
-    description: Optional[str] = None
+    id: int | None = None
+    description: str | None = None
 
 
 class ProcessingTasksTitle(BaseModel):
-    __root__: List[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
+    __root__: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
 
 
 class ExtendedProcessingTask(BaseModel):
-    __root__: Union[ProcessingTasksTitle, NestedCommentTitle] = Field(
+    __root__: ProcessingTasksTitle | NestedCommentTitle = Field(
         ..., title='Extended Processing Task Title'
     )
 
 
 class ExtendedProcessingTasksTitle(BaseModel):
-    __root__: List[ExtendedProcessingTask] = Field(
+    __root__: list[ExtendedProcessingTask] = Field(
         ..., title='Extended Processing Tasks Title'
     )
 
 
 class ProcessingTaskTitle(BaseModel):
-    processing_status_union: Optional[
-        Union[ProcessingStatusDetail, ExtendedProcessingTask, ProcessingStatusTitle]
-    ] = Field('COMPLETED', title='Processing Status Union Title')
-    processing_status: Optional[ProcessingStatusTitle] = 'COMPLETED'
-    name: Optional[str] = None
-    kind: Optional[Kind] = None
+    processing_status_union: (
+        ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None
+    ) = Field('COMPLETED', title='Processing Status Union Title')
+    processing_status: ProcessingStatusTitle | None = 'COMPLETED'
+    name: str | None = None
+    kind: Kind | None = None
 
 
 ProcessingTasksTitle.update_forward_refs()

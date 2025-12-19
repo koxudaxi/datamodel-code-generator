@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class UniqueModelB(BaseModel):
-    value: Optional[int] = None
+    value: int | None = None
 
 
 class Model(BaseModel):
-    info: Optional[UniqueModelB] = None
+    info: UniqueModelB | None = None

@@ -4,25 +4,23 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class UserRequest(BaseModel):
     name: str
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class UserResponse(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
     name: str
 
 
 class Address(BaseModel):
-    street: Optional[str] = None
+    street: str | None = None
     city: str
 
 
 class ProductRequest(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None

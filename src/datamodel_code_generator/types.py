@@ -16,7 +16,6 @@ from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     Optional,
     Protocol,
@@ -38,7 +37,6 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.imports import (
     IMPORT_ABC_MAPPING,
     IMPORT_ABC_SEQUENCE,
-    IMPORT_ABC_SET,
     IMPORT_ANY,
     IMPORT_DICT,
     IMPORT_FROZEN_SET,
@@ -78,6 +76,7 @@ LIST = "List"
 STANDARD_DICT = "dict"
 STANDARD_LIST = "list"
 STANDARD_SET = "set"
+STANDARD_FROZEN_SET = "frozenset"
 STR = "str"
 
 NOT_REQUIRED = "NotRequired"
@@ -85,7 +84,7 @@ NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from pydantic_core import core_schema
 
@@ -208,12 +207,10 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
         elif char == "]" and in_constr == 0:
             inner_count -= 1
         elif char == "(":
-            if current_part.strip().startswith("constr(") and current_part[-2] != "\\":
-                # non-escaped opening round bracket found inside constraint string expression
+            if current_part.strip().startswith("constr(") and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
                 in_constr += 1
         elif char == ")":
-            if in_constr > 0 and current_part[-2] != "\\":
-                # non-escaped closing round bracket found inside constraint string expression
+            if in_constr > 0 and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
                 in_constr -= 1
         elif char == separator and inner_count == 0 and in_constr == 0:
             part = current_part[:-1].strip()
@@ -459,10 +456,10 @@ class DataType(_BaseModel):
 
         if self.use_generic_container:
             if self.use_standard_collections:
+                # frozenset is builtin, no import needed for is_set
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_ABC_SEQUENCE),
-                    (self.is_set, IMPORT_ABC_SET),
                     (self.is_dict, IMPORT_ABC_MAPPING),
                 )
             else:
@@ -579,7 +576,7 @@ class DataType(_BaseModel):
             type_ = f"{list_}[{type_}]" if type_ else list_
         elif self.is_set:
             if self.use_generic_container:
-                set_ = FROZEN_SET
+                set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
             elif self.use_standard_collections:
                 set_ = STANDARD_SET
             else:
@@ -671,6 +668,7 @@ class DataTypeManager(ABC):
         use_generic_container_types: bool = False,  # noqa: FBT001, FBT002
         strict_types: Sequence[StrictTypes] | None = None,
         use_non_positive_negative_number_constrained_types: bool = False,  # noqa: FBT001, FBT002
+        use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
@@ -685,6 +683,7 @@ class DataTypeManager(ABC):
         self.use_non_positive_negative_number_constrained_types: bool = (
             use_non_positive_negative_number_constrained_types
         )
+        self.use_decimal_for_multiple_of: bool = use_decimal_for_multiple_of
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
@@ -711,21 +710,19 @@ class DataTypeManager(ABC):
         """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
-    def get_data_type_from_value(self, value: Any) -> DataType:
+    def get_data_type_from_value(self, value: Any) -> DataType:  # noqa: PLR0911
         """Infer a DataType from a Python value."""
-        type_: Types | None = None
-        if isinstance(value, str):
-            type_ = Types.string
-        elif isinstance(value, bool):
-            type_ = Types.boolean
-        elif isinstance(value, int):
-            type_ = Types.integer
-        elif isinstance(value, float):
-            type_ = Types.float
-        elif isinstance(value, dict):
-            return self.data_type.from_import(IMPORT_DICT)
-        elif isinstance(value, list):
-            return self.data_type.from_import(IMPORT_LIST)
-        else:
-            type_ = Types.any
-        return self.get_data_type(type_)
+        match value:
+            case str():
+                return self.get_data_type(Types.string)
+            case bool():  # bool must come before int (bool is subclass of int)
+                return self.get_data_type(Types.boolean)
+            case int():
+                return self.get_data_type(Types.integer)
+            case float():
+                return self.get_data_type(Types.float)
+            case dict():
+                return self.data_type.from_import(IMPORT_DICT)
+            case list():
+                return self.data_type.from_import(IMPORT_LIST)
+        return self.get_data_type(Types.any)

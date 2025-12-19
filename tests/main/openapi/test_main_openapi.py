@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import platform
+import re
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -30,6 +31,8 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
+    BLACK_PY313_SKIP,
+    BLACK_PY314_SKIP,
     DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -76,8 +79,17 @@ def test_main_openapi_discriminator_enum(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--use-enum-values-in-discriminator"],
+    input_schema="openapi/discriminator_enum.yaml",
+    cli_args=["--use-enum-values-in-discriminator", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/discriminator/enum_use_enum_values.py",
+)
 def test_main_openapi_discriminator_enum_use_enum_values(output_file: Path) -> None:
-    """Test OpenAPI generation with discriminator enum using enum values in literal."""
+    """Use enum values in discriminator mappings for union types.
+
+    The `--use-enum-values-in-discriminator` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
         output_path=output_file,
@@ -309,8 +321,17 @@ def test_main_pydantic_basemodel(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--base-class"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--base-class", "custom_module.Base"],
+    golden_output="openapi/base_class.py",
+)
 def test_main_base_class(output_file: Path) -> None:
-    """Test OpenAPI generation with custom base class."""
+    """Specify a custom base class for generated models.
+
+    The `--base-class` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -331,6 +352,32 @@ def test_target_python_version(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=["--target-python-version", f"3.{MIN_VERSION}"],
     )
+
+
+@BLACK_PY313_SKIP
+def test_target_python_version_313_has_future_annotations(output_file: Path) -> None:
+    """Test that Python 3.13 target includes future annotations import."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            extra_args=["--target-python-version", "3.13"],
+        )
+
+
+@BLACK_PY314_SKIP
+def test_target_python_version_314_no_future_annotations(output_file: Path) -> None:
+    """Test that Python 3.14 target omits future annotations import (PEP 649)."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "api.yaml",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            extra_args=["--target-python-version", "3.14"],
+        )
 
 
 @pytest.mark.benchmark
@@ -408,6 +455,15 @@ def test_main_openapi_no_file(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--extra-template-data"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--extra-template-data", "openapi/extra_data.json"],
+    model_outputs={
+        "pydantic_v1": "openapi/extra_template_data_config.py",
+        "pydantic_v2": "openapi/extra_template_data_config_pydantic_v2.py",
+    },
+)
 def test_main_openapi_extra_template_data_config(
     capsys: pytest.CaptureFixture,
     output_model: str,
@@ -415,7 +471,12 @@ def test_main_openapi_extra_template_data_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Test main function with custom config data in extra template."""
+    """Pass custom template variables from JSON file for code generation.
+
+    The `--extra-template-data` flag allows you to provide additional variables
+    (from a JSON file) that can be used in custom templates to configure generated
+    model settings like Config classes, enabling customization beyond standard options.
+    """
     monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
         run_main_and_assert(
@@ -427,7 +488,7 @@ def test_main_openapi_extra_template_data_config(
             extra_args=[
                 "--extra-template-data",
                 str(OPEN_API_DATA_PATH / "extra_data.json"),
-                "--output-model",
+                "--output-model-type",
                 output_model,
             ],
             expected_stderr=inferred_message.format("openapi") + "\n",
@@ -456,10 +517,22 @@ def test_main_custom_template_dir_old_style(
         )
 
 
+@pytest.mark.cli_doc(
+    options=["--custom-template-dir"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--custom-template-dir", "templates", "--extra-template-data", "openapi/extra_data.json"],
+    golden_output="openapi/custom_template_dir.py",
+)
 def test_main_openapi_custom_template_dir(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Test main function with custom template directory."""
+    """Use custom Jinja2 templates for model generation.
+
+    The `--custom-template-dir` option allows you to specify a directory containing custom Jinja2 templates
+    to override the default templates used for generating data models. This enables full customization of
+    the generated code structure and formatting. Use with `--extra-template-data` to pass additional data
+    to the templates.
+    """
     monkeypatch.chdir(tmp_path)
     with freeze_time(TIMESTAMP):
         run_main_and_assert(
@@ -543,8 +616,17 @@ def test_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--validation"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--validation"],
+    golden_output="openapi/general.py",
+)
 def test_validation(mocker: MockerFixture, output_file: Path) -> None:
-    """Test OpenAPI code generation with validation enabled."""
+    """Enable validation constraints (deprecated, use --field-constraints).
+
+    The `--validation` flag configures the code generation behavior.
+    """
     mock_prance = mocker.patch("prance.BaseParser")
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
@@ -604,10 +686,21 @@ def test_validation_failed(mocker: MockerFixture, output_file: Path) -> None:
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--use-unique-items-as-set"],
+    input_schema="openapi/api_constrained.yaml",
+    cli_args=["--use-unique-items-as-set", "--field-constraints"],
+    golden_output="openapi/with_field_constraints_use_unique_items_as_set.py",
+)
 def test_main_with_field_constraints(
     output_model: str, expected_output: str, args: list[str], output_file: Path
 ) -> None:
-    """Test OpenAPI generation with field constraints enabled."""
+    """Generate set types for arrays with uniqueItems constraint.
+
+    The `--use-unique-items-as-set` flag generates Python set types instead of
+    list types for JSON Schema arrays that have the uniqueItems constraint set
+    to true, enforcing uniqueness at the type level.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
         output_path=output_file,
@@ -615,6 +708,33 @@ def test_main_with_field_constraints(
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=["--field-constraints", "--output-model-type", output_model, *args],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--field-constraints"],
+    input_schema="openapi/api_constrained.yaml",
+    cli_args=["--field-constraints"],
+    model_outputs={
+        "pydantic_v1": "main/openapi/with_field_constraints.py",
+        "pydantic_v2": "main/openapi/with_field_constraints_pydantic_v2.py",
+    },
+    primary=True,
+)
+def test_main_field_constraints_model_outputs(output_file: Path) -> None:
+    """Generate Field() with validation constraints from schema.
+
+    The `--field-constraints` flag generates Pydantic Field() definitions with
+    validation constraints (min/max length, pattern, etc.) from the schema.
+    Output differs between Pydantic v1 and v2 due to API changes.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="with_field_constraints.py",
+        extra_args=["--field-constraints"],
     )
 
 
@@ -650,9 +770,10 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
             "pydantic.BaseModel",
             "with_aliases.py",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "with_aliases_msgspec.py",
+            marks=LEGACY_BLACK_SKIP,
         ),
     ],
 )
@@ -660,8 +781,22 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--aliases"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--aliases", "openapi/aliases.json", "--target-python-version", "3.10"],
+    model_outputs={
+        "pydantic_v1": "openapi/with_aliases.py",
+        "msgspec": "openapi/with_aliases_msgspec.py",
+    },
+    primary=True,
+)
 def test_main_with_aliases(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test OpenAPI generation with type aliases."""
+    """Apply custom field and class name aliases from JSON file.
+
+    The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+    providing fine-grained control over generated names independent of schema definitions.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -671,9 +806,9 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
         extra_args=[
             "--aliases",
             str(OPEN_API_DATA_PATH / "aliases.json"),
-            "--target-python",
-            "3.9",
-            "--output-model",
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
             output_model,
         ],
     )
@@ -725,8 +860,19 @@ def test_main_with_snake_case_field(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+@pytest.mark.cli_doc(
+    options=["--strip-default-none"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--strip-default-none"],
+    golden_output="openapi/with_strip_default_none.py",
+)
 def test_main_with_strip_default_none(output_file: Path) -> None:
-    """Test OpenAPI generation with strip default none option."""
+    """Remove fields with None as default value from generated models.
+
+    The `--strip-default-none` option removes fields that have None as their default value from the
+    generated models. This results in cleaner model definitions by excluding optional fields that
+    default to None.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -747,8 +893,17 @@ def test_disable_timestamp(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enable-version-header"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--enable-version-header"],
+    golden_output="openapi/enable_version_header.py",
+)
 def test_enable_version_header(output_file: Path) -> None:
-    """Test OpenAPI generation with version header enabled."""
+    """Include tool version information in file header.
+
+    The `--enable-version-header` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -757,6 +912,34 @@ def test_enable_version_header(output_file: Path) -> None:
         expected_file="enable_version_header.py",
         extra_args=["--enable-version-header"],
         transform=lambda s: s.replace(f"#   version:   {get_version()}", "#   version:   0.0.0"),
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--enable-command-header"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--enable-command-header"],
+    golden_output="openapi/enable_command_header.py",
+)
+def test_enable_command_header(output_file: Path) -> None:
+    """Include command-line options in file header for reproducibility.
+
+    The `--enable-command-header` flag adds the full command-line used to generate
+    the file to the header, making it easy to reproduce the generation.
+    """
+
+    def normalize_command(s: str) -> str:
+        # Replace the actual command line with a placeholder for consistent testing
+        return re.sub(r"#   command:   datamodel-codegen .*", "#   command:   datamodel-codegen [COMMAND]", s)
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enable_command_header.py",
+        extra_args=["--enable-command-header"],
+        transform=normalize_command,
     )
 
 
@@ -777,8 +960,20 @@ def test_enable_version_header(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--allow-population-by-field-name"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--allow-population-by-field-name"],
+    model_outputs={
+        "pydantic_v1": "openapi/allow_population_by_field_name.py",
+        "pydantic_v2": "openapi/allow_population_by_field_name_pydantic_v2.py",
+    },
+)
 def test_allow_population_by_field_name(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test OpenAPI generation with allow population by field name."""
+    """Allow Pydantic model population by field name (not just alias).
+
+    The `--allow-population-by-field-name` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -806,8 +1001,20 @@ def test_allow_population_by_field_name(output_model: str, expected_output: str,
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--allow-extra-fields"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--allow-extra-fields"],
+    model_outputs={
+        "pydantic_v1": "openapi/allow_extra_fields.py",
+        "pydantic_v2": "openapi/allow_extra_fields_pydantic_v2.py",
+    },
+)
 def test_allow_extra_fields(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test OpenAPI generation with allow extra fields option."""
+    """Allow extra fields in generated Pydantic models (extra='allow').
+
+    The `--allow-extra-fields` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -835,8 +1042,20 @@ def test_allow_extra_fields(output_model: str, expected_output: str, output_file
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--enable-faux-immutability"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--enable-faux-immutability"],
+    model_outputs={
+        "pydantic_v1": "openapi/enable_faux_immutability.py",
+        "pydantic_v2": "openapi/enable_faux_immutability_pydantic_v2.py",
+    },
+)
 def test_enable_faux_immutability(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test OpenAPI generation with faux immutability enabled."""
+    """Enable faux immutability in Pydantic v1 models (allow_mutation=False).
+
+    The `--enable-faux-immutability` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -859,9 +1078,18 @@ def test_use_default(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--force-optional"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--force-optional"],
+    golden_output="openapi/force_optional.py",
+)
 @pytest.mark.benchmark
 def test_force_optional(output_file: Path) -> None:
-    """Test OpenAPI generation with force optional enabled."""
+    """Force all fields to be Optional regardless of required status.
+
+    The `--force-optional` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -911,8 +1139,20 @@ def test_main_specialized_enum(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--no-use-specialized-enum"],
+    input_schema="openapi/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    golden_output="openapi/subclass_enum.py",
+    related_options=["--use-specialized-enum", "--target-python-version"],
+)
 def test_main_specialized_enums_disabled(output_file: Path) -> None:
-    """Test OpenAPI generation with specialized enums disabled."""
+    """Disable specialized Enum classes for Python 3.11+ code generation.
+
+    The `--no-use-specialized-enum` flag prevents the generator from using
+    specialized Enum classes (StrEnum, IntEnum) when generating code for
+    Python 3.11+, falling back to standard Enum classes instead.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
@@ -992,17 +1232,28 @@ def test_main_original_field_name_delimiter_without_snake_case_field(
         ("msgspec.Struct", "datetime_msgspec.py", "datetime"),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--output-datetime-class"],
+    input_schema="openapi/datetime.yaml",
+    cli_args=["--output-datetime-class", "AwareDatetime"],
+    golden_output="openapi/datetime_pydantic_v2.py",
+)
 def test_main_openapi_aware_datetime(
     output_model: str, expected_output: str, date_type: str, output_file: Path
 ) -> None:
-    """Test OpenAPI generation with aware datetime types."""
+    """Specify datetime class type for date-time schema fields.
+
+    The `--output-datetime-class` flag controls which datetime type to use for fields
+    with date-time format. Options include 'AwareDatetime' for timezone-aware datetimes
+    or 'datetime' for standard Python datetime objects.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "datetime.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-datetime-class", date_type, "--output-model", output_model],
+        extra_args=["--output-datetime-class", date_type, "--output-model-type", output_model],
     )
 
 
@@ -1027,7 +1278,7 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -1047,8 +1298,18 @@ def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path)
     version.parse(pydantic.VERSION) < version.parse("1.9.0"),
     reason="Require Pydantic version 1.9.0 or later ",
 )
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="openapi/enum_models.yaml",
+    cli_args=["--enum-field-as-literal", "one"],
+    golden_output="openapi/enum_models/one.py",
+)
 def test_main_openapi_enum_models_as_literal_one(min_version: str, output_file: Path) -> None:
-    """Test OpenAPI generation with one enum model as literal."""
+    """Convert single-member enums to Literal types in OpenAPI schemas.
+
+    The `--enum-field-as-literal one` flag converts enums with a single member
+    to Literal type annotations while keeping multi-member enums as Enum classes.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
         output_path=output_file,
@@ -1063,8 +1324,17 @@ def test_main_openapi_enum_models_as_literal_one(min_version: str, output_file: 
     version.parse(pydantic.VERSION) < version.parse("1.9.0"),
     reason="Require Pydantic version 1.9.0 or later ",
 )
+@pytest.mark.cli_doc(
+    options=["--use-one-literal-as-default"],
+    input_schema="openapi/enum_models.yaml",
+    cli_args=["--use-one-literal-as-default", "--enum-field-as-literal", "one"],
+    golden_output="openapi/enum_models/one_literal_as_default.py",
+)
 def test_main_openapi_use_one_literal_as_default(min_version: str, output_file: Path) -> None:
-    """Test OpenAPI generation with one literal as default."""
+    """Use single literal value as default when enum has only one option.
+
+    The `--use-one-literal-as-default` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
         output_path=output_file,
@@ -1145,8 +1415,17 @@ def test_main_openapi_nullable(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--strict-nullable"],
+    input_schema="openapi/nullable.yaml",
+    cli_args=["--strict-nullable"],
+    golden_output="openapi/nullable_strict_nullable.py",
+)
 def test_main_openapi_nullable_strict_nullable(output_file: Path) -> None:
-    """Test OpenAPI generation with strict nullable types."""
+    """Strictly handle nullable types in OpenAPI schemas.
+
+    The `--strict-nullable` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "nullable.yaml",
         output_path=output_file,
@@ -1169,6 +1448,7 @@ def test_main_openapi_ref_nullable_strict_nullable(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -1198,7 +1478,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, output_fi
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=f"pattern/{expected_output}",
-        extra_args=["--target-python", "3.9", "--output-model-type", output_model],
+        extra_args=["--target-python-version", "3.10", "--output-model-type", output_model],
         transform=lambda s: s.replace("pattern.yaml", "pattern.json"),
     )
 
@@ -1227,7 +1507,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--target-python", "3.9", "--output-model-type", "pydantic_v2.BaseModel", *args],
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel", *args],
     )
 
 
@@ -1295,8 +1575,17 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
     ])
 
 
+@pytest.mark.cli_doc(
+    options=["--disable-appending-item-suffix"],
+    input_schema="openapi/api_constrained.yaml",
+    cli_args=["--disable-appending-item-suffix", "--field-constraints"],
+    golden_output="openapi/disable_appending_item_suffix.py",
+)
 def test_main_disable_appending_item_suffix(output_file: Path) -> None:
-    """Test OpenAPI generation with item suffix disabled."""
+    """Disable appending 'Item' suffix to array item types.
+
+    The `--disable-appending-item-suffix` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
         output_path=output_file,
@@ -1306,8 +1595,17 @@ def test_main_disable_appending_item_suffix(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--openapi-scopes"],
+    input_schema="openapi/body_and_parameters.yaml",
+    cli_args=["--openapi-scopes", "paths", "schemas"],
+    golden_output="openapi/body_and_parameters/general.py",
+)
 def test_main_openapi_body_and_parameters(output_file: Path) -> None:
-    """Test OpenAPI generation with body and parameters."""
+    """Specify OpenAPI scopes to generate (schemas, paths, parameters).
+
+    The `--openapi-scopes` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
         output_path=output_file,
@@ -1416,10 +1714,22 @@ def test_main_openapi_json_pointer(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--use-annotated"],
+    input_schema="openapi/api_constrained.yaml",
+    cli_args=["--field-constraints", "--use-annotated"],
+    golden_output="openapi/use_annotated_with_field_constraints.py",
+    related_options=["--field-constraints"],
+)
 def test_main_use_annotated_with_field_constraints(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
-    """Test OpenAPI generation with Annotated and field constraints."""
+    """Use typing.Annotated for field constraints in OpenAPI schemas.
+
+    The `--use-annotated` flag wraps field types with `typing.Annotated` to
+    include constraint metadata, enabling runtime validation frameworks to
+    access constraints directly from type annotations.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
         output_path=output_file,
@@ -1431,7 +1741,7 @@ def test_main_use_annotated_with_field_constraints(
             "--use-annotated",
             "--target-python-version",
             min_version,
-            "--output-model",
+            "--output-model-type",
             output_model,
         ],
     )
@@ -1510,9 +1820,21 @@ def test_paths_ref_with_external_schema(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.benchmark
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models"],
+    input_schema="openapi/not_real_string.json",
+    cli_args=["--collapse-root-models"],
+    golden_output="openapi/not_real_string_collapse_root_models.py",
+)
 def test_main_collapse_root_models(output_file: Path) -> None:
-    """Test OpenAPI generation with collapsed root models."""
+    """Inline root model definitions into their referencing locations.
+
+    The `--collapse-root-models` flag collapses root model definitions by
+    inlining their types directly where they are referenced, reducing the
+    number of generated classes.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "not_real_string.json",
         output_path=output_file,
@@ -1576,7 +1898,7 @@ def test_main_openapi_const(output_model: str, expected_output: str, output_file
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model],
+        extra_args=["--output-model-type", output_model],
     )
 
 
@@ -1605,15 +1927,34 @@ def test_main_openapi_const(output_model: str, expected_output: str, output_file
         ),
     ],
 )
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models"],
+    input_schema="openapi/const.yaml",
+    cli_args=["--collapse-root-models"],
+    model_outputs={
+        "pydantic_v1": "openapi/const_field.py",
+        "pydantic_v2": "openapi/const_field_pydantic_v2.py",
+        "msgspec": "openapi/const_field_msgspec.py",
+        "typeddict": "openapi/const_field_typed_dict.py",
+        "dataclass": "openapi/const_field_dataclass.py",
+    },
+    comparison_output="openapi/const_baseline.py",
+    primary=True,
+)
 def test_main_openapi_const_field(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Test OpenAPI generation with const field."""
+    """Inline root model definitions instead of creating separate wrapper classes.
+
+    The `--collapse-root-models` option generates simpler output by inlining root models
+    directly instead of creating separate wrapper types. This shows how different output
+    model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "const.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--output-model", output_model, "--collapse-root-models"],
+        extra_args=["--output-model-type", output_model, "--collapse-root-models"],
     )
 
 
@@ -1716,6 +2057,196 @@ def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: P
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file="allof_with_required_inherited_comprehensive.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_inherited_types(output_file: Path) -> None:
+    """Test OpenAPI allOf partial overrides inherit parent field types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_inherited_types.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_inherited_types.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_array_items(output_file: Path) -> None:
+    """Test OpenAPI allOf partial overrides inherit parent array item types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_array_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_array_items.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_array_items_no_parent(output_file: Path) -> None:
+    """Test OpenAPI allOf with array field not present in parent schema."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_array_items_no_parent.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_array_items_no_parent.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_non_array_field(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with non-array fields for coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_non_array_field.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_non_array_field.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_nested_array_items(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with nested arrays for coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_nested_array_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_nested_array_items.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_deeply_nested_array(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with 3-level nested arrays for while loop coverage."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_deeply_nested_array.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_deeply_nested_array.py",
+    )
+
+
+def test_main_openapi_allof_partial_override_simple_list_any(output_file: Path) -> None:
+    """Test OpenAPI allOf partial override with simple List[Any] - while loop NOT entered."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_simple_list_any.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_partial_override_simple_list_any.py",
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        ("pydantic.BaseModel", "allof_partial_override_unique_items.py"),
+        ("pydantic_v2.BaseModel", "allof_partial_override_unique_items_pydantic_v2.py"),
+    ],
+)
+def test_main_openapi_allof_partial_override_unique_items(
+    output_model: str, expected_output: str, output_file: Path
+) -> None:
+    """Test OpenAPI allOf partial override inherits uniqueItems from parent."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_partial_override_unique_items.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--use-unique-items-as-set", "--output-model-type", output_model],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--allof-merge-mode"],
+    input_schema="openapi/allof_materialize_defaults.yaml",
+    cli_args=["--allof-merge-mode", "all"],
+    golden_output="main/openapi/allof_materialize_defaults.py",
+)
+def test_main_openapi_allof_merge_mode_all(output_file: Path) -> None:
+    """Merge all properties from parent schemas in allOf.
+
+    The `--allof-merge-mode` flag controls how parent schema properties are merged
+    in allOf compositions. With `all` mode, constraints plus annotations (default,
+    examples) are merged from parent properties. This ensures child schemas inherit
+    all metadata from parents.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_materialize_defaults.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_materialize_defaults.py",
+        extra_args=["--allof-merge-mode", "all"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--allof-merge-mode"],
+    input_schema="openapi/allof_merge_mode_none.yaml",
+    cli_args=["--allof-merge-mode", "none"],
+    golden_output="main/openapi/allof_merge_mode_none.py",
+    comparison_output="main/openapi/allof_materialize_defaults.py",
+)
+def test_main_openapi_allof_merge_mode_none(output_file: Path) -> None:
+    """Disable property merging from parent schemas in allOf.
+
+    With `none` mode, no fields are merged from parent properties. This is useful
+    when you want child schemas to define all their own constraints without inheriting
+    from parents.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_merge_mode_none.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_merge_mode_none.py",
+        extra_args=["--allof-merge-mode", "none"],
+    )
+
+
+def test_main_openapi_allof_property_bool_schema(output_file: Path) -> None:
+    """Test OpenAPI allOf with bool property schema (e.g., `allowed: true`)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_property_bool_schema.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_property_bool_schema.py",
+    )
+
+
+def test_main_openapi_allof_parent_no_properties(output_file: Path) -> None:
+    """Test OpenAPI allOf with parent schema having no properties."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_parent_no_properties.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_parent_no_properties.py",
+    )
+
+
+def test_main_openapi_allof_parent_bool_property(output_file: Path) -> None:
+    """Test OpenAPI allOf with parent having bool property schema (true/false)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_parent_bool_property.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_parent_bool_property.py",
+    )
+
+
+def test_main_openapi_allof_multiple_parents_same_property(output_file: Path) -> None:
+    """Test OpenAPI allOf with multiple parents having the same property."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_multiple_parents_same_property.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_multiple_parents_same_property.py",
     )
 
 
@@ -1842,7 +2373,7 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
         output_path=tmp_path,
         expected_directory=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9"],
+        extra_args=["--output-model-type", output_model, "--target-python-version", "3.10"],
     )
 
 
@@ -1874,7 +2405,88 @@ def test_main_openapi_union_default_object(output_model: str, expected_output: s
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model", output_model, "--target-python-version", "3.9", "--openapi-scopes", "schemas"],
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.10",
+            "--openapi-scopes",
+            "schemas",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_dict_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_dict_default.py",
+        ),
+        (
+            "msgspec.Struct",
+            "msgspec_empty_dict_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_empty_dict_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with empty dict default values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "empty_dict_default.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.10",
+            "--openapi-scopes",
+            "schemas",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_list_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_list_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test OpenAPI generation with empty list default values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "empty_list_default.yaml",
+        output_path=output_file,
+        expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        input_file_type="openapi",
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.10",
+            "--openapi-scopes",
+            "schemas",
+        ],
     )
 
 
@@ -1935,8 +2547,17 @@ def test_main_openapi_max_min(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-operation-id-as-name"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
+    golden_output="openapi/use_operation_id_as_name.py",
+)
 def test_main_openapi_use_operation_id_as_name(output_file: Path) -> None:
-    """Test OpenAPI generation with operation ID as name."""
+    """Use OpenAPI operationId as the generated function/class name.
+
+    The `--use-operation-id-as-name` flag configures the code generation behavior.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -2025,6 +2646,7 @@ def test_main_typed_dict_nullable(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
@@ -2082,14 +2704,24 @@ def test_main_openapi_nullable_required_annotated(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
             "--strict-nullable",
             "--use-annotated",
-            "--use-union-operator",
             "--snake-case-field",
         ],
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--custom-file-header-path"],
+    input_schema="openapi/api.yaml",
+    cli_args=["--custom-file-header-path", "custom_file_header.txt"],
+    golden_output="openapi/custom_file_header.py",
+)
 def test_main_custom_file_header_path(output_file: Path) -> None:
-    """Test OpenAPI generation with custom file header path."""
+    """Add custom header content from file to generated code.
+
+    The `--custom-file-header-path` flag allows you to specify a file containing
+    custom header content (like copyright notices, linting directives, or module docstrings)
+    to be inserted at the top of generated Python files.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api.yaml",
         output_path=output_file,
@@ -2191,6 +2823,7 @@ def test_main_custom_file_header_invalid_syntax(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="custom_file_header_invalid_syntax.py",
         extra_args=["--custom-file-header-path", str(DATA_PATH / "custom_file_header_invalid_syntax.txt")],
+        skip_code_validation=True,
     )
 
 
@@ -2229,8 +2862,19 @@ def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-serialize-as-any"],
+    input_schema="openapi/serialize_as_any.yaml",
+    cli_args=["--use-serialize-as-any"],
+    golden_output="openapi/serialize_as_any_pydantic_v2.py",
+)
 def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
-    """Test OpenAPI generation with SerializeAsAny for types with subtypes."""
+    """Wrap fields with subtypes in Pydantic's SerializeAsAny.
+
+    The `--use-serialize-as-any` flag applies Pydantic v2's SerializeAsAny wrapper
+    to fields that have subtype relationships, ensuring proper serialization of
+    polymorphic types and inheritance hierarchies.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "serialize_as_any.yaml",
         output_path=output_file,
@@ -2266,6 +2910,7 @@ def test_main_openapi_all_of_with_relative_ref(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_struct(min_version: str, output_file: Path) -> None:
     """Test OpenAPI generation with msgspec Struct output."""
     run_main_and_assert(
@@ -2278,6 +2923,7 @@ def test_main_openapi_msgspec_struct(min_version: str, output_file: Path) -> Non
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_struct_snake_case(min_version: str, output_file: Path) -> None:
     """Test OpenAPI generation with msgspec Struct and snake case."""
     run_main_and_assert(
@@ -2309,31 +2955,85 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="msgspec_use_annotated_with_field_constraints.py",
-        extra_args=["--field-constraints", "--target-python-version", "3.9", "--output-model-type", "msgspec.Struct"],
+        extra_args=["--field-constraints", "--target-python-version", "3.10", "--output-model-type", "msgspec.Struct"],
     )
 
 
-def test_main_openapi_discriminator_one_literal_as_default(output_file: Path) -> None:
-    """Test OpenAPI generation with discriminator one literal as default."""
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic_v2.BaseModel", "discriminator/enum_one_literal_as_default.py"),
+        ("dataclasses.dataclass", "discriminator/dataclass_enum_one_literal_as_default.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-one-literal-as-default"],
+    input_schema="openapi/discriminator_enum.yaml",
+    cli_args=["--use-one-literal-as-default"],
+    model_outputs={
+        "pydantic_v2": "openapi/discriminator/enum_one_literal_as_default.py",
+        "dataclass": "openapi/discriminator/dataclass_enum_one_literal_as_default.py",
+    },
+)
+def test_main_openapi_discriminator_one_literal_as_default(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
+    """Set default value when only one literal is valid for a discriminator field.
+
+    The `--use-one-literal-as-default` flag sets default values for discriminator
+    fields when only one literal value is valid, reducing boilerplate in model
+    instantiation.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "enum_one_literal_as_default.py",
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-one-literal-as-default"],
+        expected_file=EXPECTED_OPENAPI_PATH / expected_file,
+        extra_args=["--output-model-type", output_model, "--use-one-literal-as-default"],
     )
 
 
-def test_main_openapi_discriminator_one_literal_as_default_dataclass(output_file: Path) -> None:
-    """Test OpenAPI generation with discriminator one literal as default for dataclass."""
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_one_literal_as_default_dataclass_py310(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator one literal as default for dataclass with Python 3.10+."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py",
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--use-one-literal-as-default"],
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default_py310.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-one-literal-as-default",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_dataclass_inheritance_parent_default(output_file: Path) -> None:
+    """Test dataclass field ordering fix when parent has default field."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "dataclass_inheritance_field_ordering.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "dataclass_inheritance_field_ordering_py310.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--target-python-version",
+            "3.10",
+        ],
     )
 
 
@@ -2356,19 +3056,6 @@ def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
             "--target-python-version",
             "3.10",
         ],
-    )
-
-
-def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture, output_file: Path) -> None:
-    """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
-        output_path=output_file,
-        input_file_type="openapi",
-        expected_exit=Exit.ERROR,
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--keyword-only", "--target-python-version", "3.9"],
-        capsys=capsys,
-        expected_stderr_contains="`--keyword-only` requires `--target-python-version` 3.10 or higher.",
     )
 
 
@@ -2555,8 +3242,26 @@ def test_main_openapi_referenced_default_use_annotated(output_file: Path) -> Non
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--parent-scoped-naming"],
+    input_schema="openapi/duplicate_models2.yaml",
+    cli_args=[
+        "--parent-scoped-naming",
+        "--use-operation-id-as-name",
+        "--openapi-scopes",
+        "paths",
+        "schemas",
+        "parameters",
+    ],
+    golden_output="openapi/duplicate_models2.py",
+)
 def test_duplicate_models(output_file: Path) -> None:
-    """Test OpenAPI generation with duplicate models."""
+    """Namespace models by their parent scope to avoid naming conflicts.
+
+    The `--parent-scoped-naming` flag prefixes model names with their parent scope
+    (operation/path/parameter) to prevent name collisions when the same model name
+    appears in different contexts within an OpenAPI specification.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "duplicate_models2.yaml",
         output_path=output_file,
@@ -2612,7 +3317,7 @@ def test_main_openapi_same_name_objects(output_file: Path) -> None:
 
 
 def test_main_openapi_type_alias(output_file: Path) -> None:
-    """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.9-3.11."""
+    """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.10-3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias.yaml",
         output_path=output_file,
@@ -2908,8 +3613,20 @@ def test_main_openapi_read_only_write_only_default(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--read-only-write-only-model-type"],
+    input_schema="openapi/read_only_write_only.yaml",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--read-only-write-only-model-type", "request-response"],
+    golden_output="openapi/read_only_write_only_request_response.py",
+)
 def test_main_openapi_read_only_write_only_request_response(output_file: Path) -> None:
-    """Test readOnly/writeOnly request-response: Request/Response only, no base."""
+    """Generate separate request and response models for readOnly/writeOnly fields.
+
+    The `--read-only-write-only-model-type` option controls how models with readOnly or writeOnly
+    properties are generated. The 'request-response' mode creates separate Request and Response
+    variants for each schema that contains readOnly or writeOnly fields, allowing proper type
+    validation for API requests and responses without a shared base model.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only.yaml",
         output_path=output_file,
@@ -3482,3 +4199,83 @@ def test_main_nested_package_enum_default(output_dir: Path) -> None:
                 "--set-default-enum-member",
             ],
         )
+
+
+def test_main_openapi_x_enum_names(output_file: Path) -> None:
+    """Test OpenAPI generation with x-enumNames extension (NSwag/NJsonSchema style)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_enum_names.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_enum_names.py",
+    )
+
+
+def test_main_enum_builtin_conflict(output_file: Path) -> None:
+    """Test enum member names that conflict with str methods get underscore suffix."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "enum_builtin_conflict.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="enum_builtin_conflict.py",
+            extra_args=["--use-subclass-enum"],
+        )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        ("pydantic.BaseModel", "unique_items_default_set_pydantic.py"),
+        ("pydantic_v2.BaseModel", "unique_items_default_set_pydantic_v2.py"),
+        ("dataclasses.dataclass", "unique_items_default_set_dataclass.py"),
+        ("msgspec.Struct", "unique_items_default_set_msgspec.py"),
+    ],
+)
+def test_main_unique_items_default_set(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test --use-unique-items-as-set converts list defaults to set literals."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "unique_items_default_set.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model, "--use-unique-items-as-set"],
+    )
+
+
+def test_main_openapi_null_only_enum(output_file: Path) -> None:
+    """Test OpenAPI generation with enum containing only null value."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "null_only_enum.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="null_only_enum.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-status-code-in-response-name"],
+    input_schema="openapi/use_status_code_in_response_name.yaml",
+    cli_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
+    golden_output="openapi/use_status_code_in_response_name.py",
+)
+def test_main_openapi_use_status_code_in_response_name(output_file: Path) -> None:
+    """Include HTTP status code in response model names.
+
+    The `--use-status-code-in-response-name` flag includes the HTTP status code
+    in generated response model class names. Instead of generating ambiguous names
+    like ResourceGetResponse, ResourceGetResponse1, ResourceGetResponse2, it generates
+    clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResponseDefault.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "use_status_code_in_response_name.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="use_status_code_in_response_name.py",
+        extra_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
+    )

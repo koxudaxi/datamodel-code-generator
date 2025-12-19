@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -16,6 +15,6 @@ class Type(Enum):
 
 class Schema(BaseModel):
     type: Type
-    contactType: Optional[str] = None
+    contactType: str | None = None
     email: EmailStr
-    telephone: Optional[str] = None
+    telephone: str | None = None

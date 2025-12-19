@@ -338,3 +338,33 @@ def test_get_module_path_without_file_path_parametrized(
     """Test module path generation without file path for various module names."""
     result = get_module_path(name, None, treat_dot_as_module=treat_dot_as_module)
     assert result == expected
+
+
+def test_copy_deep_with_dict_key() -> None:
+    """Test that copy_deep properly copies dict_key."""
+    dict_key_type = DataType(type="str")
+    data_type = DataType(is_dict=True, dict_key=dict_key_type)
+    field = DataModelFieldBase(name="a", data_type=data_type, required=True)
+
+    copied = field.copy_deep()
+
+    assert copied.data_type.dict_key is not None
+    assert copied.data_type.dict_key is not field.data_type.dict_key
+    assert copied.data_type.dict_key.type == "str"
+
+
+def test_copy_deep_with_extras() -> None:
+    """Test that copy_deep properly deep copies extras."""
+    field = DataModelFieldBase(
+        name="a",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"key": "value", "nested": {"inner": 1}},
+    )
+
+    copied = field.copy_deep()
+
+    assert copied.extras is not field.extras
+    assert copied.extras == {"key": "value", "nested": {"inner": 1}}
+    copied.extras["key"] = "modified"
+    assert field.extras["key"] == "value"

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +16,6 @@ class ProcessingStatus(Enum):
 
 
 class ProcessingTask(BaseModel):
-    processing_status: Optional[ProcessingStatus] = Field(
+    processing_status: ProcessingStatus | None = Field(
         'COMPLETED', title='Status of the task'
     )

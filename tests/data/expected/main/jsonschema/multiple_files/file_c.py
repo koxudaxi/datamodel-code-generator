@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import file_b
 
 
 class ModelC(BaseModel):
-    firstName: Optional[str] = None
-    modelB: Optional[file_b.ModelB] = None
+    firstName: str | None = None
+    modelB: file_b.ModelB | None = None

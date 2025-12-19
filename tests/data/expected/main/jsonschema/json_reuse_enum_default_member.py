@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -22,13 +21,13 @@ class RedistributeEnum(Enum):
 
 
 class User(BaseModel):
-    name: Optional[str] = None
-    animal: Optional[Animal] = Animal.dog
-    pet: Optional[Animal] = Animal.cat
-    redistribute: Optional[List[RedistributeEnum]] = None
+    name: str | None = None
+    animal: Animal | None = Animal.dog
+    pet: Animal | None = Animal.cat
+    redistribute: list[RedistributeEnum] | None = None
 
 
 class Redistribute(BaseModel):
-    __root__: List[RedistributeEnum] = Field(
+    __root__: list[RedistributeEnum] = Field(
         ..., description='Redistribute type for routes.'
     )

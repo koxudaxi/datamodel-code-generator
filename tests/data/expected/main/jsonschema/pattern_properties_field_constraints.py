@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
-
 from pydantic import BaseModel
 
 
 class Bar(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Foo(BaseModel):
-    bar: Dict[str, Bar]
+    bar: dict[str, Bar]

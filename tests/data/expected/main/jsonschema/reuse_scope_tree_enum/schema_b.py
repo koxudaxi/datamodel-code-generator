@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import shared
 
 
 class Model(BaseModel):
-    state: Optional[shared.Status] = None
+    state: shared.Status | None = None

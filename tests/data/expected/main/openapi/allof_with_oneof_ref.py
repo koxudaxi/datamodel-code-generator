@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -28,8 +28,8 @@ class RegularUser(BaseModel):
     username: str
 
 
-class User(RootModel[Union[AdminUser, RegularUser]]):
-    root: Union[AdminUser, RegularUser] = Field(..., discriminator='userType')
+class User(RootModel[AdminUser | RegularUser]):
+    root: AdminUser | RegularUser = Field(..., discriminator='userType')
 
 
 class UserPostRequest1(BaseModel):
@@ -44,5 +44,5 @@ class UserPostRequest3(RegularUser, UserPostRequest1):
     pass
 
 
-class UserPostRequest(RootModel[Union[UserPostRequest2, UserPostRequest3]]):
-    root: Union[UserPostRequest2, UserPostRequest3]
+class UserPostRequest(RootModel[UserPostRequest2 | UserPostRequest3]):
+    root: UserPostRequest2 | UserPostRequest3

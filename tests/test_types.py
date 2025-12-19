@@ -133,3 +133,22 @@ def test_get_optional_type(input_: str, use_union_operator: bool, expected: str)
 def test_remove_none_from_union(type_str: str, use_union_operator: bool, expected: str) -> None:
     """Test _remove_none_from_union function with various type strings."""
     assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
+
+
+@pytest.mark.parametrize(
+    ("type_str", "use_union_operator", "expected"),
+    [
+        ("(", False, "("),
+        (")", False, ")"),
+        ("()", False, "()"),
+        ("a(", False, "a("),
+        ("constr()", False, "constr()"),
+        ("constr(pattern=')')", False, "constr(pattern=')')"),
+        ("Union[constr()]", False, "constr()"),
+        ("a | b", True, "a | b"),
+        ("(a)", True, "(a)"),
+    ],
+)
+def test_remove_none_from_union_short_strings(type_str: str, use_union_operator: bool, expected: str) -> None:
+    """Test _remove_none_from_union with short strings to verify index bounds safety."""
+    assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected

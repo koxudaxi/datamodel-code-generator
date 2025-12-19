@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from datamodel_code_generator.imports import (
     IMPORT_TYPE_ALIAS,
-    IMPORT_TYPE_ALIAS_BACKPORT,
     IMPORT_TYPE_ALIAS_TYPE,
     IMPORT_UNION,
     Import,
@@ -75,19 +74,8 @@ class DataTypeUnion(_DataTypeUnionBase):
     )
 
 
-class DataTypeUnionBackport(_DataTypeUnionBase):
-    """GraphQL union using TypeAlias annotation for Python 3.9 (Name: TypeAlias = Union[...])."""
-
-    TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasAnnotation.jinja2"
-    BASE_CLASS: ClassVar[str] = ""
-    DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (
-        IMPORT_TYPE_ALIAS_BACKPORT,
-        IMPORT_UNION,
-    )
-
-
 class DataTypeUnionTypeBackport(_DataTypeUnionBase):
-    """GraphQL union using TypeAliasType for Python 3.9-3.11 (Name = TypeAliasType("Name", Union[...]))."""
+    """GraphQL union using TypeAliasType for Python 3.10-3.11 (Name = TypeAliasType("Name", Union[...]))."""
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "UnionTypeAliasType.jinja2"
     BASE_CLASS: ClassVar[str] = ""

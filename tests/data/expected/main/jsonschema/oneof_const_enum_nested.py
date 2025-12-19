@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,5 +20,5 @@ class Mode1(Enum):
 
 
 class Config(BaseModel):
-    mode: Optional[Mode] = Field(None, title='Mode')
-    modes: Optional[List[Mode1]] = None
+    mode: Mode | None = Field(None, title='Mode')
+    modes: list[Mode1] | None = None

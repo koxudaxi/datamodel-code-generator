@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Node(BaseModel):
-    id: Optional[int] = None
-    child: Optional[Node] = None
+    id: int | None = None
+    child: Node | None = None
 
 
 Node.update_forward_refs()

@@ -1,0 +1,20 @@
+openapi: "3.1.0"
+info:
+  title: Test allOf with bool property schema
+  version: "1.0.0"
+components:
+  schemas:
+    Parent:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+    Child:
+      allOf:
+        - $ref: "#/components/schemas/Parent"
+        - type: object
+          properties:
+            name:
+              maxLength: 100
+            allowed: true

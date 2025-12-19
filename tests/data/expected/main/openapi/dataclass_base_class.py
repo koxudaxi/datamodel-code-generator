@@ -5,36 +5,35 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import TypeAlias
 
 from custom_base import Base
-from typing_extensions import TypeAlias
 
 
 @dataclass
 class Pet(Base):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
-Pets: TypeAlias = List[Pet]
+Pets: TypeAlias = list[Pet]
 
 
 @dataclass
 class User(Base):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
-Users: TypeAlias = List[User]
+Users: TypeAlias = list[User]
 
 
 Id: TypeAlias = str
 
 
-Rules: TypeAlias = List[str]
+Rules: TypeAlias = list[str]
 
 
 @dataclass
@@ -45,20 +44,20 @@ class Error(Base):
 
 @dataclass
 class Api(Base):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[str] = None
-    apiDocumentationUrl: Optional[str] = None
+    apiKey: str | None = None
+    apiVersionNumber: str | None = None
+    apiUrl: str | None = None
+    apiDocumentationUrl: str | None = None
 
 
-Apis: TypeAlias = List[Api]
+Apis: TypeAlias = list[Api]
 
 
 @dataclass
 class Event(Base):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 @dataclass
 class Result(Base):
-    event: Optional[Event] = None
+    event: Event | None = None

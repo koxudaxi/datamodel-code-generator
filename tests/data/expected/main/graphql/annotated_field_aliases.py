@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypeAliasType
@@ -28,5 +28,5 @@ class DateTimePeriod(BaseModel):
     periodFrom: Annotated[DateTime, Field(alias='from')]
     periodTo: Annotated[DateTime, Field(alias='to')]
     typename__: Annotated[
-        Optional[Literal['DateTimePeriod']], Field(alias='__typename')
+        Literal['DateTimePeriod'] | None, Field(alias='__typename')
     ] = 'DateTimePeriod'

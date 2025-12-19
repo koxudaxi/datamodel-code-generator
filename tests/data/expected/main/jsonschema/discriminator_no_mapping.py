@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -18,4 +18,4 @@ class Dog(BaseModel):
 
 
 class Animal(BaseModel):
-    pet: Union[Cat, Dog] = Field(..., discriminator='pet_type', title='Pet')
+    pet: Cat | Dog = Field(..., discriminator='pet_type', title='Pet')

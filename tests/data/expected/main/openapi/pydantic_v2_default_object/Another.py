@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field, RootModel
 
 from . import Foo as Foo_1
@@ -17,9 +15,9 @@ class Foo(RootModel[str]):
 
 
 class Bar(BaseModel):
-    original_foo: Optional[Foo_1] = Field(
+    original_foo: Foo_1 | None = Field(
         default_factory=lambda: Foo_1.model_validate({'text': 'abc', 'number': 123})
     )
-    nested_foo: Optional[List[Nested.Foo]] = Field(
+    nested_foo: list[Nested.Foo] | None = Field(
         default_factory=lambda: [Nested.Foo.model_validate(v) for v in ['abc', 'efg']]
     )

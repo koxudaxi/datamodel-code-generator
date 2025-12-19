@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, conint
 
@@ -14,12 +14,12 @@ class Model(BaseModel):
 
 
 class Person(BaseModel):
-    firstName: Optional[str] = Field(None, description="The person's first name.")
-    lastName: Optional[str] = Field(None, description="The person's last name.")
-    age: Optional[conint(ge=0)] = Field(
+    firstName: str | None = Field(None, description="The person's first name.")
+    lastName: str | None = Field(None, description="The person's last name.")
+    age: conint(ge=0) | None = Field(
         None, description='Age in years which must be equal to or greater than zero.'
     )
-    friends: Optional[List[Any]] = None
+    friends: list[Any] | None = None
     comment: None = None
 
 
@@ -28,5 +28,5 @@ class OriginalPerson(BaseModel):
 
 
 class Pet(BaseModel):
-    name: Optional[str] = Field(None, examples=['dog', 'cat'])
-    owner: Optional[Person] = None
+    name: str | None = Field(None, examples=['dog', 'cat'])
+    owner: Person | None = None

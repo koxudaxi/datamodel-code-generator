@@ -4,28 +4,26 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel
 
 
 class External(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Config(BaseModel):
-    value: Optional[int] = None
+    value: int | None = None
 
 
 class TopLevelMultiType1(BaseModel):
-    enabled: Optional[bool] = None
+    enabled: bool | None = None
 
 
 class TopLevelMultiType(BaseModel):
-    __root__: Union[TopLevelMultiType1, bool]
+    __root__: TopLevelMultiType1 | bool
 
 
 class Model(BaseModel):
-    external: Optional[Union[External, bool]] = None
-    config: Optional[Union[Optional[Config], str]] = None
-    top_level_ref: Optional[TopLevelMultiType] = None
+    external: External | bool | None = None
+    config: Config | str | None = None
+    top_level_ref: TopLevelMultiType | None = None

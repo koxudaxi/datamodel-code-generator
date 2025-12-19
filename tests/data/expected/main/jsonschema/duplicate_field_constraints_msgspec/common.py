@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeAlias
 
 from msgspec import Meta
-from typing_extensions import TypeAlias
 
 Model: TypeAlias = Any
 

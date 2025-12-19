@@ -2,6 +2,6 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from ._internal import DifferentTea, Error, Id, OptionalModel, Result, Source
+from ._internal import DifferentTea, Error, Id, Optional, Result, Source
 
-__all__ = ["DifferentTea", "Error", "Id", "OptionalModel", "Result", "Source"]
+__all__ = ["DifferentTea", "Error", "Id", "Optional", "Result", "Source"]

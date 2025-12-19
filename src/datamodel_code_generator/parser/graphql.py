@@ -10,12 +10,12 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
 )
 from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfMergeMode,
     DataclassArguments,
     DefaultPutDict,
     LiteralType,
@@ -30,8 +30,8 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
-from datamodel_code_generator.model.scalar import DataTypeScalarBackport
-from datamodel_code_generator.model.union import DataTypeUnionBackport
+from datamodel_code_generator.model.scalar import DataTypeScalar
+from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
@@ -50,7 +50,7 @@ except ImportError as exc:  # pragma: no cover
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
@@ -100,8 +100,8 @@ class GraphQLParser(Parser):
         *,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_model_scalar_type: type[DataModel] = DataTypeScalarBackport,
-        data_model_union_type: type[DataModel] = DataTypeUnionBackport,
+        data_model_scalar_type: type[DataModel] = DataTypeScalar,
+        data_model_union_type: type[DataModel] = DataTypeUnion,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
@@ -133,6 +133,7 @@ class GraphQLParser(Parser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -151,10 +152,12 @@ class GraphQLParser(Parser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         use_annotated: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
+        use_decimal_for_multiple_of: bool = False,
         original_field_name_delimiter: str | None = None,
         use_double_quotes: bool = False,
         use_union_operator: bool = False,
@@ -224,6 +227,7 @@ class GraphQLParser(Parser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -244,10 +248,12 @@ class GraphQLParser(Parser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             use_annotated=use_annotated,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             original_field_name_delimiter=original_field_name_delimiter,
             use_double_quotes=use_double_quotes,
             use_union_operator=use_union_operator,
@@ -399,8 +405,64 @@ class GraphQLParser(Parser):
             )
         )
 
+    def should_parse_enum_as_literal(self, obj: graphql.GraphQLEnumType) -> bool:
+        """Determine if an enum should be parsed as a literal type."""
+        if self.enum_field_as_literal == LiteralType.All:
+            return True
+        if self.enum_field_as_literal == LiteralType.One:
+            return len(obj.values) == 1
+        return False
+
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse a GraphQL enum type and add it to results."""
+        if self.ignore_enum_constraints:
+            return self.parse_enum_as_str_type(enum_object)
+        if self.should_parse_enum_as_literal(enum_object):
+            return self.parse_enum_as_literal(enum_object)
+        return self.parse_enum_as_enum_class(enum_object)
+
+    def parse_enum_as_str_type(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum as a str type alias when ignoring enum constraints."""
+        data_type = self.data_type_manager.get_data_type(Types.string)
+        data_model_type = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=self.references[enum_object.name],
+            fields=[
+                self.data_model_field_type(
+                    required=True,
+                    data_type=data_type,
+                )
+            ],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=enum_object.description,
+        )
+        self.results.append(data_model_type)
+
+    def parse_enum_as_literal(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum values as a Literal type."""
+        data_type = self.data_type(literals=list(enum_object.values.keys()))
+        data_model_type = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=self.references[enum_object.name],
+            fields=[
+                self.data_model_field_type(
+                    required=True,
+                    data_type=data_type,
+                )
+            ],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=enum_object.description,
+        )
+        self.results.append(data_model_type)
+
+    def parse_enum_as_enum_class(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum values as an Enum class."""
         enum_fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
 
@@ -479,12 +541,11 @@ class GraphQLParser(Parser):
             obj = graphql.assert_wrapping_type(obj)
             obj = obj.of_type
 
-        if graphql.is_enum_type(obj):
-            obj = graphql.assert_enum_type(obj)
-            data_type.reference = self.references[obj.name]
-
         obj = graphql.assert_named_type(obj)
-        if data_type.reference is None:
+        if obj.name in self.references:
+            data_type.reference = self.references[obj.name]
+        else:  # pragma: no cover
+            # Only happens for Query and Mutation root types
             data_type.type = obj.name
 
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
