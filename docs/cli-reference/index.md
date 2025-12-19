@@ -13,7 +13,7 @@ This documentation is auto-generated from test cases.
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
-| 📘 [OpenAPI-only Options](openapi-only-options.md) | 5 | OpenAPI-specific features |
+| 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
@@ -172,6 +172,7 @@ This documentation is auto-generated from test cases.
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
 - [`--use-standard-collections`](typing-customization.md#use-standard-collections)
+- [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)

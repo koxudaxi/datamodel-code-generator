@@ -713,6 +713,12 @@ openapi_options.add_argument(
     choices=[e.value for e in ReadOnlyWriteOnlyModelType],
     default=None,
 )
+openapi_options.add_argument(
+    "--use-status-code-in-response-name",
+    help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # General options

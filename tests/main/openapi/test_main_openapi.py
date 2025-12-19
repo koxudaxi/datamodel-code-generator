@@ -4223,3 +4223,27 @@ def test_main_openapi_null_only_enum(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="null_only_enum.py",
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-status-code-in-response-name"],
+    input_schema="openapi/use_status_code_in_response_name.yaml",
+    cli_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
+    golden_output="openapi/use_status_code_in_response_name.py",
+)
+def test_main_openapi_use_status_code_in_response_name(output_file: Path) -> None:
+    """Include HTTP status code in response model names.
+
+    The `--use-status-code-in-response-name` flag includes the HTTP status code
+    in generated response model class names. Instead of generating ambiguous names
+    like ResourceGetResponse, ResourceGetResponse1, ResourceGetResponse2, it generates
+    clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResponseDefault.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "use_status_code_in_response_name.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="use_status_code_in_response_name.py",
+        extra_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
+    )
