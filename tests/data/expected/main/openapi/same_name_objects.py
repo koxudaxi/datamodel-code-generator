@@ -10,8 +10,6 @@ from pydantic import BaseModel, Extra
 
 
 class Pets(BaseModel):
-    pass
-
     class Config:
         extra = Extra.forbid
 
