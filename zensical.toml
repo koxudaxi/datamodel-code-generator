@@ -73,7 +73,7 @@ features = [
 annotation = "material/arrow-right-circle"
 
 [project.theme.analytics]
-gtag = "275257853"
+gtag = "G-0QSKK66WX4"
 
 [[project.theme.palette]]
 scheme = "slate"
