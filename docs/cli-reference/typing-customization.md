@@ -10,6 +10,7 @@
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
 | [`--no-use-standard-collections`](#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
+| [`--no-use-union-operator`](#no-use-union-operator) | Test GraphQL annotated types with standard collections and u... |
 | [`--output-datetime-class`](#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](#strict-types) | Enable strict type validation for specified Python types. |
 | [`--type-mappings`](#type-mappings) | Override default type mappings for schema formats. |
@@ -19,7 +20,6 @@
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](#use-pendulum) | Use pendulum types for date/time fields instead of datetime ... |
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
-| [`--use-union-operator`](#use-union-operator) | Test GraphQL annotated types with standard collections and u... |
 | [`--use-unique-items-as-set`](#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
 ---
@@ -85,19 +85,17 @@ other properties separate.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, conint, constr
         
         
         class Parent(BaseModel):
-            name: Optional[constr(min_length=1)] = 'parent_default'
-            count: Optional[conint(ge=0)] = 10
+            name: constr(min_length=1) | None = 'parent_default'
+            count: conint(ge=0) | None = 10
         
         
         class Child(Parent):
-            name: Optional[constr(min_length=1, max_length=100)] = 'parent_default'
-            count: Optional[conint(ge=0, le=1000)] = 10
+            name: constr(min_length=1, max_length=100) | None = 'parent_default'
+            count: conint(ge=0, le=1000) | None = 10
         ```
 
     === "JSON Schema"
@@ -328,7 +326,7 @@ other properties separate.
             
             from __future__ import annotations
             
-            from typing import Any, Optional
+            from typing import Any
             
             from pydantic import BaseModel, EmailStr, Field, conint, constr
             
@@ -368,11 +366,11 @@ other properties separate.
             
             
             class ObjectBase(BaseModel):
-                id: Optional[int] = None
+                id: int | None = None
             
             
             class ObjectWithAllOf(ObjectBase):
-                name: Optional[str] = None
+                name: str | None = None
             
             
             class MultiRefAllOf(BaseModel):
@@ -388,7 +386,7 @@ other properties separate.
             
             
             class ConstraintWithProperties(BaseModel):
-                extra: Optional[str] = None
+                extra: str | None = None
             
             
             class ConstraintWithItems(BaseModel):
@@ -464,26 +462,26 @@ other properties separate.
             
             
             class Model(BaseModel):
-                name: Optional[ConstrainedStringDatatype] = None
-                count: Optional[NonNegativeIntegerDatatype] = None
-                percentage: Optional[BoundedIntegerDatatype] = None
-                email: Optional[EmailDatatype] = None
-                obj: Optional[ObjectWithAllOf] = None
-                multi: Optional[MultiRefAllOf] = None
-                noconstraint: Optional[NoConstraintAllOf] = None
-                incompatible: Optional[IncompatibleTypeAllOf] = None
-                withprops: Optional[ConstraintWithProperties] = None
-                withitems: Optional[ConstraintWithItems] = None
-                numint: Optional[NumberIntegerCompatible] = None
-                refwithkw: Optional[RefWithSchemaKeywords] = None
-                refarr: Optional[RefToArrayAllOf] = None
-                refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
-                refpatternprops: Optional[RefToPatternPropsAllOf] = None
-                refnestedallof: Optional[RefToNestedAllOfAllOf] = None
-                refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
-                nodescription: Optional[NoDescriptionAllOf] = None
-                emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
-                conflictingformat: Optional[ConflictingFormatAllOf] = None
+                name: ConstrainedStringDatatype | None = None
+                count: NonNegativeIntegerDatatype | None = None
+                percentage: BoundedIntegerDatatype | None = None
+                email: EmailDatatype | None = None
+                obj: ObjectWithAllOf | None = None
+                multi: MultiRefAllOf | None = None
+                noconstraint: NoConstraintAllOf | None = None
+                incompatible: IncompatibleTypeAllOf | None = None
+                withprops: ConstraintWithProperties | None = None
+                withitems: ConstraintWithItems | None = None
+                numint: NumberIntegerCompatible | None = None
+                refwithkw: RefWithSchemaKeywords | None = None
+                refarr: RefToArrayAllOf | None = None
+                refobjnoprops: RefToObjectNoPropsAllOf | None = None
+                refpatternprops: RefToPatternPropsAllOf | None = None
+                refnestedallof: RefToNestedAllOfAllOf | None = None
+                refconstraintsonly: RefToConstraintsOnlyAllOf | None = None
+                nodescription: NoDescriptionAllOf | None = None
+                emptyconstraint: EmptyConstraintItemAllOf | None = None
+                conflictingformat: ConflictingFormatAllOf | None = None
             ```
 
         === "Without Option"
@@ -495,7 +493,7 @@ other properties separate.
             
             from __future__ import annotations
             
-            from typing import Any, Optional
+            from typing import Any
             
             from pydantic import BaseModel, EmailStr, Field, conint, constr
             
@@ -535,11 +533,11 @@ other properties separate.
             
             
             class ObjectBase(BaseModel):
-                id: Optional[int] = None
+                id: int | None = None
             
             
             class ObjectWithAllOf(ObjectBase):
-                name: Optional[str] = None
+                name: str | None = None
             
             
             class MultiRefAllOf(BaseModel):
@@ -555,7 +553,7 @@ other properties separate.
             
             
             class ConstraintWithProperties(BaseModel):
-                extra: Optional[str] = None
+                extra: str | None = None
             
             
             class ConstraintWithItems(BaseModel):
@@ -631,26 +629,26 @@ other properties separate.
             
             
             class Model(BaseModel):
-                name: Optional[ConstrainedStringDatatype] = None
-                count: Optional[NonNegativeIntegerDatatype] = None
-                percentage: Optional[BoundedIntegerDatatype] = None
-                email: Optional[EmailDatatype] = None
-                obj: Optional[ObjectWithAllOf] = None
-                multi: Optional[MultiRefAllOf] = None
-                noconstraint: Optional[NoConstraintAllOf] = None
-                incompatible: Optional[IncompatibleTypeAllOf] = None
-                withprops: Optional[ConstraintWithProperties] = None
-                withitems: Optional[ConstraintWithItems] = None
-                numint: Optional[NumberIntegerCompatible] = None
-                refwithkw: Optional[RefWithSchemaKeywords] = None
-                refarr: Optional[RefToArrayAllOf] = None
-                refobjnoprops: Optional[RefToObjectNoPropsAllOf] = None
-                refpatternprops: Optional[RefToPatternPropsAllOf] = None
-                refnestedallof: Optional[RefToNestedAllOfAllOf] = None
-                refconstraintsonly: Optional[RefToConstraintsOnlyAllOf] = None
-                nodescription: Optional[NoDescriptionAllOf] = None
-                emptyconstraint: Optional[EmptyConstraintItemAllOf] = None
-                conflictingformat: Optional[ConflictingFormatAllOf] = None
+                name: ConstrainedStringDatatype | None = None
+                count: NonNegativeIntegerDatatype | None = None
+                percentage: BoundedIntegerDatatype | None = None
+                email: EmailDatatype | None = None
+                obj: ObjectWithAllOf | None = None
+                multi: MultiRefAllOf | None = None
+                noconstraint: NoConstraintAllOf | None = None
+                incompatible: IncompatibleTypeAllOf | None = None
+                withprops: ConstraintWithProperties | None = None
+                withitems: ConstraintWithItems | None = None
+                numint: NumberIntegerCompatible | None = None
+                refwithkw: RefWithSchemaKeywords | None = None
+                refarr: RefToArrayAllOf | None = None
+                refobjnoprops: RefToObjectNoPropsAllOf | None = None
+                refpatternprops: RefToPatternPropsAllOf | None = None
+                refnestedallof: RefToNestedAllOfAllOf | None = None
+                refconstraintsonly: RefToConstraintsOnlyAllOf | None = None
+                nodescription: NoDescriptionAllOf | None = None
+                emptyconstraint: EmptyConstraintItemAllOf | None = None
+                conflictingformat: ConflictingFormatAllOf | None = None
             ```
 
 ---
@@ -712,17 +710,15 @@ postponed evaluation of annotations (PEP 563).
     #   filename:  keep_model_order_field_references.json
     #   timestamp: 2019-07-26T00:00:00+00:00
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Metadata(BaseModel):
-        title: Optional[str] = None
+        title: str | None = None
     
     
     class DescriptionType(BaseModel):
-        metadata: Optional[list[Metadata]] = None
+        metadata: list[Metadata] | None = None
     ```
 
 ---
@@ -916,7 +912,7 @@ of Enum classes for all enumerations.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import Literal, Optional, Union
+        from typing import Literal
         
         from pydantic import BaseModel, Field
         
@@ -929,9 +925,9 @@ of Enum classes for all enumerations.
         class Pet(BaseModel):
             id: int
             name: str
-            tag: Optional[str] = None
-            kind: Optional[Kind] = None
-            type: Optional[Literal['animal']] = None
+            tag: str | None = None
+            kind: Kind | None = None
+            type: Literal['animal'] | None = None
             number: Literal[1]
             boolean: Literal[True]
         
@@ -946,7 +942,7 @@ of Enum classes for all enumerations.
         
         
         class Animal(BaseModel):
-            kind: Optional[Kind1] = None
+            kind: Kind1 | None = None
         
         
         class Error(BaseModel):
@@ -960,7 +956,7 @@ of Enum classes for all enumerations.
         
         
         class EnumObject(BaseModel):
-            type: Optional[Type] = None
+            type: Type | None = None
         
         
         class EnumRoot(Enum):
@@ -992,7 +988,7 @@ of Enum classes for all enumerations.
         
         
         class ArrayEnum(BaseModel):
-            __root__: list[Union[Literal['cat'], Literal['dog']]]
+            __root__: list[Literal['cat'] | Literal['dog']]
         
         
         class NestedVersionEnum(Enum):
@@ -1005,13 +1001,13 @@ of Enum classes for all enumerations.
         
         
         class NestedVersion(BaseModel):
-            __root__: Optional[NestedVersionEnum] = Field(
+            __root__: NestedVersionEnum | None = Field(
                 'RC1', description='nullable enum', example='RC2'
             )
         
         
         class NestedNullableEnum(BaseModel):
-            nested_version: Optional[NestedVersion] = Field(
+            nested_version: NestedVersion | None = Field(
                 default_factory=lambda: NestedVersion.parse_obj('RC1'),
                 description='nullable enum',
                 example='RC2',
@@ -1028,7 +1024,7 @@ of Enum classes for all enumerations.
         
         
         class Version(BaseModel):
-            __root__: Optional[VersionEnum] = Field(
+            __root__: VersionEnum | None = Field(
                 'RC1', description='nullable enum', example='RC2'
             )
         ```
@@ -1068,14 +1064,14 @@ of Enum classes for all enumerations.
         
         from __future__ import annotations
         
-        from typing import Literal, Optional
+        from typing import Literal
         
         from pydantic import BaseModel, Field
         
         
         class Config(BaseModel):
-            mode: Optional[Literal['fast', 'slow']] = Field(None, title='Mode')
-            modes: Optional[list[Literal['a', 'b']]] = None
+            mode: Literal['fast', 'slow'] | None = Field(None, title='Mode')
+            modes: list[Literal['a', 'b']] | None = None
         ```
 
     === "GraphQL"
@@ -1393,7 +1389,6 @@ Python 3.11+, falling back to standard Enum classes instead.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import Optional
         
         from pydantic import BaseModel, Field
         
@@ -1405,7 +1400,7 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         
         class ProcessingTask(BaseModel):
-            processing_status: Optional[ProcessingStatus] = Field(
+            processing_status: ProcessingStatus | None = Field(
                 'COMPLETED', title='Status of the task'
             )
         ```
@@ -1478,7 +1473,6 @@ Python 3.11+, falling back to standard Enum classes instead.
         from __future__ import annotations
         
         from enum import Enum, IntEnum, StrEnum
-        from typing import Optional
         
         from pydantic import BaseModel
         
@@ -1518,12 +1512,12 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         
         class Model(BaseModel):
-            IntEnum: Optional[IntEnumModel] = None
-            FloatEnum: Optional[FloatEnum] = None
-            StrEnum: Optional[StrEnumModel] = None
-            NonTypedEnum: Optional[NonTypedEnum] = None
-            BooleanEnum: Optional[BooleanEnum] = None
-            UnknownEnum: Optional[UnknownEnum] = None
+            IntEnum: IntEnumModel | None = None
+            FloatEnum: FloatEnum | None = None
+            StrEnum: StrEnumModel | None = None
+            NonTypedEnum: NonTypedEnum | None = None
+            BooleanEnum: BooleanEnum | None = None
+            UnknownEnum: UnknownEnum | None = None
         ```
 
     === "GraphQL"
@@ -1759,7 +1753,6 @@ code for Python 3.10+ where built-in types support subscripting.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional, Union
     
     from pydantic import BaseModel, Field
     
@@ -1774,19 +1767,19 @@ code for Python 3.10+ where built-in types support subscripting.
     
     
     class OneOfResult(BaseModel):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class AnyOfResult(BaseModel):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class User(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class AllOfResult(User):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class Model(BaseModel):
@@ -1795,12 +1788,83 @@ code for Python 3.10+ where built-in types support subscripting.
         result: dict[str, int]
         nested_object_result: dict[str, NestedObjectResult]
         nested_enum_result: dict[str, NestedEnumResult]
-        all_of_result: Optional[dict[str, AllOfResult]] = None
-        one_of_result: Optional[dict[str, Union[User, OneOfResult]]] = None
-        any_of_result: Optional[dict[str, Union[User, AnyOfResult]]] = None
-        all_of_with_unknown_object: Optional[dict[str, User]] = None
-        objectRef: Optional[dict[str, User]] = None
-        deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, User]]]] = None
+        all_of_result: dict[str, AllOfResult] | None = None
+        one_of_result: dict[str, User | OneOfResult] | None = None
+        any_of_result: dict[str, User | AnyOfResult] | None = None
+        all_of_with_unknown_object: dict[str, User] | None = None
+        objectRef: dict[str, User] | None = None
+        deepNestedObjectRef: dict[str, dict[str, dict[str, User]]] | None = None
+    ```
+
+---
+
+## `--no-use-union-operator` {#no-use-union-operator}
+
+Test GraphQL annotated types with standard collections and union operator.
+
+**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+
+**See also:** [Python Version Compatibility](../python-version-compatibility.md)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated --use-standard-collections --use-union-operator # (1)!
+    ```
+
+    1. :material-arrow-left: `--no-use-union-operator` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```graphql
+    type A {
+        field: String!
+        optionalField: String
+        listField: [String!]!
+        listOptionalField: [String]!
+        optionalListField: [String!]
+        optionalListOptionalField: [String]
+        listListField:[[String!]!]!
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  annotated.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Annotated, Literal
+    
+    from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
+    
+    Boolean = TypeAliasType("Boolean", bool)
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    String = TypeAliasType("String", str)
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    class A(BaseModel):
+        field: String
+        listField: list[String]
+        listListField: list[list[String]]
+        listOptionalField: list[String | None]
+        optionalField: String | None = None
+        optionalListField: list[String] | None = None
+        optionalListOptionalField: list[String | None] | None = None
+        typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
     ```
 
 ---
@@ -2317,7 +2381,7 @@ Test GraphQL annotated types with standard collections and union operator.
         
         from __future__ import annotations
         
-        from typing import Annotated, Optional, Union
+        from typing import Annotated
         
         from pydantic import AnyUrl, BaseModel, Field
         
@@ -2325,7 +2389,7 @@ Test GraphQL annotated types with standard collections and union operator.
         class Pet(BaseModel):
             id: Annotated[int, Field(ge=0, le=9223372036854775807)]
             name: Annotated[str, Field(max_length=256)]
-            tag: Annotated[Optional[str], Field(max_length=64)] = None
+            tag: Annotated[str | None, Field(max_length=64)] = None
         
         
         class Pets(BaseModel):
@@ -2347,14 +2411,14 @@ Test GraphQL annotated types with standard collections and union operator.
         class User(BaseModel):
             id: Annotated[int, Field(ge=0)]
             name: Annotated[str, Field(max_length=256)]
-            tag: Annotated[Optional[str], Field(max_length=64)] = None
+            tag: Annotated[str | None, Field(max_length=64)] = None
             uid: UID
-            phones: Annotated[Optional[list[Phone]], Field(max_items=10)] = None
-            fax: Optional[list[FaxItem]] = None
-            height: Annotated[Optional[Union[int, float]], Field(ge=1.0, le=300.0)] = None
-            weight: Annotated[Optional[Union[float, int]], Field(ge=1.0, le=1000.0)] = None
-            age: Annotated[Optional[int], Field(gt=0, le=200)] = None
-            rating: Annotated[Optional[float], Field(gt=0.0, le=5.0)] = None
+            phones: Annotated[list[Phone] | None, Field(max_items=10)] = None
+            fax: list[FaxItem] | None = None
+            height: Annotated[int | float | None, Field(ge=1.0, le=300.0)] = None
+            weight: Annotated[float | int | None, Field(ge=1.0, le=1000.0)] = None
+            age: Annotated[int | None, Field(gt=0, le=200)] = None
+            rating: Annotated[float | None, Field(gt=0.0, le=5.0)] = None
         
         
         class Users(BaseModel):
@@ -2376,16 +2440,16 @@ Test GraphQL annotated types with standard collections and union operator.
         
         class Api(BaseModel):
             apiKey: Annotated[
-                Optional[str], Field(description='To be used as a dataset parameter value')
+                str | None, Field(description='To be used as a dataset parameter value')
             ] = None
             apiVersionNumber: Annotated[
-                Optional[str], Field(description='To be used as a version parameter value')
+                str | None, Field(description='To be used as a version parameter value')
             ] = None
             apiUrl: Annotated[
-                Optional[AnyUrl], Field(description="The URL describing the dataset's fields")
+                AnyUrl | None, Field(description="The URL describing the dataset's fields")
             ] = None
             apiDocumentationUrl: Annotated[
-                Optional[AnyUrl], Field(description='A URL to the API console for each API')
+                AnyUrl | None, Field(description='A URL to the API console for each API')
             ] = None
         
         
@@ -2394,11 +2458,11 @@ Test GraphQL annotated types with standard collections and union operator.
         
         
         class Event(BaseModel):
-            name: Optional[str] = None
+            name: str | None = None
         
         
         class Result(BaseModel):
-            event: Optional[Event] = None
+            event: Event | None = None
         ```
 
     === "GraphQL"
@@ -2516,16 +2580,14 @@ precise decimal arithmetic when validating values against the constraint.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel, condecimal, confloat
     
     
     class Model(BaseModel):
-        price: Optional[condecimal(ge=0, le=99999.99, multiple_of=0.01)] = None
-        quantity: Optional[condecimal(multiple_of=0.1)] = None
-        rate: Optional[condecimal(multiple_of=0.001, lt=1.0, gt=0.0)] = None
-        simple_float: Optional[confloat(ge=0.0, le=100.0)] = None
+        price: condecimal(ge=0, le=99999.99, multiple_of=0.01) | None = None
+        quantity: condecimal(multiple_of=0.1) | None = None
+        rate: condecimal(multiple_of=0.001, lt=1.0, gt=0.0) | None = None
+        simple_float: confloat(ge=0.0, le=100.0) | None = None
     ```
 
 ---
@@ -2695,7 +2757,6 @@ Python 3.8 compatibility or when explicit typing imports are preferred.
     
     from collections.abc import Mapping
     from enum import Enum
-    from typing import Optional, Union
     
     from pydantic import BaseModel, Field
     
@@ -2710,19 +2771,19 @@ Python 3.8 compatibility or when explicit typing imports are preferred.
     
     
     class OneOfResult(BaseModel):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class AnyOfResult(BaseModel):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class User(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class AllOfResult(User):
-        description: Optional[str] = None
+        description: str | None = None
     
     
     class Model(BaseModel):
@@ -2731,12 +2792,12 @@ Python 3.8 compatibility or when explicit typing imports are preferred.
         result: Mapping[str, int]
         nested_object_result: Mapping[str, NestedObjectResult]
         nested_enum_result: Mapping[str, NestedEnumResult]
-        all_of_result: Optional[Mapping[str, AllOfResult]] = None
-        one_of_result: Optional[Mapping[str, Union[User, OneOfResult]]] = None
-        any_of_result: Optional[Mapping[str, Union[User, AnyOfResult]]] = None
-        all_of_with_unknown_object: Optional[Mapping[str, User]] = None
-        objectRef: Optional[Mapping[str, User]] = None
-        deepNestedObjectRef: Optional[Mapping[str, Mapping[str, Mapping[str, User]]]] = None
+        all_of_result: Mapping[str, AllOfResult] | None = None
+        one_of_result: Mapping[str, User | OneOfResult] | None = None
+        any_of_result: Mapping[str, User | AnyOfResult] | None = None
+        all_of_with_unknown_object: Mapping[str, User] | None = None
+        objectRef: Mapping[str, User] | None = None
+        deepNestedObjectRef: Mapping[str, Mapping[str, Mapping[str, User]]] | None = None
     ```
 
 ---
@@ -2801,8 +2862,6 @@ conint/confloat with ge/le parameters.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import (
         BaseModel,
         Field,
@@ -2814,16 +2873,16 @@ conint/confloat with ge/le parameters.
     
     
     class NumberConstraints(BaseModel):
-        non_negative_count: Optional[NonNegativeInt] = Field(
+        non_negative_count: NonNegativeInt | None = Field(
             None, description='A count that cannot be negative'
         )
-        non_positive_balance: Optional[NonPositiveInt] = Field(
+        non_positive_balance: NonPositiveInt | None = Field(
             None, description='A balance that cannot be positive'
         )
-        non_negative_amount: Optional[NonNegativeFloat] = Field(
+        non_negative_amount: NonNegativeFloat | None = Field(
             None, description='An amount that cannot be negative'
         )
-        non_positive_score: Optional[NonPositiveFloat] = Field(
+        non_positive_score: NonPositiveFloat | None = Field(
             None, description='A score that cannot be positive'
         )
     ```
@@ -2887,8 +2946,6 @@ working with the pendulum library for enhanced timezone and date handling.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pendulum import Date, DateTime, Duration
     from pydantic import BaseModel
     
@@ -2896,8 +2953,8 @@ working with the pendulum library for enhanced timezone and date handling.
     class Event(BaseModel):
         name: str
         created_at: DateTime
-        event_date: Optional[Date] = None
-        duration: Optional[Duration] = None
+        event_date: Date | None = None
+        duration: Duration | None = None
     ```
 
 ---
@@ -2974,7 +3031,7 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, Optional, TypeAlias, Union
+        from typing import Annotated, Any, TypeAlias
         
         from pydantic import BaseModel, Field
         
@@ -2984,23 +3041,23 @@ syntax. This feature is experimental.
         SimpleString: TypeAlias = str
         
         
-        UnionType: TypeAlias = Union[str, int]
+        UnionType: TypeAlias = str | int
         
         
         ArrayType: TypeAlias = list[str]
         
         
         AnnotatedType: TypeAlias = Annotated[
-            Union[str, bool],
+            str | bool,
             Field(..., description='An annotated union type', title='MyAnnotatedType'),
         ]
         
         
         class ModelWithTypeAliasField(BaseModel):
-            simple_field: Optional[SimpleString] = None
-            union_field: Optional[UnionType] = None
-            array_field: Optional[ArrayType] = None
-            annotated_field: Optional[AnnotatedType] = None
+            simple_field: SimpleString | None = None
+            union_field: UnionType | None = None
+            array_field: ArrayType | None = None
+            annotated_field: AnnotatedType | None = None
         ```
 
     === "GraphQL"
@@ -3038,7 +3095,7 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Literal, Optional, TypeAlias, Union
+        from typing import Literal, TypeAlias, Union
         
         from pydantic import BaseModel, Field
         
@@ -3066,13 +3123,13 @@ syntax. This feature is experimental.
         class Person(BaseModel):
             age: Int
             name: String
-            typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
+            typename__: Literal['Person'] | None = Field('Person', alias='__typename')
         
         
         class Pet(BaseModel):
             name: String
             type: String
-            typename__: Optional[Literal['Pet']] = Field('Pet', alias='__typename')
+            typename__: Literal['Pet'] | None = Field('Pet', alias='__typename')
         
         
         UnionType: TypeAlias = Union[
@@ -3082,84 +3139,13 @@ syntax. This feature is experimental.
         
         
         class ModelWithTypeAliasField(BaseModel):
-            simple_field: Optional[SimpleString] = None
-            string_field: Optional[String] = None
-            union_field: Optional[UnionType] = None
-            typename__: Optional[Literal['ModelWithTypeAliasField']] = Field(
+            simple_field: SimpleString | None = None
+            string_field: String | None = None
+            union_field: UnionType | None = None
+            typename__: Literal['ModelWithTypeAliasField'] | None = Field(
                 'ModelWithTypeAliasField', alias='__typename'
             )
         ```
-
----
-
-## `--use-union-operator` {#use-union-operator}
-
-Test GraphQL annotated types with standard collections and union operator.
-
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
-
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
-
-!!! tip "Usage"
-
-    ```bash
-    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated --use-standard-collections --use-union-operator # (1)!
-    ```
-
-    1. :material-arrow-left: `--use-union-operator` - the option documented here
-
-??? example "Examples"
-
-    **Input Schema:**
-
-    ```graphql
-    type A {
-        field: String!
-        optionalField: String
-        listField: [String!]!
-        listOptionalField: [String]!
-        optionalListField: [String!]
-        optionalListOptionalField: [String]
-        listListField:[[String!]!]!
-    }
-    ```
-
-    **Output:**
-
-    ```python
-    # generated by datamodel-codegen:
-    #   filename:  annotated.graphql
-    #   timestamp: 2019-07-26T00:00:00+00:00
-    
-    from __future__ import annotations
-    
-    from typing import Annotated, Literal
-    
-    from pydantic import BaseModel, Field
-    from typing_extensions import TypeAliasType
-    
-    Boolean = TypeAliasType("Boolean", bool)
-    """
-    The `Boolean` scalar type represents `true` or `false`.
-    """
-    
-    
-    String = TypeAliasType("String", str)
-    """
-    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
-    """
-    
-    
-    class A(BaseModel):
-        field: String
-        listField: list[String]
-        listListField: list[list[String]]
-        listOptionalField: list[String | None]
-        optionalField: String | None = None
-        optionalListField: list[String] | None = None
-        optionalListOptionalField: list[String | None] | None = None
-        typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
-    ```
 
 ---
 
@@ -3424,15 +3410,13 @@ to true, enforcing uniqueness at the type level.
     
     from __future__ import annotations
     
-    from typing import Optional, Union
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int = Field(..., ge=0, le=9223372036854775807)
         name: str = Field(..., max_length=256)
-        tag: Optional[str] = Field(None, max_length=64)
+        tag: str | None = Field(None, max_length=64)
     
     
     class Pets(BaseModel):
@@ -3454,14 +3438,14 @@ to true, enforcing uniqueness at the type level.
     class User(BaseModel):
         id: int = Field(..., ge=0)
         name: str = Field(..., max_length=256)
-        tag: Optional[str] = Field(None, max_length=64)
+        tag: str | None = Field(None, max_length=64)
         uid: UID
-        phones: Optional[list[Phone]] = Field(None, max_items=10)
-        fax: Optional[list[FaxItem]] = None
-        height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-        weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-        age: Optional[int] = Field(None, gt=0, le=200)
-        rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+        phones: list[Phone] | None = Field(None, max_items=10)
+        fax: list[FaxItem] | None = None
+        height: int | float | None = Field(None, ge=1.0, le=300.0)
+        weight: float | int | None = Field(None, ge=1.0, le=1000.0)
+        age: int | None = Field(None, gt=0, le=200)
+        rating: float | None = Field(None, gt=0.0, le=5.0)
     
     
     class Users(BaseModel):
@@ -3482,16 +3466,16 @@ to true, enforcing uniqueness at the type level.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -3501,11 +3485,11 @@ to true, enforcing uniqueness at the type level.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---

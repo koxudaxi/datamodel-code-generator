@@ -69,7 +69,7 @@ is useful when using custom types defined in external modules (e.g.,
     from __future__ import annotations
     
     from datetime import date, datetime
-    from typing import Literal, Optional, TypeAlias
+    from typing import Literal, TypeAlias
     
     from mymodule.myclass import MyCustomPythonClass
     from pydantic import BaseModel, Field
@@ -102,7 +102,7 @@ is useful when using custom types defined in external modules (e.g.,
         a: Date
         b: DateTime
         c: MyCustomClass
-        typename__: Optional[Literal['A']] = Field('A', alias='__typename')
+        typename__: Literal['A'] | None = Field('A', alias='__typename')
     ```
 
 ---
@@ -156,15 +156,13 @@ headers, or other metadata to generated files.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class Person(BaseModel):
             first_name: str = Field(..., alias='first-name')
             last_name: str = Field(..., alias='last-name')
-            email_address: Optional[str] = None
+            email_address: str | None = None
         ```
 
     === "Without Option"
@@ -400,15 +398,13 @@ to be inserted at the top of generated Python files.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -418,7 +414,7 @@ to be inserted at the top of generated Python files.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -439,16 +435,16 @@ to be inserted at the top of generated Python files.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -458,11 +454,11 @@ to be inserted at the top of generated Python files.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -510,7 +506,7 @@ formatting rules beyond what black/isort provide.
     # a comment
     from __future__ import annotations
     
-    from typing import Literal, Optional, TypeAlias
+    from typing import Literal, TypeAlias
     
     from pydantic import BaseModel, Field
     
@@ -538,7 +534,7 @@ formatting rules beyond what black/isort provide.
     class A(BaseModel):
         duration: Long
         id: ID
-        typename__: Optional[Literal['A']] = Field('A', alias='__typename')
+        typename__: Literal['A'] | None = Field('A', alias='__typename')
     ```
 
 ---
@@ -596,15 +592,13 @@ configuration to user-defined formatter modules.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -823,15 +817,13 @@ to the templates.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -841,7 +833,7 @@ to the templates.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -862,10 +854,10 @@ to the templates.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = None
-        apiVersionNumber: Optional[str] = None
-        apiUrl: Optional[AnyUrl] = None
-        apiDocumentationUrl: Optional[AnyUrl] = None
+        apiKey: str | None = None
+        apiVersionNumber: str | None = None
+        apiUrl: AnyUrl | None = None
+        apiDocumentationUrl: AnyUrl | None = None
     
     
     class Apis(BaseModel):
@@ -873,11 +865,11 @@ to the templates.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -1141,15 +1133,13 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     from __future__ import annotations
     
-    from typing import Optional, Union
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int = Field(..., ge=0, le=9223372036854775807)
         name: str = Field(..., max_length=256)
-        tag: Optional[str] = Field(None, max_length=64)
+        tag: str | None = Field(None, max_length=64)
     
     
     class Pets(BaseModel):
@@ -1171,14 +1161,14 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     class User(BaseModel):
         id: int = Field(..., ge=0)
         name: str = Field(..., max_length=256)
-        tag: Optional[str] = Field(None, max_length=64)
+        tag: str | None = Field(None, max_length=64)
         uid: UID
-        phones: Optional[list[Phone]] = Field(None, max_items=10)
-        fax: Optional[list[Fax]] = None
-        height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-        weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-        age: Optional[int] = Field(None, gt=0, le=200)
-        rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+        phones: list[Phone] | None = Field(None, max_items=10)
+        fax: list[Fax] | None = None
+        height: int | float | None = Field(None, ge=1.0, le=300.0)
+        weight: float | int | None = Field(None, ge=1.0, le=1000.0)
+        age: int | None = Field(None, gt=0, le=200)
+        rating: float | None = Field(None, gt=0.0, le=5.0)
     
     
     class Users(BaseModel):
@@ -1199,16 +1189,16 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -1218,11 +1208,11 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -1281,22 +1271,21 @@ The `--disable-timestamp` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel, constr
     
     
     class Info(BaseModel):
-        hostName: Optional[
+        hostName: (
             constr(
                 regex=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'
             )
-        ] = None
-        arn: Optional[
-            constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$')
-        ] = None
-        tel: Optional[constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$')] = None
-        comment: Optional[constr(regex=r'[^\b\f\n\r\t\\a+.?\'"|()]+$')] = None
+            | None
+        ) = None
+        arn: (
+            constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$') | None
+        ) = None
+        tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+        comment: constr(regex=r'[^\b\f\n\r\t\\a+.?\'"|()]+$') | None = None
     ```
 
 ---
@@ -1512,15 +1501,13 @@ the file to the header, making it easy to reproduce the generation.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -1530,7 +1517,7 @@ the file to the header, making it easy to reproduce the generation.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -1551,16 +1538,16 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -1570,11 +1557,11 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -1789,15 +1776,13 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -1807,7 +1792,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -1828,16 +1813,16 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -1847,11 +1832,11 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -2071,8 +2056,6 @@ model settings like Config classes, enabling customization beyond standard optio
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import AnyUrl, BaseModel, Field
         
         
@@ -2082,7 +2065,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Pets(BaseModel):
@@ -2092,7 +2075,7 @@ model settings like Config classes, enabling customization beyond standard optio
         class User(BaseModel):
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Users(BaseModel):
@@ -2113,16 +2096,16 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Api(BaseModel):
-            apiKey: Optional[str] = Field(
+            apiKey: str | None = Field(
                 None, description='To be used as a dataset parameter value'
             )
-            apiVersionNumber: Optional[str] = Field(
+            apiVersionNumber: str | None = Field(
                 None, description='To be used as a version parameter value'
             )
-            apiUrl: Optional[AnyUrl] = Field(
+            apiUrl: AnyUrl | None = Field(
                 None, description="The URL describing the dataset's fields"
             )
-            apiDocumentationUrl: Optional[AnyUrl] = Field(
+            apiDocumentationUrl: AnyUrl | None = Field(
                 None, description='A URL to the API console for each API'
             )
         
@@ -2132,11 +2115,11 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Event(BaseModel):
-            name: Optional[str] = None
+            name: str | None = None
         
         
         class Result(BaseModel):
-            event: Optional[Event] = None
+            event: Event | None = None
         ```
 
     === "Pydantic v2"
@@ -2148,8 +2131,6 @@ model settings like Config classes, enabling customization beyond standard optio
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
         
         
@@ -2160,7 +2141,7 @@ model settings like Config classes, enabling customization beyond standard optio
             )
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Pets(RootModel[list[Pet]]):
@@ -2170,7 +2151,7 @@ model settings like Config classes, enabling customization beyond standard optio
         class User(BaseModel):
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Users(RootModel[list[User]]):
@@ -2191,16 +2172,16 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Api(BaseModel):
-            apiKey: Optional[str] = Field(
+            apiKey: str | None = Field(
                 None, description='To be used as a dataset parameter value'
             )
-            apiVersionNumber: Optional[str] = Field(
+            apiVersionNumber: str | None = Field(
                 None, description='To be used as a version parameter value'
             )
-            apiUrl: Optional[AnyUrl] = Field(
+            apiUrl: AnyUrl | None = Field(
                 None, description="The URL describing the dataset's fields"
             )
-            apiDocumentationUrl: Optional[AnyUrl] = Field(
+            apiDocumentationUrl: AnyUrl | None = Field(
                 None, description='A URL to the API console for each API'
             )
         
@@ -2210,11 +2191,11 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Event(BaseModel):
-            name: Optional[str] = None
+            name: str | None = None
         
         
         class Result(BaseModel):
-            event: Optional[Event] = None
+            event: Event | None = None
         ```
 
 ---
@@ -2270,15 +2251,13 @@ Use this to customize formatting or disable formatters entirely.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -2341,14 +2320,12 @@ The `--treat-dot-as-module` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class User(BaseModel):
         name: str
-        age: Optional[int] = None
+        age: int | None = None
     ```
 
 ---
@@ -2442,8 +2419,6 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     from __future__ import annotations
     
-    from typing import Optional, Union
-    
     from pydantic import BaseModel, Field, confloat
     
     
@@ -2454,10 +2429,10 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     class MapState2(BaseModel):
         latitude: Latitude
         longitude: Longitude
-        zoom: Optional[Zoom] = Field(default_factory=lambda: Zoom.parse_obj(0))
-        bearing: Optional[Bearing] = None
+        zoom: Zoom | None = Field(default_factory=lambda: Zoom.parse_obj(0))
+        bearing: Bearing | None = None
         pitch: Pitch
-        drag_rotate: Optional[DragRotate] = Field(None, alias="dragRotate")
+        drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
         map_split_mode: str = Field("SWIPE_COMPARE", alias="mapSplitMode", const=True)
         is_split: bool = Field(True, alias="isSplit", const=True)
     
@@ -2483,7 +2458,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     
     class MapState(BaseModel):
-        __root__: Union[MapState4, MapState5, MapState6, MapState7] = Field(
+        __root__: MapState4 | MapState5 | MapState6 | MapState7 = Field(
             ..., title="MapState"
         )
     
@@ -2566,15 +2541,13 @@ modules are generated. For single-file output, the difference is minimal.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -2630,21 +2603,19 @@ single-line strings in the generated code.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel, Field
     
     
     class LongDescription(BaseModel):
-        summary: Optional[str] = Field(None, description='summary for object')
-        description: Optional[str] = Field(
+        summary: str | None = Field(None, description='summary for object')
+        description: str | None = Field(
             None,
             description=(
                 'datamodel-code-generator. This code generator creates pydantic model from'
                 ' an openapi file and others.'
             ),
         )
-        multi_line: Optional[str] = Field(
+        multi_line: str | None = Field(
             None,
             description=(
                 'datamodel-code-generator\nThis code generator creates pydantic model from'

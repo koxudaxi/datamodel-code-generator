@@ -91,21 +91,19 @@ models that include both path and query parameters.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Post(BaseModel):
-        id: Optional[str] = None
-        title: Optional[str] = None
-        content: Optional[str] = None
+        id: str | None = None
+        title: str | None = None
+        content: str | None = None
     
     
     class UsersUserIdPostsPostIdGetParameters(BaseModel):
         userId: int
         postId: str
-        includeComments: Optional[bool] = None
+        includeComments: bool | None = None
     ```
 
 ---
@@ -507,7 +505,6 @@ The `--openapi-scopes` flag configures the code generation behavior.
     from __future__ import annotations
     
     from datetime import datetime
-    from typing import Optional
     
     from pydantic import BaseModel
     
@@ -515,7 +512,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Error(BaseModel):
@@ -524,8 +521,8 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     
     class PetForm(BaseModel):
-        name: Optional[str] = None
-        age: Optional[int] = None
+        name: str | None = None
+        age: int | None = None
     
     
     class PetsGetResponse(BaseModel):
@@ -539,19 +536,19 @@ The `--openapi-scopes` flag configures the code generation behavior.
     class UserGetResponse(BaseModel):
         timestamp: datetime
         name: str
-        age: Optional[str] = None
+        age: str | None = None
     
     
     class UserPostRequest(BaseModel):
         timestamp: datetime
         name: str
-        age: Optional[str] = None
+        age: str | None = None
     
     
     class UsersGetResponseItem(BaseModel):
         timestamp: datetime
         name: str
-        age: Optional[str] = None
+        age: str | None = None
     
     
     class UsersGetResponse(BaseModel):
@@ -561,7 +558,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     class UsersPostRequestItem(BaseModel):
         timestamp: datetime
         name: str
-        age: Optional[str] = None
+        age: str | None = None
     
     
     class UsersPostRequest(BaseModel):
@@ -634,21 +631,19 @@ validation for API requests and responses without a shared base model.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AwareDatetime, BaseModel
     
     
     class UserRequest(BaseModel):
         name: str
         password: str
-        secret_token: Optional[str] = None
+        secret_token: str | None = None
     
     
     class UserResponse(BaseModel):
         id: int
         name: str
-        created_at: Optional[AwareDatetime] = None
+        created_at: AwareDatetime | None = None
     ```
 
 ---
@@ -864,15 +859,13 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -882,7 +875,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -903,16 +896,16 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -922,15 +915,15 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     
     
     class ListPetsParametersQuery(BaseModel):
-        limit: Optional[int] = None
+        limit: int | None = None
     ```
 
 ---
@@ -1008,23 +1001,21 @@ clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResp
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class ResourceGetResponse200(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
     
     
     class ResourceGetResponse400(BaseModel):
-        error: Optional[str] = None
-        code: Optional[int] = None
+        error: str | None = None
+        code: int | None = None
     
     
     class ResourceGetResponseDefault(BaseModel):
-        message: Optional[str] = None
+        message: str | None = None
     ```
 
 ---
@@ -1242,15 +1233,13 @@ The `--validation` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -1260,7 +1249,7 @@ The `--validation` flag configures the code generation behavior.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -1281,16 +1270,16 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None, description='To be used as a dataset parameter value'
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -1300,11 +1289,11 @@ The `--validation` flag configures the code generation behavior.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
