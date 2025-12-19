@@ -1275,12 +1275,15 @@ The `--disable-timestamp` flag configures the code generation behavior.
     
     
     class Info(BaseModel):
-        hostName: constr(
-            regex=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'
-        ) | None = None
-        arn: constr(
-            regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$'
-        ) | None = None
+        hostName: (
+            constr(
+                regex=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'
+            )
+            | None
+        ) = None
+        arn: (
+            constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$') | None
+        ) = None
         tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
         comment: constr(regex=r'[^\b\f\n\r\t\\a+.?\'"|()]+$') | None = None
     ```
