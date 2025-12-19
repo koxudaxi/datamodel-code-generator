@@ -350,22 +350,18 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Api(Struct):
-                apiKey: (
-                    Annotated[str, Meta(description='To be used as a dataset parameter value')]
-                    | UnsetType
-                ) = UNSET
-                apiVersionNumber: (
-                    Annotated[str, Meta(description='To be used as a version parameter value')]
-                    | UnsetType
-                ) = UNSET
-                apiUrl: (
-                    Annotated[str, Meta(description="The URL describing the dataset's fields")]
-                    | UnsetType
-                ) = UNSET
-                apiDocumentationUrl: (
-                    Annotated[str, Meta(description='A URL to the API console for each API')]
-                    | UnsetType
-                ) = UNSET
+                apiKey: Annotated[
+                    str, Meta(description='To be used as a dataset parameter value')
+                ] | UnsetType = UNSET
+                apiVersionNumber: Annotated[
+                    str, Meta(description='To be used as a version parameter value')
+                ] | UnsetType = UNSET
+                apiUrl: Annotated[
+                    str, Meta(description="The URL describing the dataset's fields")
+                ] | UnsetType = UNSET
+                apiDocumentationUrl: Annotated[
+                    str, Meta(description='A URL to the API console for each API')
+                ] | UnsetType = UNSET
             
             
             Apis: TypeAlias = list[Api]
@@ -3543,9 +3539,9 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class ProcessingTaskTitle(BaseModel):
-        processing_status_union: (
-            ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None
-        ) = Field('COMPLETED', title='Processing Status Union Title')
+        processing_status_union: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None = Field(
+            'COMPLETED', title='Processing Status Union Title'
+        )
         processing_status: ProcessingStatusTitle | None = 'COMPLETED'
         name: str | None = None
         kind: Kind | None = None
