@@ -660,9 +660,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         reuse_model=reuse_model,
         reuse_scope=reuse_scope,
         shared_module_name=shared_module_name,
-        enum_field_as_literal=LiteralType.All
-        if output_model_type == DataModelType.TypingTypedDict
-        else enum_field_as_literal,
+        enum_field_as_literal=enum_field_as_literal
+        if enum_field_as_literal is not None
+        else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
         use_one_literal_as_default=use_one_literal_as_default,
         use_enum_values_in_discriminator=use_enum_values_in_discriminator,
         set_default_enum_member=True

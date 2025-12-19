@@ -767,9 +767,11 @@ class JsonSchemaParser(Parser):
 
     def should_parse_enum_as_literal(self, obj: JsonSchemaObject) -> bool:
         """Determine if an enum should be parsed as a literal type."""
-        return self.enum_field_as_literal == LiteralType.All or (
-            self.enum_field_as_literal == LiteralType.One and len(obj.enum) == 1
-        )
+        if self.enum_field_as_literal == LiteralType.All:
+            return True
+        if self.enum_field_as_literal == LiteralType.One:
+            return len(obj.enum) == 1
+        return False
 
     @classmethod
     def _extract_const_enum_from_combined(  # noqa: PLR0912

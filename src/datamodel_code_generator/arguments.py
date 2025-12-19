@@ -343,7 +343,8 @@ typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "
-    "one: field type is Literal when an enum has only one possible value",
+    "one: field type is Literal when an enum has only one possible value. "
+    "none: always use Enum class (never convert to Literal)",
     choices=[lt.value for lt in LiteralType],
     default=None,
 )

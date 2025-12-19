@@ -2841,6 +2841,75 @@ def test_main_typed_dict_additional_properties(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_none(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=none."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_none.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "none",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_one(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=one."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_one.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "one",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
+    """Test TypedDict with enum_field_as_literal=all."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_enum_literal_all.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--enum-field-as-literal",
+            "all",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
 def test_main_dataclass_const(output_file: Path) -> None:
     """Test main function writing to dataclass with const fields."""
     run_main_and_assert(
