@@ -727,5 +727,4 @@ class DataTypeManager(ABC):
                 return self.data_type.from_import(IMPORT_DICT)
             case list():
                 return self.data_type.from_import(IMPORT_LIST)
-            case _:
-                return self.get_data_type(Types.any)
+        return self.get_data_type(Types.any)
