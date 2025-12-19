@@ -2646,6 +2646,7 @@ def test_main_typed_dict_nullable(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.skipif(
     version.parse(black.__version__) < version.parse("23.3.0"),
     reason="Require Black version 23.3.0 or later ",
