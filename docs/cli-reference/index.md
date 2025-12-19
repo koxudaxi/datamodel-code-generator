@@ -112,6 +112,7 @@ This documentation is auto-generated from test cases.
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
+- [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 
 ### O {#o}
 
@@ -172,7 +173,6 @@ This documentation is auto-generated from test cases.
 - [`--use-pendulum`](typing-customization.md#use-pendulum)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
-- [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)

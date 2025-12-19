@@ -400,7 +400,7 @@ to be inserted at the top of generated Python files.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -412,7 +412,7 @@ to be inserted at the top of generated Python files.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -422,7 +422,7 @@ to be inserted at the top of generated Python files.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -430,7 +430,7 @@ to be inserted at the top of generated Python files.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -454,7 +454,7 @@ to be inserted at the top of generated Python files.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -823,7 +823,7 @@ to the templates.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -835,7 +835,7 @@ to the templates.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -845,7 +845,7 @@ to the templates.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -853,7 +853,7 @@ to the templates.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -869,7 +869,7 @@ to the templates.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -1141,7 +1141,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     from __future__ import annotations
     
-    from typing import List, Optional, Union
+    from typing import Optional, Union
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -1153,7 +1153,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Pets(BaseModel):
-        __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+        __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
     
     
     class UID(BaseModel):
@@ -1173,8 +1173,8 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         name: str = Field(..., max_length=256)
         tag: Optional[str] = Field(None, max_length=64)
         uid: UID
-        phones: Optional[List[Phone]] = Field(None, max_items=10)
-        fax: Optional[List[Fax]] = None
+        phones: Optional[list[Phone]] = Field(None, max_items=10)
+        fax: Optional[list[Fax]] = None
         height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
         weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
         age: Optional[int] = Field(None, gt=0, le=200)
@@ -1182,7 +1182,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -1190,7 +1190,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -1214,7 +1214,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -1512,7 +1512,7 @@ the file to the header, making it easy to reproduce the generation.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -1524,7 +1524,7 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -1534,7 +1534,7 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -1542,7 +1542,7 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -1566,7 +1566,7 @@ the file to the header, making it easy to reproduce the generation.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -1789,7 +1789,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import List, Optional
+    from typing import Optional
     
     from pydantic import AnyUrl, BaseModel, Field
     
@@ -1801,7 +1801,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Pets(BaseModel):
-        __root__: List[Pet]
+        __root__: list[Pet]
     
     
     class User(BaseModel):
@@ -1811,7 +1811,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Users(BaseModel):
-        __root__: List[User]
+        __root__: list[User]
     
     
     class Id(BaseModel):
@@ -1819,7 +1819,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Rules(BaseModel):
-        __root__: List[str]
+        __root__: list[str]
     
     
     class Error(BaseModel):
@@ -1843,7 +1843,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     
     class Apis(BaseModel):
-        __root__: List[Api]
+        __root__: list[Api]
     
     
     class Event(BaseModel):
@@ -2071,7 +2071,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, Field
         
@@ -2086,7 +2086,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Pets(BaseModel):
-            __root__: List[Pet]
+            __root__: list[Pet]
         
         
         class User(BaseModel):
@@ -2096,7 +2096,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Users(BaseModel):
-            __root__: List[User]
+            __root__: list[User]
         
         
         class Id(BaseModel):
@@ -2104,7 +2104,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Rules(BaseModel):
-            __root__: List[str]
+            __root__: list[str]
         
         
         class Error(BaseModel):
@@ -2128,7 +2128,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         
         class Apis(BaseModel):
-            __root__: List[Api]
+            __root__: list[Api]
         
         
         class Event(BaseModel):
@@ -2148,7 +2148,7 @@ model settings like Config classes, enabling customization beyond standard optio
         
         from __future__ import annotations
         
-        from typing import List, Optional
+        from typing import Optional
         
         from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
         
@@ -2163,8 +2163,8 @@ model settings like Config classes, enabling customization beyond standard optio
             tag: Optional[str] = None
         
         
-        class Pets(RootModel[List[Pet]]):
-            root: List[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -2173,16 +2173,16 @@ model settings like Config classes, enabling customization beyond standard optio
             tag: Optional[str] = None
         
         
-        class Users(RootModel[List[User]]):
-            root: List[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
         class Id(RootModel[str]):
             root: str
         
         
-        class Rules(RootModel[List[str]]):
-            root: List[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -2205,8 +2205,8 @@ model settings like Config classes, enabling customization beyond standard optio
             )
         
         
-        class Apis(RootModel[List[Api]]):
-            root: List[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
