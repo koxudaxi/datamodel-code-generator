@@ -19,6 +19,7 @@ class LiteralType(Enum):
 
     All = "all"
     One = "one"
+    Off = "none"
 
 
 class DefaultPutDict(UserDict[TK, TV]):

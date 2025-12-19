@@ -406,9 +406,11 @@ class GraphQLParser(Parser):
 
     def should_parse_enum_as_literal(self, obj: graphql.GraphQLEnumType) -> bool:
         """Determine if an enum should be parsed as a literal type."""
-        return self.enum_field_as_literal == LiteralType.All or (
-            self.enum_field_as_literal == LiteralType.One and len(obj.values) == 1
-        )
+        if self.enum_field_as_literal == LiteralType.All:
+            return True
+        if self.enum_field_as_literal == LiteralType.One:
+            return len(obj.values) == 1
+        return False
 
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse a GraphQL enum type and add it to results."""
