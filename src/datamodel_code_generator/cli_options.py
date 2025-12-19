@@ -133,7 +133,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     # Typing Customization
     # ==========================================================================
-    "--use-union-operator": CLIOptionMeta(name="--use-union-operator", category=OptionCategory.TYPING),
+    "--no-use-union-operator": CLIOptionMeta(name="--no-use-union-operator", category=OptionCategory.TYPING),
     "--no-use-standard-collections": CLIOptionMeta(
         name="--no-use-standard-collections", category=OptionCategory.TYPING
     ),

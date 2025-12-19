@@ -4,48 +4,46 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class BalanceTransaction(BaseModel):
-    id: Optional[str] = None
-    amount: Optional[int] = None
-    source: Optional[Authorization] = None
+    id: str | None = None
+    amount: int | None = None
+    source: Authorization | None = None
 
 
 class Subscription(BaseModel):
-    id: Optional[str] = None
-    plan: Optional[str] = None
+    id: str | None = None
+    plan: str | None = None
 
 
 class Invoice(BaseModel):
-    id: Optional[str] = None
-    session: Optional[Session] = None
-    subscription: Optional[Subscription] = None
+    id: str | None = None
+    session: Session | None = None
+    subscription: Subscription | None = None
 
 
 class LineItem(BaseModel):
-    id: Optional[str] = None
-    price: Optional[int] = None
+    id: str | None = None
+    price: int | None = None
 
 
 class Session(BaseModel):
-    id: Optional[str] = None
-    transaction: Optional[BalanceTransaction] = None
-    line_items: Optional[list[LineItem]] = None
+    id: str | None = None
+    transaction: BalanceTransaction | None = None
+    line_items: list[LineItem] | None = None
 
 
 class Cardholder(BaseModel):
-    id: Optional[str] = None
-    name: Optional[str] = None
+    id: str | None = None
+    name: str | None = None
 
 
 class Authorization(BaseModel):
-    id: Optional[str] = None
-    invoice: Optional[Invoice] = None
-    cardholder: Optional[Cardholder] = None
+    id: str | None = None
+    invoice: Invoice | None = None
+    cardholder: Cardholder | None = None
 
 
 BalanceTransaction.update_forward_refs()

@@ -5,13 +5,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
 class ParentWithDefault:
-    name: Optional[str] = 'default_name'
-    read_only_field: Optional[str] = None
+    name: str | None = 'default_name'
+    read_only_field: str | None = None
 
 
 @dataclass

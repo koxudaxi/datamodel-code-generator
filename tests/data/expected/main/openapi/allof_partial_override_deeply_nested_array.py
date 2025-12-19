@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Thing(BaseModel):
-    cube: Optional[list[list[list[str]]]] = [[['a']]]
+    cube: list[list[list[str]]] | None = [[['a']]]
 
 
 class Person(Thing):
-    cube: Optional[list[list[list[str]]]] = [[['b']]]
+    cube: list[list[list[str]]] | None = [[['b']]]

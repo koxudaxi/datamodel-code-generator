@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -17,8 +17,8 @@ class UserContextVariable(BaseModel):
 
 
 class IssueContextVariable(BaseModel):
-    id: Optional[int] = Field(None, description='The issue ID.')
-    key: Optional[str] = Field(None, description='The issue key.')
+    id: int | None = Field(None, description='The issue ID.')
+    key: str | None = Field(None, description='The issue key.')
     field_type: str = Field(
         ..., alias='@type', description='Type of custom context variable.'
     )
@@ -36,9 +36,7 @@ class CustomContextVariable2(IssueContextVariable):
     )
 
 
-class CustomContextVariable(
-    RootModel[Union[CustomContextVariable1, CustomContextVariable2]]
-):
-    root: Union[CustomContextVariable1, CustomContextVariable2] = Field(
+class CustomContextVariable(RootModel[CustomContextVariable1 | CustomContextVariable2]):
+    root: CustomContextVariable1 | CustomContextVariable2 = Field(
         ..., discriminator='field_type'
     )

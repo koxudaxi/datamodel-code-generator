@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import NotRequired, Optional, TypeAlias, TypedDict, Union
+from typing import NotRequired, TypeAlias, TypedDict
 
 
 class Cursors(TypedDict):
@@ -33,7 +33,7 @@ class Api(TypedDict):
     apiDocumentationUrl: NotRequired[str]
 
 
-Apis: TypeAlias = Optional[list[Api]]
+Apis: TypeAlias = list[Api] | None
 
 
 class EmailItem(TypedDict):
@@ -49,10 +49,10 @@ Email: TypeAlias = list[EmailItem]
 Id: TypeAlias = int
 
 
-Description: TypeAlias = Optional[str]
+Description: TypeAlias = str | None
 
 
-Name: TypeAlias = Optional[str]
+Name: TypeAlias = str | None
 
 
 Tag: TypeAlias = str
@@ -64,4 +64,4 @@ class Notes(TypedDict):
 
 class Options(TypedDict):
     comments: list[str]
-    oneOfComments: list[Union[str, float]]
+    oneOfComments: list[str | float]

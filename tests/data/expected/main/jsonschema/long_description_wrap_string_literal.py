@@ -4,21 +4,19 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class LongDescription(BaseModel):
-    summary: Optional[str] = Field(None, description='summary for object')
-    description: Optional[str] = Field(
+    summary: str | None = Field(None, description='summary for object')
+    description: str | None = Field(
         None,
         description=(
             'datamodel-code-generator. This code generator creates pydantic model from'
             ' an openapi file and others.'
         ),
     )
-    multi_line: Optional[str] = Field(
+    multi_line: str | None = Field(
         None,
         description=(
             'datamodel-code-generator\nThis code generator creates pydantic model from'

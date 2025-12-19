@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -20,9 +19,9 @@ class Type(Enum):
 
 
 class Organization(BaseModel):
-    id: Optional[id_1.Schema] = None
+    id: id_1.Schema | None = None
     type: Type
     name: name_1.Schema
-    contactPoint: Optional[ContactPoint.Schema] = None
-    sameAs: Optional[sameAs_1.Schema] = None
-    url: Optional[URI.Schema] = None
+    contactPoint: ContactPoint.Schema | None = None
+    sameAs: sameAs_1.Schema | None = None
+    url: URI.Schema | None = None

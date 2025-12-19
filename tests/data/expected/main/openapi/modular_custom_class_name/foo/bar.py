@@ -4,22 +4,22 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class CustomThing(BaseModel):
-    attributes: Optional[dict[str, Any]] = None
+    attributes: dict[str, Any] | None = None
 
 
 class CustomThang(BaseModel):
-    attributes: Optional[list[dict[str, Any]]] = None
+    attributes: list[dict[str, Any]] | None = None
 
 
 class CustomOthers(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class CustomClone(CustomThing):
-    others: Optional[CustomOthers] = None
+    others: CustomOthers | None = None

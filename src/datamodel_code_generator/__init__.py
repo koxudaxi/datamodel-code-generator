@@ -448,7 +448,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_decimal_for_multiple_of: bool = False,
     original_field_name_delimiter: str | None = None,
     use_double_quotes: bool = False,
-    use_union_operator: bool = False,
+    use_union_operator: bool = True,
     collapse_root_models: bool = False,
     skip_root_model: bool = False,
     use_type_alias: bool = False,

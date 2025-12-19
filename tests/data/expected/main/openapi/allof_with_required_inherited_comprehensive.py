@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, constr
 
@@ -16,11 +16,11 @@ class Status(Enum):
 
 
 class BaseType(BaseModel):
-    id: Optional[int] = None
+    id: int | None = None
 
 
 class ObjectWithProps(BaseModel):
-    nested: Optional[str] = None
+    nested: str | None = None
 
 
 class AllofPrimitivesWithConstraints(BaseModel):
@@ -36,41 +36,41 @@ class AllofWithUnique(BaseModel):
 
 
 class Level2(BaseModel):
-    level3: Optional[str] = None
+    level3: str | None = None
 
 
 class Level1(BaseModel):
-    level2: Optional[Level2] = None
+    level2: Level2 | None = None
 
 
 class DeepNested(BaseModel):
-    level1: Optional[Level1] = None
+    level1: Level1 | None = None
 
 
 class ProjectedEntity(BaseModel):
-    primitive_string: Optional[str] = None
-    primitive_int: Optional[int] = None
-    primitive_number: Optional[float] = None
-    primitive_bool: Optional[bool] = None
-    ref_field: Optional[BaseType] = None
-    enum_field: Optional[Status] = None
-    array_with_ref: Optional[list[BaseType]] = None
-    array_with_primitive: Optional[list[str]] = None
-    object_with_props: Optional[ObjectWithProps] = None
-    object_with_additional: Optional[dict[str, int]] = None
-    anyof_field: Optional[Union[str, int]] = None
-    oneof_field: Optional[Union[bool, float]] = None
-    allof_single_ref: Optional[BaseType] = None
-    allof_multiple_refs: Optional[BaseType] = None
-    allof_primitives_with_constraints: Optional[AllofPrimitivesWithConstraints] = None
-    allof_with_pattern: Optional[AllofWithPattern] = None
-    allof_with_unique: Optional[AllofWithUnique] = None
-    type_list: Optional[str] = None
-    deep_nested: Optional[DeepNested] = None
+    primitive_string: str | None = None
+    primitive_int: int | None = None
+    primitive_number: float | None = None
+    primitive_bool: bool | None = None
+    ref_field: BaseType | None = None
+    enum_field: Status | None = None
+    array_with_ref: list[BaseType] | None = None
+    array_with_primitive: list[str] | None = None
+    object_with_props: ObjectWithProps | None = None
+    object_with_additional: dict[str, int] | None = None
+    anyof_field: str | int | None = None
+    oneof_field: bool | float | None = None
+    allof_single_ref: BaseType | None = None
+    allof_multiple_refs: BaseType | None = None
+    allof_primitives_with_constraints: AllofPrimitivesWithConstraints | None = None
+    allof_with_pattern: AllofWithPattern | None = None
+    allof_with_unique: AllofWithUnique | None = None
+    type_list: str | None = None
+    deep_nested: DeepNested | None = None
 
 
 class Entity(ProjectedEntity):
-    extra: Optional[str] = None
+    extra: str | None = None
     primitive_string: str
     primitive_int: int
     primitive_number: float
@@ -81,12 +81,12 @@ class Entity(ProjectedEntity):
     array_with_primitive: list[str]
     object_with_props: dict[str, Any]
     object_with_additional: dict[str, int]
-    anyof_field: Union[str, int]
-    oneof_field: Union[bool, float]
+    anyof_field: str | int
+    oneof_field: bool | float
     allof_single_ref: BaseType
     allof_multiple_refs: BaseType
     allof_primitives_with_constraints: constr(min_length=5, max_length=100)
     allof_with_pattern: constr(regex=r'(?=^[a-z]+)(?=[0-9]$)')
     allof_with_unique: list[str]
-    type_list: Optional[str]
+    type_list: str | None
     deep_nested: dict[str, Any]

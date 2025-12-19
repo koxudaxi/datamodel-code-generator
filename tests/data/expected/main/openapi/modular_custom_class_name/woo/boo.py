@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .. import bar
@@ -13,7 +11,7 @@ from .._internal import CustomCocoa, CustomSource
 
 
 class CustomChocolate(BaseModel):
-    flavour: Optional[str] = None
-    source: Optional[CustomSource] = None
-    cocoa: Optional[CustomCocoa] = None
-    field: Optional[bar.CustomField] = None
+    flavour: str | None = None
+    source: CustomSource | None = None
+    cocoa: CustomCocoa | None = None
+    field: bar.CustomField | None = None

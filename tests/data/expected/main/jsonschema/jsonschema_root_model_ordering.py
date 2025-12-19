@@ -4,36 +4,36 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
 
 class Zoo(BaseModel):
-    animals: Optional[list[Animals]] = Field(default_factory=list, title='Animals')
+    animals: list[Animals] | None = Field(default_factory=list, title='Animals')
 
 
 class Dog(BaseModel):
     name: Literal['dog'] = Field('dog', title='woof')
-    friends: Optional[list[Friends]] = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
 
 
 class Cat(BaseModel):
     name: Literal['cat'] = Field('cat', title='meow')
-    friends: Optional[list[Friends]] = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
 
 
 class Bird(BaseModel):
     name: Literal['bird'] = Field('bird', title='chirp')
-    friends: Optional[list[Friends]] = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
 
 
-class Animals(RootModel[Union[Dog, Cat, Bird]]):
-    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
+class Animals(RootModel[Dog | Cat | Bird]):
+    root: Dog | Cat | Bird = Field(..., discriminator='name', title='Animal')
 
 
-class Friends(RootModel[Union[Dog, Cat, Bird]]):
-    root: Union[Dog, Cat, Bird] = Field(..., discriminator='name', title='Animal')
+class Friends(RootModel[Dog | Cat | Bird]):
+    root: Dog | Cat | Bird = Field(..., discriminator='name', title='Animal')
 
 
 Zoo.model_rebuild()

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Literal, Optional, TypeAlias
+from typing import Literal, TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -49,8 +49,8 @@ class Film:
     title: String
     vehicles: list[Vehicle]
     vehicles_ids: list[ID]
-    producer: Optional[String] = None
-    typename__: Optional[Literal['Film']] = 'Film'
+    producer: String | None = None
+    typename__: Literal['Film'] | None = 'Film'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -65,16 +65,16 @@ class Person:
     starships_ids: list[ID]
     vehicles: list[Vehicle]
     vehicles_ids: list[ID]
-    birth_year: Optional[String] = None
-    eye_color: Optional[String] = None
-    gender: Optional[String] = None
-    hair_color: Optional[String] = None
-    height: Optional[Int] = None
-    homeworld: Optional[Planet] = None
-    homeworld_id: Optional[ID] = None
-    mass: Optional[Int] = None
-    skin_color: Optional[String] = None
-    typename__: Optional[Literal['Person']] = 'Person'
+    birth_year: String | None = None
+    eye_color: String | None = None
+    gender: String | None = None
+    hair_color: String | None = None
+    height: Int | None = None
+    homeworld: Planet | None = None
+    homeworld_id: ID | None = None
+    mass: Int | None = None
+    skin_color: String | None = None
+    typename__: Literal['Person'] | None = 'Person'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -85,15 +85,15 @@ class Planet:
     name: String
     residents: list[Person]
     residents_ids: list[ID]
-    climate: Optional[String] = None
-    diameter: Optional[String] = None
-    gravity: Optional[String] = None
-    orbital_period: Optional[String] = None
-    population: Optional[String] = None
-    rotation_period: Optional[String] = None
-    surface_water: Optional[String] = None
-    terrain: Optional[String] = None
-    typename__: Optional[Literal['Planet']] = 'Planet'
+    climate: String | None = None
+    diameter: String | None = None
+    gravity: String | None = None
+    orbital_period: String | None = None
+    population: String | None = None
+    rotation_period: String | None = None
+    surface_water: String | None = None
+    terrain: String | None = None
+    typename__: Literal['Planet'] | None = 'Planet'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -104,15 +104,15 @@ class Species:
     name: String
     people: list[Person]
     people_ids: list[ID]
-    average_height: Optional[String] = None
-    average_lifespan: Optional[String] = None
-    classification: Optional[String] = None
-    designation: Optional[String] = None
-    eye_colors: Optional[String] = None
-    hair_colors: Optional[String] = None
-    language: Optional[String] = None
-    skin_colors: Optional[String] = None
-    typename__: Optional[Literal['Species']] = 'Species'
+    average_height: String | None = None
+    average_lifespan: String | None = None
+    classification: String | None = None
+    designation: String | None = None
+    eye_colors: String | None = None
+    hair_colors: String | None = None
+    language: String | None = None
+    skin_colors: String | None = None
+    typename__: Literal['Species'] | None = 'Species'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -123,19 +123,19 @@ class Starship:
     name: String
     pilots: list[Person]
     pilots_ids: list[ID]
-    MGLT: Optional[String] = None
-    cargo_capacity: Optional[String] = None
-    consumables: Optional[String] = None
-    cost_in_credits: Optional[String] = None
-    crew: Optional[String] = None
-    hyperdrive_rating: Optional[String] = None
-    length: Optional[String] = None
-    manufacturer: Optional[String] = None
-    max_atmosphering_speed: Optional[String] = None
-    model: Optional[String] = None
-    passengers: Optional[String] = None
-    starship_class: Optional[String] = None
-    typename__: Optional[Literal['Starship']] = 'Starship'
+    MGLT: String | None = None
+    cargo_capacity: String | None = None
+    consumables: String | None = None
+    cost_in_credits: String | None = None
+    crew: String | None = None
+    hyperdrive_rating: String | None = None
+    length: String | None = None
+    manufacturer: String | None = None
+    max_atmosphering_speed: String | None = None
+    model: String | None = None
+    passengers: String | None = None
+    starship_class: String | None = None
+    typename__: Literal['Starship'] | None = 'Starship'
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -146,14 +146,14 @@ class Vehicle:
     name: String
     pilots: list[Person]
     pilots_ids: list[ID]
-    cargo_capacity: Optional[String] = None
-    consumables: Optional[String] = None
-    cost_in_credits: Optional[String] = None
-    crew: Optional[String] = None
-    length: Optional[String] = None
-    manufacturer: Optional[String] = None
-    max_atmosphering_speed: Optional[String] = None
-    model: Optional[String] = None
-    passengers: Optional[String] = None
-    vehicle_class: Optional[String] = None
-    typename__: Optional[Literal['Vehicle']] = 'Vehicle'
+    cargo_capacity: String | None = None
+    consumables: String | None = None
+    cost_in_credits: String | None = None
+    crew: String | None = None
+    length: String | None = None
+    manufacturer: String | None = None
+    max_atmosphering_speed: String | None = None
+    model: String | None = None
+    passengers: String | None = None
+    vehicle_class: String | None = None
+    typename__: Literal['Vehicle'] | None = 'Vehicle'

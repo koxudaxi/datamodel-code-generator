@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -14,20 +12,20 @@ class Member(BaseModel):
 
 
 class User(BaseModel):
-    name: Optional[str] = None
-    pet: Optional[Animal] = None
-    home: Optional[House] = None
+    name: str | None = None
+    pet: Animal | None = None
+    home: House | None = None
 
 
 class Animal(BaseModel):
-    name: Optional[str] = None
-    breeder: Optional[User] = None
-    home: Optional[House] = None
+    name: str | None = None
+    breeder: User | None = None
+    home: House | None = None
 
 
 class House(BaseModel):
-    address: Optional[str] = None
-    owner: Optional[User] = None
+    address: str | None = None
+    owner: User | None = None
 
 
 Member.update_forward_refs()

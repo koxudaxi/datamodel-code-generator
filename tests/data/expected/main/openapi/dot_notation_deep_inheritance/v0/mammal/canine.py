@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from .. import Animal
 
 
 class Puppy(Animal):
-    age_weeks: Optional[int] = None
+    age_weeks: int | None = None

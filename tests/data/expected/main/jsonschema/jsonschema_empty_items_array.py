@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    datum_kwargs: Optional[dict[str, list[Any]]] = None
-    simple_list: Optional[list[Any]] = None
+    datum_kwargs: dict[str, list[Any]] | None = None
+    simple_list: list[Any] | None = None

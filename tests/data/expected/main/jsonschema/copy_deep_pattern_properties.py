@@ -4,35 +4,33 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel, Field, constr
 
 
 class MetadataRequest(BaseModel):
-    tags: Optional[dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str]] = Field(
+    tags: dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str] | None = Field(
         None, description='Dynamic key-value metadata'
     )
 
 
 class Metadata(BaseModel):
-    tags: Optional[dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str]] = Field(
+    tags: dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str] | None = Field(
         None, description='Dynamic key-value metadata'
     )
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class ExtendedMetadataRequest(BaseModel):
-    tags: Optional[dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str]] = Field(
+    tags: dict[constr(pattern=r'^[a-z][a-z0-9_]*$'), str] | None = Field(
         None, description='Dynamic key-value metadata'
     )
-    owner: Optional[str] = None
+    owner: str | None = None
 
 
 class ExtendedMetadata(Metadata):
     id: int
-    owner: Optional[str] = None
+    owner: str | None = None
 
 
 class Model(BaseModel):
-    metadata: Optional[ExtendedMetadata] = None
+    metadata: ExtendedMetadata | None = None

@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .. import model_a
 
 
 class QualityEvaluationRequest(BaseModel):
-    input: Optional[model_a.Output] = None
+    input: model_a.Output | None = None

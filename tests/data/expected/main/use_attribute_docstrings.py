@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, ConfigDict
 
 
@@ -17,7 +15,7 @@ class Person(BaseModel):
     """
     The person's full name
     """
-    age: Optional[int] = None
+    age: int | None = None
     """
     The person's age in years
     """

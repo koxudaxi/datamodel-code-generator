@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional, Union
 
 from pydantic import BaseModel
 
@@ -21,12 +20,12 @@ class Kind(BaseModel):
 
 
 class ExtendedProcessingTask1(BaseModel):
-    comment: Optional[str] = None
+    comment: str | None = None
 
 
 class ProcessingStatusUnion(BaseModel):
-    id: Optional[int] = None
-    description: Optional[str] = None
+    id: int | None = None
+    description: str | None = None
 
 
 class Model(BaseModel):
@@ -34,7 +33,7 @@ class Model(BaseModel):
 
 
 class ExtendedProcessingTask(BaseModel):
-    __root__: Union[Model, ExtendedProcessingTask1]
+    __root__: Model | ExtendedProcessingTask1
 
 
 class ExtendedProcessingTasks(BaseModel):
@@ -42,12 +41,12 @@ class ExtendedProcessingTasks(BaseModel):
 
 
 class ProcessingTask(BaseModel):
-    processing_status_union: Optional[
-        Union[ProcessingStatusUnion, ExtendedProcessingTask, ProcessingStatus]
-    ] = 'COMPLETED'
-    processing_status: Optional[ProcessingStatus] = 'COMPLETED'
-    name: Optional[str] = None
-    kind: Optional[Kind] = None
+    processing_status_union: (
+        ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
+    ) = 'COMPLETED'
+    processing_status: ProcessingStatus | None = 'COMPLETED'
+    name: str | None = None
+    kind: Kind | None = None
 
 
 Model.update_forward_refs()

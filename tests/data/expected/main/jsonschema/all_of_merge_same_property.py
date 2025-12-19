@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Links(BaseModel):
-    self: Optional[str] = None
-    collection: Optional[str] = None
+    self: str | None = None
+    collection: str | None = None
 
 
 class Model(BaseModel):
@@ -19,7 +17,7 @@ class Model(BaseModel):
 
 
 class Links1(BaseModel):
-    self: Optional[str] = None
+    self: str | None = None
 
 
 class SelfLink(BaseModel):
@@ -27,7 +25,7 @@ class SelfLink(BaseModel):
 
 
 class Links2(BaseModel):
-    collection: Optional[str] = None
+    collection: str | None = None
 
 
 class CollectionLink(BaseModel):

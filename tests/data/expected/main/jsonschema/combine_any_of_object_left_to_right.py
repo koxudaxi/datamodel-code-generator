@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
@@ -14,9 +12,9 @@ class MySchema1(BaseModel):
         extra='allow',
     )
     AddressLine1: str
-    AddressLine2: Optional[str] = None
-    City: Optional[str] = None
-    State: Optional[str] = None
+    AddressLine2: str | None = None
+    City: str | None = None
+    State: str | None = None
     ZipCode: str
 
 
@@ -25,14 +23,14 @@ class MySchema2(BaseModel):
         extra='allow',
     )
     AddressLine1: str
-    AddressLine2: Optional[str] = None
-    City: Optional[str] = None
-    County: Optional[str] = None
+    AddressLine2: str | None = None
+    City: str | None = None
+    County: str | None = None
     PostCode: str
 
 
 class US(BaseModel):
-    County: Optional[str] = None
+    County: str | None = None
     PostCode: str
 
 
@@ -41,11 +39,11 @@ class MySchema3(US):
         extra='allow',
     )
     AddressLine1: str
-    AddressLine2: Optional[str] = None
-    City: Optional[str] = None
+    AddressLine2: str | None = None
+    City: str | None = None
 
 
-class MySchema(RootModel[Union[MySchema1, MySchema2, MySchema3]]):
-    root: Union[MySchema1, MySchema2, MySchema3] = Field(
+class MySchema(RootModel[MySchema1 | MySchema2 | MySchema3]):
+    root: MySchema1 | MySchema2 | MySchema3 = Field(
         ..., title='My schema', union_mode='left_to_right'
     )

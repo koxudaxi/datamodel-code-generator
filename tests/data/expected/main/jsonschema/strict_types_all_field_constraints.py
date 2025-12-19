@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import (
     BaseModel,
     Field,
@@ -18,14 +16,14 @@ from pydantic import (
 
 
 class User(BaseModel):
-    name: Optional[StrictStr] = Field(None, example='ken')
-    age: Optional[StrictInt] = None
-    salary: Optional[StrictInt] = Field(None, ge=0)
-    debt: Optional[StrictInt] = Field(None, le=0)
-    loan: Optional[StrictFloat] = Field(None, le=0.0)
-    tel: Optional[StrictStr] = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
-    height: Optional[StrictFloat] = Field(None, ge=0.0)
-    weight: Optional[StrictFloat] = Field(None, ge=0.0)
-    score: Optional[StrictFloat] = Field(None, ge=1e-08)
-    active: Optional[StrictBool] = None
-    photo: Optional[StrictBytes] = Field(None, min_length=100)
+    name: StrictStr | None = Field(None, example='ken')
+    age: StrictInt | None = None
+    salary: StrictInt | None = Field(None, ge=0)
+    debt: StrictInt | None = Field(None, le=0)
+    loan: StrictFloat | None = Field(None, le=0.0)
+    tel: StrictStr | None = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+    height: StrictFloat | None = Field(None, ge=0.0)
+    weight: StrictFloat | None = Field(None, ge=0.0)
+    score: StrictFloat | None = Field(None, ge=1e-08)
+    active: StrictBool | None = None
+    photo: StrictBytes | None = Field(None, min_length=100)

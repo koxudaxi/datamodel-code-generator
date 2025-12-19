@@ -4,20 +4,18 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, conint, constr
 
 
 class Parent1(BaseModel):
-    name: Optional[constr(min_length=1)] = None
+    name: constr(min_length=1) | None = None
 
 
 class Parent2(BaseModel):
-    name: Optional[constr(min_length=5)] = None
-    age: Optional[conint(ge=0)] = None
+    name: constr(min_length=5) | None = None
+    age: conint(ge=0) | None = None
 
 
 class Child(BaseModel):
-    name: Optional[constr(min_length=5, max_length=100)] = None
-    age: Optional[conint(ge=0, le=150)] = None
+    name: constr(min_length=5, max_length=100) | None = None
+    age: conint(ge=0, le=150) | None = None

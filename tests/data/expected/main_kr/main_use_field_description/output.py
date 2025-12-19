@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AnyUrl, BaseModel
 
 
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Pets(BaseModel):
@@ -22,7 +20,7 @@ class Pets(BaseModel):
 class User(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Users(BaseModel):
@@ -43,20 +41,20 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = None
+    apiKey: str | None = None
     """
     To be used as a dataset parameter value.
     Now also with multi-line docstrings.
     """
-    apiVersionNumber: Optional[str] = None
+    apiVersionNumber: str | None = None
     """
     To be used as a version parameter value
     """
-    apiUrl: Optional[AnyUrl] = None
+    apiUrl: AnyUrl | None = None
     """
     The URL describing the dataset's fields
     """
-    apiDocumentationUrl: Optional[AnyUrl] = None
+    apiDocumentationUrl: AnyUrl | None = None
     """
     A URL to the API console for each API
     """
@@ -67,8 +65,8 @@ class Apis(BaseModel):
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

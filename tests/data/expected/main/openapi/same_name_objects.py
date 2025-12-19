@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Extra
 
 
@@ -17,7 +15,7 @@ class Pets(BaseModel):
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Error(BaseModel):
@@ -26,7 +24,7 @@ class Error(BaseModel):
 
 
 class Resolved(BaseModel):
-    resolved: Optional[list[str]] = None
+    resolved: list[str] | None = None
 
 
 class PetsModel(BaseModel):

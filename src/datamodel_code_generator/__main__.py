@@ -413,7 +413,7 @@ class Config(BaseModel):
     use_specialized_enum: bool = True
     strict_nullable: bool = False
     use_generic_container_types: bool = False
-    use_union_operator: bool = False
+    use_union_operator: bool = True
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None  # noqa: UP045
     disable_appending_item_suffix: bool = False

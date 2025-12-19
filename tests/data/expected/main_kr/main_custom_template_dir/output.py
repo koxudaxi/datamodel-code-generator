@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Pets(BaseModel):
@@ -22,7 +20,7 @@ class Pets(BaseModel):
 class User(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Users(BaseModel):
@@ -43,10 +41,10 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = None
-    apiVersionNumber: Optional[str] = None
-    apiUrl: Optional[AnyUrl] = None
-    apiDocumentationUrl: Optional[AnyUrl] = None
+    apiKey: str | None = None
+    apiVersionNumber: str | None = None
+    apiUrl: AnyUrl | None = None
+    apiDocumentationUrl: AnyUrl | None = None
 
 
 class Apis(BaseModel):
@@ -54,8 +52,8 @@ class Apis(BaseModel):
 
 
 class Event(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Result(BaseModel):
-    event: Optional[Event] = None
+    event: Event | None = None

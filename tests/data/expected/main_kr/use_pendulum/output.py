@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pendulum import Date, DateTime, Duration
 from pydantic import BaseModel
 
@@ -13,5 +11,5 @@ from pydantic import BaseModel
 class Event(BaseModel):
     name: str
     created_at: DateTime
-    event_date: Optional[Date] = None
-    duration: Optional[Duration] = None
+    event_date: Date | None = None
+    duration: Duration | None = None

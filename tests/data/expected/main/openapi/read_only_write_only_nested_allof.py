@@ -4,30 +4,28 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class BaseTimestamps(BaseModel):
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class ExtendedTimestamps(BaseTimestamps):
-    updated_at: Optional[AwareDatetime] = None
+    updated_at: AwareDatetime | None = None
 
 
 class UserRequest(BaseModel):
     name: str
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class UserResponse(BaseModel):
-    created_at: Optional[AwareDatetime] = None
-    updated_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
     name: str
 
 
 class User(ExtendedTimestamps):
     name: str
-    password: Optional[str] = None
+    password: str | None = None

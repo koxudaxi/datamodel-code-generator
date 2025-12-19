@@ -4,16 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
 class Cursors(BaseModel):
-    prev: Optional[str] = Field(...)
+    prev: str | None = Field(...)
     next: str = 'last'
     index: float
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class TopLevel(BaseModel):
@@ -29,29 +27,29 @@ class User(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: Optional[str] = Field(
+    apiKey: str | None = Field(
         None, description='To be used as a dataset parameter value'
     )
-    apiVersionNumber: Optional[str] = Field(
+    apiVersionNumber: str | None = Field(
         None, description='To be used as a version parameter value'
     )
-    apiUrl: Optional[AnyUrl] = Field(
+    apiUrl: AnyUrl | None = Field(
         None, description="The URL describing the dataset's fields"
     )
-    apiDocumentationUrl: Optional[AnyUrl] = Field(
+    apiDocumentationUrl: AnyUrl | None = Field(
         None, description='A URL to the API console for each API'
     )
 
 
 class Apis(BaseModel):
-    __root__: Optional[list[Api]] = Field(...)
+    __root__: list[Api] | None = Field(...)
 
 
 class EmailItem(BaseModel):
     author: str
     address: str = Field(..., description='email address')
     description: str = 'empty'
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Email(BaseModel):
@@ -63,11 +61,11 @@ class Id(BaseModel):
 
 
 class Description(BaseModel):
-    __root__: Optional[str] = 'example'
+    __root__: str | None = 'example'
 
 
 class Name(BaseModel):
-    __root__: Optional[str] = None
+    __root__: str | None = None
 
 
 class Tag(BaseModel):
@@ -79,5 +77,5 @@ class Notes(BaseModel):
 
 
 class Options(BaseModel):
-    comments: list[Optional[str]]
-    oneOfComments: list[Union[Optional[str], Optional[float]]]
+    comments: list[str | None]
+    oneOfComments: list[str | float | None]

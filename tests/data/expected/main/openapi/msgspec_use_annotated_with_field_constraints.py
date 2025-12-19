@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, TypeAlias, Union
+from typing import Annotated, TypeAlias
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
@@ -12,7 +12,7 @@ from msgspec import UNSET, Meta, Struct, UnsetType
 class Pet(Struct):
     id: Annotated[int, Meta(ge=0, le=9223372036854775807)]
     name: Annotated[str, Meta(max_length=256)]
-    tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
+    tag: Annotated[str, Meta(max_length=64)] | UnsetType = UNSET
 
 
 Pets: TypeAlias = list[Pet]
@@ -31,17 +31,13 @@ class User(Struct):
     id: Annotated[int, Meta(ge=0)]
     name: Annotated[str, Meta(max_length=256)]
     uid: UID
-    tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
-    phones: Union[list[Phone], UnsetType] = UNSET
-    fax: Union[list[FaxItem], UnsetType] = UNSET
-    height: Union[Annotated[Union[int, float], Meta(ge=1.0, le=300.0)], UnsetType] = (
-        UNSET
-    )
-    weight: Union[Annotated[Union[float, int], Meta(ge=1.0, le=1000.0)], UnsetType] = (
-        UNSET
-    )
-    age: Union[Annotated[int, Meta(gt=0, le=200)], UnsetType] = UNSET
-    rating: Union[Annotated[float, Meta(gt=0.0, le=5.0)], UnsetType] = UNSET
+    tag: Annotated[str, Meta(max_length=64)] | UnsetType = UNSET
+    phones: list[Phone] | UnsetType = UNSET
+    fax: list[FaxItem] | UnsetType = UNSET
+    height: Annotated[int | float, Meta(ge=1.0, le=300.0)] | UnsetType = UNSET
+    weight: Annotated[float | int, Meta(ge=1.0, le=1000.0)] | UnsetType = UNSET
+    age: Annotated[int, Meta(gt=0, le=200)] | UnsetType = UNSET
+    rating: Annotated[float, Meta(gt=0.0, le=5.0)] | UnsetType = UNSET
 
 
 Users: TypeAlias = list[User]
@@ -59,33 +55,33 @@ class Error(Struct):
 
 
 class Api(Struct):
-    apiKey: Union[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')],
-        UnsetType,
-    ] = UNSET
-    apiVersionNumber: Union[
-        Annotated[str, Meta(description='To be used as a version parameter value')],
-        UnsetType,
-    ] = UNSET
-    apiUrl: Union[
+    apiKey: (
+        Annotated[str, Meta(description='To be used as a dataset parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiVersionNumber: (
+        Annotated[str, Meta(description='To be used as a version parameter value')]
+        | UnsetType
+    ) = UNSET
+    apiUrl: (
         Annotated[
             str,
             Meta(description="The URL describing the dataset's fields", min_length=1),
-        ],
-        UnsetType,
-    ] = UNSET
-    apiDocumentationUrl: Union[
-        Annotated[str, Meta(description='A URL to the API console for each API')],
-        UnsetType,
-    ] = UNSET
+        ]
+        | UnsetType
+    ) = UNSET
+    apiDocumentationUrl: (
+        Annotated[str, Meta(description='A URL to the API console for each API')]
+        | UnsetType
+    ) = UNSET
 
 
 Apis: TypeAlias = list[Api]
 
 
 class Event(Struct):
-    name: Union[str, UnsetType] = UNSET
+    name: str | UnsetType = UNSET
 
 
 class Result(Struct):
-    event: Union[Event, UnsetType] = UNSET
+    event: Event | UnsetType = UNSET

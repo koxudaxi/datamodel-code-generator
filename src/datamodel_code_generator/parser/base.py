@@ -1897,6 +1897,7 @@ class Parser(ABC):
             if isinstance(model, TypeStatement):
                 continue
 
+            has_forward_ref = False
             for field in model.fields:
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
@@ -1912,6 +1913,10 @@ class Parser(ABC):
                     source_index = model_index.get(name)
                     if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
+                        has_forward_ref = True
+
+            if has_forward_ref:
+                model.has_forward_reference = True
 
     @classmethod
     def __postprocess_result_modules(cls, results: dict[tuple[str, ...], Result]) -> dict[tuple[str, ...], Result]:
@@ -2573,6 +2578,7 @@ class Parser(ABC):
             self.__apply_discriminator_type(models, imports)
             self.__set_one_literal_on_default(models)
             self.__fix_dataclass_field_ordering(models)
+            self.__update_type_aliases(models)
 
             processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
 
@@ -2639,7 +2645,6 @@ class Parser(ABC):
                             export_imports.add_export(m.reference.short_name)
                     result += [export_imports.dump_all(multiline=True) + "\n"]
 
-                self.__update_type_aliases(models)
                 code = dump_templates(models)
                 result += [code]
 

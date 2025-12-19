@@ -113,6 +113,7 @@ This documentation is auto-generated from test cases.
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+- [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
 
 ### O {#o}
 
@@ -177,7 +178,6 @@ This documentation is auto-generated from test cases.
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
-- [`--use-union-operator`](typing-customization.md#use-union-operator)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
 
 ### V {#v}

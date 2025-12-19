@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import subns
 
 
 class Wrapper(BaseModel):
-    item: Optional[subns.Item] = None
+    item: subns.Item | None = None

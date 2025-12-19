@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, constr
 
 
@@ -14,4 +12,4 @@ class EmptyParent(BaseModel):
 
 
 class Child(EmptyParent):
-    name: Optional[constr(max_length=100)] = None
+    name: constr(max_length=100) | None = None

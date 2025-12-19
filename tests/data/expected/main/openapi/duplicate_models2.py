@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, RootModel
 
@@ -15,15 +15,15 @@ class PetType(Enum):
 
 
 class PetDetails(BaseModel):
-    race: Optional[str] = None
+    race: str | None = None
 
 
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
     type: PetType
-    details: Optional[PetDetails] = None
+    details: PetDetails | None = None
 
 
 class CarType(Enum):
@@ -31,15 +31,15 @@ class CarType(Enum):
 
 
 class CarDetails(BaseModel):
-    brand: Optional[str] = None
+    brand: str | None = None
 
 
 class Car(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
     type: CarType
-    details: Optional[CarDetails] = None
+    details: CarDetails | None = None
 
 
 class Cars(RootModel[Any]):

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -28,5 +28,5 @@ class RequestV2(RequestBase):
     version: Literal['v2']
 
 
-class Request(RootModel[Union[RequestV1, RequestV2]]):
-    root: Union[RequestV1, RequestV2] = Field(..., discriminator='version')
+class Request(RootModel[RequestV1 | RequestV2]):
+    root: RequestV1 | RequestV2 = Field(..., discriminator='version')

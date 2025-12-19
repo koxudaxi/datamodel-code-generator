@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Nested15(BaseModel):
-    value: Optional[int] = None
+    value: int | None = None
 
 
 class GenomeStudio20MethylationModule(BaseModel):
-    version: Optional[str] = None
-    nested: Optional[Nested15] = Field(None, title='Nested 1.5')
+    version: str | None = None
+    nested: Nested15 | None = Field(None, title='Nested 1.5')

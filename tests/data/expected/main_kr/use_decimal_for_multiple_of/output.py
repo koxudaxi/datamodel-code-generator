@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, condecimal, confloat
 
 
 class Model(BaseModel):
-    price: Optional[condecimal(ge=0, le=99999.99, multiple_of=0.01)] = None
-    quantity: Optional[condecimal(multiple_of=0.1)] = None
-    rate: Optional[condecimal(multiple_of=0.001, lt=1.0, gt=0.0)] = None
-    simple_float: Optional[confloat(ge=0.0, le=100.0)] = None
+    price: condecimal(ge=0, le=99999.99, multiple_of=0.01) | None = None
+    quantity: condecimal(multiple_of=0.1) | None = None
+    rate: condecimal(multiple_of=0.001, lt=1.0, gt=0.0) | None = None
+    simple_float: confloat(ge=0.0, le=100.0) | None = None

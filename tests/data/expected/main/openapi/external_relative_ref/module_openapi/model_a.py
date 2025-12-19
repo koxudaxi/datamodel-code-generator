@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Input(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Output(BaseModel):
-    output: Optional[str] = None
-    input: Optional[Input] = None
+    output: str | None = None
+    input: Input | None = None

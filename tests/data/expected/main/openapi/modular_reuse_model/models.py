@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -19,15 +19,15 @@ class Species(Enum):
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
-    species: Optional[Species] = None
+    tag: str | None = None
+    species: Species | None = None
 
 
 class User(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class Event(BaseModel):
-    name: Optional[Union[str, float, int, bool, dict[str, Any], list[str]]] = None
+    name: str | float | int | bool | dict[str, Any] | list[str] | None = None

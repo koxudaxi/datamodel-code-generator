@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from .empty_parent.nested import deep as deep_1
@@ -13,6 +11,6 @@ from .nested import deep
 
 
 class NestedPerson(BaseModel):
-    nested_deep_childJson: Optional[deep.Json] = None
-    nested_deep_childAnother: Optional[deep.Another] = None
-    empty_parent_nested_deep_childJson: Optional[deep_1.Json] = None
+    nested_deep_childJson: deep.Json | None = None
+    nested_deep_childAnother: deep.Another | None = None
+    empty_parent_nested_deep_childJson: deep_1.Json | None = None

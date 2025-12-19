@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, RootModel
 
@@ -14,7 +13,7 @@ class Animal(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    kind: Optional[Kind] = None
+    kind: Kind | None = None
     """
     The kind of the animal
     """
@@ -33,7 +32,7 @@ class Pet(BaseModel):
     model_config = ConfigDict(
         extra='forbid',
     )
-    kind: Optional[Kind] = None
+    kind: Kind | None = None
     """
     The kind of the pet
     """

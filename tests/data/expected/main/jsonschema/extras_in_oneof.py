@@ -4,42 +4,40 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, Field
 
 
 class OneofProp(BaseModel):
-    shared_prop: Optional[str] = Field(
+    shared_prop: str | None = Field(
         None, json_schema_extra={'x-shared': 'shared_value'}
     )
-    variant_a_prop: Optional[str] = Field(
+    variant_a_prop: str | None = Field(
         None, json_schema_extra={'x-variant': 'variant_a_value'}
     )
 
 
 class OneofProp1(BaseModel):
-    shared_prop: Optional[str] = Field(
+    shared_prop: str | None = Field(
         None, json_schema_extra={'x-shared': 'shared_value'}
     )
-    variant_b_prop: Optional[int] = Field(
+    variant_b_prop: int | None = Field(
         None, json_schema_extra={'x-variant': 'variant_b_value'}
     )
 
 
 class AnyofProp(BaseModel):
-    any_a_prop: Optional[str] = Field(None, json_schema_extra={'x-any': 'any_a_value'})
+    any_a_prop: str | None = Field(None, json_schema_extra={'x-any': 'any_a_value'})
 
 
 class AnyofProp1(BaseModel):
-    any_b_prop: Optional[bool] = Field(None, json_schema_extra={'x-any': 'any_b_value'})
+    any_b_prop: bool | None = Field(None, json_schema_extra={'x-any': 'any_b_value'})
 
 
 class ExtrasInOneOf(BaseModel):
-    simple_prop: Optional[str] = Field(
+    simple_prop: str | None = Field(
         None, json_schema_extra={'x-custom': 'simple_value'}
     )
-    oneof_prop: Optional[Union[OneofProp, OneofProp1]] = Field(
+    oneof_prop: OneofProp | OneofProp1 | None = Field(
         None, json_schema_extra={'x-parent-custom': 'parent_value'}
     )
-    anyof_prop: Optional[Union[AnyofProp, AnyofProp1]] = None
+    anyof_prop: AnyofProp | AnyofProp1 | None = None

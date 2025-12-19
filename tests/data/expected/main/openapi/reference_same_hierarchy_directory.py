@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -16,4 +14,4 @@ class CatDetails(BaseModel):
 
 class CatInfo(BaseModel):
     cat_id: str = Field(..., description='ID of this cat')
-    details: Optional[CatDetails] = None
+    details: CatDetails | None = None

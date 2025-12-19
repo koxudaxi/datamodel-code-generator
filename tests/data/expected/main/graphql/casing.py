@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Optional, TypeAlias
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -34,18 +34,18 @@ class Lowercase(Enum):
 class Conflict(BaseModel):
     Bar: Int
     bar: String
-    typename__: Optional[Literal['Conflict']] = Field('Conflict', alias='__typename')
+    typename__: Literal['Conflict'] | None = Field('Conflict', alias='__typename')
 
 
 class ConflictModel(BaseModel):
     Foo: Int
     foo: String
-    typename__: Optional[Literal['conflict']] = Field('conflict', alias='__typename')
+    typename__: Literal['conflict'] | None = Field('conflict', alias='__typename')
 
 
 class Lowercasetype(BaseModel):
     foo: Int
-    typename__: Optional[Literal['lowercasetype']] = Field(
+    typename__: Literal['lowercasetype'] | None = Field(
         'lowercasetype', alias='__typename'
     )
 
@@ -55,4 +55,4 @@ class Ref(BaseModel):
     baz: Lowercasetype
     eggs: Conflict
     spam: ConflictModel
-    typename__: Optional[Literal['Ref']] = Field('Ref', alias='__typename')
+    typename__: Literal['Ref'] | None = Field('Ref', alias='__typename')

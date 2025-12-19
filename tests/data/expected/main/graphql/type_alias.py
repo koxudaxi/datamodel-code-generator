@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, TypeAlias, Union
+from typing import Literal, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
@@ -32,13 +32,13 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 class Person(BaseModel):
     age: Int
     name: String
-    typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
+    typename__: Literal['Person'] | None = Field('Person', alias='__typename')
 
 
 class Pet(BaseModel):
     name: String
     type: String
-    typename__: Optional[Literal['Pet']] = Field('Pet', alias='__typename')
+    typename__: Literal['Pet'] | None = Field('Pet', alias='__typename')
 
 
 UnionType: TypeAlias = Union[
@@ -48,9 +48,9 @@ UnionType: TypeAlias = Union[
 
 
 class ModelWithTypeAliasField(BaseModel):
-    simple_field: Optional[SimpleString] = None
-    string_field: Optional[String] = None
-    union_field: Optional[UnionType] = None
-    typename__: Optional[Literal['ModelWithTypeAliasField']] = Field(
+    simple_field: SimpleString | None = None
+    string_field: String | None = None
+    union_field: UnionType | None = None
+    typename__: Literal['ModelWithTypeAliasField'] | None = Field(
         'ModelWithTypeAliasField', alias='__typename'
     )

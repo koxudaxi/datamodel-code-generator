@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import ref2
@@ -13,5 +11,5 @@ from .other import ref2 as ref2_1
 
 
 class Model(BaseModel):
-    ref1: Optional[ref2.Model] = None
-    other_ref1: Optional[ref2_1.Other] = None
+    ref1: ref2.Model | None = None
+    other_ref1: ref2_1.Other | None = None

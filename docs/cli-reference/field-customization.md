@@ -243,15 +243,13 @@ providing fine-grained control over generated names independent of schema defini
             
             from __future__ import annotations
             
-            from typing import Optional
-            
             from pydantic import AnyUrl, BaseModel, Field
             
             
             class Pet(BaseModel):
                 id_: int = Field(..., alias='id')
                 name_: str = Field(..., alias='name')
-                tag: Optional[str] = None
+                tag: str | None = None
             
             
             class Pets(BaseModel):
@@ -261,7 +259,7 @@ providing fine-grained control over generated names independent of schema defini
             class User(BaseModel):
                 id_: int = Field(..., alias='id')
                 name_: str = Field(..., alias='name')
-                tag: Optional[str] = None
+                tag: str | None = None
             
             
             class Users(BaseModel):
@@ -282,16 +280,16 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Api(BaseModel):
-                apiKey: Optional[str] = Field(
+                apiKey: str | None = Field(
                     None, description='To be used as a dataset parameter value'
                 )
-                apiVersionNumber: Optional[str] = Field(
+                apiVersionNumber: str | None = Field(
                     None, description='To be used as a version parameter value'
                 )
-                apiUrl: Optional[AnyUrl] = Field(
+                apiUrl: AnyUrl | None = Field(
                     None, description="The URL describing the dataset's fields"
                 )
-                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                apiDocumentationUrl: AnyUrl | None = Field(
                     None, description='A URL to the API console for each API'
                 )
             
@@ -301,11 +299,11 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Event(BaseModel):
-                name_: Optional[str] = Field(None, alias='name')
+                name_: str | None = Field(None, alias='name')
             
             
             class Result(BaseModel):
-                event: Optional[Event] = None
+                event: Event | None = None
             ```
 
         === "msgspec"
@@ -317,7 +315,7 @@ providing fine-grained control over generated names independent of schema defini
             
             from __future__ import annotations
             
-            from typing import Annotated, TypeAlias, Union
+            from typing import Annotated, TypeAlias
             
             from msgspec import UNSET, Meta, Struct, UnsetType, field
             
@@ -325,7 +323,7 @@ providing fine-grained control over generated names independent of schema defini
             class Pet(Struct):
                 id_: int = field(name='id')
                 name_: str = field(name='name')
-                tag: Union[str, UnsetType] = UNSET
+                tag: str | UnsetType = UNSET
             
             
             Pets: TypeAlias = list[Pet]
@@ -334,7 +332,7 @@ providing fine-grained control over generated names independent of schema defini
             class User(Struct):
                 id_: int = field(name='id')
                 name_: str = field(name='name')
-                tag: Union[str, UnsetType] = UNSET
+                tag: str | UnsetType = UNSET
             
             
             Users: TypeAlias = list[User]
@@ -352,33 +350,33 @@ providing fine-grained control over generated names independent of schema defini
             
             
             class Api(Struct):
-                apiKey: Union[
-                    Annotated[str, Meta(description='To be used as a dataset parameter value')],
-                    UnsetType,
-                ] = UNSET
-                apiVersionNumber: Union[
-                    Annotated[str, Meta(description='To be used as a version parameter value')],
-                    UnsetType,
-                ] = UNSET
-                apiUrl: Union[
-                    Annotated[str, Meta(description="The URL describing the dataset's fields")],
-                    UnsetType,
-                ] = UNSET
-                apiDocumentationUrl: Union[
-                    Annotated[str, Meta(description='A URL to the API console for each API')],
-                    UnsetType,
-                ] = UNSET
+                apiKey: (
+                    Annotated[str, Meta(description='To be used as a dataset parameter value')]
+                    | UnsetType
+                ) = UNSET
+                apiVersionNumber: (
+                    Annotated[str, Meta(description='To be used as a version parameter value')]
+                    | UnsetType
+                ) = UNSET
+                apiUrl: (
+                    Annotated[str, Meta(description="The URL describing the dataset's fields")]
+                    | UnsetType
+                ) = UNSET
+                apiDocumentationUrl: (
+                    Annotated[str, Meta(description='A URL to the API console for each API')]
+                    | UnsetType
+                ) = UNSET
             
             
             Apis: TypeAlias = list[Api]
             
             
             class Event(Struct):
-                name_: Union[str, UnsetType] = field(name='name', default=UNSET)
+                name_: str | UnsetType = field(name='name', default=UNSET)
             
             
             class Result(Struct):
-                event: Union[Event, UnsetType] = UNSET
+                event: Event | UnsetType = UNSET
             ```
 
     === "JSON Schema"
@@ -431,25 +429,23 @@ providing fine-grained control over generated names independent of schema defini
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class User(BaseModel):
-            user_name: Optional[str] = Field(None, alias='name')
-            id: Optional[int] = None
+            user_name: str | None = Field(None, alias='name')
+            id: int | None = None
         
         
         class Address(BaseModel):
-            address_name: Optional[str] = Field(None, alias='name')
-            city: Optional[str] = None
+            address_name: str | None = Field(None, alias='name')
+            city: str | None = None
         
         
         class Root(BaseModel):
-            root_name: Optional[str] = Field(None, alias='name')
-            user: Optional[User] = Field(None, title='User')
-            address: Optional[Address] = Field(None, title='Address')
+            root_name: str | None = Field(None, alias='name')
+            user: User | None = Field(None, title='User')
+            address: Address | None = Field(None, title='Address')
         ```
 
     === "GraphQL"
@@ -474,7 +470,7 @@ providing fine-grained control over generated names independent of schema defini
         
         from __future__ import annotations
         
-        from typing import Annotated, Literal, Optional
+        from typing import Annotated, Literal
         
         from pydantic import BaseModel, Field
         from typing_extensions import TypeAliasType
@@ -498,7 +494,7 @@ providing fine-grained control over generated names independent of schema defini
             periodFrom: Annotated[DateTime, Field(alias='from')]
             periodTo: Annotated[DateTime, Field(alias='to')]
             typename__: Annotated[
-                Optional[Literal['DateTimePeriod']], Field(alias='__typename')
+                Literal['DateTimePeriod'] | None, Field(alias='__typename')
             ] = 'DateTimePeriod'
         ```
 
@@ -606,7 +602,6 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional
     
     from pydantic import BaseModel
     
@@ -623,7 +618,7 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
     
     
     class Model(BaseModel):
-        __root__: Optional[ModelEnum] = None
+        __root__: ModelEnum | None = None
     ```
 
 ---
@@ -802,7 +797,7 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     from __future__ import annotations
     
-    from typing import Literal, Optional, TypeAlias
+    from typing import Literal, TypeAlias
     
     from pydantic import BaseModel, Extra, Field
     
@@ -842,7 +837,7 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         opening_crawl: String
         planets: list[Planet]
         planets_ids: list[ID]
-        producer: Optional[String] = None
+        producer: String | None = None
         release_date: String
         species: list[Species]
         species_ids: list[ID]
@@ -851,123 +846,123 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         title: String
         vehicles: list[Vehicle]
         vehicles_ids: list[ID]
-        typename__: Optional[Literal['Film']] = Field('Film', alias='__typename')
+        typename__: Literal['Film'] | None = Field('Film', alias='__typename')
     
     
     class Person(BaseModel):
         class Config:
             extra = Extra.allow
     
-        birth_year: Optional[String] = None
-        eye_color: Optional[String] = None
+        birth_year: String | None = None
+        eye_color: String | None = None
         films: list[Film]
         films_ids: list[ID]
-        gender: Optional[String] = None
-        hair_color: Optional[String] = None
-        height: Optional[Int] = None
-        homeworld: Optional[Planet] = None
-        homeworld_id: Optional[ID] = None
+        gender: String | None = None
+        hair_color: String | None = None
+        height: Int | None = None
+        homeworld: Planet | None = None
+        homeworld_id: ID | None = None
         id: ID
-        mass: Optional[Int] = None
+        mass: Int | None = None
         name: String
-        skin_color: Optional[String] = None
+        skin_color: String | None = None
         species: list[Species]
         species_ids: list[ID]
         starships: list[Starship]
         starships_ids: list[ID]
         vehicles: list[Vehicle]
         vehicles_ids: list[ID]
-        typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
+        typename__: Literal['Person'] | None = Field('Person', alias='__typename')
     
     
     class Planet(BaseModel):
         class Config:
             extra = Extra.allow
     
-        climate: Optional[String] = None
-        diameter: Optional[String] = None
+        climate: String | None = None
+        diameter: String | None = None
         films: list[Film]
         films_ids: list[ID]
-        gravity: Optional[String] = None
+        gravity: String | None = None
         id: ID
         name: String
-        orbital_period: Optional[String] = None
-        population: Optional[String] = None
+        orbital_period: String | None = None
+        population: String | None = None
         residents: list[Person]
         residents_ids: list[ID]
-        rotation_period: Optional[String] = None
-        surface_water: Optional[String] = None
-        terrain: Optional[String] = None
-        typename__: Optional[Literal['Planet']] = Field('Planet', alias='__typename')
+        rotation_period: String | None = None
+        surface_water: String | None = None
+        terrain: String | None = None
+        typename__: Literal['Planet'] | None = Field('Planet', alias='__typename')
     
     
     class Species(BaseModel):
         class Config:
             extra = Extra.allow
     
-        average_height: Optional[String] = None
-        average_lifespan: Optional[String] = None
-        classification: Optional[String] = None
-        designation: Optional[String] = None
-        eye_colors: Optional[String] = None
+        average_height: String | None = None
+        average_lifespan: String | None = None
+        classification: String | None = None
+        designation: String | None = None
+        eye_colors: String | None = None
         films: list[Film]
         films_ids: list[ID]
-        hair_colors: Optional[String] = None
+        hair_colors: String | None = None
         id: ID
-        language: Optional[String] = None
+        language: String | None = None
         name: String
         people: list[Person]
         people_ids: list[ID]
-        skin_colors: Optional[String] = None
-        typename__: Optional[Literal['Species']] = Field('Species', alias='__typename')
+        skin_colors: String | None = None
+        typename__: Literal['Species'] | None = Field('Species', alias='__typename')
     
     
     class Starship(BaseModel):
         class Config:
             extra = Extra.allow
     
-        MGLT: Optional[String] = None
-        cargo_capacity: Optional[String] = None
-        consumables: Optional[String] = None
-        cost_in_credits: Optional[String] = None
-        crew: Optional[String] = None
+        MGLT: String | None = None
+        cargo_capacity: String | None = None
+        consumables: String | None = None
+        cost_in_credits: String | None = None
+        crew: String | None = None
         films: list[Film]
         films_ids: list[ID]
-        hyperdrive_rating: Optional[String] = None
+        hyperdrive_rating: String | None = None
         id: ID
-        length: Optional[String] = None
-        manufacturer: Optional[String] = None
-        max_atmosphering_speed: Optional[String] = None
-        model: Optional[String] = None
+        length: String | None = None
+        manufacturer: String | None = None
+        max_atmosphering_speed: String | None = None
+        model: String | None = None
         name: String
-        passengers: Optional[String] = None
+        passengers: String | None = None
         pilots: list[Person]
         pilots_ids: list[ID]
-        starship_class: Optional[String] = None
-        typename__: Optional[Literal['Starship']] = Field('Starship', alias='__typename')
+        starship_class: String | None = None
+        typename__: Literal['Starship'] | None = Field('Starship', alias='__typename')
     
     
     class Vehicle(BaseModel):
         class Config:
             extra = Extra.allow
     
-        cargo_capacity: Optional[String] = None
-        consumables: Optional[String] = None
-        cost_in_credits: Optional[String] = None
-        crew: Optional[String] = None
+        cargo_capacity: String | None = None
+        consumables: String | None = None
+        cost_in_credits: String | None = None
+        crew: String | None = None
         films: list[Film]
         films_ids: list[ID]
         id: ID
-        length: Optional[String] = None
-        manufacturer: Optional[String] = None
-        max_atmosphering_speed: Optional[String] = None
-        model: Optional[String] = None
+        length: String | None = None
+        manufacturer: String | None = None
+        max_atmosphering_speed: String | None = None
+        model: String | None = None
         name: String
-        passengers: Optional[String] = None
+        passengers: String | None = None
         pilots: list[Person]
         pilots_ids: list[ID]
-        vehicle_class: Optional[String] = None
-        typename__: Optional[Literal['Vehicle']] = Field('Vehicle', alias='__typename')
+        vehicle_class: String | None = None
+        typename__: Literal['Vehicle'] | None = Field('Vehicle', alias='__typename')
     
     
     Film.update_forward_refs()
@@ -1245,15 +1240,13 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             from __future__ import annotations
             
-            from typing import Optional, Union
-            
             from pydantic import AnyUrl, BaseModel, Field
             
             
             class Pet(BaseModel):
                 id: int = Field(..., ge=0, le=9223372036854775807)
                 name: str = Field(..., max_length=256)
-                tag: Optional[str] = Field(None, max_length=64)
+                tag: str | None = Field(None, max_length=64)
             
             
             class Pets(BaseModel):
@@ -1275,14 +1268,14 @@ Output differs between Pydantic v1 and v2 due to API changes.
             class User(BaseModel):
                 id: int = Field(..., ge=0)
                 name: str = Field(..., max_length=256)
-                tag: Optional[str] = Field(None, max_length=64)
+                tag: str | None = Field(None, max_length=64)
                 uid: UID
-                phones: Optional[list[Phone]] = Field(None, max_items=10)
-                fax: Optional[list[FaxItem]] = None
-                height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-                weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-                age: Optional[int] = Field(None, gt=0, le=200)
-                rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+                phones: list[Phone] | None = Field(None, max_items=10)
+                fax: list[FaxItem] | None = None
+                height: int | float | None = Field(None, ge=1.0, le=300.0)
+                weight: float | int | None = Field(None, ge=1.0, le=1000.0)
+                age: int | None = Field(None, gt=0, le=200)
+                rating: float | None = Field(None, gt=0.0, le=5.0)
             
             
             class Users(BaseModel):
@@ -1303,16 +1296,16 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Api(BaseModel):
-                apiKey: Optional[str] = Field(
+                apiKey: str | None = Field(
                     None, description='To be used as a dataset parameter value'
                 )
-                apiVersionNumber: Optional[str] = Field(
+                apiVersionNumber: str | None = Field(
                     None, description='To be used as a version parameter value'
                 )
-                apiUrl: Optional[AnyUrl] = Field(
+                apiUrl: AnyUrl | None = Field(
                     None, description="The URL describing the dataset's fields"
                 )
-                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                apiDocumentationUrl: AnyUrl | None = Field(
                     None, description='A URL to the API console for each API'
                 )
             
@@ -1322,11 +1315,11 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Event(BaseModel):
-                name: Optional[str] = None
+                name: str | None = None
             
             
             class Result(BaseModel):
-                event: Optional[Event] = None
+                event: Event | None = None
             ```
 
         === "Pydantic v2"
@@ -1338,15 +1331,13 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             from __future__ import annotations
             
-            from typing import Optional, Union
-            
             from pydantic import AnyUrl, BaseModel, Field, RootModel
             
             
             class Pet(BaseModel):
                 id: int = Field(..., ge=0, le=9223372036854775807)
                 name: str = Field(..., max_length=256)
-                tag: Optional[str] = Field(None, max_length=64)
+                tag: str | None = Field(None, max_length=64)
             
             
             class Pets(RootModel[list[Pet]]):
@@ -1368,14 +1359,14 @@ Output differs between Pydantic v1 and v2 due to API changes.
             class User(BaseModel):
                 id: int = Field(..., ge=0)
                 name: str = Field(..., max_length=256)
-                tag: Optional[str] = Field(None, max_length=64)
+                tag: str | None = Field(None, max_length=64)
                 uid: UID
-                phones: Optional[list[Phone]] = Field(None, max_length=10)
-                fax: Optional[list[FaxItem]] = None
-                height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
-                weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
-                age: Optional[int] = Field(None, gt=0, le=200)
-                rating: Optional[float] = Field(None, gt=0.0, le=5.0)
+                phones: list[Phone] | None = Field(None, max_length=10)
+                fax: list[FaxItem] | None = None
+                height: int | float | None = Field(None, ge=1.0, le=300.0)
+                weight: float | int | None = Field(None, ge=1.0, le=1000.0)
+                age: int | None = Field(None, gt=0, le=200)
+                rating: float | None = Field(None, gt=0.0, le=5.0)
             
             
             class Users(RootModel[list[User]]):
@@ -1396,16 +1387,16 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Api(BaseModel):
-                apiKey: Optional[str] = Field(
+                apiKey: str | None = Field(
                     None, description='To be used as a dataset parameter value'
                 )
-                apiVersionNumber: Optional[str] = Field(
+                apiVersionNumber: str | None = Field(
                     None, description='To be used as a version parameter value'
                 )
-                apiUrl: Optional[AnyUrl] = Field(
+                apiUrl: AnyUrl | None = Field(
                     None, description="The URL describing the dataset's fields"
                 )
-                apiDocumentationUrl: Optional[AnyUrl] = Field(
+                apiDocumentationUrl: AnyUrl | None = Field(
                     None, description='A URL to the API console for each API'
                 )
             
@@ -1415,11 +1406,11 @@ Output differs between Pydantic v1 and v2 due to API changes.
             
             
             class Event(BaseModel):
-                name: Optional[str] = None
+                name: str | None = None
             
             
             class Result(BaseModel):
-                event: Optional[Event] = None
+                event: Event | None = None
             ```
 
     === "JSON Schema"
@@ -1488,8 +1479,6 @@ Output differs between Pydantic v1 and v2 due to API changes.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import (
             BaseModel,
             Field,
@@ -1502,17 +1491,17 @@ Output differs between Pydantic v1 and v2 due to API changes.
         
         
         class User(BaseModel):
-            name: Optional[StrictStr] = Field(None, example='ken')
-            age: Optional[StrictInt] = None
-            salary: Optional[StrictInt] = Field(None, ge=0)
-            debt: Optional[StrictInt] = Field(None, le=0)
-            loan: Optional[StrictFloat] = Field(None, le=0.0)
-            tel: Optional[StrictStr] = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
-            height: Optional[StrictFloat] = Field(None, ge=0.0)
-            weight: Optional[StrictFloat] = Field(None, ge=0.0)
-            score: Optional[StrictFloat] = Field(None, ge=1e-08)
-            active: Optional[StrictBool] = None
-            photo: Optional[StrictBytes] = Field(None, min_length=100)
+            name: StrictStr | None = Field(None, example='ken')
+            age: StrictInt | None = None
+            salary: StrictInt | None = Field(None, ge=0)
+            debt: StrictInt | None = Field(None, le=0)
+            loan: StrictFloat | None = Field(None, le=0.0)
+            tel: StrictStr | None = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+            height: StrictFloat | None = Field(None, ge=0.0)
+            weight: StrictFloat | None = Field(None, ge=0.0)
+            score: StrictFloat | None = Field(None, ge=1e-08)
+            active: StrictBool | None = None
+            photo: StrictBytes | None = Field(None, min_length=100)
         ```
 
 ---
@@ -1582,13 +1571,11 @@ The `--field-extra-keys` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class Extras(BaseModel):
-            name: Optional[str] = Field(
+            name: str | None = Field(
                 None,
                 description='normal key',
                 example='example',
@@ -1596,7 +1583,7 @@ The `--field-extra-keys` flag configures the code generation behavior.
                 key2=456,
                 repr=True,
             )
-            age: Optional[int] = Field(None, example=12, examples=[13, 20])
+            age: int | None = Field(None, example=12, examples=[13, 20])
         ```
 
     === "Pydantic v2"
@@ -1608,22 +1595,18 @@ The `--field-extra-keys` flag configures the code generation behavior.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class Extras(BaseModel):
-            name: Optional[str] = Field(
+            name: str | None = Field(
                 None,
                 description='normal key',
                 examples=['example'],
                 json_schema_extra={'key2': 456, 'invalid-key-1': 'abc'},
                 repr=True,
             )
-            age: Optional[int] = Field(
-                None, examples=[13, 20], json_schema_extra={'example': 12}
-            )
+            age: int | None = Field(None, examples=[13, 20], json_schema_extra={'example': 12})
         ```
 
 ---
@@ -1696,13 +1679,11 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class Extras(BaseModel):
-            name: Optional[str] = Field(
+            name: str | None = Field(
                 None,
                 description='normal key',
                 example='example',
@@ -1718,7 +1699,7 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
                 schema_='klm',
                 x_abc=True,
             )
-            age: Optional[int] = Field(None, example=12, examples=[13, 20], writeOnly=True)
+            age: int | None = Field(None, example=12, examples=[13, 20], writeOnly=True)
         ```
 
     === "Pydantic v2"
@@ -1730,13 +1711,11 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel, Field
         
         
         class Extras(BaseModel):
-            name: Optional[str] = Field(
+            name: str | None = Field(
                 None,
                 description='normal key',
                 examples=['example'],
@@ -1754,7 +1733,7 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
                 },
                 repr=True,
             )
-            age: Optional[int] = Field(
+            age: int | None = Field(
                 None, examples=[13, 20], json_schema_extra={'example': 12, 'writeOnly': True}
             )
         ```
@@ -1817,18 +1796,18 @@ The `--field-include-all-keys` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from typing import Any, Optional
+    from typing import Any
     
     from pydantic import BaseModel, Field, conint
     
     
     class Person(BaseModel):
-        firstName: Optional[str] = Field(None, description="The person's first name.")
-        lastName: Optional[str] = Field(None, description="The person's last name.")
-        age: Optional[conint(ge=0)] = Field(
+        firstName: str | None = Field(None, description="The person's first name.")
+        lastName: str | None = Field(None, description="The person's last name.")
+        age: conint(ge=0) | None = Field(
             None, description='Age in years which must be equal to or greater than zero.'
         )
-        friends: Optional[list[Any]] = None
+        friends: list[Any] | None = None
         comment: None = None
     ```
 
@@ -1888,15 +1867,13 @@ With this flag, only Python-safe names are used without aliases.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import BaseModel
         
         
         class Person(BaseModel):
             first_name: str
             last_name: str
-            email_address: Optional[str] = None
+            email_address: str | None = None
         ```
 
     === "Without Option"
@@ -1972,7 +1949,6 @@ snake_case conversion.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional
     
     from pydantic import BaseModel, Field
     
@@ -1982,7 +1958,7 @@ snake_case conversion.
     
     
     class Model(BaseModel):
-        space_if: Optional[SpaceIF] = Field(None, alias='SpaceIF')
+        space_if: SpaceIF | None = Field(None, alias='SpaceIF')
     ```
 
 ---
@@ -2036,17 +2012,15 @@ The `--remove-special-field-name-prefix` flag configures the code generation beh
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Model(BaseModel):
         id: AnyUrl = Field(..., alias='@id', title='Id must be presesnt and must be a URI')
         type: str = Field(..., alias='@type')
-        type_1: Optional[str] = Field(None, alias='@+!type')
-        type_2: Optional[str] = Field(None, alias='@-!type')
-        profile: Optional[str] = None
+        type_1: str | None = Field(None, alias='@+!type')
+        type_2: str | None = Field(None, alias='@-!type')
+        profile: str | None = None
     ```
 
 ---
@@ -2133,7 +2107,6 @@ The `--set-default-enum-member` flag configures the code generation behavior.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional
     
     from pydantic import BaseModel, Field
     
@@ -2150,10 +2123,10 @@ The `--set-default-enum-member` flag configures the code generation behavior.
     
     
     class User(BaseModel):
-        name: Optional[str] = None
-        animal: Optional[Animal] = Animal.dog
-        pet: Optional[Animal] = Animal.cat
-        redistribute: Optional[list[RedistributeEnum]] = None
+        name: str | None = None
+        animal: Animal | None = Animal.dog
+        pet: Animal | None = Animal.cat
+        redistribute: list[RedistributeEnum] | None = None
     
     
     class Redistribute(BaseModel):
@@ -2271,7 +2244,6 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional
     
     from pydantic import BaseModel
     
@@ -2288,7 +2260,7 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
     
     
     class Model(BaseModel):
-        __root__: Optional[ModelEnum] = None
+        __root__: ModelEnum | None = None
     ```
 
 ---
@@ -2344,8 +2316,6 @@ This provides better IDE support for hovering over attributes. Requires
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel, ConfigDict
     
     
@@ -2357,7 +2327,7 @@ This provides better IDE support for hovering over attributes. Requires
         """
         The person's full name
         """
-        age: Optional[int] = None
+        age: int | None = None
         """
         The person's age in years
         """
@@ -2436,7 +2406,7 @@ The `--use-enum-values-in-discriminator` flag configures the code generation beh
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Literal, Union
+    from typing import Literal
     
     from pydantic import BaseModel, Field, RootModel
     
@@ -2459,8 +2429,8 @@ The `--use-enum-values-in-discriminator` flag configures the code generation beh
         version: Literal[RequestVersionEnum.v2]
     
     
-    class Request(RootModel[Union[RequestV1, RequestV2]]):
-        root: Union[RequestV1, RequestV2] = Field(..., discriminator='version')
+    class Request(RootModel[RequestV1 | RequestV2]):
+        root: RequestV1 | RequestV2 = Field(..., discriminator='version')
     ```
 
 ---
@@ -2680,15 +2650,13 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from typing import Optional
-        
         from pydantic import AnyUrl, BaseModel
         
         
         class Pet(BaseModel):
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Pets(BaseModel):
@@ -2698,7 +2666,7 @@ generated models, preserving documentation from the original schema.
         class User(BaseModel):
             id: int
             name: str
-            tag: Optional[str] = None
+            tag: str | None = None
         
         
         class Users(BaseModel):
@@ -2719,20 +2687,20 @@ generated models, preserving documentation from the original schema.
         
         
         class Api(BaseModel):
-            apiKey: Optional[str] = None
+            apiKey: str | None = None
             """
             To be used as a dataset parameter value.
             Now also with multi-line docstrings.
             """
-            apiVersionNumber: Optional[str] = None
+            apiVersionNumber: str | None = None
             """
             To be used as a version parameter value
             """
-            apiUrl: Optional[AnyUrl] = None
+            apiUrl: AnyUrl | None = None
             """
             The URL describing the dataset's fields
             """
-            apiDocumentationUrl: Optional[AnyUrl] = None
+            apiDocumentationUrl: AnyUrl | None = None
             """
             A URL to the API console for each API
             """
@@ -2743,11 +2711,11 @@ generated models, preserving documentation from the original schema.
         
         
         class Event(BaseModel):
-            name: Optional[str] = None
+            name: str | None = None
         
         
         class Result(BaseModel):
-            event: Optional[Event] = None
+            event: Event | None = None
         ```
 
     === "JSON Schema"
@@ -2801,7 +2769,7 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, Optional, TypeAlias, Union
+        from typing import Annotated, Any, TypeAlias
         
         from pydantic import BaseModel, Field
         
@@ -2811,25 +2779,23 @@ generated models, preserving documentation from the original schema.
         SimpleString: TypeAlias = str
         
         
-        UnionType: TypeAlias = Union[str, int]
+        UnionType: TypeAlias = str | int
         
         
         ArrayType: TypeAlias = list[str]
         
         
-        AnnotatedType: TypeAlias = Annotated[
-            Union[str, bool], Field(..., title='MyAnnotatedType')
-        ]
+        AnnotatedType: TypeAlias = Annotated[str | bool, Field(..., title='MyAnnotatedType')]
         """
         An annotated union type
         """
         
         
         class ModelWithTypeAliasField(BaseModel):
-            simple_field: Optional[SimpleString] = None
-            union_field: Optional[UnionType] = None
-            array_field: Optional[ArrayType] = None
-            annotated_field: Optional[AnnotatedType] = None
+            simple_field: SimpleString | None = None
+            union_field: UnionType | None = None
+            array_field: ArrayType | None = None
+            annotated_field: AnnotatedType | None = None
         ```
 
 ---
@@ -3047,15 +3013,13 @@ documentation without using Field() wrappers.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -3065,7 +3029,7 @@ documentation without using Field() wrappers.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -3086,7 +3050,7 @@ documentation without using Field() wrappers.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None,
             description='To be used as a dataset parameter value.\nNow also with multi-line docstrings.',
         )
@@ -3095,17 +3059,17 @@ documentation without using Field() wrappers.
         Now also with multi-line docstrings.
         """
     
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
         """To be used as a version parameter value"""
     
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
         """The URL describing the dataset's fields"""
     
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
         """A URL to the API console for each API"""
@@ -3116,11 +3080,11 @@ documentation without using Field() wrappers.
     
     
     class Event(BaseModel):
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -3338,15 +3302,13 @@ useful for preserving documentation from your schema in the generated code.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import AnyUrl, BaseModel, Field
     
     
     class Pet(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Pets(BaseModel):
@@ -3356,7 +3318,7 @@ useful for preserving documentation from your schema in the generated code.
     class User(BaseModel):
         id: int
         name: str
-        tag: Optional[str] = None
+        tag: str | None = None
     
     
     class Users(BaseModel):
@@ -3382,17 +3344,17 @@ useful for preserving documentation from your schema in the generated code.
     
     
     class Api(BaseModel):
-        apiKey: Optional[str] = Field(
+        apiKey: str | None = Field(
             None,
             description='To be used as a dataset parameter value.\nNow also with multi-line docstrings.',
         )
-        apiVersionNumber: Optional[str] = Field(
+        apiVersionNumber: str | None = Field(
             None, description='To be used as a version parameter value'
         )
-        apiUrl: Optional[AnyUrl] = Field(
+        apiUrl: AnyUrl | None = Field(
             None, description="The URL describing the dataset's fields"
         )
-        apiDocumentationUrl: Optional[AnyUrl] = Field(
+        apiDocumentationUrl: AnyUrl | None = Field(
             None, description='A URL to the API console for each API'
         )
     
@@ -3406,11 +3368,11 @@ useful for preserving documentation from your schema in the generated code.
         Event object
         """
     
-        name: Optional[str] = None
+        name: str | None = None
     
     
     class Result(BaseModel):
-        event: Optional[Event] = None
+        event: Event | None = None
     ```
 
 ---
@@ -3541,7 +3503,6 @@ This is useful when schemas have descriptive titles that should be preserved.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import Optional, Union
     
     from pydantic import BaseModel, Field
     
@@ -3557,12 +3518,12 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class NestedCommentTitle(BaseModel):
-        comment: Optional[str] = None
+        comment: str | None = None
     
     
     class ProcessingStatusDetail(BaseModel):
-        id: Optional[int] = None
-        description: Optional[str] = None
+        id: int | None = None
+        description: str | None = None
     
     
     class ProcessingTasksTitle(BaseModel):
@@ -3570,7 +3531,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class ExtendedProcessingTask(BaseModel):
-        __root__: Union[ProcessingTasksTitle, NestedCommentTitle] = Field(
+        __root__: ProcessingTasksTitle | NestedCommentTitle = Field(
             ..., title='Extended Processing Task Title'
         )
     
@@ -3582,12 +3543,12 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     
     class ProcessingTaskTitle(BaseModel):
-        processing_status_union: Optional[
-            Union[ProcessingStatusDetail, ExtendedProcessingTask, ProcessingStatusTitle]
-        ] = Field('COMPLETED', title='Processing Status Union Title')
-        processing_status: Optional[ProcessingStatusTitle] = 'COMPLETED'
-        name: Optional[str] = None
-        kind: Optional[Kind] = None
+        processing_status_union: (
+            ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None
+        ) = Field('COMPLETED', title='Processing Status Union Title')
+        processing_status: ProcessingStatusTitle | None = 'COMPLETED'
+        name: str | None = None
+        kind: Kind | None = None
     
     
     ProcessingTasksTitle.update_forward_refs()

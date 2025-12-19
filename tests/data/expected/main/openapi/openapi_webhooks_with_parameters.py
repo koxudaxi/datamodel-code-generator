@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
@@ -15,7 +13,7 @@ class Pet(BaseModel):
 
 
 class PetNewPostParametersQuery(BaseModel):
-    X_Request_Id: Optional[str] = Field(None, alias='X-Request-Id')
+    X_Request_Id: str | None = Field(None, alias='X-Request-Id')
     X_Webhook_Id: str = Field(..., alias='X-Webhook-Id')
 
 

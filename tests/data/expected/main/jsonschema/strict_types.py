@@ -4,20 +4,18 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field, conbytes, confloat, conint, constr
 
 
 class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')
-    age: Optional[int] = None
-    salary: Optional[conint(ge=0)] = None
-    debt: Optional[conint(le=0)] = None
-    loan: Optional[confloat(le=0.0)] = None
-    tel: Optional[constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$')] = None
-    height: Optional[confloat(ge=0.0)] = None
-    weight: Optional[confloat(ge=0.0)] = None
-    score: Optional[confloat(ge=1e-08)] = None
-    active: Optional[bool] = None
-    photo: Optional[conbytes(min_length=100)] = None
+    name: str | None = Field(None, example='ken')
+    age: int | None = None
+    salary: conint(ge=0) | None = None
+    debt: conint(le=0) | None = None
+    loan: confloat(le=0.0) | None = None
+    tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+    height: confloat(ge=0.0) | None = None
+    weight: confloat(ge=0.0) | None = None
+    score: confloat(ge=1e-08) | None = None
+    active: bool | None = None
+    photo: conbytes(min_length=100) | None = None

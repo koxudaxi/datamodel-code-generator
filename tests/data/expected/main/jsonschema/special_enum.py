@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -22,4 +21,4 @@ class ModelEnum(Enum):
 
 
 class Model(BaseModel):
-    __root__: Optional[ModelEnum] = None
+    __root__: ModelEnum | None = None

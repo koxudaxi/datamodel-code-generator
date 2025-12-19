@@ -62,14 +62,12 @@ For consistent cross-platform behavior, explicitly specify `--encoding utf-8`.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel, Field
     
     
     class 日本語Model(BaseModel):
-        名前: Optional[str] = Field(None, description='ユーザー名')
-        年齢: Optional[int] = None
+        名前: str | None = Field(None, description='ユーザー名')
+        年齢: int | None = None
     ```
 
 ---
@@ -122,15 +120,13 @@ schemas. Required unless using `--url` to fetch schema from a URL.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -236,15 +232,13 @@ is written to stdout.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---
@@ -298,15 +292,13 @@ Format: `HeaderName:HeaderValue`.
     
     from __future__ import annotations
     
-    from typing import Optional
-    
     from pydantic import BaseModel
     
     
     class Pet(BaseModel):
-        id: Optional[int] = None
-        name: Optional[str] = None
-        tag: Optional[str] = None
+        id: int | None = None
+        name: str | None = None
+        tag: str | None = None
     ```
 
 ---

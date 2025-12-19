@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel, Extra, Field
 
 from . import bar, foo
@@ -15,12 +13,12 @@ class ExecutionContext(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: Union[foo.JobRun, bar.JobRun] = Field(
+    __root__: foo.JobRun | bar.JobRun = Field(
         ..., description='Execution Configuration.'
     )
 
 
 class App(BaseModel):
-    runtime: Optional[ExecutionContext] = Field(
+    runtime: ExecutionContext | None = Field(
         None, description='Execution Configuration.'
     )

@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, constr
 
 
 class Parent(BaseModel):
-    name: Optional[constr(min_length=1)] = None
+    name: constr(min_length=1) | None = None
 
 
 class Child(Parent):
-    name: Optional[constr(min_length=1, max_length=100)] = None
-    allowed: Optional[Any] = None
+    name: constr(min_length=1, max_length=100) | None = None
+    allowed: Any | None = None

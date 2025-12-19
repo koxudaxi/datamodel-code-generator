@@ -4,20 +4,18 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class ResourceGetResponse200(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
 
 
 class ResourceGetResponse400(BaseModel):
-    error: Optional[str] = None
-    code: Optional[int] = None
+    error: str | None = None
+    code: int | None = None
 
 
 class ResourceGetResponseDefault(BaseModel):
-    message: Optional[str] = None
+    message: str | None = None

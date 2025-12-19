@@ -4,16 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Thing(BaseModel):
-    name: Optional[str] = 'default_name'
-    count: Optional[int] = 0
+    name: str | None = 'default_name'
+    count: int | None = 0
 
 
 class Person(Thing):
-    name: Optional[str] = Field(None, title='Person name')
-    count: Optional[int] = Field(None, description='Count value')
+    name: str | None = Field(None, title='Person name')
+    count: int | None = Field(None, description='Count value')

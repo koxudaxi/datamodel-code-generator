@@ -6,11 +6,10 @@ from __future__ import annotations
 
 from datetime import date as date_aliased
 from datetime import datetime as datetime_aliased
-from typing import Optional
 
 from pydantic import BaseModel
 
 
 class TypeDate(BaseModel):
-    date: Optional[date_aliased]
-    datetime: Optional[datetime_aliased] = None
+    date: date_aliased | None
+    datetime: datetime_aliased | None = None

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -23,9 +22,9 @@ class Pet(BaseModel):
 
 class User(BaseModel):
     name: str
-    pet: Optional[Pet] = None
+    pet: Pet | None = None
 
 
 class BundledSchema(BaseModel):
-    user: Optional[User] = None
-    pet: Optional[Pet] = None
+    user: User | None = None
+    pet: Pet | None = None

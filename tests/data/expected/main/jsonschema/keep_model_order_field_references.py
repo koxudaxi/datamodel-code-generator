@@ -2,14 +2,12 @@
 #   filename:  keep_model_order_field_references.json
 #   timestamp: 2019-07-26T00:00:00+00:00
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Metadata(BaseModel):
-    title: Optional[str] = None
+    title: str | None = None
 
 
 class DescriptionType(BaseModel):
-    metadata: Optional[list[Metadata]] = None
+    metadata: list[Metadata] | None = None

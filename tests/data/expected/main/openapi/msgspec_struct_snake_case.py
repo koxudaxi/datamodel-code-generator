@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, TypeAlias, Union
+from typing import Annotated, TypeAlias
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
 
@@ -13,7 +13,7 @@ class Pet(Struct):
     id: int
     name: str
     before_tag: str = field(name='beforeTag')
-    tag: Union[str, UnsetType] = UNSET
+    tag: str | UnsetType = UNSET
 
 
 Pets: TypeAlias = list[Pet]
@@ -22,7 +22,7 @@ Pets: TypeAlias = list[Pet]
 class User(Struct):
     id: int
     name: str
-    tag: Union[str, UnsetType] = UNSET
+    tag: str | UnsetType = UNSET
 
 
 Users: TypeAlias = list[User]
@@ -40,30 +40,30 @@ class Error(Struct):
 
 
 class Api(Struct):
-    api_key: Union[
-        Annotated[str, Meta(description='To be used as a dataset parameter value')],
-        UnsetType,
-    ] = field(name='apiKey', default=UNSET)
-    api_version_number: Union[
-        Annotated[str, Meta(description='To be used as a version parameter value')],
-        UnsetType,
-    ] = field(name='apiVersionNumber', default=UNSET)
-    api_url: Union[
-        Annotated[str, Meta(description="The URL describing the dataset's fields")],
-        UnsetType,
-    ] = field(name='apiUrl', default=UNSET)
-    api_documentation_url: Union[
-        Annotated[str, Meta(description='A URL to the API console for each API')],
-        UnsetType,
-    ] = field(name='apiDocumentationUrl', default=UNSET)
+    api_key: (
+        Annotated[str, Meta(description='To be used as a dataset parameter value')]
+        | UnsetType
+    ) = field(name='apiKey', default=UNSET)
+    api_version_number: (
+        Annotated[str, Meta(description='To be used as a version parameter value')]
+        | UnsetType
+    ) = field(name='apiVersionNumber', default=UNSET)
+    api_url: (
+        Annotated[str, Meta(description="The URL describing the dataset's fields")]
+        | UnsetType
+    ) = field(name='apiUrl', default=UNSET)
+    api_documentation_url: (
+        Annotated[str, Meta(description='A URL to the API console for each API')]
+        | UnsetType
+    ) = field(name='apiDocumentationUrl', default=UNSET)
 
 
 Apis: TypeAlias = list[Api]
 
 
 class Event(Struct):
-    name: Union[str, UnsetType] = UNSET
+    name: str | UnsetType = UNSET
 
 
 class Result(Struct):
-    event: Union[Event, UnsetType] = UNSET
+    event: Event | UnsetType = UNSET

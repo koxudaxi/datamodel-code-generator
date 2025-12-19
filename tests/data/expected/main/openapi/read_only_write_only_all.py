@@ -4,26 +4,24 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class UserRequest(BaseModel):
     name: str
     password: str
-    secret_token: Optional[str] = None
+    secret_token: str | None = None
 
 
 class UserResponse(BaseModel):
     id: int
     name: str
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class User(BaseModel):
     id: int
     name: str
     password: str
-    created_at: Optional[AwareDatetime] = None
-    secret_token: Optional[str] = None
+    created_at: AwareDatetime | None = None
+    secret_token: str | None = None
