@@ -1037,7 +1037,7 @@ The `--validation` flag configures the code generation behavior.
 
 **Deprecated:** Use --field-constraints instead
 
-**See also:** [OpenAPI-Specific Options](../openapi-options.md), [Field Constraints](../field-constraints.md)
+**See also:** [Field Constraints](../field-constraints.md), [OpenAPI-Specific Options](../openapi-options.md)
 
 !!! tip "Usage"
 

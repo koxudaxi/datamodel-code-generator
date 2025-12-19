@@ -192,7 +192,8 @@ def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
     option_to_pages: dict[str, list[tuple[str, str]]] = defaultdict(list)
 
     # Scan all markdown files in docs/ (excluding cli-reference/)
-    for md_file in DOCS_ROOT.glob("**/*.md"):
+    # Sort to ensure consistent ordering across different environments
+    for md_file in sorted(DOCS_ROOT.glob("**/*.md")):
         # Skip cli-reference directory (auto-generated)
         try:
             md_file.relative_to(DOCS_OUTPUT)
@@ -226,7 +227,8 @@ def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
                     canonical = get_canonical_option(option)
                     option_to_pages[canonical].append((page_path, page_title))
 
-    return dict(option_to_pages)
+    # Sort the page lists for each option to ensure consistent ordering
+    return {option: sorted(pages) for option, pages in sorted(option_to_pages.items())}
 
 
 def slugify(text: str) -> str:
@@ -893,7 +895,11 @@ def build_docs(*, check: bool = False) -> int:
         generated += 1
         return True
 
-    for category, options in categories.items():
+    # Iterate in OptionCategory enum order for consistent output
+    for category in OptionCategory:
+        if category not in categories:
+            continue
+        options = categories[category]
         if not options:
             continue
         try:
