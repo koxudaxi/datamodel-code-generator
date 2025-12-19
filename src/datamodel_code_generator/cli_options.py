@@ -181,6 +181,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     "--openapi-scopes": CLIOptionMeta(name="--openapi-scopes", category=OptionCategory.OPENAPI),
     "--use-operation-id-as-name": CLIOptionMeta(name="--use-operation-id-as-name", category=OptionCategory.OPENAPI),
+    "--use-status-code-in-response-name": CLIOptionMeta(
+        name="--use-status-code-in-response-name", category=OptionCategory.OPENAPI
+    ),
     "--read-only-write-only-model-type": CLIOptionMeta(
         name="--read-only-write-only-model-type", category=OptionCategory.OPENAPI
     ),

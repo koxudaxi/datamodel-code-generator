@@ -272,6 +272,7 @@ class OpenAPIParser(JsonSchemaParser):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         use_frozen_field: bool = False,
+        use_status_code_in_response_name: bool = False,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -369,6 +370,7 @@ class OpenAPIParser(JsonSchemaParser):
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
+        self.use_status_code_in_response_name: bool = use_status_code_in_response_name
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
@@ -550,6 +552,8 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse response objects into data types by status code and content type."""
         data_types: defaultdict[str | int, dict[str, DataType]] = defaultdict(dict)
         for status_code, detail in responses.items():
+            response_name = f"{name}{str(status_code).capitalize()}" if self.use_status_code_in_response_name else name
+
             if isinstance(detail, ReferenceObject):
                 if not detail.ref:  # pragma: no cover
                     continue
@@ -563,7 +567,7 @@ class OpenAPIParser(JsonSchemaParser):
 
             for content_type, obj in content.items():
                 response_path: list[str] = [*path, str(status_code), str(content_type)]
-                data_type = self._parse_schema_or_ref(name, obj.schema_, response_path)
+                data_type = self._parse_schema_or_ref(response_name, obj.schema_, response_path)
                 if data_type:
                     data_types[status_code][content_type] = data_type  # pyright: ignore[reportArgumentType]
 
