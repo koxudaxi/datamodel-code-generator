@@ -3337,10 +3337,9 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             from __future__ import annotations
             
-            from typing import List, Literal, Optional
+            from typing import List, Literal, Optional, TypeAlias
             
             from pydantic import BaseModel, Field
-            from typing_extensions import TypeAlias
             
             Boolean: TypeAlias = bool
             """
@@ -3502,9 +3501,7 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             from __future__ import annotations
             
             from dataclasses import dataclass
-            from typing import List, Literal, Optional
-            
-            from typing_extensions import TypeAlias
+            from typing import List, Literal, Optional, TypeAlias
             
             Boolean: TypeAlias = bool
             """
