@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class Parent(BaseModel):
-    items: Optional[List[str]] = None
+    items: Optional[list[str]] = None
 
 
 class Child(Parent):
-    items: Optional[List[str]] = None
+    items: Optional[list[str]] = None

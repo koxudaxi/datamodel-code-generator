@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, constr
 
@@ -54,10 +54,10 @@ class ProjectedEntity(BaseModel):
     primitive_bool: Optional[bool] = None
     ref_field: Optional[BaseType] = None
     enum_field: Optional[Status] = None
-    array_with_ref: Optional[List[BaseType]] = None
-    array_with_primitive: Optional[List[str]] = None
+    array_with_ref: Optional[list[BaseType]] = None
+    array_with_primitive: Optional[list[str]] = None
     object_with_props: Optional[ObjectWithProps] = None
-    object_with_additional: Optional[Dict[str, int]] = None
+    object_with_additional: Optional[dict[str, int]] = None
     anyof_field: Optional[Union[str, int]] = None
     oneof_field: Optional[Union[bool, float]] = None
     allof_single_ref: Optional[BaseType] = None
@@ -77,16 +77,16 @@ class Entity(ProjectedEntity):
     primitive_bool: bool
     ref_field: BaseType
     enum_field: Status
-    array_with_ref: List[BaseType]
-    array_with_primitive: List[str]
-    object_with_props: Dict[str, Any]
-    object_with_additional: Dict[str, int]
+    array_with_ref: list[BaseType]
+    array_with_primitive: list[str]
+    object_with_props: dict[str, Any]
+    object_with_additional: dict[str, int]
     anyof_field: Union[str, int]
     oneof_field: Union[bool, float]
     allof_single_ref: BaseType
     allof_multiple_refs: BaseType
     allof_primitives_with_constraints: constr(min_length=5, max_length=100)
     allof_with_pattern: constr(regex=r'(?=^[a-z]+)(?=[0-9]$)')
-    allof_with_unique: List[str]
+    allof_with_unique: list[str]
     type_list: Optional[str]
-    deep_nested: Dict[str, Any]
+    deep_nested: dict[str, Any]

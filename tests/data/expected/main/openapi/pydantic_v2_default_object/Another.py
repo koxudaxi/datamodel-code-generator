@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -20,6 +20,6 @@ class Bar(BaseModel):
     original_foo: Optional[Foo_1] = Field(
         default_factory=lambda: Foo_1.model_validate({'text': 'abc', 'number': 123})
     )
-    nested_foo: Optional[List[Nested.Foo]] = Field(
+    nested_foo: Optional[list[Nested.Foo]] = Field(
         default_factory=lambda: [Nested.Foo.model_validate(v) for v in ['abc', 'efg']]
     )

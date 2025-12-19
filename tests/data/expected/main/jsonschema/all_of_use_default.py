@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class Item(BaseModel):
     test: Optional[str] = 'test123'
-    testarray: Optional[List[str]] = Field(['test123'], min_items=1, title='test array')
+    testarray: Optional[list[str]] = Field(['test123'], min_items=1, title='test array')

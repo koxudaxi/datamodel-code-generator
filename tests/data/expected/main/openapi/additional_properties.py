@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Extra, Field
 
@@ -22,7 +22,7 @@ class Pets(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class User(BaseModel):
@@ -38,7 +38,7 @@ class Users(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(BaseModel):
@@ -52,7 +52,7 @@ class Rules(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(BaseModel):
@@ -89,7 +89,7 @@ class BrokenArray(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    broken: Optional[Dict[str, List[Broken]]] = None
+    broken: Optional[dict[str, list[Broken]]] = None
 
 
 class FileSetUpload(BaseModel):
@@ -97,7 +97,7 @@ class FileSetUpload(BaseModel):
         extra = Extra.forbid
 
     task_id: Optional[str] = Field(None, title='task id')
-    tags: Dict[str, List[str]] = Field(
+    tags: dict[str, list[str]] = Field(
         ..., title='Dict of tags, each containing a list of file names'
     )
 
@@ -106,5 +106,5 @@ class Test(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    broken: Optional[Dict[str, Broken]] = None
-    failing: Optional[Dict[str, str]] = {}
+    broken: Optional[dict[str, Broken]] = None
+    failing: Optional[dict[str, str]] = {}

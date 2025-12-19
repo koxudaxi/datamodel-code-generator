@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, constr
 
@@ -14,4 +14,4 @@ class Bar(BaseModel):
 
 
 class Foo(BaseModel):
-    bar: Dict[constr(regex=r'^([a-zA-Z_][a-zA-Z0-9_]*)$'), Bar]
+    bar: dict[constr(regex=r'^([a-zA-Z_][a-zA-Z0-9_]*)$'), Bar]

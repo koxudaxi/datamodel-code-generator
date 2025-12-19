@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, conint
 
@@ -72,7 +72,7 @@ class ProjectedEdgeCases(BaseModel):
     allof_max_constraints: Optional[AllofMaxConstraints] = None
     allof_unique_items: Optional[AllofUniqueItems] = None
     object_without_additional: Optional[ObjectWithoutAdditional] = None
-    object_only_type: Optional[Dict[str, Any]] = None
+    object_only_type: Optional[dict[str, Any]] = None
     multiple_additional_props: Optional[MultipleAdditionalProps] = None
     depth_limit_test: Optional[DepthLimitTest] = None
     cycle_detection: Optional[BaseRef] = None
@@ -88,11 +88,11 @@ class EdgeCases(ProjectedEdgeCases):
     allof_nested_anyof: Union[str, int]
     allof_constraint_only: Any
     allof_max_constraints: conint(le=50)
-    allof_unique_items: List[str]
-    object_without_additional: Dict[str, Any]
-    object_only_type: Dict[str, Any]
-    multiple_additional_props: Dict[str, BaseRef]
-    depth_limit_test: Dict[str, Any]
+    allof_unique_items: list[str]
+    object_without_additional: dict[str, Any]
+    object_only_type: dict[str, Any]
+    multiple_additional_props: dict[str, BaseRef]
+    depth_limit_test: dict[str, Any]
     cycle_detection: BaseRef
     type_list_field: Union[str, int]
     allof_multiple_refs_only: BaseRef

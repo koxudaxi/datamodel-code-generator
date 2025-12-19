@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -36,4 +36,4 @@ class MyArray(BaseModel):
 
 
 class Demo(BaseModel):
-    myArray: List[MyArray]
+    myArray: list[MyArray]

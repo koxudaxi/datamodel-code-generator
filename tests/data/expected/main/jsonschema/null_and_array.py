@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel
 
 
 class MyObjItem(BaseModel):
-    items: Optional[List[Any]]
+    items: Optional[list[Any]]
 
 
 class Model(BaseModel):
-    my_obj: List[MyObjItem]
+    my_obj: list[MyObjItem]

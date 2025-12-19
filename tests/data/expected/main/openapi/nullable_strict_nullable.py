@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -44,7 +44,7 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
-    __root__: Optional[List[Api]] = Field(...)
+    __root__: Optional[list[Api]] = Field(...)
 
 
 class EmailItem(BaseModel):
@@ -55,7 +55,7 @@ class EmailItem(BaseModel):
 
 
 class Email(BaseModel):
-    __root__: List[EmailItem]
+    __root__: list[EmailItem]
 
 
 class Id(BaseModel):
@@ -75,9 +75,9 @@ class Tag(BaseModel):
 
 
 class Notes(BaseModel):
-    comments: List[str] = Field(default_factory=list)
+    comments: list[str] = Field(default_factory=list)
 
 
 class Options(BaseModel):
-    comments: List[Optional[str]]
-    oneOfComments: List[Union[Optional[str], Optional[float]]]
+    comments: list[Optional[str]]
+    oneOfComments: list[Union[Optional[str], Optional[float]]]

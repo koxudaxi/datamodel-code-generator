@@ -82,6 +82,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
 
 BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
     "use_specialized_enum",
+    "use_standard_collections",
 })
 
 
@@ -393,7 +394,7 @@ class Config(BaseModel):
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None  # noqa: UP045
-    use_standard_collections: bool = False
+    use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
     use_attribute_docstrings: bool = False

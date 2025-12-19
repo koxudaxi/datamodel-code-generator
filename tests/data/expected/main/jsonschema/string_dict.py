@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Dict
-
 from pydantic import BaseModel
 
 
 class MyStringDict(BaseModel):
-    __root__: Dict[str, str]
+    __root__: dict[str, str]

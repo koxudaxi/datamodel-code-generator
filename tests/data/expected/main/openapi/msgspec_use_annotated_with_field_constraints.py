@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, TypeAlias, Union
+from typing import Annotated, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
 
@@ -15,7 +15,7 @@ class Pet(Struct):
     tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
 
 
-Pets: TypeAlias = List[Pet]
+Pets: TypeAlias = list[Pet]
 
 
 UID: TypeAlias = Annotated[int, Meta(ge=0)]
@@ -32,8 +32,8 @@ class User(Struct):
     name: Annotated[str, Meta(max_length=256)]
     uid: UID
     tag: Union[Annotated[str, Meta(max_length=64)], UnsetType] = UNSET
-    phones: Union[List[Phone], UnsetType] = UNSET
-    fax: Union[List[FaxItem], UnsetType] = UNSET
+    phones: Union[list[Phone], UnsetType] = UNSET
+    fax: Union[list[FaxItem], UnsetType] = UNSET
     height: Union[Annotated[Union[int, float], Meta(ge=1.0, le=300.0)], UnsetType] = (
         UNSET
     )
@@ -44,13 +44,13 @@ class User(Struct):
     rating: Union[Annotated[float, Meta(gt=0.0, le=5.0)], UnsetType] = UNSET
 
 
-Users: TypeAlias = List[User]
+Users: TypeAlias = list[User]
 
 
 Id: TypeAlias = str
 
 
-Rules: TypeAlias = List[str]
+Rules: TypeAlias = list[str]
 
 
 class Error(Struct):
@@ -80,7 +80,7 @@ class Api(Struct):
     ] = UNSET
 
 
-Apis: TypeAlias = List[Api]
+Apis: TypeAlias = list[Api]
 
 
 class Event(Struct):

@@ -134,7 +134,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # Typing Customization
     # ==========================================================================
     "--use-union-operator": CLIOptionMeta(name="--use-union-operator", category=OptionCategory.TYPING),
-    "--use-standard-collections": CLIOptionMeta(name="--use-standard-collections", category=OptionCategory.TYPING),
+    "--no-use-standard-collections": CLIOptionMeta(
+        name="--no-use-standard-collections", category=OptionCategory.TYPING
+    ),
     "--use-generic-container-types": CLIOptionMeta(
         name="--use-generic-container-types", category=OptionCategory.TYPING
     ),

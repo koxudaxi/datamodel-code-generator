@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Extra
 
@@ -28,11 +28,11 @@ class Error(BaseModel):
 
 
 class Resolved(BaseModel):
-    resolved: Optional[List[str]] = None
+    resolved: Optional[list[str]] = None
 
 
 class PetsModel(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class Friends2(BaseModel):

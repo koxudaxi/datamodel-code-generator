@@ -5,13 +5,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class FoodFoodIdGetResponse(BaseModel):
-    __root__: List[int]
+    __root__: list[int]
 
 
 class UserGetResponse(BaseModel):
@@ -33,7 +33,7 @@ class UsersGetResponseItem(BaseModel):
 
 
 class UsersGetResponse(BaseModel):
-    __root__: List[UsersGetResponseItem]
+    __root__: list[UsersGetResponseItem]
 
 
 class UsersPostRequestItem(BaseModel):
@@ -43,7 +43,7 @@ class UsersPostRequestItem(BaseModel):
 
 
 class UsersPostRequest(BaseModel):
-    __root__: List[UsersPostRequestItem]
+    __root__: list[UsersPostRequestItem]
 
 
 class Error(BaseModel):
@@ -63,4 +63,4 @@ class PetForm(BaseModel):
 
 
 class PetsGetResponse(BaseModel):
-    __root__: List[Pet]
+    __root__: list[Pet]

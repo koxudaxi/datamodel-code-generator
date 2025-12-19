@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
 class JobRun(BaseModel):
     enabled: Optional[bool] = Field(False, description='If Live Execution is enabled')
-    resources: Optional[List[str]] = Field(
+    resources: Optional[list[str]] = Field(
         None, description='Resource full classname to register to extend any endpoints.'
     )
