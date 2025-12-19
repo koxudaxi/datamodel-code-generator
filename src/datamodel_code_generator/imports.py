@@ -88,27 +88,39 @@ class Imports(defaultdict[str | None, set[str]]):
                     if import_.alias:
                         self.alias[import_.from_][import_.import_] = import_.alias
 
-    def remove(self, imports: Import | Iterable[Import]) -> None:
+    def remove(self, imports: Import | Iterable[Import]) -> None:  # noqa: PLR0912
         """Remove one or more imports from the collection."""
         if isinstance(imports, Import):  # pragma: no cover
             imports = [imports]
         for import_ in imports:
             if "." in import_.import_:  # pragma: no cover
-                self.counter[None, import_.import_] -= 1
-                if self.counter[None, import_.import_] == 0:  # pragma: no cover
-                    self[None].remove(import_.import_)
-                    if not self[None]:
-                        del self[None]
+                key = (None, import_.import_)
+                if self.counter.get(key, 0) <= 0:
+                    continue
+                self.counter[key] -= 1
+                if self.counter[key] == 0:  # pragma: no cover
+                    del self.counter[key]
+                    if None in self and import_.import_ in self[None]:
+                        self[None].remove(import_.import_)
+                        if not self[None]:
+                            del self[None]
             else:
-                self.counter[import_.from_, import_.import_] -= 1  # pragma: no cover
-                if self.counter[import_.from_, import_.import_] == 0:  # pragma: no cover
-                    self[import_.from_].remove(import_.import_)
-                    if not self[import_.from_]:
-                        del self[import_.from_]
-                    if import_.alias:  # pragma: no cover
+                key = (import_.from_, import_.import_)
+                if self.counter.get(key, 0) <= 0:
+                    continue
+                self.counter[key] -= 1  # pragma: no cover
+                if self.counter[key] == 0:  # pragma: no cover
+                    del self.counter[key]
+                    if import_.from_ in self and import_.import_ in self[import_.from_]:
+                        self[import_.from_].remove(import_.import_)
+                        if not self[import_.from_]:
+                            del self[import_.from_]
+                    if import_.alias and import_.from_ in self.alias and import_.import_ in self.alias[import_.from_]:
                         del self.alias[import_.from_][import_.import_]
                         if not self.alias[import_.from_]:
                             del self.alias[import_.from_]
+            if import_.reference_path and import_.reference_path in self.reference_paths:
+                del self.reference_paths[import_.reference_path]
 
     def remove_referenced_imports(self, reference_path: str) -> None:
         """Remove imports associated with a reference path."""
@@ -126,6 +138,9 @@ class Imports(defaultdict[str | None, set[str]]):
                     future.counter[key] = self.counter.pop(key)
             if future_key in self.alias:
                 future.alias[future_key] = self.alias.pop(future_key)
+            for ref_path, import_ in list(self.reference_paths.items()):
+                if import_.from_ == future_key:
+                    future.reference_paths[ref_path] = self.reference_paths.pop(ref_path)
         return future
 
     def add_export(self, name: str) -> None:

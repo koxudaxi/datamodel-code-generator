@@ -207,12 +207,10 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
         elif char == "]" and in_constr == 0:
             inner_count -= 1
         elif char == "(":
-            if current_part.strip().startswith("constr(") and current_part[-2] != "\\":
-                # non-escaped opening round bracket found inside constraint string expression
+            if current_part.strip().startswith("constr(") and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
                 in_constr += 1
         elif char == ")":
-            if in_constr > 0 and current_part[-2] != "\\":
-                # non-escaped closing round bracket found inside constraint string expression
+            if in_constr > 0 and (len(current_part) < 2 or current_part[-2] != "\\"):  # noqa: PLR2004
                 in_constr -= 1
         elif char == separator and inner_count == 0 and in_constr == 0:
             part = current_part[:-1].strip()

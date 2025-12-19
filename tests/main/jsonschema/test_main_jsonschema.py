@@ -3923,6 +3923,24 @@ def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
     )
 
 
+def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with frozen dataclasses preserves frozen in inherited models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass_frozen",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen",
+        ],
+    )
+
+
 def test_main_jsonschema_reuse_scope_tree_typeddict(output_dir: Path) -> None:
     """Test --reuse-scope=tree with TypedDict output type (no inheritance, direct reference)."""
     run_main_and_assert(

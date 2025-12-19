@@ -328,9 +328,12 @@ class DataModelFieldBase(_BaseModel):
         """Create a deep copy of this field to avoid mutating the original."""
         copied = self.copy()
         copied.parent = None
+        copied.extras = deepcopy(self.extras)
         copied.data_type = self.data_type.copy()
         if self.data_type.data_types:
             copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+        if self.data_type.dict_key:
+            copied.data_type.dict_key = self.data_type.dict_key.copy()
         return copied
 
     def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:
@@ -549,6 +552,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
                 path=self.reference.path + "/reuse",
             ),
             custom_template_dir=self._custom_template_dir,
+            custom_base_class=self.custom_base_class,
+            keyword_only=self.keyword_only,
+            treat_dot_as_module=self._treat_dot_as_module,
         )
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
