@@ -1896,7 +1896,9 @@ comparison, not continuous watching.
 
 ??? example "Output"
 
-    > **Error:** File not found: /home/runner/work/datamodel-code-generator/datamodel-code-generator/tests/data/expected/Error: --watch and --check cannot be used together
+    ```
+    Error: --watch and --check cannot be used together
+    ```
 
 ---
 
@@ -1950,7 +1952,9 @@ rapid file changes. Press Ctrl+C to stop watching.
 
 ??? example "Output"
 
-    > **Error:** File not found: /home/runner/work/datamodel-code-generator/datamodel-code-generator/tests/data/expected/Watching
+    ```
+    Watching
+    ```
 
 ---
 

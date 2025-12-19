@@ -155,7 +155,7 @@ def safe_read_file(base_path: Path, relative_path: str, file_types: tuple[str, .
         raise ValueError(msg) from None
 
     if not full_path.exists():
-        msg = f"File not found: {full_path}"
+        msg = f"File not found: {relative_path}"
         raise FileNotFoundError(msg)
 
     if full_path.is_dir():
@@ -312,14 +312,21 @@ def generate_option_section(
 
     md += '??? example "Output"\n\n'
     if "expected_stdout" in kwargs:
-        try:
-            content = read_expected_file(kwargs["expected_stdout"])
+        stdout_value = kwargs["expected_stdout"]
+        if "/" in stdout_value or stdout_value.endswith((".py", ".txt")):
+            try:
+                content = read_expected_file(stdout_value)
+                md += "    ```\n"
+                for line in content.strip().split("\n"):
+                    md += f"    {line}\n" if line else "    \n"
+                md += "    ```\n\n"
+            except (FileNotFoundError, ValueError) as e:
+                md += f"    > **Error:** {e}\n\n"
+        else:
             md += "    ```\n"
-            for line in content.strip().split("\n"):
+            for line in stdout_value.strip().split("\n"):
                 md += f"    {line}\n" if line else "    \n"
             md += "    ```\n\n"
-        except (FileNotFoundError, ValueError) as e:
-            md += f"    > **Error:** {e}\n\n"
     elif "comparison_output" in kwargs and "model_outputs" in kwargs:
         model_labels = {
             "pydantic_v1": "Pydantic v1",
