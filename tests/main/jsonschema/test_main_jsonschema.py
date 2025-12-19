@@ -2841,6 +2841,10 @@ def test_main_typed_dict_additional_properties(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
 def test_main_typed_dict_enum_field_as_literal_none(output_file: Path) -> None:
     """Test TypedDict with enum_field_as_literal=none."""
     run_main_and_assert(
@@ -2860,6 +2864,10 @@ def test_main_typed_dict_enum_field_as_literal_none(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
 def test_main_typed_dict_enum_field_as_literal_one(output_file: Path) -> None:
     """Test TypedDict with enum_field_as_literal=one."""
     run_main_and_assert(
@@ -2879,6 +2887,10 @@ def test_main_typed_dict_enum_field_as_literal_one(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
 def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     """Test TypedDict with enum_field_as_literal=all."""
     run_main_and_assert(
