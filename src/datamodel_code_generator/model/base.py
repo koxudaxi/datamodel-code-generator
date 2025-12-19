@@ -227,7 +227,7 @@ class DataModelFieldBase(_BaseModel):
         parts = [dt.type_hint for dt in self.data_type.data_types if dt.type_hint]
         if len(parts) > 1:
             return f"Union[{', '.join(parts)}]"
-        return None
+        return None  # pragma: no cover
 
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
