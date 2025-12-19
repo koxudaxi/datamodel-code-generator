@@ -120,7 +120,7 @@ def test_direct_input_dict(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("keyword_only", "target_python_version", "expected_file"),
     [
-        (False, PythonVersion.PY_39, "frozen_dataclasses.py"),
+        (False, PythonVersion.PY_310, "frozen_dataclasses.py"),
         (True, PythonVersion.PY_310, "frozen_dataclasses_keyword_only.py"),
     ],
 )

@@ -38,7 +38,7 @@ class Import(BaseModel):
         return Import(from_=".".join(split_class_path[:-1]) or None, import_=split_class_path[-1])
 
 
-class Imports(defaultdict[Optional[str], set[str]]):
+class Imports(defaultdict[str | None, set[str]]):
     """Collection of imports with reference counting and alias support."""
 
     def __str__(self) -> str:
@@ -162,7 +162,6 @@ IMPORT_UNION = Import.from_full_path("typing.Union")
 IMPORT_OPTIONAL = Import.from_full_path("typing.Optional")
 IMPORT_LITERAL = Import.from_full_path("typing.Literal")
 IMPORT_TYPE_ALIAS = Import.from_full_path("typing.TypeAlias")
-IMPORT_TYPE_ALIAS_BACKPORT = Import.from_full_path("typing_extensions.TypeAlias")
 IMPORT_TYPE_ALIAS_TYPE = Import.from_full_path("typing_extensions.TypeAliasType")
 IMPORT_SEQUENCE = Import.from_full_path("typing.Sequence")
 IMPORT_FROZEN_SET = Import.from_full_path("typing.FrozenSet")

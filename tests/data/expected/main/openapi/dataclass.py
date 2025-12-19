@@ -5,9 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
-
-from typing_extensions import TypeAlias
+from typing import List, Optional, TypeAlias
 
 
 @dataclass

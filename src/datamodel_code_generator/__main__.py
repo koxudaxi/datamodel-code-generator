@@ -14,12 +14,11 @@ from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 import argcomplete
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -527,7 +526,7 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
     return {}
 
 
-TomlValue: TypeAlias = Union[str, bool, list["TomlValue"], tuple["TomlValue", ...]]
+TomlValue: TypeAlias = str | bool | list["TomlValue"] | tuple["TomlValue", ...]
 
 
 def _format_toml_value(value: TomlValue) -> str:

@@ -39,7 +39,7 @@ providing fine-grained control over generated names independent of schema defini
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --aliases openapi/aliases.json --target-python 3.9 # (1)!
+    datamodel-codegen --input schema.json --aliases openapi/aliases.json --target-python 3.10 # (1)!
     ```
 
     1. :material-arrow-left: `--aliases` - the option documented here
@@ -313,10 +313,9 @@ providing fine-grained control over generated names independent of schema defini
         
         from __future__ import annotations
         
-        from typing import Annotated, List, Union
+        from typing import Annotated, List, TypeAlias, Union
         
         from msgspec import UNSET, Meta, Struct, UnsetType, field
-        from typing_extensions import TypeAlias
         
         
         class Pet(Struct):
@@ -672,10 +671,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     from __future__ import annotations
     
-    from typing import List, Literal, Optional
+    from typing import List, Literal, Optional, TypeAlias
     
     from pydantic import BaseModel, Extra, Field
-    from typing_extensions import TypeAlias
     
     Boolean: TypeAlias = bool
     """
@@ -2280,10 +2278,9 @@ generated models, preserving documentation from the original schema.
     
     from __future__ import annotations
     
-    from typing import Annotated, Any, List, Optional, Union
+    from typing import Annotated, Any, List, Optional, TypeAlias, Union
     
     from pydantic import BaseModel, Field
-    from typing_extensions import TypeAlias
     
     Model: TypeAlias = Any
     

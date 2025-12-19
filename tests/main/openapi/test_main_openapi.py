@@ -783,7 +783,7 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
 @pytest.mark.cli_doc(
     options=["--aliases"],
     input_schema="openapi/api.yaml",
-    cli_args=["--aliases", "openapi/aliases.json", "--target-python", "3.9"],
+    cli_args=["--aliases", "openapi/aliases.json", "--target-python", "3.10"],
     model_outputs={
         "pydantic_v1": "openapi/with_aliases.py",
         "msgspec": "openapi/with_aliases_msgspec.py",
@@ -806,7 +806,7 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
             "--aliases",
             str(OPEN_API_DATA_PATH / "aliases.json"),
             "--target-python",
-            "3.9",
+            "3.10",
             "--output-model-type",
             output_model,
         ],
@@ -1454,7 +1454,7 @@ def test_main_openapi_pattern(output_model: str, expected_output: str, output_fi
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=f"pattern/{expected_output}",
-        extra_args=["--target-python", "3.9", "--output-model-type", output_model],
+        extra_args=["--target-python", "3.10", "--output-model-type", output_model],
         transform=lambda s: s.replace("pattern.yaml", "pattern.json"),
     )
 
@@ -1483,7 +1483,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=expected_output,
-        extra_args=["--target-python", "3.9", "--output-model-type", "pydantic_v2.BaseModel", *args],
+        extra_args=["--target-python", "3.10", "--output-model-type", "pydantic_v2.BaseModel", *args],
     )
 
 
@@ -2325,7 +2325,7 @@ def test_main_openapi_default_object(output_model: str, expected_output: str, tm
         output_path=tmp_path,
         expected_directory=EXPECTED_OPENAPI_PATH / expected_output,
         input_file_type="openapi",
-        extra_args=["--output-model-type", output_model, "--target-python-version", "3.9"],
+        extra_args=["--output-model-type", output_model, "--target-python-version", "3.10"],
     )
 
 
@@ -2361,7 +2361,7 @@ def test_main_openapi_union_default_object(output_model: str, expected_output: s
             "--output-model-type",
             output_model,
             "--target-python-version",
-            "3.9",
+            "3.10",
             "--openapi-scopes",
             "schemas",
         ],
@@ -2400,7 +2400,7 @@ def test_main_openapi_empty_dict_default(output_model: str, expected_output: str
             "--output-model-type",
             output_model,
             "--target-python-version",
-            "3.9",
+            "3.10",
             "--openapi-scopes",
             "schemas",
         ],
@@ -2435,7 +2435,7 @@ def test_main_openapi_empty_list_default(output_model: str, expected_output: str
             "--output-model-type",
             output_model,
             "--target-python-version",
-            "3.9",
+            "3.10",
             "--openapi-scopes",
             "schemas",
         ],
@@ -2886,7 +2886,7 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="msgspec_use_annotated_with_field_constraints.py",
-        extra_args=["--field-constraints", "--target-python-version", "3.9", "--output-model-type", "msgspec.Struct"],
+        extra_args=["--field-constraints", "--target-python-version", "3.10", "--output-model-type", "msgspec.Struct"],
     )
 
 
@@ -2951,30 +2951,6 @@ def test_main_openapi_discriminator_one_literal_as_default_dataclass_py310(outpu
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
-def test_main_openapi_discriminator_one_literal_as_default_dataclass_py39_warning(output_file: Path) -> None:
-    """Test that Python 3.9 emits warning for dataclass field ordering conflict."""
-    with pytest.warns(UserWarning, match=r"Dataclass .* has a field ordering conflict due to inheritance"):
-        run_main_and_assert(
-            input_path=OPEN_API_DATA_PATH / "discriminator_enum.yaml",
-            output_path=output_file,
-            input_file_type="openapi",
-            assert_func=assert_file_content,
-            expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "dataclass_enum_one_literal_as_default.py",
-            extra_args=[
-                "--output-model-type",
-                "dataclasses.dataclass",
-                "--use-one-literal-as-default",
-                "--target-python-version",
-                "3.9",
-            ],
-            skip_code_validation=True,
-        )
-
-
-@pytest.mark.skipif(
-    black.__version__.split(".")[0] == "19",
-    reason="Installed black doesn't support the old style",
-)
 def test_main_openapi_dataclass_inheritance_parent_default(output_file: Path) -> None:
     """Test dataclass field ordering fix when parent has default field."""
     run_main_and_assert(
@@ -3011,19 +2987,6 @@ def test_main_openapi_keyword_only_dataclass(output_file: Path) -> None:
             "--target-python-version",
             "3.10",
         ],
-    )
-
-
-def test_main_openapi_keyword_only_dataclass_with_python_3_9(capsys: pytest.CaptureFixture, output_file: Path) -> None:
-    """Test OpenAPI generation with keyword-only dataclass for Python 3.9."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "inheritance.yaml",
-        output_path=output_file,
-        input_file_type="openapi",
-        expected_exit=Exit.ERROR,
-        extra_args=["--output-model-type", "dataclasses.dataclass", "--keyword-only", "--target-python-version", "3.9"],
-        capsys=capsys,
-        expected_stderr_contains="`--keyword-only` requires `--target-python-version` 3.10 or higher.",
     )
 
 
@@ -3285,7 +3248,7 @@ def test_main_openapi_same_name_objects(output_file: Path) -> None:
 
 
 def test_main_openapi_type_alias(output_file: Path) -> None:
-    """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.9-3.11."""
+    """Test that TypeAliasType is generated for OpenAPI schemas for Python 3.10-3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias.yaml",
         output_path=output_file,

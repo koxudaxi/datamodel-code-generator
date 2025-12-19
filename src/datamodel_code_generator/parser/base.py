@@ -13,15 +13,14 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -475,7 +474,7 @@ def relative(
         return "", ""
 
     i = 0
-    for x, y in zip(current_module_path, reference_path):
+    for x, y in zip(current_module_path, reference_path, strict=False):
         if x != y:
             break
         i += 1

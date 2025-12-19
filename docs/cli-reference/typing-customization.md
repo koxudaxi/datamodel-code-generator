@@ -712,10 +712,9 @@ of Enum classes for all enumerations.
         
         from __future__ import annotations
         
-        from typing import Literal
+        from typing import Literal, TypeAlias
         
         from pydantic import BaseModel
-        from typing_extensions import TypeAlias
         
         Boolean: TypeAlias = bool
         """
@@ -755,8 +754,7 @@ of Enum classes for all enumerations.
         from __future__ import annotations
         
         from enum import Enum
-        
-        from typing_extensions import TypeAlias
+        from typing import TypeAlias
         
         Boolean: TypeAlias = bool
         """
@@ -1631,7 +1629,7 @@ Use built-in dict/list instead of typing.Dict/List.
 
 The `--use-standard-collections` flag generates built-in container types
 (dict, list) instead of typing module equivalents. This produces cleaner
-code for Python 3.9+ where built-in types support subscripting.
+code for Python 3.10+ where built-in types support subscripting.
 
 **Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
 
@@ -1838,7 +1836,7 @@ code for Python 3.9+ where built-in types support subscripting.
 Use TypeAlias instead of root models for type definitions (experimental).
 
 The `--use-type-alias` flag generates TypeAlias declarations instead of
-root model classes for certain type definitions. For Python 3.9-3.11, it
+root model classes for certain type definitions. For Python 3.10-3.11, it
 generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
 syntax. This feature is experimental.
 
@@ -1885,10 +1883,9 @@ syntax. This feature is experimental.
     
     from __future__ import annotations
     
-    from typing import Literal, Optional, Union
+    from typing import Literal, Optional, TypeAlias, Union
     
     from pydantic import BaseModel, Field
-    from typing_extensions import TypeAlias
     
     Boolean: TypeAlias = bool
     """

@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
 
@@ -81,7 +81,7 @@ if PYDANTIC_V2:
     from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
 
 def unescape_json_pointer_segment(segment: str) -> str:

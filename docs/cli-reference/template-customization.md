@@ -67,11 +67,10 @@ is useful when using custom types defined in external modules (e.g.,
     from __future__ import annotations
     
     from datetime import date, datetime
-    from typing import Literal, Optional
+    from typing import Literal, Optional, TypeAlias
     
     from mymodule.myclass import MyCustomPythonClass
     from pydantic import BaseModel, Field
-    from typing_extensions import TypeAlias
     
     Boolean: TypeAlias = bool
     """
@@ -503,10 +502,9 @@ formatting rules beyond what black/isort provide.
     # a comment
     from __future__ import annotations
     
-    from typing import Literal, Optional
+    from typing import Literal, Optional, TypeAlias
     
     from pydantic import BaseModel, Field
-    from typing_extensions import TypeAlias
     
     Boolean: TypeAlias = bool
     """
@@ -2208,7 +2206,7 @@ the generated Python code. Available formatters are: black, isort,
 ruff, yapf, autopep8, autoflake. Default is [black, isort].
 Use this to customize formatting or disable formatters entirely.
 
-**See also:** [CI/CD Integration](../ci-cd.md), [Code Formatting](../formatting.md)
+**See also:** [Code Formatting](../formatting.md), [CI/CD Integration](../ci-cd.md)
 
 !!! tip "Usage"
 

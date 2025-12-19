@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
 )
 from urllib.parse import ParseResult
 
@@ -31,8 +30,8 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
-from datamodel_code_generator.model.scalar import DataTypeScalarBackport
-from datamodel_code_generator.model.union import DataTypeUnionBackport
+from datamodel_code_generator.model.scalar import DataTypeScalar
+from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
@@ -51,7 +50,7 @@ except ImportError as exc:  # pragma: no cover
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
@@ -101,8 +100,8 @@ class GraphQLParser(Parser):
         *,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_model_scalar_type: type[DataModel] = DataTypeScalarBackport,
-        data_model_union_type: type[DataModel] = DataTypeUnionBackport,
+        data_model_scalar_type: type[DataModel] = DataTypeScalar,
+        data_model_union_type: type[DataModel] = DataTypeUnion,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,

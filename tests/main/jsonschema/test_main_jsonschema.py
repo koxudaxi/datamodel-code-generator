@@ -1096,7 +1096,7 @@ def test_main_root_model_with_additional_properties_use_standard_collections(out
 
     The `--use-standard-collections` flag generates built-in container types
     (dict, list) instead of typing module equivalents. This produces cleaner
-    code for Python 3.9+ where built-in types support subscripting.
+    code for Python 3.10+ where built-in types support subscripting.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
@@ -2688,7 +2688,7 @@ def test_main_jsonschema_enum_root_literal(output_file: Path) -> None:
             "--use-title-as-name",
             "--field-constraints",
             "--target-python-version",
-            "3.9",
+            "3.10",
             "--allow-population-by-field-name",
             "--strip-default-none",
             "--use-default",

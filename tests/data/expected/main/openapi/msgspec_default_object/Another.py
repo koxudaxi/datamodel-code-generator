@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import List, Union
+from typing import List, TypeAlias, Union
 
 from msgspec import Struct, UnsetType, convert, field
-from typing_extensions import TypeAlias
 
 from . import Foo as Foo_1
 from . import Nested

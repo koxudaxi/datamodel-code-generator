@@ -16,7 +16,6 @@ from re import Pattern
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     ClassVar,
     Optional,
     Protocol,
@@ -85,7 +84,7 @@ NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
 if TYPE_CHECKING:
     import builtins
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from pydantic_core import core_schema
 

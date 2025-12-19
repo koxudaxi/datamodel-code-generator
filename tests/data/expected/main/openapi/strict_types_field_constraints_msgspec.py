@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, TypeAlias
 
 from msgspec import Meta
-from typing_extensions import TypeAlias
 
 Timestamp: TypeAlias = Annotated[int, Meta(ge=1, le=9999999999)]
 

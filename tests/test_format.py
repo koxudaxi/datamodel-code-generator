@@ -26,7 +26,6 @@ def test_python_version() -> None:
 
 def test_python_version_has_native_deferred_annotations() -> None:
     """Test that has_native_deferred_annotations returns correct values for each Python version."""
-    assert not PythonVersion.PY_39.has_native_deferred_annotations
     assert not PythonVersion.PY_310.has_native_deferred_annotations
     assert not PythonVersion.PY_311.has_native_deferred_annotations
     assert not PythonVersion.PY_312.has_native_deferred_annotations

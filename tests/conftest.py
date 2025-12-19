@@ -6,12 +6,13 @@ import difflib
 import inspect
 import json
 import re
-import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 import pytest
+import time_machine
 from inline_snapshot import external_file, register_format_alias
 
 from datamodel_code_generator import MIN_VERSION
@@ -259,36 +260,29 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pyte
                 terminalreporter.write_line(f"  {file_path}: {error}")
 
 
-if sys.version_info >= (3, 10):
-    from datetime import datetime, timezone
+def _parse_time_string(time_str: str) -> datetime:
+    """Parse time string to datetime with UTC timezone."""
+    for fmt in (
+        "%Y-%m-%dT%H:%M:%S%z",
+        "%Y-%m-%d %H:%M:%S%z",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d",
+    ):
+        try:
+            dt = datetime.strptime(time_str, fmt)  # noqa: DTZ007
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt  # noqa: TRY300
+        except ValueError:  # noqa: PERF203
+            continue
+    return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
 
-    import time_machine
 
-    def _parse_time_string(time_str: str) -> datetime:
-        """Parse time string to datetime with UTC timezone."""
-        for fmt in (
-            "%Y-%m-%dT%H:%M:%S%z",
-            "%Y-%m-%d %H:%M:%S%z",
-            "%Y-%m-%dT%H:%M:%S",
-            "%Y-%m-%d %H:%M:%S",
-            "%Y-%m-%d",
-        ):
-            try:
-                dt = datetime.strptime(time_str, fmt)  # noqa: DTZ007
-                if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                return dt  # noqa: TRY300
-            except ValueError:  # noqa: PERF203
-                continue
-        return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
-
-    def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
-        """Freeze time using time-machine (100-200x faster than freezegun)."""
-        dt = _parse_time_string(time_to_freeze)
-        return time_machine.travel(dt, tick=False)
-
-else:
-    from freezegun import freeze_time as freeze_time  # noqa: PLC0414
+def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
+    """Freeze time using time-machine (100-200x faster than freezegun)."""
+    dt = _parse_time_string(time_to_freeze)
+    return time_machine.travel(dt, tick=False)
 
 
 def _normalize_line_endings(text: str) -> str:
