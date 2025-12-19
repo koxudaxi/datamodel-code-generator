@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
-from typing_extensions import TypeAlias
 
 OptionalOneofWithNullAndConstraint: TypeAlias = Annotated[str, Meta(max_length=100)]
 

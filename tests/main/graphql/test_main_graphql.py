@@ -459,7 +459,7 @@ def test_main_graphql_type_alias(output_file: Path) -> None:
     """Use TypeAlias instead of root models for type definitions (experimental).
 
     The `--use-type-alias` flag generates TypeAlias declarations instead of
-    root model classes for certain type definitions. For Python 3.9-3.11, it
+    root model classes for certain type definitions. For Python 3.10-3.11, it
     generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
     syntax. This feature is experimental.
     """

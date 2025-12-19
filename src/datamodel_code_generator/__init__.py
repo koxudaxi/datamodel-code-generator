@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from collections.abc import Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -17,18 +17,17 @@ from typing import (
     IO,
     TYPE_CHECKING,
     Any,
-    Callable,
     Final,
     TextIO,
+    TypeAlias,
     TypeVar,
-    Union,
     cast,
 )
 from urllib.parse import ParseResult
 
 import yaml
 import yaml.parser
-from typing_extensions import TypeAlias, TypeAliasType, TypedDict
+from typing_extensions import TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
@@ -48,10 +47,10 @@ if TYPE_CHECKING:
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
 
-    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
-    YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+    YamlScalar: TypeAlias = str | int | float | bool | None
+    YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
 
-MIN_VERSION: Final[int] = 9
+MIN_VERSION: Final[int] = 10
 MAX_VERSION: Final[int] = 13
 DEFAULT_SHARED_MODULE_NAME: Final[str] = "shared"
 
@@ -74,12 +73,12 @@ class DataclassArguments(TypedDict, total=False):
 
 
 if not TYPE_CHECKING:
-    YamlScalar: TypeAlias = Union[str, int, float, bool, None]
+    YamlScalar: TypeAlias = str | int | float | bool | None
     if PYDANTIC_V2:
-        YamlValue = TypeAliasType("YamlValue", "Union[dict[str, YamlValue], list[YamlValue], YamlScalar]")
+        YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
     else:
         # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
-        YamlValue: TypeAlias = Union[dict[str, Any], list[Any], YamlScalar]
+        YamlValue: TypeAlias = dict[str, Any] | list[Any] | YamlScalar
 
 try:
     import pysnooper
@@ -489,17 +488,18 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
     """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
-    if isinstance(input_, str):
-        input_text: str | None = input_
-    elif isinstance(input_, ParseResult):
-        from datamodel_code_generator.http import get_body  # noqa: PLC0415
+    match input_:
+        case str():
+            input_text: str | None = input_
+        case ParseResult():
+            from datamodel_code_generator.http import get_body  # noqa: PLC0415
 
-        input_text = remote_text_cache.get_or_put(
-            input_.geturl(),
-            default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
-        )
-    else:
-        input_text = None
+            input_text = remote_text_cache.get_or_put(
+                input_.geturl(),
+                default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
+            )
+        case _:
+            input_text = None
 
     if dataclass_arguments is None:
         dataclass_arguments = {}
@@ -562,7 +562,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                     def get_header_and_first_line(csv_file: IO[str]) -> dict[str, Any]:
                         csv_reader = csv.DictReader(csv_file)
                         assert csv_reader.fieldnames is not None
-                        return dict(zip(csv_reader.fieldnames, next(csv_reader)))
+                        return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
 
                     if isinstance(input_, Path):
                         with input_.open(encoding=encoding) as f:
@@ -735,16 +735,16 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             module_split_mode=module_split_mode,
         )
     if not input_filename:  # pragma: no cover
-        if isinstance(input_, str):
-            input_filename = "<stdin>"
-        elif isinstance(input_, ParseResult):
-            input_filename = input_.geturl()
-        elif input_file_type == InputFileType.Dict:
-            # input_ might be a dict object provided directly, and missing a name field
-            input_filename = getattr(input_, "name", "<dict>")
-        else:
-            assert isinstance(input_, Path)
-            input_filename = input_.name
+        match input_:
+            case str():
+                input_filename = "<stdin>"
+            case ParseResult():
+                input_filename = input_.geturl()
+            case Path():
+                input_filename = input_.name
+            case _:
+                # input_ might be a dict object provided directly, and missing a name field
+                input_filename = getattr(input_, "name", "<dict>")
     if not results:
         msg = "Models not found in the input data"
         raise Error(msg)

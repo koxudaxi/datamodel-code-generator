@@ -23,7 +23,7 @@ You can define multiple named profiles for different use cases within a single p
 
 ```toml
 [tool.datamodel-codegen]
-target-python-version = "3.9"
+target-python-version = "3.10"
 snake-case-field = true
 
 [tool.datamodel-codegen.profiles.api]

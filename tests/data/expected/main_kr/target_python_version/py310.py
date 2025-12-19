@@ -4,16 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, conint
 
 
 class Person(BaseModel):
-    firstName: str | None = Field(None, description="The person's first name.")
-    lastName: str | None = Field(None, description="The person's last name.")
-    age: conint(ge=0) | None = Field(
+    firstName: Optional[str] = Field(None, description="The person's first name.")
+    lastName: Optional[str] = Field(None, description="The person's last name.")
+    age: Optional[conint(ge=0)] = Field(
         None, description='Age in years which must be equal to or greater than zero.'
     )
-    friends: list[Any] | None = None
+    friends: Optional[list[Any]] = None
     comment: None = None

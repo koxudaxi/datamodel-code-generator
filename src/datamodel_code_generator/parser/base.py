@@ -13,15 +13,14 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Hashable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, NamedTuple, Optional, Protocol, TypeVar, cast, runtime_checkable
+from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
 from urllib.parse import ParseResult
 from warnings import warn
 
 from pydantic import BaseModel
-from typing_extensions import TypeAlias
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -475,7 +474,7 @@ def relative(
         return "", ""
 
     i = 0
-    for x, y in zip(current_module_path, reference_path):
+    for x, y in zip(current_module_path, reference_path, strict=False):
         if x != y:
             break
         i += 1
@@ -926,23 +925,26 @@ class Parser(ABC):
     @property
     def iter_source(self) -> Iterator[Source]:
         """Iterate over all source files to be parsed."""
-        if isinstance(self.source, str):
-            yield Source(path=Path(), text=self.source)
-        elif isinstance(self.source, Path):  # pragma: no cover
-            if self.source.is_dir():
-                for path in sorted(self.source.rglob("*"), key=lambda p: p.name):
-                    if path.is_file():
-                        yield Source.from_path(path, self.base_path, self.encoding)
-            else:
-                yield Source.from_path(self.source, self.base_path, self.encoding)
-        elif isinstance(self.source, list):  # pragma: no cover
-            for path in self.source:
-                yield Source.from_path(path, self.base_path, self.encoding)
-        else:
-            yield Source(
-                path=Path(self.source.path),
-                text=self.remote_text_cache.get_or_put(self.source.geturl(), default_factory=self._get_text_from_url),
-            )
+        match self.source:
+            case str():
+                yield Source(path=Path(), text=self.source)
+            case Path() as path:  # pragma: no cover
+                if path.is_dir():
+                    for p in sorted(path.rglob("*"), key=lambda p: p.name):
+                        if p.is_file():
+                            yield Source.from_path(p, self.base_path, self.encoding)
+                else:
+                    yield Source.from_path(path, self.base_path, self.encoding)
+            case list() as paths:  # pragma: no cover
+                for path in paths:
+                    yield Source.from_path(path, self.base_path, self.encoding)
+            case _:
+                yield Source(
+                    path=Path(self.source.path),
+                    text=self.remote_text_cache.get_or_put(
+                        self.source.geturl(), default_factory=self._get_text_from_url
+                    ),
+                )
 
     def _append_additional_imports(self, additional_imports: list[str] | None) -> None:
         if additional_imports is None:

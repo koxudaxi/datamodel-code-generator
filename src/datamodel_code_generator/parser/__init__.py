@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from collections import UserDict
 from enum import Enum
-from typing import Callable, TypeVar
+from typing import TYPE_CHECKING, TypeVar
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 TK = TypeVar("TK")
 TV = TypeVar("TV")

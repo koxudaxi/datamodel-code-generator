@@ -5,10 +5,9 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import Any, Union
+from typing import Any, TypeAlias, Union
 
 from msgspec import UNSET, Struct, UnsetType
-from typing_extensions import TypeAlias
 
 Model: TypeAlias = Any
 

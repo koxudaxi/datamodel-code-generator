@@ -9,13 +9,14 @@ from __future__ import annotations
 import copy
 import re
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
 import pydantic
 from packaging import version
 from pydantic import BaseModel as _BaseModel
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 PYDANTIC_VERSION = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))

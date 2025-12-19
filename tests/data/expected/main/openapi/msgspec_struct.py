@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Union
+from typing import Annotated, List, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType
-from typing_extensions import TypeAlias
 
 
 class Pet(Struct):

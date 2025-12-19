@@ -7,14 +7,14 @@ Provides factory functions and classes for generating different output formats
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Callable, NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from datamodel_code_generator import PythonVersion
 
 from .base import ConstraintsBase, DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
     from datamodel_code_generator import DataModelType
     from datamodel_code_generator.types import DataTypeManager as DataTypeManagerABC
@@ -69,14 +69,10 @@ def get_data_model_types(
         type_alias_class = type_alias.TypeStatement
         scalar_class = scalar.DataTypeScalarTypeStatement
         union_class = union.DataTypeUnionTypeStatement
-    elif target_python_version.has_type_alias:
+    else:  # 3.10+ always has TypeAlias
         type_alias_class = type_alias.TypeAlias
         scalar_class = scalar.DataTypeScalar
         union_class = union.DataTypeUnion
-    else:
-        type_alias_class = type_alias.TypeAliasBackport
-        scalar_class = scalar.DataTypeScalarBackport
-        union_class = union.DataTypeUnionBackport
 
     if data_model_type == DataModelType.PydanticBaseModel:
         return DataModelSet(

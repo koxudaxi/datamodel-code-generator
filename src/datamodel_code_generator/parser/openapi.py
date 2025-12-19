@@ -12,7 +12,7 @@ from contextlib import nullcontext
 from enum import Enum
 from pathlib import Path
 from re import Pattern
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
 from pydantic import Field
@@ -51,7 +51,7 @@ from datamodel_code_generator.types import (
 from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
     from urllib.parse import ParseResult
 
     from datamodel_code_generator.parser import DefaultPutDict

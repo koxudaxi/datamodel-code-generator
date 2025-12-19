@@ -6,9 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
-
-from typing_extensions import TypeAlias
+from typing import Optional, TypeAlias
 
 
 class ProcessingStatus(Enum):

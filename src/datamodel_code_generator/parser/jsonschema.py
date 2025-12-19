@@ -13,7 +13,7 @@ from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, ClassVar, Literal, Optional, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
 
@@ -81,7 +81,7 @@ if PYDANTIC_V2:
     from pydantic import ConfigDict
 
 if TYPE_CHECKING:
-    from collections.abc import Generator, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -805,28 +805,30 @@ class JsonSchemaParser(Parser):
                 varnames.append(str(const_value))
 
             if inferred_type is None and const_value is not None:
-                if isinstance(const_value, str):
-                    inferred_type = "string"
-                elif isinstance(const_value, bool):
-                    inferred_type = "boolean"
-                elif isinstance(const_value, int):
-                    inferred_type = "integer"
-                elif isinstance(const_value, float):
-                    inferred_type = "number"
+                match const_value:
+                    case str():
+                        inferred_type = "string"
+                    case bool():  # bool must come before int (bool is subclass of int)
+                        inferred_type = "boolean"
+                    case int():
+                        inferred_type = "integer"
+                    case float():
+                        inferred_type = "number"
 
         if not enum_values:  # pragma: no cover
             return None
 
         final_type: str | None
-        if isinstance(parent_type, str):
-            final_type = parent_type
-        elif isinstance(parent_type, list):
-            non_null_types = [t for t in parent_type if t != "null"]
-            final_type = non_null_types[0] if non_null_types else inferred_type
-            if "null" in parent_type:
-                nullable = True
-        else:
-            final_type = inferred_type
+        match parent_type:
+            case str():
+                final_type = parent_type
+            case list():
+                non_null_types = [t for t in parent_type if t != "null"]
+                final_type = non_null_types[0] if non_null_types else inferred_type
+                if "null" in parent_type:
+                    nullable = True
+            case _:
+                final_type = inferred_type
 
         return (enum_values, varnames, final_type, nullable)
 
@@ -2382,12 +2384,13 @@ class JsonSchemaParser(Parser):
             else:
                 required = not obj.nullable and required
                 nullable = None
-        if isinstance(obj.items, JsonSchemaObject):
-            items: list[JsonSchemaObject] = [obj.items]
-        elif isinstance(obj.items, list):
-            items = obj.items
-        else:
-            items = []
+        match obj.items:
+            case JsonSchemaObject():
+                items: list[JsonSchemaObject] = [obj.items]
+            case list():
+                items = obj.items
+            case _:
+                items = []
 
         if items:
             item_data_types = self.parse_list_item(
@@ -2912,11 +2915,11 @@ class JsonSchemaParser(Parser):
     ) -> None:
         """Traverse schema objects recursively and apply callback."""
         callback(obj, path)
-        if obj.items:
-            if isinstance(obj.items, JsonSchemaObject):
-                self._traverse_schema_objects(obj.items, path, callback, include_one_of=include_one_of)
-            elif isinstance(obj.items, list):
-                for item in obj.items:
+        match obj.items:
+            case JsonSchemaObject() as item:
+                self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
+            case list() as items:
+                for item in items:
                     self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self._traverse_schema_objects(obj.additionalProperties, path, callback, include_one_of=include_one_of)
