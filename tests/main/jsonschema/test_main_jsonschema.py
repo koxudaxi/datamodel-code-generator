@@ -2652,6 +2652,23 @@ def test_main_jsonschema_pattern_properties_by_reference(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_copy_deep_pattern_properties(output_file: Path) -> None:
+    """Test copy_deep properly preserves dict_key from patternProperties during allOf inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "copy_deep_pattern_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="copy_deep_pattern_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--read-only-write-only-model-type",
+            "all",
+        ],
+    )
+
+
 def test_main_dataclass_field(output_file: Path) -> None:
     """Test dataclass field generation."""
     run_main_and_assert(
@@ -3920,6 +3937,24 @@ def test_main_jsonschema_reuse_scope_tree_dataclass(output_dir: Path) -> None:
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass",
         input_file_type="jsonschema",
         extra_args=["--reuse-model", "--reuse-scope", "tree", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with frozen dataclasses preserves frozen in inherited models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree_dataclass",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_dataclass_frozen",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--frozen",
+        ],
     )
 
 
