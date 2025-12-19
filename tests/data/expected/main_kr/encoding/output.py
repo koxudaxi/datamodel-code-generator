@@ -4,11 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class 日本語Model(BaseModel):
-    名前: Optional[str] = Field(None, description='ユーザー名')
-    年齢: Optional[int] = None
+    名前: str | None = Field(None, description='ユーザー名')
+    年齢: int | None = None

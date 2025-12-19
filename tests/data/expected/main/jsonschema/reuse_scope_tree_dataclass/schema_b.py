@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 from . import shared
 
 
 @dataclass
 class Model:
-    info: Optional[shared.SharedModel] = None
+    info: shared.SharedModel | None = None

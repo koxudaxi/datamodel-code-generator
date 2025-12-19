@@ -4,11 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, NaiveDatetime
 
 
 class Model(BaseModel):
-    some_optional_property: Optional[str] = None
-    some_optional_typed_property: Optional[NaiveDatetime] = None
+    some_optional_property: str | None = None
+    some_optional_typed_property: NaiveDatetime | None = None

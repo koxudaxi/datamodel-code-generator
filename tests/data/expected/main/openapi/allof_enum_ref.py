@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -21,4 +20,4 @@ class QuantityTrunc(BaseModel):
 
 
 class CreateOrderByEstimateRequest(BaseModel):
-    quantity_trunc: Optional[QuantityTrunc] = None
+    quantity_trunc: QuantityTrunc | None = None

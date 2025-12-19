@@ -5,17 +5,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass(kw_only=True)
 class Base:
     id: str
-    createdAt: Optional[str] = None
-    version: Optional[float] = 1
+    createdAt: str | None = None
+    version: float | None = 1
 
 
 @dataclass(kw_only=True)
 class Child(Base):
     title: str
-    url: Optional[str] = 'https://example.com'
+    url: str | None = 'https://example.com'

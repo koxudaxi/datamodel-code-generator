@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class ExternalChildRoot(BaseModel):
-    somefield: Optional[int] = None
+    somefield: int | None = None
 
 
 class Object(BaseModel):

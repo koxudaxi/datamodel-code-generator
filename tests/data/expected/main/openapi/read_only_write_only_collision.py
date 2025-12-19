@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class UserRequest(BaseModel):
-    existing_field: Optional[str] = None
+    existing_field: str | None = None
 
 
 class UserRequest1(BaseModel):
     name: str
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class UserResponse(BaseModel):
@@ -26,4 +24,4 @@ class UserResponse(BaseModel):
 class User(BaseModel):
     id: int
     name: str
-    password: Optional[str] = None
+    password: str | None = None

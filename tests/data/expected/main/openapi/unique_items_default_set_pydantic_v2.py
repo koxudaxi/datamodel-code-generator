@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class TestModel(BaseModel):
-    tags: Optional[set[str]] = {'tag1', 'tag2'}
-    empty_tags: Optional[set[str]] = set()
-    numbers: Optional[set[int]] = {1, 2, 3}
+    tags: set[str] | None = {'tag1', 'tag2'}
+    empty_tags: set[str] | None = set()
+    numbers: set[int] | None = {1, 2, 3}

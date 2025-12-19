@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -36,8 +35,8 @@ class CountryDuplicateTitle(Enum):
 
 
 class EnumObjectTest(BaseModel):
-    country_with_title: Optional[CountryWithTitle] = None
-    country_with_name: Optional[CountryWithName] = None
-    country_with_const: Optional[CountryWithConst] = None
-    country_no_identifier: Optional[CountryNoIdentifier] = None
-    country_duplicate_title: Optional[CountryDuplicateTitle] = None
+    country_with_title: CountryWithTitle | None = None
+    country_with_name: CountryWithName | None = None
+    country_with_const: CountryWithConst | None = None
+    country_no_identifier: CountryNoIdentifier | None = None
+    country_duplicate_title: CountryDuplicateTitle | None = None

@@ -4,37 +4,37 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Address(BaseModel):
-    street: Optional[str] = None
-    city: Optional[str] = None
+    street: str | None = None
+    city: str | None = None
 
 
 class ContactInfo(BaseModel):
-    email: Optional[str] = None
-    phone: Optional[str] = None
+    email: str | None = None
+    phone: str | None = None
 
 
 class ProjectedPerson(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
-    address: Optional[Address] = None
-    metadata: Optional[dict[str, str]] = None
-    contact: Optional[ContactInfo] = None
-    tags: Optional[list[str]] = None
-    priority: Optional[Union[int, str]] = None
+    id: int | None = None
+    name: str | None = None
+    address: Address | None = None
+    metadata: dict[str, str] | None = None
+    contact: ContactInfo | None = None
+    tags: list[str] | None = None
+    priority: int | str | None = None
 
 
 class Person(ProjectedPerson):
-    nickname: Optional[str] = None
+    nickname: str | None = None
     id: int
     name: str
     address: dict[str, Any]
     metadata: dict[str, str]
     contact: ContactInfo
     tags: list[str]
-    priority: Union[int, str]
+    priority: int | str

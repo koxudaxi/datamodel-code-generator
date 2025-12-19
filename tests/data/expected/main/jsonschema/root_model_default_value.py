@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -24,13 +24,13 @@ class NameType(RootModel[str]):
 
 
 class Model(BaseModel):
-    admin_state: Optional[AdminStateLeaf] = AdminStateLeaf.enable
+    admin_state: AdminStateLeaf | None = AdminStateLeaf.enable
     count: Annotated[
-        Optional[CountType],
+        CountType | None,
         Field(default_factory=lambda: CountType.model_validate(CountType(10))),
     ]
     name: Annotated[
-        Optional[NameType],
+        NameType | None,
         Field(
             default_factory=lambda: NameType.model_validate(NameType('default_name'))
         ),

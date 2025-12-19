@@ -4,15 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Properties(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Animal(BaseModel):
-    species: Optional[str] = None
-    props: Optional[Properties] = None
+    species: str | None = None
+    props: Properties | None = None

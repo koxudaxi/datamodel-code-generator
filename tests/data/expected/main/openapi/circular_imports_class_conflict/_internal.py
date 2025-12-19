@@ -4,44 +4,42 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Item(BaseModel):
-    id: Optional[str] = None
-    sub_item: Optional[Authorization] = None
+    id: str | None = None
+    sub_item: Authorization | None = None
 
 
 class Item_1(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class Invoice(BaseModel):
-    id: Optional[str] = None
-    billing_item: Optional[Item_1] = None
-    session: Optional[Session] = None
+    id: str | None = None
+    billing_item: Item_1 | None = None
+    session: Session | None = None
 
 
 class Item_2(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class Session(BaseModel):
-    id: Optional[str] = None
-    checkout_item: Optional[Item_2] = None
-    root_item: Optional[Item] = None
+    id: str | None = None
+    checkout_item: Item_2 | None = None
+    root_item: Item | None = None
 
 
 class Item_3(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
 
 
 class Authorization(BaseModel):
-    id: Optional[str] = None
-    item: Optional[Item_3] = None
-    invoice: Optional[Invoice] = None
+    id: str | None = None
+    item: Item_3 | None = None
+    invoice: Invoice | None = None
 
 
 Item.update_forward_refs()

@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Person(BaseModel):
     first_name: str
     last_name: str
-    email_address: Optional[str] = None
+    email_address: str | None = None

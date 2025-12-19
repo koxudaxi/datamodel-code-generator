@@ -4,40 +4,38 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class BaseRequest(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class Base(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
 
 
 class ParentRequest(BaseModel):
-    name: Optional[str] = None
-    parent_field: Optional[str] = None
+    name: str | None = None
+    parent_field: str | None = None
 
 
 class Parent(Base):
-    parent_field: Optional[str] = None
+    parent_field: str | None = None
 
 
 class ChildRequest(BaseModel):
-    name: Optional[str] = None
-    parent_field: Optional[str] = None
-    extra: Optional[str] = None
+    name: str | None = None
+    parent_field: str | None = None
+    extra: str | None = None
 
 
 class ChildResponse(BaseModel):
-    id: Optional[int] = None
-    name: Optional[str] = None
-    parent_field: Optional[str] = None
+    id: int | None = None
+    name: str | None = None
+    parent_field: str | None = None
 
 
 class Child(Parent):
-    extra: Optional[str] = None
+    extra: str | None = None

@@ -4,13 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class A(BaseModel):
-    a_property: Optional[B1] = None
+    a_property: B1 | None = None
 
 
 class B1(A):

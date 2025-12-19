@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -17,19 +16,19 @@ class FoodFoodIdGetResponse(BaseModel):
 class UserGetResponse(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UserPostRequest(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersGetResponseItem(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersGetResponse(BaseModel):
@@ -39,7 +38,7 @@ class UsersGetResponse(BaseModel):
 class UsersPostRequestItem(BaseModel):
     timestamp: datetime
     name: str
-    age: Optional[str] = None
+    age: str | None = None
 
 
 class UsersPostRequest(BaseModel):
@@ -54,12 +53,12 @@ class Error(BaseModel):
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str] = None
+    tag: str | None = None
 
 
 class PetForm(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = None
+    name: str | None = None
+    age: int | None = None
 
 
 class PetsGetResponse(BaseModel):

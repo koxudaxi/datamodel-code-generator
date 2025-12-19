@@ -4,12 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Union
-
 from msgspec import Struct, UnsetType, field
 
 
 class TestModel(Struct):
-    tags: Union[set[str], UnsetType] = field(default_factory=lambda: {'tag1', 'tag2'})
-    empty_tags: Union[set[str], UnsetType] = field(default_factory=set)
-    numbers: Union[set[int], UnsetType] = field(default_factory=lambda: {1, 2, 3})
+    tags: set[str] | UnsetType = field(default_factory=lambda: {'tag1', 'tag2'})
+    empty_tags: set[str] | UnsetType = field(default_factory=set)
+    numbers: set[int] | UnsetType = field(default_factory=lambda: {1, 2, 3})

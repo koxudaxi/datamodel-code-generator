@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, TypeAlias, Union
+from typing import Literal, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +26,7 @@ class GroupMetadata(BaseModel):
     """
 
     name: String
-    typename__: Optional[Literal['GroupMetadata']] = Field(
+    typename__: Literal['GroupMetadata'] | None = Field(
         'GroupMetadata', alias='__typename'
     )
 
@@ -39,7 +39,7 @@ class UserMetadata(BaseModel):
     """
 
     name: String
-    typename__: Optional[Literal['UserMetadata']] = Field(
+    typename__: Literal['UserMetadata'] | None = Field(
         'UserMetadata', alias='__typename'
     )
 
@@ -62,4 +62,4 @@ Metadata: TypeAlias = Union[
 
 class Resource(BaseModel):
     metadata: UserMetadata
-    typename__: Optional[Literal['Resource']] = Field('Resource', alias='__typename')
+    typename__: Literal['Resource'] | None = Field('Resource', alias='__typename')

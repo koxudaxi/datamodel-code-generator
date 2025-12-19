@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, constr
 
 
 class Parent(BaseModel):
-    name: Optional[constr(min_length=1)] = 'parent_default'
+    name: constr(min_length=1) | None = 'parent_default'
 
 
 class Child(Parent):
-    name: Optional[constr(min_length=1)] = None
+    name: constr(min_length=1) | None = None

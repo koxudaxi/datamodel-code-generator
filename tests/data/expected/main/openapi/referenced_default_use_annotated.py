@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -14,8 +14,8 @@ class ModelSettingB(RootModel[float]):
 
 
 class Model(BaseModel):
-    settingA: Annotated[Optional[float], Field(ge=0.0, le=10.0)] = 5
+    settingA: Annotated[float | None, Field(ge=0.0, le=10.0)] = 5
     settingB: Annotated[
-        Optional[ModelSettingB],
+        ModelSettingB | None,
         Field(default_factory=lambda: ModelSettingB.model_validate(ModelSettingB(5))),
     ]

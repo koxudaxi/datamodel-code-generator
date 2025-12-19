@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field, RootModel, confloat
 
 
@@ -14,7 +12,7 @@ class ModelSettingB(RootModel[confloat(ge=0.0, le=10.0)]):
 
 
 class Model(BaseModel):
-    settingA: Optional[confloat(ge=0.0, le=10.0)] = 5
-    settingB: Optional[ModelSettingB] = Field(
+    settingA: confloat(ge=0.0, le=10.0) | None = 5
+    settingB: ModelSettingB | None = Field(
         default_factory=lambda: ModelSettingB.model_validate(5)
     )

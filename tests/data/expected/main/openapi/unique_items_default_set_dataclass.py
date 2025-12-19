@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
 class TestModel:
-    tags: Optional[set[str]] = field(default_factory=lambda: {'tag1', 'tag2'})
-    empty_tags: Optional[set[str]] = field(default_factory=set)
-    numbers: Optional[set[int]] = field(default_factory=lambda: {1, 2, 3})
+    tags: set[str] | None = field(default_factory=lambda: {'tag1', 'tag2'})
+    empty_tags: set[str] | None = field(default_factory=set)
+    numbers: set[int] | None = field(default_factory=lambda: {1, 2, 3})

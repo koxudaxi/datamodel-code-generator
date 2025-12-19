@@ -436,8 +436,8 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-union-operator",
-    help="Use | operator for Union type (PEP 604).",
-    action="store_true",
+    help="Use | operator for Union type (PEP 604). Default: enabled",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(

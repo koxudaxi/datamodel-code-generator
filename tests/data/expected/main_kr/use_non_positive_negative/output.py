@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import (
     BaseModel,
     Field,
@@ -17,15 +15,15 @@ from pydantic import (
 
 
 class NumberConstraints(BaseModel):
-    non_negative_count: Optional[NonNegativeInt] = Field(
+    non_negative_count: NonNegativeInt | None = Field(
         None, description='A count that cannot be negative'
     )
-    non_positive_balance: Optional[NonPositiveInt] = Field(
+    non_positive_balance: NonPositiveInt | None = Field(
         None, description='A balance that cannot be positive'
     )
-    non_negative_amount: Optional[NonNegativeFloat] = Field(
+    non_negative_amount: NonNegativeFloat | None = Field(
         None, description='An amount that cannot be negative'
     )
-    non_positive_score: Optional[NonPositiveFloat] = Field(
+    non_positive_score: NonPositiveFloat | None = Field(
         None, description='A score that cannot be positive'
     )

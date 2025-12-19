@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum, IntEnum
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -45,9 +44,9 @@ class UnknownEnum(Enum):
 
 
 class Model(BaseModel):
-    IntEnum: Optional[IntEnumModel] = None
-    FloatEnum: Optional[FloatEnum] = None
-    StrEnum: Optional[StrEnum] = None
-    NonTypedEnum: Optional[NonTypedEnum] = None
-    BooleanEnum: Optional[BooleanEnum] = None
-    UnknownEnum: Optional[UnknownEnum] = None
+    IntEnum: IntEnumModel | None = None
+    FloatEnum: FloatEnum | None = None
+    StrEnum: StrEnum | None = None
+    NonTypedEnum: NonTypedEnum | None = None
+    BooleanEnum: BooleanEnum | None = None
+    UnknownEnum: UnknownEnum | None = None

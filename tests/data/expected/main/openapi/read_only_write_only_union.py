@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
-
 from pydantic import BaseModel
 
 
 class UserRequest(BaseModel):
     name: str
-    metadata: Optional[Union[str, int]] = None
+    metadata: str | int | None = None
 
 
 class UserResponse(BaseModel):
@@ -22,4 +20,4 @@ class UserResponse(BaseModel):
 class User(BaseModel):
     id: int
     name: str
-    metadata: Optional[Union[str, int]] = None
+    metadata: str | int | None = None

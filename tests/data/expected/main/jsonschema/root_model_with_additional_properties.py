@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -20,19 +19,19 @@ class NestedEnumResult(Enum):
 
 
 class OneOfResult(BaseModel):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class AnyOfResult(BaseModel):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class User(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class AllOfResult(User):
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class Model(BaseModel):
@@ -41,9 +40,9 @@ class Model(BaseModel):
     result: dict[str, int]
     nested_object_result: dict[str, NestedObjectResult]
     nested_enum_result: dict[str, NestedEnumResult]
-    all_of_result: Optional[dict[str, AllOfResult]] = None
-    one_of_result: Optional[dict[str, Union[User, OneOfResult]]] = None
-    any_of_result: Optional[dict[str, Union[User, AnyOfResult]]] = None
-    all_of_with_unknown_object: Optional[dict[str, User]] = None
-    objectRef: Optional[dict[str, User]] = None
-    deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, User]]]] = None
+    all_of_result: dict[str, AllOfResult] | None = None
+    one_of_result: dict[str, User | OneOfResult] | None = None
+    any_of_result: dict[str, User | AnyOfResult] | None = None
+    all_of_with_unknown_object: dict[str, User] | None = None
+    objectRef: dict[str, User] | None = None
+    deepNestedObjectRef: dict[str, dict[str, dict[str, User]]] | None = None

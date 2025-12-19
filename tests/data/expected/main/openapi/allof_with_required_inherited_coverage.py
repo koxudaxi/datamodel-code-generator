@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel, conint
 
 
 class ConstraintOnlyBase(BaseModel):
-    field_with_constraints: Optional[Any] = None
+    field_with_constraints: Any | None = None
 
 
 class MultipleField(BaseModel):
@@ -18,7 +18,7 @@ class MultipleField(BaseModel):
 
 
 class MultipleOfBase(BaseModel):
-    multiple_field: Optional[MultipleField] = None
+    multiple_field: MultipleField | None = None
 
 
 class SimpleString(BaseModel):
@@ -26,74 +26,72 @@ class SimpleString(BaseModel):
 
 
 class NestedAnyOfWithRef(BaseModel):
-    nested_anyof: Optional[Union[SimpleString, int]] = None
+    nested_anyof: SimpleString | int | None = None
 
 
 class L4(BaseModel):
-    l5: Optional[str] = None
+    l5: str | None = None
 
 
 class L3(BaseModel):
-    l4: Optional[L4] = None
+    l4: L4 | None = None
 
 
 class L2(BaseModel):
-    l3: Optional[L3] = None
+    l3: L3 | None = None
 
 
 class L1(BaseModel):
-    l2: Optional[L2] = None
+    l2: L2 | None = None
 
 
 class DeepArrayItem(BaseModel):
-    l1: Optional[L1] = None
+    l1: L1 | None = None
 
 
 class DeepNestedArray(BaseModel):
-    deep_array: Optional[list[DeepArrayItem]] = None
+    deep_array: list[DeepArrayItem] | None = None
 
 
 class OneOfBase(BaseModel):
-    oneof_field: Optional[Union[str, int]] = None
+    oneof_field: str | int | None = None
 
 
 class SingleOneOf(BaseModel):
-    single_oneof: Optional[str] = None
+    single_oneof: str | None = None
 
 
 class L31(BaseModel):
-    l4: Optional[str] = None
+    l4: str | None = None
 
 
 class L21(BaseModel):
-    l3: Optional[L31] = None
+    l3: L31 | None = None
 
 
 class L11(BaseModel):
-    l2: Optional[L21] = None
+    l2: L21 | None = None
 
 
 class DeepDict(BaseModel):
-    l1: Optional[L11] = None
+    l1: L11 | None = None
 
 
 class AdditionalPropsDeep(BaseModel):
-    deep_dict: Optional[dict[str, DeepDict]] = None
+    deep_dict: dict[str, DeepDict] | None = None
 
 
 class ObjectAllof(BaseModel):
-    a: Optional[str] = None
-    b: Optional[int] = None
+    a: str | None = None
+    b: int | None = None
 
 
 class ObjectOnlyAllOf(BaseModel):
-    object_allof: Optional[ObjectAllof] = None
+    object_allof: ObjectAllof | None = None
 
 
 class LargeUnion(BaseModel):
-    large_union: Optional[Union[str, int, bool, float, list[str], dict[str, Any]]] = (
-        None
-    )
+    large_union: str | int | bool | float | list[str] | dict[str, Any] | None = None
 
 
 class BaseWithNoProperties(BaseModel):
@@ -101,16 +99,16 @@ class BaseWithNoProperties(BaseModel):
 
 
 class BaseWithBooleanProperty(BaseModel):
-    bool_prop: Optional[bool] = None
+    bool_prop: bool | None = None
 
 
 class ChildOfNoProps(BaseWithNoProperties):
-    extra: Optional[str] = None
+    extra: str | None = None
     some_field: Any
 
 
 class NestedAllOfRef(BaseModel):
-    nested_allof_ref: Optional[SimpleString] = None
+    nested_allof_ref: SimpleString | None = None
 
 
 class NestedIndirect1(BaseModel):
@@ -126,7 +124,7 @@ class NestedIndirect(BaseModel):
 
 
 class NestedAllOfWithoutDirectRef(BaseModel):
-    nested_indirect: Optional[NestedIndirect] = None
+    nested_indirect: NestedIndirect | None = None
 
 
 class EnumField(BaseModel):
@@ -134,11 +132,11 @@ class EnumField(BaseModel):
 
 
 class EnumInAllOf(BaseModel):
-    enum_field: Optional[EnumField] = None
+    enum_field: EnumField | None = None
 
 
 class RefWithPrimitiveBase(BaseModel):
-    ref_and_primitive: Optional[SimpleString] = None
+    ref_and_primitive: SimpleString | None = None
 
 
 class EdgeCasesCoverage(
@@ -156,13 +154,13 @@ class EdgeCasesCoverage(
     NestedAllOfWithoutDirectRef,
     EnumInAllOf,
 ):
-    local_field: Optional[str] = None
+    local_field: str | None = None
     field_with_constraints: Any
     multiple_field: conint(multiple_of=5)
     ref_and_primitive: SimpleString
-    nested_anyof: Union[SimpleString, int]
+    nested_anyof: SimpleString | int
     deep_array: list[dict[str, Any]]
-    oneof_field: Union[str, int]
+    oneof_field: str | int
     single_oneof: str
     deep_dict: dict[str, dict[str, Any]]
     object_allof: dict[str, Any]

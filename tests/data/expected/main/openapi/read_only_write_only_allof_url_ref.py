@@ -4,38 +4,36 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel
 
 
 class ChildRequest(BaseModel):
     id: int
-    password: Optional[str] = None
-    child_field: Optional[str] = None
+    password: str | None = None
+    child_field: str | None = None
 
 
 class ChildResponse(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
-    child_field: Optional[str] = None
+    created_at: AwareDatetime | None = None
+    child_field: str | None = None
 
 
 class BaseObjectRequest(BaseModel):
     id: int
-    password: Optional[str] = None
+    password: str | None = None
 
 
 class BaseObjectResponse(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
+    created_at: AwareDatetime | None = None
 
 
 class BaseObject(BaseModel):
     id: int
-    created_at: Optional[AwareDatetime] = None
-    password: Optional[str] = None
+    created_at: AwareDatetime | None = None
+    password: str | None = None
 
 
 class Child(BaseObject):
-    child_field: Optional[str] = None
+    child_field: str | None = None

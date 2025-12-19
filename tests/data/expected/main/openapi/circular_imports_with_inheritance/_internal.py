@@ -4,34 +4,32 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class BaseEntity(BaseModel):
-    id: Optional[str] = None
-    created_at: Optional[str] = None
+    id: str | None = None
+    created_at: str | None = None
 
 
 class RootModel(BaseModel):
-    id: Optional[str] = None
-    auth: Optional[Authorization] = None
+    id: str | None = None
+    auth: Authorization | None = None
 
 
 class Invoice(BaseEntity):
-    total: Optional[int] = None
-    session: Optional[Session] = None
+    total: int | None = None
+    session: Session | None = None
 
 
 class Session(BaseEntity):
-    status: Optional[str] = None
-    root_ref: Optional[RootModel] = None
+    status: str | None = None
+    root_ref: RootModel | None = None
 
 
 class Authorization(BaseEntity):
-    amount: Optional[int] = None
-    invoice: Optional[Invoice] = None
+    amount: int | None = None
+    invoice: Invoice | None = None
 
 
 RootModel.update_forward_refs()

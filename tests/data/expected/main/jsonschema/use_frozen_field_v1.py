@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,4 +16,4 @@ class User(BaseModel):
     id: int = Field(..., allow_mutation=False, description='Server-generated ID')
     name: str
     password: str = Field(..., description='User password')
-    created_at: Optional[datetime] = Field(None, allow_mutation=False)
+    created_at: datetime | None = Field(None, allow_mutation=False)

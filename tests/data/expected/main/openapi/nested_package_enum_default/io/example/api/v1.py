@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class Resolution(Enum):
@@ -21,6 +20,6 @@ class Policy(Enum):
 
 @dataclass
 class BucketSpec:
-    resolution: Optional[Resolution] = Resolution.Required
-    policy: Optional[Policy] = Policy.Allow
-    name: Optional[str] = None
+    resolution: Resolution | None = Resolution.Required
+    policy: Policy | None = Policy.Allow
+    name: str | None = None

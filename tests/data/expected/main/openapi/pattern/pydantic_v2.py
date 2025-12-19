@@ -4,19 +4,19 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, constr
 
 
 class Info(BaseModel):
-    hostName: Optional[
+    hostName: (
         constr(
             pattern=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'
         )
-    ] = None
-    arn: Optional[
+        | None
+    ) = None
+    arn: (
         constr(pattern=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$')
-    ] = None
-    tel: Optional[constr(pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$')] = None
-    comment: Optional[constr(pattern=r'[^\b\f\n\r\t\\a+.?\'"|()]+$')] = None
+        | None
+    ) = None
+    tel: constr(pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+    comment: constr(pattern=r'[^\b\f\n\r\t\\a+.?\'"|()]+$') | None = None

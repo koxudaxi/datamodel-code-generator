@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Json(BaseModel):
-    firstName: Optional[str] = None
+    firstName: str | None = None

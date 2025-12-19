@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, Optional, Union
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -31,7 +31,5 @@ class Lizard(BaseModel):
 
 
 class Animal(BaseModel):
-    pet: Optional[Union[Cat, Dog, Lizard]] = Field(
-        None, discriminator='pet_type', title='Pet'
-    )
-    n: Optional[int] = Field(None, title='N')
+    pet: Cat | Dog | Lizard | None = Field(None, discriminator='pet_type', title='Pet')
+    n: int | None = Field(None, title='N')

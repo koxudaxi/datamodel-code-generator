@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 from . import shared
@@ -17,5 +15,5 @@ class SharedModel(SharedModel_1):
 
 
 class Model(BaseModel):
-    data: Optional[SharedModel] = None
-    extra: Optional[shared.SharedModel2] = None
+    data: SharedModel | None = None
+    extra: shared.SharedModel2 | None = None

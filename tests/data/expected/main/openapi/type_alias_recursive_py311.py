@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, TypeAlias, Union
+from typing import TypeAlias
 
 from pydantic import BaseModel
 
@@ -14,27 +14,27 @@ class File(BaseModel):
 
 
 class Folder(BaseModel):
-    address: Optional[str] = None
+    address: str | None = None
     files: list[File]
-    subfolders: Optional[list[Folder]] = None
+    subfolders: list[Folder] | None = None
 
 
-ElementaryType: TypeAlias = Optional[Union[bool, str, int, float]]
+ElementaryType: TypeAlias = bool | str | int | float | None
 
 
-JsonType: TypeAlias = Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]]
+JsonType: TypeAlias = ElementaryType | list["JsonType"] | dict[str, "JsonType"]
 
 
 class Space(BaseModel):
-    label: Optional[str] = None
-    data: Optional[JsonType] = None
-    dual: Optional[DualSpace] = None
+    label: str | None = None
+    data: JsonType | None = None
+    dual: DualSpace | None = None
 
 
 class DualSpace(BaseModel):
-    label: Optional[str] = None
-    data: Optional[JsonType] = None
-    predual: Optional[Space] = None
+    label: str | None = None
+    data: JsonType | None = None
+    predual: Space | None = None
 
 
 Folder.update_forward_refs()

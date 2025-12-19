@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    some_optional_property: Optional[str] = None
-    some_optional_typed_property: Optional[datetime] = None
+    some_optional_property: str | None = None
+    some_optional_typed_property: datetime | None = None

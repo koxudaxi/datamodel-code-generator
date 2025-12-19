@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Union
-
 from pydantic import BaseModel, EmailStr
 
 
@@ -26,4 +24,4 @@ class Model2(BaseModel):
 
 
 class Model(BaseModel):
-    __root__: Union[Model1, Model2]
+    __root__: Model1 | Model2

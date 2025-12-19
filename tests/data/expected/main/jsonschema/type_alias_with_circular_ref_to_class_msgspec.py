@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import TypeAlias
 
 from msgspec import Struct
 
@@ -17,7 +17,7 @@ class SpanB(Struct):
     recur: list[Span]
 
 
-Either: TypeAlias = Union[SpanB, "Span"]
+Either: TypeAlias = SpanB | "Span"
 
 
 class Span(Struct):

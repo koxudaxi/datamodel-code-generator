@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Literal, TypeAlias, Union
+from typing import Literal, TypeAlias
 
 
 class RequestVersionEnum(Enum):
@@ -30,4 +30,4 @@ class RequestV2(RequestBase):
     version: Literal['v2'] = 'v2'
 
 
-Request: TypeAlias = Union[RequestV1, RequestV2]
+Request: TypeAlias = RequestV1 | RequestV2

@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Union
 
 from pydantic import BaseModel, RootModel
 
@@ -28,8 +27,8 @@ class NumberItem(BaseModel):
     value: int
 
 
-class Item(RootModel[Union[TextItem, NumberItem]]):
-    root: Union[TextItem, NumberItem]
+class Item(RootModel[TextItem | NumberItem]):
+    root: TextItem | NumberItem
 
 
 class ItemPostRequest1(BaseModel):
@@ -44,5 +43,5 @@ class ItemPostRequest3(NumberItem, ItemPostRequest1):
     pass
 
 
-class ItemPostRequest(RootModel[Union[ItemPostRequest2, ItemPostRequest3]]):
-    root: Union[ItemPostRequest2, ItemPostRequest3]
+class ItemPostRequest(RootModel[ItemPostRequest2 | ItemPostRequest3]):
+    root: ItemPostRequest2 | ItemPostRequest3

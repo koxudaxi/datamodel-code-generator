@@ -4,11 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Cat(BaseModel):
-    name: Optional[str] = None
-    breed: Optional[str] = None
+    name: str | None = None
+    breed: str | None = None

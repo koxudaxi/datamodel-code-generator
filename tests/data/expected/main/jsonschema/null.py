@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Any
 
 from pydantic import BaseModel
 
 
 class Model(BaseModel):
     null: None = None
-    nullableString: Optional[str] = None
-    nullableNumber: Optional[Union[float, int]] = None
-    any: Optional[Any] = None
+    nullableString: str | None = None
+    nullableNumber: float | int | None = None
+    any: Any | None = None

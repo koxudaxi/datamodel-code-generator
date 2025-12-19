@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, confloat, constr
 
 
@@ -18,12 +16,12 @@ class NumberConstraint(BaseModel):
 
 
 class BaseConfig(BaseModel):
-    name: Optional[str] = None
-    enabled: Optional[bool] = None
+    name: str | None = None
+    enabled: bool | None = None
 
 
 class ExtendedConfig(BaseModel):
-    timeout: Optional[int] = None
+    timeout: int | None = None
 
 
 class Score(BaseModel):
@@ -39,15 +37,15 @@ class Metadata(BaseModel):
 
 
 class ProjectedItem(BaseModel):
-    id: Optional[int] = None
-    code: Optional[StringConstraint] = None
-    score: Optional[Score] = None
-    config: Optional[Config] = None
-    metadata: Optional[Metadata] = None
+    id: int | None = None
+    code: StringConstraint | None = None
+    score: Score | None = None
+    config: Config | None = None
+    metadata: Metadata | None = None
 
 
 class Item(ProjectedItem):
-    extra: Optional[str] = None
+    extra: str | None = None
     id: int
     code: StringConstraint
     score: confloat(ge=0.0, le=100.0)

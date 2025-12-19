@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional, TypeAlias
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
 
@@ -24,16 +24,16 @@ class A(BaseModel):
     field: String
     listField: list[String]
     listListField: list[list[String]]
-    listListOptionalField: list[list[Optional[String]]]
-    listOptionalField: list[Optional[String]]
-    listOptionalListField: list[Optional[list[String]]]
-    listOptionalListOptionalField: list[Optional[list[Optional[String]]]]
-    optionalField: Optional[String] = None
-    optionalListListField: Optional[list[list[String]]] = None
-    optionalListListOptionalField: Optional[list[list[Optional[String]]]] = None
-    optionalListOptionalField: Optional[list[Optional[String]]] = None
-    optionalListOptionalListField: Optional[list[Optional[list[String]]]] = None
-    optionalListOptionalListOptionalField: Optional[
-        list[Optional[list[Optional[String]]]]
-    ] = None
-    typename__: Optional[Literal['A']] = Field('A', alias='__typename')
+    listListOptionalField: list[list[String | None]]
+    listOptionalField: list[String | None]
+    listOptionalListField: list[list[String] | None]
+    listOptionalListOptionalField: list[list[String | None] | None]
+    optionalField: String | None = None
+    optionalListListField: list[list[String]] | None = None
+    optionalListListOptionalField: list[list[String | None]] | None = None
+    optionalListOptionalField: list[String | None] | None = None
+    optionalListOptionalListField: list[list[String] | None] | None = None
+    optionalListOptionalListOptionalField: list[list[String | None] | None] | None = (
+        None
+    )
+    typename__: Literal['A'] | None = Field('A', alias='__typename')

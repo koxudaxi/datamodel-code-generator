@@ -4,18 +4,16 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Post(BaseModel):
-    id: Optional[str] = None
-    title: Optional[str] = None
-    content: Optional[str] = None
+    id: str | None = None
+    title: str | None = None
+    content: str | None = None
 
 
 class UsersUserIdPostsPostIdGetParameters(BaseModel):
     userId: int
     postId: str
-    includeComments: Optional[bool] = None
+    includeComments: bool | None = None

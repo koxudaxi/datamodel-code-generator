@@ -4,29 +4,27 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel
 
 
 class Root(BaseModel):
-    id: Optional[str] = None
-    alpha_ref: Optional[Model] = None
+    id: str | None = None
+    alpha_ref: Model | None = None
 
 
 class Model(BaseModel):
-    id: Optional[str] = None
-    beta_ref: Optional[Model_1] = None
+    id: str | None = None
+    beta_ref: Model_1 | None = None
 
 
 class Model_1(BaseModel):
-    id: Optional[str] = None
-    gamma_ref: Optional[Model_2] = None
+    id: str | None = None
+    gamma_ref: Model_2 | None = None
 
 
 class Model_2(BaseModel):
-    id: Optional[str] = None
-    root_ref: Optional[Root] = None
+    id: str | None = None
+    root_ref: Root | None = None
 
 
 Root.update_forward_refs()

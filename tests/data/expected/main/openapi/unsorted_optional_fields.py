@@ -5,10 +5,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass
 class Note:
     text: str
-    author: Optional[str] = None
+    author: str | None = None

@@ -4,22 +4,20 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, conint
 
 
 class MaximumProblem(BaseModel):
-    status: Optional[conint(ge=100, lt=600)] = None
+    status: conint(ge=100, lt=600) | None = None
 
 
 class MinimumProblem(BaseModel):
-    status: Optional[conint(le=600, gt=100)] = None
+    status: conint(le=600, gt=100) | None = None
 
 
 class MinimumMaximumProblem(BaseModel):
-    status: Optional[conint(lt=600, gt=100)] = None
+    status: conint(lt=600, gt=100) | None = None
 
 
 class Problem(BaseModel):
-    status: Optional[conint(ge=100, le=600)] = None
+    status: conint(ge=100, le=600) | None = None

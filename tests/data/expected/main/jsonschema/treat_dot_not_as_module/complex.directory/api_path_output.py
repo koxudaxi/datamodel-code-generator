@@ -4,10 +4,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class Output(BaseModel):
-    output: Optional[Any] = Field('output', title='Output')
+    output: Any | None = Field('output', title='Output')

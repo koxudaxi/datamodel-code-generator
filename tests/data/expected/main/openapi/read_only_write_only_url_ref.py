@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import AwareDatetime, BaseModel, RootModel
 
 
@@ -19,15 +17,15 @@ class WriteOnlySecret(RootModel[str]):
 
 class UserRequest(BaseModel):
     name: str
-    secret: Optional[WriteOnlySecret] = None
+    secret: WriteOnlySecret | None = None
 
 
 class UserResponse(BaseModel):
     name: str
-    created_at: Optional[ReadOnlyTimestamp] = None
+    created_at: ReadOnlyTimestamp | None = None
 
 
 class User(BaseModel):
     name: str
-    created_at: Optional[ReadOnlyTimestamp] = None
-    secret: Optional[WriteOnlySecret] = None
+    created_at: ReadOnlyTimestamp | None = None
+    secret: WriteOnlySecret | None = None

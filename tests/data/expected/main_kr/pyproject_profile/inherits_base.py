@@ -3,10 +3,8 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Model(BaseModel):
-    first_name: Optional[str] = Field(None, alias='firstName')
+    first_name: str | None = Field(None, alias='firstName')
