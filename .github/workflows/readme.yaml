@@ -9,19 +9,33 @@ on:
     branches: [main]
     paths:
       - 'src/datamodel_code_generator/**'
+  pull_request_target:
+    types: [labeled]
+    paths:
+      - 'src/datamodel_code_generator/**'
 
 permissions:
   contents: write
 
 jobs:
   update-readme:
-    if: github.event_name == 'push' || !github.event.pull_request.head.repo.fork
+    if: |
+      github.event_name == 'push' ||
+      !github.event.pull_request.head.repo.fork ||
+      github.actor == 'koxudaxi' ||
+      github.actor == 'gaborbernat' ||
+      github.actor == 'ilovelinux' ||
+      (github.event_name == 'pull_request_target' && github.event.label.name == 'safe-to-fix' &&
+       (github.event.sender.login == 'koxudaxi' ||
+        github.event.sender.login == 'gaborbernat' ||
+        github.event.sender.login == 'ilovelinux'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           token: ${{ secrets.PAT }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
