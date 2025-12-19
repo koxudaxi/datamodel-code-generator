@@ -6,8 +6,6 @@ from __future__ import (
     annotations,
 )
 
-from typing import Optional
-
 from pydantic import (
     AnyUrl,
     BaseModel,
@@ -18,7 +16,7 @@ from pydantic import (
 class Pet(BaseModel):
     id: int
     name: str
-    tag: Optional[str]
+    tag: str | None
 
 
 class Pets(BaseModel):
@@ -28,7 +26,7 @@ class Pets(BaseModel):
 class User(BaseModel):
     id: int
     name: str
-    tag: Optional[str]
+    tag: str | None
 
 
 class Users(BaseModel):
@@ -49,30 +47,22 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    api_key: Optional[
-        str
-    ] = Field(
+    api_key: str | None = Field(
         None,
         alias="apiKey",
         description="To be used as a dataset parameter value",
     )
-    api_version_number: Optional[
-        str
-    ] = Field(
+    api_version_number: str | None = Field(
         None,
         alias="apiVersionNumber",
         description="To be used as a version parameter value",
     )
-    api_url: Optional[
-        AnyUrl
-    ] = Field(
+    api_url: AnyUrl | None = Field(
         None,
         alias="apiUrl",
         description="The URL describing the dataset's fields",
     )
-    api_documentation_url: Optional[
-        AnyUrl
-    ] = Field(
+    api_documentation_url: AnyUrl | None = Field(
         None,
         alias="apiDocumentationUrl",
         description="A URL to the API console for each API",
@@ -84,8 +74,8 @@ class Apis(BaseModel):
 
 
 class Event(BaseModel):
-    name: Optional[str]
+    name: str | None
 
 
 class Result(BaseModel):
-    event: Optional[Event]
+    event: Event | None

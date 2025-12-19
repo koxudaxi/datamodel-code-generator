@@ -27,8 +27,8 @@ class SomeschemaSchema(BaseModel):
     class Config:
         extra = Extra.forbid
 
-    KeyWithExplicitPatternProperties: (
-        dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any] | None
-    ) = None
+    KeyWithExplicitPatternProperties: dict[
+        constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any
+    ] | None = None
     KeyWithPatternPropertiesByReference: TextResponse | None = None
     SomeOtherBoringReference: Stt | None = None

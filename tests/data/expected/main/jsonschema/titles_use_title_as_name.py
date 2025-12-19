@@ -45,9 +45,9 @@ class ExtendedProcessingTasksTitle(BaseModel):
 
 
 class ProcessingTaskTitle(BaseModel):
-    processing_status_union: (
-        ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None
-    ) = Field('COMPLETED', title='Processing Status Union Title')
+    processing_status_union: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None = Field(
+        'COMPLETED', title='Processing Status Union Title'
+    )
     processing_status: ProcessingStatusTitle | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None

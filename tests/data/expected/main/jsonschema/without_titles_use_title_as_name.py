@@ -41,9 +41,9 @@ class ExtendedProcessingTasks(BaseModel):
 
 
 class ProcessingTask(BaseModel):
-    processing_status_union: (
-        ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = 'COMPLETED'
+    processing_status_union: ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None = (
+        'COMPLETED'
+    )
     processing_status: ProcessingStatus | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None

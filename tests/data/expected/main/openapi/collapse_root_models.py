@@ -22,9 +22,9 @@ class FileRequest(BaseModel):
 
 
 class ImageRequest(BaseModel):
-    image_hash: (
-        constr(regex=r'^[a-fA-F\d]{32}$', min_length=64, max_length=64) | None
-    ) = Field(None, description='For image')
+    image_hash: constr(
+        regex=r'^[a-fA-F\d]{32}$', min_length=64, max_length=64
+    ) | None = Field(None, description='For image')
 
 
 class FileHashes(BaseModel):
