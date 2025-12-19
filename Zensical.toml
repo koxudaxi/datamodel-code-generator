@@ -1,242 +1,122 @@
-[site]
-name = "datamodel-code-generator"
-description = "This code generator creates pydantic model from an openapi file and others."
-url = "https://koxudaxi.github.io/datamodel-code-generator"
+[project]
+site_name = "datamodel-code-generator"
+site_description = "This code generator creates pydantic model from an openapi file and others."
+site_url = "https://koxudaxi.github.io/datamodel-code-generator"
+repo_name = "koxudaxi/datamodel-code-generator"
+repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
 
-[repo]
-name = "koxudaxi/datamodel-code-generator"
-url = "https://github.com/koxudaxi/datamodel-code-generator"
+nav = [
+  { "Overview" = "index.md" },
+  { "CLI Reference" = [
+    { "Overview" = "cli-reference/index.md" },
+    { "Base Options" = "cli-reference/base-options.md" },
+    { "Model Customization" = "cli-reference/model-customization.md" },
+    { "Field Customization" = "cli-reference/field-customization.md" },
+    { "Typing Customization" = "cli-reference/typing-customization.md" },
+    { "Template Customization" = "cli-reference/template-customization.md" },
+    { "OpenAPI Options" = "cli-reference/openapi-only-options.md" },
+    { "General Options" = "cli-reference/general-options.md" },
+    { "Utility Options" = "cli-reference/utility-options.md" },
+    { "Quick Reference" = "cli-reference/quick-reference.md" }
+  ]},
+  { "Support data types" = "supported-data-types.md" },
+  { "Usage" = [
+    { "Input Formats" = [
+      { "OpenAPI" = "openapi.md" },
+      { "JSON Schema" = "jsonschema.md" },
+      { "JSON Data" = "jsondata.md" },
+      { "GraphQL" = "graphql.md" }
+    ]},
+    { "Output Customization" = [
+      { "Output Model Types" = "what_is_the_difference_between_v1_and_v2.md" },
+      { "Model Reuse and Deduplication" = "model-reuse.md" },
+      { "Module Structure and Exports" = "module-exports.md" },
+      { "Type Mappings and Custom Types" = "type-mappings.md" },
+      { "Python Version Compatibility" = "python-version-compatibility.md" },
+      { "Root Models and Type Aliases" = "root-model-and-type-alias.md" },
+      { "Field Constraints" = "field-constraints.md" },
+      { "Field Aliases" = "aliases.md" },
+      { "OpenAPI-Specific Options" = "openapi-options.md" }
+    ]},
+    { "Templates and Formatting" = [
+      { "Custom Templates" = "custom_template.md" },
+      { "Custom Formatters" = "custom-formatters.md" },
+      { "Code Formatting" = "formatting.md" }
+    ]},
+    { "Integration" = [
+      { "One-liner Usage" = "oneliner.md" },
+      { "Using as Module" = "using_as_module.md" },
+      { "pyproject.toml" = "pyproject_toml.md" },
+      { "CI/CD Integration" = "ci-cd.md" }
+    ]}
+  ]},
+  { "FAQ" = "faq.md" },
+  { "Development-Contributing" = "development-contributing.md" },
+  { "Changelog" = "changelog.md" }
+]
 
-[theme]
-name = "material"
+[project.theme]
+features = [
+  "content.code.copy",
+  "content.code.annotate",
+  "content.tabs.link",
+  "navigation.instant",
+  "navigation.tracking",
+  "navigation.sections",
+  "navigation.expand",
+  "search.highlight",
+  "search.share",
+  "toc.follow"
+]
 
-[theme.icon]
+[project.theme.icon]
 annotation = "material/arrow-right-circle"
 
-[theme.features]
-content_code_copy = true
-content_code_annotate = true
-content_tabs_link = true
-navigation_instant = true
-navigation_tracking = true
-navigation_sections = true
-navigation_expand = true
-search_highlight = true
-search_share = true
-toc_follow = true
+[project.theme.analytics]
+gtag = "275257853"
 
-[[theme.palette]]
+[[project.theme.palette]]
 scheme = "slate"
 primary = "light blue"
 accent = "light blue"
-toggle_icon = "material/brightness-4"
-toggle_name = "Switch to light mode"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
 
-[[theme.palette]]
+[[project.theme.palette]]
 scheme = "default"
 primary = "light blue"
 accent = "light blue"
-toggle_icon = "material/brightness-7"
-toggle_name = "Switch to dark mode"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
 
-[theme.analytics]
-gtag = "275257853"
-
-[markdown_extensions.pymdownx_highlight]
+[project.markdown_extensions.pymdownx.highlight]
 anchor_linenums = true
 line_spans = "__span"
 pygments_lang_class = true
 
-[markdown_extensions.pymdownx_inlinehilite]
-enabled = true
+[project.markdown_extensions.pymdownx.inlinehilite]
 
-[markdown_extensions.pymdownx_snippets]
+[project.markdown_extensions.pymdownx.snippets]
 base_path = "."
 
-[markdown_extensions.pymdownx_superfences]
-enabled = true
+[project.markdown_extensions.pymdownx.superfences]
 
-[markdown_extensions.pymdownx_tabbed]
+[project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true
 
-[markdown_extensions.pymdownx_details]
-enabled = true
+[project.markdown_extensions.pymdownx.details]
 
-[markdown_extensions.pymdownx_emoji]
-emoji_index = "material.extensions.emoji.twemoji"
-emoji_generator = "material.extensions.emoji.to_svg"
+[project.markdown_extensions.pymdownx.emoji]
+emoji_index = "zensical.extensions.emoji.twemoji"
+emoji_generator = "zensical.extensions.emoji.to_svg"
 
-[markdown_extensions.admonition]
-enabled = true
+[project.markdown_extensions.admonition]
 
-[markdown_extensions.attr_list]
-enabled = true
+[project.markdown_extensions.attr_list]
 
-[markdown_extensions.md_in_html]
-enabled = true
+[project.markdown_extensions.md_in_html]
 
-[markdown_extensions.toc]
+[project.markdown_extensions.toc]
 permalink = true
 
-[plugins]
-search = true
-
-[nav]
-
-[nav.overview]
-title = "Overview"
-path = "index.md"
-
-[nav.cli_reference]
-title = "CLI Reference"
-
-[nav.cli_reference.overview]
-title = "Overview"
-path = "cli-reference/index.md"
-
-[nav.cli_reference.base_options]
-title = "Base Options"
-path = "cli-reference/base-options.md"
-
-[nav.cli_reference.model_customization]
-title = "Model Customization"
-path = "cli-reference/model-customization.md"
-
-[nav.cli_reference.field_customization]
-title = "Field Customization"
-path = "cli-reference/field-customization.md"
-
-[nav.cli_reference.typing_customization]
-title = "Typing Customization"
-path = "cli-reference/typing-customization.md"
-
-[nav.cli_reference.template_customization]
-title = "Template Customization"
-path = "cli-reference/template-customization.md"
-
-[nav.cli_reference.openapi_options]
-title = "OpenAPI Options"
-path = "cli-reference/openapi-only-options.md"
-
-[nav.cli_reference.general_options]
-title = "General Options"
-path = "cli-reference/general-options.md"
-
-[nav.cli_reference.utility_options]
-title = "Utility Options"
-path = "cli-reference/utility-options.md"
-
-[nav.cli_reference.quick_reference]
-title = "Quick Reference"
-path = "cli-reference/quick-reference.md"
-
-[nav.supported_data_types]
-title = "Support data types"
-path = "supported-data-types.md"
-
-[nav.usage]
-title = "Usage"
-
-[nav.usage.input_formats]
-title = "Input Formats"
-
-[nav.usage.input_formats.openapi]
-title = "OpenAPI"
-path = "openapi.md"
-
-[nav.usage.input_formats.jsonschema]
-title = "JSON Schema"
-path = "jsonschema.md"
-
-[nav.usage.input_formats.jsondata]
-title = "JSON Data"
-path = "jsondata.md"
-
-[nav.usage.input_formats.graphql]
-title = "GraphQL"
-path = "graphql.md"
-
-[nav.usage.output_customization]
-title = "Output Customization"
-
-[nav.usage.output_customization.output_model_types]
-title = "Output Model Types"
-path = "what_is_the_difference_between_v1_and_v2.md"
-
-[nav.usage.output_customization.model_reuse]
-title = "Model Reuse and Deduplication"
-path = "model-reuse.md"
-
-[nav.usage.output_customization.module_exports]
-title = "Module Structure and Exports"
-path = "module-exports.md"
-
-[nav.usage.output_customization.type_mappings]
-title = "Type Mappings and Custom Types"
-path = "type-mappings.md"
-
-[nav.usage.output_customization.python_version]
-title = "Python Version Compatibility"
-path = "python-version-compatibility.md"
-
-[nav.usage.output_customization.root_models]
-title = "Root Models and Type Aliases"
-path = "root-model-and-type-alias.md"
-
-[nav.usage.output_customization.field_constraints]
-title = "Field Constraints"
-path = "field-constraints.md"
-
-[nav.usage.output_customization.field_aliases]
-title = "Field Aliases"
-path = "aliases.md"
-
-[nav.usage.output_customization.openapi_specific]
-title = "OpenAPI-Specific Options"
-path = "openapi-options.md"
-
-[nav.usage.templates_and_formatting]
-title = "Templates and Formatting"
-
-[nav.usage.templates_and_formatting.custom_templates]
-title = "Custom Templates"
-path = "custom_template.md"
-
-[nav.usage.templates_and_formatting.custom_formatters]
-title = "Custom Formatters"
-path = "custom-formatters.md"
-
-[nav.usage.templates_and_formatting.code_formatting]
-title = "Code Formatting"
-path = "formatting.md"
-
-[nav.usage.integration]
-title = "Integration"
-
-[nav.usage.integration.oneliner]
-title = "One-liner Usage"
-path = "oneliner.md"
-
-[nav.usage.integration.using_as_module]
-title = "Using as Module"
-path = "using_as_module.md"
-
-[nav.usage.integration.pyproject_toml]
-title = "pyproject.toml"
-path = "pyproject_toml.md"
-
-[nav.usage.integration.ci_cd]
-title = "CI/CD Integration"
-path = "ci-cd.md"
-
-[nav.faq]
-title = "FAQ"
-path = "faq.md"
-
-[nav.development_contributing]
-title = "Development-Contributing"
-path = "development-contributing.md"
-
-[nav.changelog]
-title = "Changelog"
-path = "changelog.md"
+[project.plugins.search]
