@@ -3031,7 +3031,7 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, Optional, TypeAlias, Union
+        from typing import Annotated, Any, TypeAlias
         
         from pydantic import BaseModel, Field
         
@@ -3041,23 +3041,23 @@ syntax. This feature is experimental.
         SimpleString: TypeAlias = str
         
         
-        UnionType: TypeAlias = Union[str, int]
+        UnionType: TypeAlias = str | int
         
         
         ArrayType: TypeAlias = list[str]
         
         
         AnnotatedType: TypeAlias = Annotated[
-            Union[str, bool],
+            str | bool,
             Field(..., description='An annotated union type', title='MyAnnotatedType'),
         ]
         
         
         class ModelWithTypeAliasField(BaseModel):
-            simple_field: Optional[SimpleString] = None
-            union_field: Optional[UnionType] = None
-            array_field: Optional[ArrayType] = None
-            annotated_field: Optional[AnnotatedType] = None
+            simple_field: SimpleString | None = None
+            union_field: UnionType | None = None
+            array_field: ArrayType | None = None
+            annotated_field: AnnotatedType | None = None
         ```
 
     === "GraphQL"
@@ -3095,7 +3095,7 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Literal, Optional, TypeAlias, Union
+        from typing import Literal, TypeAlias, Union
         
         from pydantic import BaseModel, Field
         
@@ -3123,13 +3123,13 @@ syntax. This feature is experimental.
         class Person(BaseModel):
             age: Int
             name: String
-            typename__: Optional[Literal['Person']] = Field('Person', alias='__typename')
+            typename__: Literal['Person'] | None = Field('Person', alias='__typename')
         
         
         class Pet(BaseModel):
             name: String
             type: String
-            typename__: Optional[Literal['Pet']] = Field('Pet', alias='__typename')
+            typename__: Literal['Pet'] | None = Field('Pet', alias='__typename')
         
         
         UnionType: TypeAlias = Union[
@@ -3139,10 +3139,10 @@ syntax. This feature is experimental.
         
         
         class ModelWithTypeAliasField(BaseModel):
-            simple_field: Optional[SimpleString] = None
-            string_field: Optional[String] = None
-            union_field: Optional[UnionType] = None
-            typename__: Optional[Literal['ModelWithTypeAliasField']] = Field(
+            simple_field: SimpleString | None = None
+            string_field: String | None = None
+            union_field: UnionType | None = None
+            typename__: Literal['ModelWithTypeAliasField'] | None = Field(
                 'ModelWithTypeAliasField', alias='__typename'
             )
         ```
