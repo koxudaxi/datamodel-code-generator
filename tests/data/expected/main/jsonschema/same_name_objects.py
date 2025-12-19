@@ -14,8 +14,6 @@ class Model(BaseModel):
 
 
 class Friends(BaseModel):
-    pass
-
     class Config:
         extra = Extra.forbid
 
