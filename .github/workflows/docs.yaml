@@ -21,6 +21,15 @@ jobs:
         python-version: 3.13
     - name: Install dependencies
       run: uv sync
+    - name: Copy CHANGELOG to docs
+      run: |
+        if [ -f CHANGELOG.md ]; then
+          cp CHANGELOG.md docs/changelog.md
+        else
+          echo "# Changelog" > docs/changelog.md
+          echo "" >> docs/changelog.md
+          echo "Changelog will be available after the first release." >> docs/changelog.md
+        fi
     - name: build site
       run: zensical build --clean
     - name: Deploy

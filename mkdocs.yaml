@@ -98,6 +98,7 @@ nav:
       - CI/CD Integration: ci-cd.md
   - FAQ: faq.md
   - Development-Contributing: development-contributing.md
+  - Changelog: changelog.md
 
 plugins:
   - search
