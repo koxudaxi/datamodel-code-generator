@@ -236,6 +236,31 @@ def test_main_graphql_enums_to_typed_dict(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--ignore-enum-constraints"],
+    input_schema="graphql/enums.graphql",
+    cli_args=["--ignore-enum-constraints"],
+    golden_output="graphql/enums_ignore_enum_constraints.py",
+    comparison_output="graphql/enums.py",
+)
+def test_main_graphql_enums_ignore_enum_constraints(output_file: Path) -> None:
+    """Ignore enum constraints and use base string type instead of Enum classes.
+
+    The `--ignore-enum-constraints` flag ignores enum constraints and uses
+    the base type (str) instead of generating Enum classes. This is useful
+    when you need flexibility in the values a field can accept beyond the
+    defined enum members.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "enums.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="enums_ignore_enum_constraints.py",
+        extra_args=["--ignore-enum-constraints"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",

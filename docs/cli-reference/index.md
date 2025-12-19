@@ -9,7 +9,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 16 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
@@ -92,6 +92,7 @@ This documentation is auto-generated from test cases.
 
 ### I {#i}
 
+- [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints)
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject)
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters)
 - [`--input`](base-options.md#input)

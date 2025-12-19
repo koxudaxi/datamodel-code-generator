@@ -1284,7 +1284,9 @@ def test_encoding_option(output_file: Path) -> None:
     The `--encoding` flag sets the character encoding used when reading
     the schema file and writing the generated Python code. This is useful
     for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
-    Default is utf-8.
+    Default is the system's preferred encoding (via `locale.getpreferredencoding()`),
+    which is typically UTF-8 on Linux/macOS but may differ on Windows (e.g., cp1252).
+    For consistent cross-platform behavior, explicitly specify `--encoding utf-8`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "encoding_test.json",

@@ -1138,8 +1138,20 @@ def test_main_specialized_enum(output_file: Path) -> None:
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--no-use-specialized-enum"],
+    input_schema="openapi/subclass_enum.json",
+    cli_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
+    golden_output="openapi/subclass_enum.py",
+    related_options=["--use-specialized-enum", "--target-python-version"],
+)
 def test_main_specialized_enums_disabled(output_file: Path) -> None:
-    """Test OpenAPI generation with specialized enums disabled."""
+    """Disable specialized Enum classes for Python 3.11+ code generation.
+
+    The `--no-use-specialized-enum` flag prevents the generator from using
+    specialized Enum classes (StrEnum, IntEnum) when generating code for
+    Python 3.11+, falling back to standard Enum classes instead.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "subclass_enum.json",
         output_path=output_file,
@@ -1285,8 +1297,18 @@ def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path)
     version.parse(pydantic.VERSION) < version.parse("1.9.0"),
     reason="Require Pydantic version 1.9.0 or later ",
 )
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal"],
+    input_schema="openapi/enum_models.yaml",
+    cli_args=["--enum-field-as-literal", "one"],
+    golden_output="openapi/enum_models/one.py",
+)
 def test_main_openapi_enum_models_as_literal_one(min_version: str, output_file: Path) -> None:
-    """Test OpenAPI generation with one enum model as literal."""
+    """Convert single-member enums to Literal types in OpenAPI schemas.
+
+    The `--enum-field-as-literal one` flag converts enums with a single member
+    to Literal type annotations while keeping multi-member enums as Enum classes.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "enum_models.yaml",
         output_path=output_file,
@@ -1690,10 +1712,22 @@ def test_main_openapi_json_pointer(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+@pytest.mark.cli_doc(
+    options=["--use-annotated"],
+    input_schema="openapi/api_constrained.yaml",
+    cli_args=["--field-constraints", "--use-annotated"],
+    golden_output="openapi/use_annotated_with_field_constraints.py",
+    related_options=["--field-constraints"],
+)
 def test_main_use_annotated_with_field_constraints(
     output_model: str, expected_output: str, min_version: str, output_file: Path
 ) -> None:
-    """Test OpenAPI generation with Annotated and field constraints."""
+    """Use typing.Annotated for field constraints in OpenAPI schemas.
+
+    The `--use-annotated` flag wraps field types with `typing.Annotated` to
+    include constraint metadata, enabling runtime validation frameworks to
+    access constraints directly from type annotations.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
         output_path=output_file,
@@ -1785,8 +1819,19 @@ def test_paths_ref_with_external_schema(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models"],
+    input_schema="openapi/not_real_string.json",
+    cli_args=["--collapse-root-models"],
+    golden_output="openapi/not_real_string_collapse_root_models.py",
+)
 def test_main_collapse_root_models(output_file: Path) -> None:
-    """Test OpenAPI generation with collapsed root models."""
+    """Inline root model definitions into their referencing locations.
+
+    The `--collapse-root-models` flag collapses root model definitions by
+    inlining their types directly where they are referenced, reducing the
+    number of generated classes.
+    """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "not_real_string.json",
         output_path=output_file,

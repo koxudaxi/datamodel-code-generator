@@ -544,6 +544,7 @@ class JsonSchemaParser(Parser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
         set_default_enum_member: bool = False,
@@ -638,6 +639,7 @@ class JsonSchemaParser(Parser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -854,7 +856,15 @@ class JsonSchemaParser(Parser):
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
         """Check if a field should include constraints."""
         return obj.is_array or (
-            self.field_constraints and not (obj.ref or obj.anyOf or obj.oneOf or obj.allOf or obj.is_object or obj.enum)
+            self.field_constraints
+            and not (
+                obj.ref
+                or obj.anyOf
+                or obj.oneOf
+                or obj.allOf
+                or obj.is_object
+                or (obj.enum and not self.ignore_enum_constraints)
+            )
         )
 
     def _resolve_field_flag(self, obj: JsonSchemaObject, flag: Literal["readOnly", "writeOnly"]) -> bool:
@@ -1502,7 +1512,7 @@ class JsonSchemaParser(Parser):
             return prop_schema
         return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
-    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR6301
+    def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:
         """Check if schema represents a root model (primitive type with constraints).
 
         Based on parse_raw_obj() else branch conditions. Returns True when
@@ -1518,7 +1528,7 @@ class JsonSchemaParser(Parser):
             return False
         if obj.type == "object":
             return False
-        return not obj.enum
+        return not obj.enum or self.ignore_enum_constraints
 
     def _handle_allof_root_model_with_constraints(  # noqa: PLR0911, PLR0912
         self,
@@ -2330,7 +2340,7 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(
                 Types.object,
             )
-        if item.enum:
+        if item.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(item):
                 return self.parse_enum_as_literal(item)
             return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
@@ -2404,7 +2414,7 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_all_of(name, obj, get_special_path("allOf", path)))
         elif obj.is_object:
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
-        if obj.enum:
+        if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
@@ -2513,7 +2523,7 @@ class JsonSchemaParser(Parser):
                     data_type = data_types[0]
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
-        elif obj.enum:
+        elif obj.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(obj):
                 data_type = self.parse_enum_as_literal(obj)
             else:  # pragma: no cover
@@ -3003,7 +3013,7 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         elif obj.type == "object":
             self.parse_object(name, obj, path)
-        elif obj.enum and not self.should_parse_enum_as_literal(obj):
+        elif obj.enum and not self.ignore_enum_constraints and not self.should_parse_enum_as_literal(obj):
             self.parse_enum(name, obj, path)
         else:
             self.parse_root_type(name, obj, path)
