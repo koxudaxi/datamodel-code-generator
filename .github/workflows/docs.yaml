@@ -21,6 +21,8 @@ jobs:
         python-version: 3.13
     - name: Install dependencies
       run: uv sync
+    - name: Copy CHANGELOG to docs
+      run: cp CHANGELOG.md docs/changelog.md
     - name: build site
       run: zensical build --clean
     - name: Deploy
