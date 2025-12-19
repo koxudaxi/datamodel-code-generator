@@ -770,9 +770,10 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
             "pydantic.BaseModel",
             "with_aliases.py",
         ),
-        (
+        pytest.param(
             "msgspec.Struct",
             "with_aliases_msgspec.py",
+            marks=LEGACY_BLACK_SKIP,
         ),
     ],
 )
@@ -1447,6 +1448,7 @@ def test_main_openapi_ref_nullable_strict_nullable(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
@@ -1818,6 +1820,7 @@ def test_paths_ref_with_external_schema(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--collapse-root-models"],
@@ -2888,6 +2891,7 @@ def test_main_openapi_all_of_with_relative_ref(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_struct(min_version: str, output_file: Path) -> None:
     """Test OpenAPI generation with msgspec Struct output."""
     run_main_and_assert(
@@ -2900,6 +2904,7 @@ def test_main_openapi_msgspec_struct(min_version: str, output_file: Path) -> Non
     )
 
 
+@LEGACY_BLACK_SKIP
 def test_main_openapi_msgspec_struct_snake_case(min_version: str, output_file: Path) -> None:
     """Test OpenAPI generation with msgspec Struct and snake case."""
     run_main_and_assert(

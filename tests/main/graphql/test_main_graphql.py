@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import black
 import pytest
 
-from tests.main.conftest import GRAPHQL_DATA_PATH, run_main_and_assert
+from tests.main.conftest import GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
 from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -56,6 +56,7 @@ def test_main_graphql_simple_star_wars(output_model: str, expected_output: str, 
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
