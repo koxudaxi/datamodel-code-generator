@@ -7,7 +7,7 @@ This is a multi-line docstring used for testing.
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -15,15 +15,15 @@ from . import models
 
 
 class Pets(BaseModel):
-    __root__: List[models.Pet]
+    __root__: list[models.Pet]
 
 
 class Users(BaseModel):
-    __root__: List[models.User]
+    __root__: list[models.User]
 
 
 class Rules(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Stage(Enum):
@@ -50,4 +50,4 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
-    __root__: List[Api]
+    __root__: list[Api]

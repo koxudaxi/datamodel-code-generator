@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, List, Optional, TypeAlias
+from typing import Any, Optional, TypeAlias
 
 Model: TypeAlias = Any
 
@@ -13,7 +13,7 @@ Model: TypeAlias = Any
 @dataclass
 class User:
     name: Optional[str] = None
-    pets: List[User] = field(default_factory=list)
+    pets: list[User] = field(default_factory=list)
 
 
 @dataclass

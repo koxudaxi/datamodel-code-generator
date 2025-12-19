@@ -405,7 +405,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     apply_default_values_for_required_fields: bool = False,
     force_optional_for_required_fields: bool = False,
     class_name: str | None = None,
-    use_standard_collections: bool = False,
+    use_standard_collections: bool = True,
     use_schema_description: bool = False,
     use_field_description: bool = False,
     use_attribute_docstrings: bool = False,

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, TypeAlias, Union
+from typing import Annotated, TypeAlias, Union
 
 from msgspec import UNSET, Meta, Struct, UnsetType, field
 
@@ -16,7 +16,7 @@ class Pet(Struct):
     tag: Union[str, UnsetType] = UNSET
 
 
-Pets: TypeAlias = List[Pet]
+Pets: TypeAlias = list[Pet]
 
 
 class User(Struct):
@@ -25,13 +25,13 @@ class User(Struct):
     tag: Union[str, UnsetType] = UNSET
 
 
-Users: TypeAlias = List[User]
+Users: TypeAlias = list[User]
 
 
 Id: TypeAlias = str
 
 
-Rules: TypeAlias = List[str]
+Rules: TypeAlias = list[str]
 
 
 class Error(Struct):
@@ -58,7 +58,7 @@ class Api(Struct):
     ] = field(name='apiDocumentationUrl', default=UNSET)
 
 
-Apis: TypeAlias = List[Api]
+Apis: TypeAlias = list[Api]
 
 
 class Event(Struct):

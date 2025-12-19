@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel
 
@@ -23,9 +23,9 @@ class ProjectedPerson(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
     address: Optional[Address] = None
-    metadata: Optional[Dict[str, str]] = None
+    metadata: Optional[dict[str, str]] = None
     contact: Optional[ContactInfo] = None
-    tags: Optional[List[str]] = None
+    tags: Optional[list[str]] = None
     priority: Optional[Union[int, str]] = None
 
 
@@ -33,8 +33,8 @@ class Person(ProjectedPerson):
     nickname: Optional[str] = None
     id: int
     name: str
-    address: Dict[str, Any]
-    metadata: Dict[str, str]
+    address: dict[str, Any]
+    metadata: dict[str, str]
     contact: ContactInfo
-    tags: List[str]
+    tags: list[str]
     priority: Union[int, str]

@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -13,5 +13,5 @@ class Person:
     firstName: Optional[str] = None
     lastName: Optional[str] = None
     age: Optional[int] = None
-    friends: Optional[List[Any]] = None
+    friends: Optional[list[Any]] = None
     comment: None = None

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -22,7 +22,7 @@ class Pets(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    __root__: List[Pet]
+    __root__: list[Pet]
 
 
 class User(BaseModel):
@@ -38,7 +38,7 @@ class Users(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(BaseModel):
@@ -52,7 +52,7 @@ class Rules(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(BaseModel):
@@ -85,7 +85,7 @@ class Apis(BaseModel):
     class Config:
         allow_population_by_field_name = True
 
-    __root__: List[Api]
+    __root__: list[Api]
 
 
 class Event(BaseModel):

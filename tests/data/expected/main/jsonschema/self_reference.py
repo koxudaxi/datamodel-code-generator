@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -15,7 +15,7 @@ class Model(BaseModel):
 
 class Pet(BaseModel):
     name: Optional[str] = Field(None, examples=['dog', 'cat'])
-    friends: Optional[List[Pet]] = None
+    friends: Optional[list[Pet]] = None
 
 
 Pet.update_forward_refs()

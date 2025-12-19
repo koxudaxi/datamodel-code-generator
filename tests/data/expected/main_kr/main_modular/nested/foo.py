@@ -2,8 +2,8 @@
 #   filename:  modular.yaml
 #   timestamp: 1985-10-26T08:21:00+00:00
 
-from .._internal import ListModel
+from .._internal import List
 from .._internal import Tea_1 as Tea
 from .._internal import TeaClone
 
-__all__ = ["ListModel", "Tea", "TeaClone"]
+__all__ = ["List", "Tea", "TeaClone"]

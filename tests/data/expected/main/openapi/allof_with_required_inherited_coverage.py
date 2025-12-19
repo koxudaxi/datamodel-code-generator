@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from pydantic import BaseModel, conint
 
@@ -50,7 +50,7 @@ class DeepArrayItem(BaseModel):
 
 
 class DeepNestedArray(BaseModel):
-    deep_array: Optional[List[DeepArrayItem]] = None
+    deep_array: Optional[list[DeepArrayItem]] = None
 
 
 class OneOfBase(BaseModel):
@@ -78,7 +78,7 @@ class DeepDict(BaseModel):
 
 
 class AdditionalPropsDeep(BaseModel):
-    deep_dict: Optional[Dict[str, DeepDict]] = None
+    deep_dict: Optional[dict[str, DeepDict]] = None
 
 
 class ObjectAllof(BaseModel):
@@ -91,7 +91,7 @@ class ObjectOnlyAllOf(BaseModel):
 
 
 class LargeUnion(BaseModel):
-    large_union: Optional[Union[str, int, bool, float, List[str], Dict[str, Any]]] = (
+    large_union: Optional[Union[str, int, bool, float, list[str], dict[str, Any]]] = (
         None
     )
 
@@ -161,11 +161,11 @@ class EdgeCasesCoverage(
     multiple_field: conint(multiple_of=5)
     ref_and_primitive: SimpleString
     nested_anyof: Union[SimpleString, int]
-    deep_array: List[Dict[str, Any]]
+    deep_array: list[dict[str, Any]]
     oneof_field: Union[str, int]
     single_oneof: str
-    deep_dict: Dict[str, Dict[str, Any]]
-    object_allof: Dict[str, Any]
+    deep_dict: dict[str, dict[str, Any]]
+    object_allof: dict[str, Any]
     large_union: Any
     nested_allof_ref: SimpleString
     nested_indirect: Any

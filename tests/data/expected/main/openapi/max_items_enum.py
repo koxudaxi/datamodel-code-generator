@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -16,4 +16,4 @@ class BarEnum(Enum):
 
 
 class Foo(BaseModel):
-    bar: Optional[List[BarEnum]] = Field(None, max_items=3)
+    bar: Optional[list[BarEnum]] = Field(None, max_items=3)

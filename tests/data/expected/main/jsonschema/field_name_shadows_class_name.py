@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -14,4 +14,4 @@ class Elem(BaseModel):
 
 
 class Model(BaseModel):
-    Elem_1: Optional[List[Elem]] = Field(None, alias='Elem')
+    Elem_1: Optional[list[Elem]] = Field(None, alias='Elem')

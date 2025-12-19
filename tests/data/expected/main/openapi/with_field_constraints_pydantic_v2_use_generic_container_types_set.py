@@ -4,7 +4,8 @@
 
 from __future__ import annotations
 
-from typing import FrozenSet, Optional, Sequence, Union
+from collections.abc import Sequence, Set
+from typing import Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field, RootModel
 

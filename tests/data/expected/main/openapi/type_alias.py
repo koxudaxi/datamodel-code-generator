@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, List, Optional, TypeAlias, Union
+from typing import Annotated, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
@@ -14,7 +14,7 @@ SimpleString: TypeAlias = str
 UnionType: TypeAlias = Union[str, int]
 
 
-ArrayType: TypeAlias = List[str]
+ArrayType: TypeAlias = list[str]
 
 
 AnnotatedType: TypeAlias = Annotated[

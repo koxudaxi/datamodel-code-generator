@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from typing import List
-
 from pydantic import AnyUrl, BaseModel, Field
 
 
@@ -44,7 +42,7 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
-    __root__: List[Api] | None = Field(...)
+    __root__: list[Api] | None = Field(...)
 
 
 class EmailItem(BaseModel):
@@ -55,7 +53,7 @@ class EmailItem(BaseModel):
 
 
 class Email(BaseModel):
-    __root__: List[EmailItem]
+    __root__: list[EmailItem]
 
 
 class Id(BaseModel):
@@ -75,9 +73,9 @@ class Tag(BaseModel):
 
 
 class Notes(BaseModel):
-    comments: List[str] = Field(default_factory=list)
+    comments: list[str] = Field(default_factory=list)
 
 
 class Options(BaseModel):
-    comments: List[str | None]
-    oneOfComments: List[str | float | None]
+    comments: list[str | None]
+    oneOfComments: list[str | float | None]

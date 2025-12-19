@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -34,7 +34,7 @@ class LineItem(BaseModel):
 class Session(BaseModel):
     id: Optional[str] = None
     transaction: Optional[BalanceTransaction] = None
-    line_items: Optional[List[LineItem]] = None
+    line_items: Optional[list[LineItem]] = None
 
 
 class Cardholder(BaseModel):

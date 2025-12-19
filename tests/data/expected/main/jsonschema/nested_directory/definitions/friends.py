@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel, Extra, Field
 
@@ -17,8 +17,8 @@ class Friend(BaseModel):
 
     name: str = Field(..., example='John Doe')
     phone_number: Optional[str] = Field(None, example='(555) 555-1234')
-    food: Optional[List[Union[food_1.Noodle, food_1.Soup]]] = None
+    food: Optional[list[Union[food_1.Noodle, food_1.Soup]]] = None
 
 
 class Friends(BaseModel):
-    __root__: List[Friend] = Field(..., title='Friends')
+    __root__: list[Friend] = Field(..., title='Friends')

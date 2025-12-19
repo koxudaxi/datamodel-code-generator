@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import AnyUrl, BaseModel, Field
 
@@ -16,7 +16,7 @@ class Pet(BaseModel):
 
 
 class Pets(BaseModel):
-    __root__: List[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+    __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
 
 
 class UID(BaseModel):
@@ -36,8 +36,8 @@ class User(BaseModel):
     name: str = Field(..., max_length=256)
     tag: Optional[str] = Field(None, max_length=64)
     uid: UID
-    phones: Optional[List[Phone]] = Field(None, max_items=10)
-    fax: Optional[List[Fax]] = None
+    phones: Optional[list[Phone]] = Field(None, max_items=10)
+    fax: Optional[list[Fax]] = None
     height: Optional[Union[int, float]] = Field(None, ge=1.0, le=300.0)
     weight: Optional[Union[float, int]] = Field(None, ge=1.0, le=1000.0)
     age: Optional[int] = Field(None, gt=0, le=200)
@@ -45,7 +45,7 @@ class User(BaseModel):
 
 
 class Users(BaseModel):
-    __root__: List[User]
+    __root__: list[User]
 
 
 class Id(BaseModel):
@@ -53,7 +53,7 @@ class Id(BaseModel):
 
 
 class Rules(BaseModel):
-    __root__: List[str]
+    __root__: list[str]
 
 
 class Error(BaseModel):
@@ -77,7 +77,7 @@ class Api(BaseModel):
 
 
 class Apis(BaseModel):
-    __root__: List[Api]
+    __root__: list[Api]
 
 
 class Event(BaseModel):

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, RootModel
 
@@ -15,7 +15,7 @@ class Model(RootModel[Any]):
 
 class User(BaseModel):
     name: Optional[str] = Field(None, examples=['ken'])
-    pets: List[User] = Field(default_factory=list)
+    pets: list[User] = Field(default_factory=list)
 
 
 class Pet(BaseModel):
