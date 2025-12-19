@@ -134,6 +134,7 @@ class GraphQLParser(Parser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        ignore_enum_constraints: bool = False,
         set_default_enum_member: bool = False,
         use_subclass_enum: bool = False,
         use_specialized_enum: bool = True,
@@ -227,6 +228,7 @@ class GraphQLParser(Parser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
             set_default_enum_member=set_default_enum_member,
@@ -414,9 +416,31 @@ class GraphQLParser(Parser):
 
     def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse a GraphQL enum type and add it to results."""
+        if self.ignore_enum_constraints:
+            return self.parse_enum_as_str_type(enum_object)
         if self.should_parse_enum_as_literal(enum_object):
             return self.parse_enum_as_literal(enum_object)
         return self.parse_enum_as_enum_class(enum_object)
+
+    def parse_enum_as_str_type(self, enum_object: graphql.GraphQLEnumType) -> None:
+        """Parse enum as a str type alias when ignoring enum constraints."""
+        data_type = self.data_type_manager.get_data_type(Types.string)
+        data_model_type = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=self.references[enum_object.name],
+            fields=[
+                self.data_model_field_type(
+                    required=True,
+                    data_type=data_type,
+                )
+            ],
+            custom_base_class=self.base_class,
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=enum_object.description,
+        )
+        self.results.append(data_model_type)
 
     def parse_enum_as_literal(self, enum_object: graphql.GraphQLEnumType) -> None:
         """Parse enum values as a Literal type."""

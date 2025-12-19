@@ -405,6 +405,7 @@ class Config(BaseModel):
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
+    ignore_enum_constraints: bool = False
     use_one_literal_as_default: bool = False
     use_enum_values_in_discriminator: bool = False
     set_default_enum_member: bool = False
@@ -708,6 +709,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         shared_module_name=config.shared_module_name,
         encoding=config.encoding,
         enum_field_as_literal=config.enum_field_as_literal,
+        ignore_enum_constraints=config.ignore_enum_constraints,
         use_one_literal_as_default=config.use_one_literal_as_default,
         use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
         set_default_enum_member=config.set_default_enum_member,
