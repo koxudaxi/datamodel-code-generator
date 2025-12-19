@@ -772,3 +772,14 @@ def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
         expected_file="union_snake_case_field.py",
         extra_args=["--snake-case-field", "--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_main_graphql_split_graphql_schemas(output_file: Path) -> None:
+    """Test GraphQL code generation with multiple schema files in a directory."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "split",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="split_graphql_schemas.py",
+    )
