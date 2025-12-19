@@ -35,10 +35,26 @@ jobs:
             echo ""
           } > new_entry.md
 
+          # Initialize CHANGELOG.md if it doesn't exist
+          if [ ! -f CHANGELOG.md ]; then
+            cat > CHANGELOG.md << 'EOF'
+# Changelog
+
+All notable changes to this project are documented in this file.
+This changelog is automatically generated from GitHub Releases.
+
+---
+
+EOF
+          fi
+
           # Split CHANGELOG.md at first "---" separator (content-based, not line-number based)
           # Header includes everything up to and including the first "---" line
           # Old entries are everything after the first "---" line
           awk '/^---$/ && !found {found=1; print > "header.md"; next} !found {print > "header.md"} found {print > "old_entries.md"}' CHANGELOG.md
+
+          # Ensure old_entries.md exists even if empty
+          touch old_entries.md
 
           # Reassemble: header + new entry + old entries
           cat header.md new_entry.md old_entries.md > CHANGELOG.md
