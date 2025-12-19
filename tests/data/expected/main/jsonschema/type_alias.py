@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, TypeAlias
+from typing import Annotated, Any, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
@@ -14,20 +14,20 @@ Model: TypeAlias = Any
 SimpleString: TypeAlias = str
 
 
-UnionType: TypeAlias = str | int
+UnionType: TypeAlias = Union[str, int]
 
 
 ArrayType: TypeAlias = list[str]
 
 
 AnnotatedType: TypeAlias = Annotated[
-    str | bool,
+    Union[str, bool],
     Field(..., description='An annotated union type', title='MyAnnotatedType'),
 ]
 
 
 class ModelWithTypeAliasField(BaseModel):
-    simple_field: SimpleString | None = None
-    union_field: UnionType | None = None
-    array_field: ArrayType | None = None
-    annotated_field: AnnotatedType | None = None
+    simple_field: Optional[SimpleString] = None
+    union_field: Optional[UnionType] = None
+    array_field: Optional[ArrayType] = None
+    annotated_field: Optional[AnnotatedType] = None

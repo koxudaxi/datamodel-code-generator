@@ -4,24 +4,26 @@
 
 from __future__ import annotations
 
-from typing import Annotated, TypeAlias
+from typing import Annotated, Optional, TypeAlias, Union
 
 from pydantic import BaseModel, Field
 
 SimpleString: TypeAlias = str
 
 
-UnionType: TypeAlias = str | int
+UnionType: TypeAlias = Union[str, int]
 
 
 ArrayType: TypeAlias = list[str]
 
 
-AnnotatedType: TypeAlias = Annotated[str | bool, Field(..., title='MyAnnotatedType')]
+AnnotatedType: TypeAlias = Annotated[
+    Union[str, bool], Field(..., title='MyAnnotatedType')
+]
 
 
 class ModelWithTypeAliasField(BaseModel):
-    simple_field: SimpleString | None = None
-    union_field: UnionType | None = None
-    array_field: ArrayType | None = None
-    annotated_field: AnnotatedType | None = None
+    simple_field: Optional[SimpleString] = None
+    union_field: Optional[UnionType] = None
+    array_field: Optional[ArrayType] = None
+    annotated_field: Optional[AnnotatedType] = None

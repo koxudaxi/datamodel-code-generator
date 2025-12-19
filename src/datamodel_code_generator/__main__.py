@@ -823,6 +823,25 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(e.message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
+    # Disable use_union_operator when using TypeAlias with Python < 3.12
+    # because | operator doesn't work with forward references in TypeAlias
+    if (
+        config.use_type_alias
+        and config.use_union_operator
+        and not config.target_python_version.has_type_statement
+    ):
+        if namespace.use_union_operator is True:
+            # User explicitly requested --use-union-operator
+            print(  # noqa: T201
+                "Warning: --use-union-operator is incompatible with --use-type-alias "
+                f"on Python {config.target_python_version.value}.\n"
+                "The | operator doesn't work with forward references in TypeAlias.\n"
+                "Disabling --use-union-operator. Use --target-python-version 3.12 or later, "
+                "or remove --use-type-alias.",
+                file=sys.stderr,
+            )
+        config.use_union_operator = False
+
     if not config.input and not config.url and sys.stdin.isatty():
         print(  # noqa: T201
             "Not Found Input: require `stdin` or arguments `--input` or `--url`",

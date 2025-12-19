@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias
+from typing import TypeAlias, Union
 
 A: TypeAlias = list["B"]
 
@@ -12,4 +12,4 @@ A: TypeAlias = list["B"]
 B: TypeAlias = list[A]
 
 
-Model: TypeAlias = A | B
+Model: TypeAlias = Union[A, B]
