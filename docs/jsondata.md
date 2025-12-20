@@ -41,19 +41,17 @@ datamodel-codegen --input pets.json --input-file-type json --output model.py
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel
 
 
 class Pet(BaseModel):
     name: str
     age: int
-    nickname: Optional[str] = None
+    nickname: str | None = None
 
 
 class Model(BaseModel):
-    pets: List[Pet]
+    pets: list[Pet]
     status: int
 
 ```

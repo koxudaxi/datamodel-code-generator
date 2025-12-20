@@ -49,19 +49,73 @@ datamodel-codegen --input person.json --input-file-type jsonschema --output mode
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, conint
 
 
 class Person(BaseModel):
-    firstName: Optional[str] = Field(None, description="The person's first name.")
-    lastName: Optional[str] = Field(None, description="The person's last name.")
-    age: Optional[conint(ge=0)] = Field(
+    firstName: str | None = Field(None, description="The person's first name.")
+    lastName: str | None = Field(None, description="The person's last name.")
+    age: conint(ge=0) | None = Field(
         None, description='Age in years which must be equal to or greater than zero.'
     )
-    friends: Optional[List] = None
-    comment: Optional[Any] = None
+    friends: list | None = None
+    comment: Any | None = None
+```
+
+## Tuple validation
+
+JSON Schema's [`prefixItems`](https://json-schema.org/understanding-json-schema/reference/array.html#tuple-validation) syntax lets you describe heterogeneous arrays.
+
+When:
+
+- `prefixItems` is present
+- no `items` are specified
+- `minItems`/`maxItems` match the number of prefix entries
+
+datamodel-code-generator emits precise tuple annotations.
+
+### Example
+
+```json
+{
+  "$defs": {
+    "Span": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "integer" }
+      },
+      "required": ["value"]
+    }
+  },
+  "title": "defaults",
+  "type": "object",
+  "properties": {
+    "a": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/Span" },
+        { "type": "string" }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    }
+  },
+  "required": ["a"]
+}
+```
+
+```py
+from pydantic import BaseModel
+
+
+class Span(BaseModel):
+    value: int
+
+
+class Defaults(BaseModel):
+    a: tuple[Span, str]
 ```
 
 ---
