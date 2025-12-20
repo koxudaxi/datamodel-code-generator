@@ -23,6 +23,4 @@ class Bar(BaseModel):
             for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
         ]
     )
-    nested_foo: Foo | None = Field(
-        default_factory=lambda: Foo.model_validate('default foo')
-    )
+    nested_foo: Foo | None = Field(default_factory=lambda: Foo('default foo'))

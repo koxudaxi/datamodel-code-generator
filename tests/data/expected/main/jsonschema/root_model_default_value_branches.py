@@ -15,8 +15,7 @@ class CountType(RootModel[int]):
 
 class Model(BaseModel):
     count_with_default: Annotated[
-        CountType | None,
-        Field(default_factory=lambda: CountType.model_validate(CountType(10))),
+        CountType | None, Field(default_factory=lambda: CountType(10))
     ]
     count_no_default: CountType | None = None
     count_list_default: Annotated[

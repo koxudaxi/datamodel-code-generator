@@ -1,0 +1,18 @@
+openapi: 3.1.0
+info:
+  title: Test
+  version: 0.1.0
+paths: {}
+components:
+  schemas:
+    Timeout:
+      type: integer
+      maximum: 14400
+      exclusiveMinimum: 0
+    CrawlConfiguration:
+      properties:
+        timeout:
+          anyOf:
+            - $ref: "#/components/schemas/Timeout"
+            - type: "null"
+          default: 3600
