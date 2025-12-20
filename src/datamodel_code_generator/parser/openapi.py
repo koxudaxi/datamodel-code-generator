@@ -826,20 +826,21 @@ class OpenAPIParser(JsonSchemaParser):
                     content = resolved_body.get("content", {})
                     for media_type, media_obj in content.items():
                         schema = media_obj.get("schema")
-                        if schema:
-                            self.parse_raw_obj(
+                        if not schema:
+                            continue
+                        self.parse_raw_obj(
+                            body_name,
+                            schema,
+                            [
+                                *path_parts,
+                                "#/components",
+                                "requestBodies",
                                 body_name,
-                                schema,
-                                [
-                                    *path_parts,
-                                    "#/components",
-                                    "requestBodies",
-                                    body_name,
-                                    "content",
-                                    media_type,
-                                    "schema",
-                                ],
-                            )
+                                "content",
+                                media_type,
+                                "schema",
+                            ],
+                        )
 
         self._resolve_unparsed_json_pointer()
 
