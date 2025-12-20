@@ -3213,11 +3213,10 @@ Use 'recursive' to include all descendant exports with collision handling.</p>
 <p>The <code>--check</code> flag compares the generated output with existing files and exits with
 a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
 and generated code stay in sync. Works with both single files and directory outputs.</p>
-<p><strong>Related:</strong> <a href="../typing-customization/#no-use-standard-collections"><code>--no-use-standard-collections</code></a>, <a href="../typing-customization/#no-use-union-operator"><code>--no-use-union-operator</code></a></p>
 <p><strong>See also:</strong> <a href="../../ci-cd/">CI/CD Integration</a></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--disable-timestamp<span class="w"> </span>--use-union-operator<span class="w"> </span>--use-standard-collections<span class="w"> </span>--check<span class="w"> </span><span class="c1"># (1)!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--disable-timestamp<span class="w"> </span>--check<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--check</code> - the option documented here</li>
