@@ -273,6 +273,7 @@ class OpenAPIParser(JsonSchemaParser):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         use_frozen_field: bool = False,
+        use_default_factory_for_optional_nested_models: bool = False,
         use_status_code_in_response_name: bool = False,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
@@ -369,6 +370,7 @@ class OpenAPIParser(JsonSchemaParser):
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
             use_frozen_field=use_frozen_field,
+            use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters

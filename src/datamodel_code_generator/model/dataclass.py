@@ -143,6 +143,19 @@ class DataModelField(DataModelFieldBase):
             return None
         return result
 
+    def _get_default_factory_for_nested_model(self) -> str | None:
+        """Get default_factory for nested dataclass model fields.
+
+        Returns the class name if the field type references a DataClass,
+        otherwise returns None.
+        """
+        for data_type in self.data_type.data_types or (self.data_type,):
+            if data_type.is_dict:
+                continue
+            if data_type.reference and isinstance(data_type.reference.source, DataClass):
+                return data_type.alias or data_type.reference.source.class_name
+        return None
+
     def __str__(self) -> str:
         """Generate field() call or default value representation."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
@@ -160,6 +173,16 @@ class DataModelField(DataModelFieldBase):
                     "default_factory",
                 }
             }
+
+        if (
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+            and "default_factory" not in data
+        ):
+            nested_model_name = self._get_default_factory_for_nested_model()
+            if nested_model_name:
+                data["default_factory"] = nested_model_name
 
         if not data:
             return ""

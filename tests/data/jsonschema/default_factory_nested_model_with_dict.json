@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {"type": "string"},
+    "address": {"$ref": "#/$defs/Address"},
+    "metadata": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": {"type": "string"}},
+        {"$ref": "#/$defs/Contact"}
+      ]
+    }
+  },
+  "required": ["name"],
+  "$defs": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "street": {"type": "string"},
+        "city": {"type": "string"}
+      }
+    },
+    "Contact": {
+      "type": "object",
+      "properties": {
+        "email": {"type": "string"},
+        "phone": {"type": "string"}
+      }
+    }
+  }
+}

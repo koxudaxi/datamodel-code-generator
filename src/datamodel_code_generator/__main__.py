@@ -459,6 +459,7 @@ class Config(BaseModel):
     dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
     no_alias: bool = False
     use_frozen_field: bool = False
+    use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
@@ -761,6 +762,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         frozen_dataclasses=config.frozen_dataclasses,
         no_alias=config.no_alias,
         use_frozen_field=config.use_frozen_field,
+        use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
         formatters=config.formatters,
         settings_path=settings_path,
         parent_scoped_naming=config.parent_scoped_naming,

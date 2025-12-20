@@ -156,6 +156,7 @@ class DataModelFieldBase(_BaseModel):
     read_only: bool = False
     write_only: bool = False
     use_frozen_field: bool = False
+    use_default_factory_for_optional_nested_models: bool = False
 
     if not TYPE_CHECKING:
         if not PYDANTIC_V2:
