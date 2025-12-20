@@ -596,6 +596,7 @@ class JsonSchemaParser(Parser):
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
         use_frozen_field: bool = False,
+        use_default_factory_for_optional_nested_models: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
@@ -691,6 +692,7 @@ class JsonSchemaParser(Parser):
             frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
             use_frozen_field=use_frozen_field,
+            use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
             formatters=formatters,
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
@@ -1035,6 +1037,7 @@ class JsonSchemaParser(Parser):
             read_only=self._resolve_field_flag(field, "readOnly"),
             write_only=self._resolve_field_flag(field, "writeOnly"),
             use_frozen_field=self.use_frozen_field,
+            use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:

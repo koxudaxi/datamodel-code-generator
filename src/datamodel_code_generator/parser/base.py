@@ -734,6 +734,7 @@ class Parser(ABC):
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
         use_frozen_field: bool = False,
+        use_default_factory_for_optional_nested_models: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
@@ -875,6 +876,7 @@ class Parser(ABC):
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
         self.use_frozen_field: bool = use_frozen_field
+        self.use_default_factory_for_optional_nested_models: bool = use_default_factory_for_optional_nested_models
 
     @property
     def field_name_model_type(self) -> ModelType:

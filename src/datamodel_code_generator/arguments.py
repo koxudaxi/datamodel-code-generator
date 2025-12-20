@@ -594,6 +594,13 @@ field_options.add_argument(
     action="store_true",
     default=None,
 )
+field_options.add_argument(
+    "--use-default-factory-for-optional-nested-models",
+    help="Use default_factory for optional nested model fields instead of None default. "
+    "E.g., `field: Model | None = Field(default_factory=Model)` instead of `field: Model | None = None`",
+    action="store_true",
+    default=None,
+)
 
 # ======================================================================================
 # Options for templating output

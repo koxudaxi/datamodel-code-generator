@@ -92,6 +92,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--strip-default-none": CLIOptionMeta(name="--strip-default-none", category=OptionCategory.MODEL),
     "--dataclass-arguments": CLIOptionMeta(name="--dataclass-arguments", category=OptionCategory.MODEL),
     "--use-frozen-field": CLIOptionMeta(name="--use-frozen-field", category=OptionCategory.MODEL),
+    "--use-default-factory-for-optional-nested-models": CLIOptionMeta(
+        name="--use-default-factory-for-optional-nested-models", category=OptionCategory.MODEL
+    ),
     "--union-mode": CLIOptionMeta(name="--union-mode", category=OptionCategory.MODEL),
     "--parent-scoped-naming": CLIOptionMeta(name="--parent-scoped-naming", category=OptionCategory.MODEL),
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),

@@ -4417,6 +4417,79 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("dataclasses.dataclass", "default_factory_nested_model_dataclass.py"),
+        ("pydantic_v2.BaseModel", "default_factory_nested_model_pydantic_v2.py"),
+        ("msgspec.Struct", "default_factory_nested_model_msgspec.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-default-factory-for-optional-nested-models"],
+    input_schema="jsonschema/default_factory_nested_model.json",
+    cli_args=["--use-default-factory-for-optional-nested-models"],
+    model_outputs={
+        "dataclass": "main/jsonschema/default_factory_nested_model_dataclass.py",
+        "pydantic_v2": "main/jsonschema/default_factory_nested_model_pydantic_v2.py",
+        "msgspec": "main/jsonschema/default_factory_nested_model_msgspec.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_default_factory_for_optional_nested_models(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
+    """Generate default_factory for optional nested model fields.
+
+    The `--use-default-factory-for-optional-nested-models` flag generates default_factory
+    for optional nested model fields instead of None default:
+    - Dataclasses: `field: Model | None = field(default_factory=Model)`
+    - Pydantic: `field: Model | None = Field(default_factory=Model)`
+    - msgspec: `field: Model | UnsetType = field(default_factory=Model)`
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_factory_nested_model.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--use-default-factory-for-optional-nested-models",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("dataclasses.dataclass", "default_factory_nested_model_with_dict_dataclass.py"),
+        ("pydantic_v2.BaseModel", "default_factory_nested_model_with_dict_pydantic_v2.py"),
+        ("msgspec.Struct", "default_factory_nested_model_with_dict_msgspec.py"),
+    ],
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_default_factory_for_optional_nested_models_with_dict(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
+    """Test --use-default-factory-for-optional-nested-models with dict union skips dict types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_factory_nested_model_with_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--use-default-factory-for-optional-nested-models",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_field_name_shadows_class_name(output_file: Path) -> None:
     """Test field name shadowing class name is renamed with alias for Pydantic v2."""

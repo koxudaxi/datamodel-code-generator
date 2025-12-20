@@ -247,7 +247,7 @@ class DataModelField(DataModelFieldBase):
             return None
         return result
 
-    def __str__(self) -> str:
+    def __str__(self) -> str:  # noqa: PLR0912
         """Generate field() call or default value representation."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k in self._FIELD_KEYS}
         if self.alias:
@@ -283,6 +283,17 @@ class DataModelField(DataModelFieldBase):
                 data["default_factory"] = f"lambda: {default_repr}"
             else:
                 data["default_factory"] = type(default_value).__name__
+
+        if (
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+            and "default_factory" not in data
+        ):
+            nested_model_name = self._get_default_factory_for_optional_nested_model()
+            if nested_model_name:
+                data["default_factory"] = nested_model_name
+                data.pop("default", None)
 
         if not data:
             return ""
@@ -410,6 +421,19 @@ class DataModelField(DataModelFieldBase):
                     f"lambda: {self._PARSE_METHOD}({self.default!r},  "
                     f"type={data_type.alias or data_type.reference.source.class_name})"
                 )
+        return None
+
+    def _get_default_factory_for_optional_nested_model(self) -> str | None:
+        """Get default_factory for optional nested Struct model fields.
+
+        Returns the class name if the field type references a Struct,
+        otherwise returns None.
+        """
+        for data_type in self.data_type.data_types or (self.data_type,):
+            if data_type.is_dict:
+                continue
+            if data_type.reference and isinstance(data_type.reference.source, Struct):
+                return data_type.alias or data_type.reference.source.class_name
         return None
 
 

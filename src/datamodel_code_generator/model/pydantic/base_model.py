@@ -152,6 +152,19 @@ class DataModelField(DataModelFieldBase):
                 )
         return None
 
+    def _get_default_factory_for_optional_nested_model(self) -> str | None:
+        """Get default_factory for optional nested Pydantic model fields.
+
+        Returns the class name if the field type references a BaseModel,
+        otherwise returns None.
+        """
+        for data_type in self.data_type.data_types or (self.data_type,):
+            if data_type.is_dict:
+                continue
+            if data_type.reference and isinstance(data_type.reference.source, BaseModelBase):
+                return data_type.alias or data_type.reference.source.class_name
+        return None
+
     def _process_data_in_str(self, data: dict[str, Any]) -> None:
         if self.const:
             data["const"] = True
@@ -203,6 +216,14 @@ class DataModelField(DataModelFieldBase):
             default_factory = self._get_default_as_pydantic_model()
         else:
             default_factory = data.pop("default_factory", None)
+
+        if (
+            default_factory is None
+            and self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+        ):
+            default_factory = self._get_default_factory_for_optional_nested_model()
 
         self.__dict__["_computed_default_factory"] = default_factory
 
