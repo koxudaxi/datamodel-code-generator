@@ -946,3 +946,32 @@ def test_parse_responses_return(
         for content_type, expected_type_hint in expected_content_types.items():
             assert content_type in result[status_code]
             assert result[status_code][content_type].type_hint == expected_type_hint
+
+
+def test_parse_all_parameters_strict_nullable() -> None:
+    """Test that strict_nullable exposes nullable for optional parameters without default."""
+    parser = OpenAPIParser(
+        data_model_field_type=DataModelField,
+        source="",
+        openapi_scopes=[OpenAPIScope.Parameters],
+        strict_nullable=True,
+    )
+    parameters_data = [
+        {"name": "nullable_param", "in": "query", "required": False, "schema": {"type": "string", "nullable": True}},
+        {
+            "name": "non_nullable_param",
+            "in": "query",
+            "required": False,
+            "schema": {"type": "string", "nullable": False},
+        },
+    ]
+    result = parser.parse_all_parameters(
+        "TestParametersQuery",
+        [ParameterObject.parse_obj(param_data) for param_data in parameters_data],
+        ["test", "path"],
+    )
+    assert result is not None
+    fields = parser.results[0].fields
+    assert len(fields) == 2
+    assert fields[0].nullable is True
+    assert fields[1].nullable is False

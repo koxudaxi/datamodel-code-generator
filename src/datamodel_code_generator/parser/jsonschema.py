@@ -335,7 +335,7 @@ class JsonSchemaObject(BaseModel):
     properties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
     required: list[str] = []  # noqa: RUF012
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
-    nullable: Optional[bool] = False  # noqa: UP045
+    nullable: Optional[bool] = None  # noqa: UP045
     x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
     x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
     description: Optional[str] = None  # noqa: UP045
@@ -1032,7 +1032,9 @@ class JsonSchemaParser(Parser):
             required=required,
             alias=alias,
             constraints=constraints,
-            nullable=field.nullable if self.strict_nullable and (field.has_default or required) else None,
+            nullable=field.nullable
+            if self.strict_nullable and field.nullable is not None
+            else (False if self.strict_nullable and (field.has_default or required) else None),
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
             use_annotated=self.use_annotated,
@@ -1075,7 +1077,9 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add_ref(ref)
         ref_schema = self._load_ref_schema_object(ref)
         is_optional = (
-            ref_schema.type_has_null or ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable)
+            ref_schema.type_has_null
+            or ref_schema.type == "null"
+            or (self.strict_nullable and ref_schema.nullable is True)
         )
         return self.data_type(reference=reference, is_optional=is_optional)
 
@@ -2576,7 +2580,9 @@ class JsonSchemaParser(Parser):
                     default=obj.default,
                     required=required,
                     constraints=obj.dict() if self.field_constraints else {},
-                    nullable=obj.nullable if self.strict_nullable else None,
+                    nullable=obj.nullable
+                    if self.strict_nullable and obj.nullable is not None
+                    else (False if self.strict_nullable and obj.has_default else None),
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,

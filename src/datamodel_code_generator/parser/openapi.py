@@ -671,8 +671,14 @@ class OpenAPIParser(JsonSchemaParser):
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable
-                        if object_schema and self.strict_nullable and (object_schema.has_default or parameter.required)
-                        else None,
+                        if object_schema and self.strict_nullable and object_schema.nullable is not None
+                        else (
+                            False
+                            if object_schema
+                            and self.strict_nullable
+                            and (object_schema.has_default or parameter.required)
+                            else None
+                        ),
                         strip_default_none=self.strip_default_none,
                         extras=self.get_field_extras(object_schema) if object_schema else {},
                         use_annotated=self.use_annotated,
