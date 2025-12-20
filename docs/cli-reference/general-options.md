@@ -1168,14 +1168,12 @@ The `--check` flag compares the generated output with existing files and exits w
 a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
 and generated code stay in sync. Works with both single files and directory outputs.
 
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections), [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
-
 **See also:** [CI/CD Integration](../ci-cd.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --disable-timestamp --use-union-operator --use-standard-collections --check # (1)!
+    datamodel-codegen --input schema.json --disable-timestamp --check # (1)!
     ```
 
     1. :material-arrow-left: `--check` - the option documented here
