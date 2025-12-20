@@ -1015,13 +1015,23 @@ class JsonSchemaParser(Parser):
         original_field_name: str | None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
+        constraints = field.dict() if self.is_constraints_field(field) else None
+        # Suppress minItems/maxItems for fixed-length tuples
+        if (
+            constraints
+            and field.prefixItems is not None
+            and field.minItems == field.maxItems == len(field.prefixItems)
+            and field.items in {None, False}
+        ):
+            constraints.pop("minItems", None)
+            constraints.pop("maxItems", None)
         return self.data_model_field_type(
             name=field_name,
             default=field.default,
             data_type=field_type,
             required=required,
             alias=alias,
-            constraints=field.dict() if self.is_constraints_field(field) else None,
+            constraints=constraints,
             nullable=field.nullable if self.strict_nullable and (field.has_default or required) else None,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
@@ -2386,6 +2396,7 @@ class JsonSchemaParser(Parser):
                 required = not obj.nullable and required
                 nullable = None
         is_tuple = False
+        suppress_item_constraints = False
         if isinstance(obj.items, JsonSchemaObject):
             items: list[JsonSchemaObject] = [obj.items]
         elif isinstance(obj.items, list):
@@ -2395,8 +2406,8 @@ class JsonSchemaParser(Parser):
             and obj.minItems == obj.maxItems == len(obj.prefixItems)
             and obj.items in {None, False}
         ):
-            # Set these to None so that it won't output max item constraints
-            obj.minItems = obj.maxItems = None
+            # Suppress minItems/maxItems constraints for fixed-length tuples
+            suppress_item_constraints = True
             items = obj.prefixItems
             is_tuple = True
         else:
@@ -2427,11 +2438,15 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
+        constraints = obj.dict()
+        if suppress_item_constraints:
+            constraints.pop("minItems", None)
+            constraints.pop("maxItems", None)
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
             default=obj.default,
             required=required,
-            constraints=obj.dict(),
+            constraints=constraints,
             nullable=nullable,
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(obj),
