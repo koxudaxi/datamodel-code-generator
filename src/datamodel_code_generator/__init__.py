@@ -243,6 +243,7 @@ class OpenAPIScope(Enum):
     Tags = "tags"
     Parameters = "parameters"
     Webhooks = "webhooks"
+    RequestBodies = "requestbodies"
 
 
 class AllExportsScope(Enum):

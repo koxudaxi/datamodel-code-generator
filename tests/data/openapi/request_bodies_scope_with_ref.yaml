@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test API for RequestBodies with $ref
+paths: {}
+components:
+  requestBodies:
+    CreatePet:
+      $ref: '#/components/requestBodies/BasePet'
+    BasePet:
+      description: Base pet request body
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string

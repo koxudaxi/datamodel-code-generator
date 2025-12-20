@@ -819,6 +819,28 @@ class OpenAPIParser(JsonSchemaParser):
                 webhooks: dict[str, dict[str, Any]] = specification.get("webhooks", {})
                 self._process_path_items(webhooks, path_parts, "webhooks", [], security, strip_leading_slash=False)
 
+            if OpenAPIScope.RequestBodies in self.open_api_scopes:
+                request_bodies: dict[str, Any] = specification.get("components", {}).get("requestBodies", {})
+                for body_name, raw_body in request_bodies.items():
+                    resolved_body = self.get_ref_model(raw_body["$ref"]) if "$ref" in raw_body else raw_body
+                    content = resolved_body.get("content", {})
+                    for media_type, media_obj in content.items():
+                        schema = media_obj.get("schema")
+                        if schema:
+                            self.parse_raw_obj(
+                                body_name,
+                                schema,
+                                [
+                                    *path_parts,
+                                    "#/components",
+                                    "requestBodies",
+                                    body_name,
+                                    "content",
+                                    media_type,
+                                    "schema",
+                                ],
+                            )
+
         self._resolve_unparsed_json_pointer()
 
     def _collect_discriminator_schemas(self) -> None:
