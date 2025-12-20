@@ -10,7 +10,6 @@ import re
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
@@ -26,6 +25,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
+from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -38,6 +38,8 @@ from datamodel_code_generator.types import (
     get_optional_type,
 )
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
+
+__all__ = ["WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -111,18 +113,6 @@ class ConstraintsBase(_BaseModel):
             **root_type_field_constraints,
             **model_field_constraints,
         })
-
-
-@dataclass(repr=False)
-class WrappedDefault:
-    """Represents a default value wrapped with its type constructor."""
-
-    value: Any
-    type_name: str
-
-    def __repr__(self) -> str:
-        """Return type constructor representation, e.g., 'CountType(10)'."""
-        return f"{self.type_name}({self.value!r})"
 
 
 class DataModelFieldBase(_BaseModel):

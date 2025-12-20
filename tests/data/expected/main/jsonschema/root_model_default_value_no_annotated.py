@@ -24,9 +24,5 @@ class NameType(RootModel[constr(min_length=1, max_length=50)]):
 
 class Model(BaseModel):
     admin_state: AdminStateLeaf | None = AdminStateLeaf.enable
-    count: CountType | None = Field(
-        default_factory=lambda: CountType.model_validate(10)
-    )
-    name: NameType | None = Field(
-        default_factory=lambda: NameType.model_validate('default_name')
-    )
+    count: CountType | None = Field(default_factory=lambda: CountType(10))
+    name: NameType | None = Field(default_factory=lambda: NameType('default_name'))

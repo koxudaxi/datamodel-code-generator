@@ -3242,6 +3242,18 @@ def test_main_openapi_referenced_default_use_annotated(output_file: Path) -> Non
     )
 
 
+def test_main_openapi_root_model_default_primitive(output_file: Path) -> None:
+    """Test RootModel with primitive default value in union type."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "root_model_default_primitive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="root_model_default_primitive.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--parent-scoped-naming"],
     input_schema="openapi/duplicate_models2.yaml",
