@@ -2390,7 +2390,11 @@ class JsonSchemaParser(Parser):
             items: list[JsonSchemaObject] = [obj.items]
         elif isinstance(obj.items, list):
             items = obj.items
-        elif obj.prefixItems is not None and obj.minItems == obj.maxItems == len(obj.prefixItems):
+        elif (
+            obj.prefixItems is not None
+            and obj.minItems == obj.maxItems == len(obj.prefixItems)
+            and obj.items in (None, False)
+        ):
             # Set these to None so that it won't output max item constraints
             obj.minItems = obj.maxItems = None
             items = obj.prefixItems
