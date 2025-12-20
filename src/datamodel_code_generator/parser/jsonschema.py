@@ -2393,7 +2393,7 @@ class JsonSchemaParser(Parser):
         elif (
             obj.prefixItems is not None
             and obj.minItems == obj.maxItems == len(obj.prefixItems)
-            and obj.items in (None, False)
+            and obj.items in {None, False}
         ):
             # Set these to None so that it won't output max item constraints
             obj.minItems = obj.maxItems = None
