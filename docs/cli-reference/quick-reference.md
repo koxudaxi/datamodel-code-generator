@@ -94,6 +94,7 @@ datamodel-codegen [OPTIONS]
 | [`--target-python-version`](model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
 | [`--union-mode`](model-customization.md#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_to_right). |
 | [`--use-default`](model-customization.md#use-default) | Use default values from schema in generated models. |
+| [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) | Generate default_factory for optional nested model fields. |
 | [`--use-default-kwarg`](model-customization.md#use-default-kwarg) | Use default= keyword argument instead of positional argument for fields with def... |
 | [`--use-frozen-field`](model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
 | [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) | Use single literal value as default when enum has only one option. |
@@ -252,6 +253,7 @@ All options sorted alphabetically:
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) - Generate Decimal types for fields with multipleOf constraint...
 - [`--use-default`](model-customization.md#use-default) - Use default values from schema in generated models.
+- [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) - Generate default_factory for optional nested model fields.
 - [`--use-default-kwarg`](model-customization.md#use-default-kwarg) - Use default= keyword argument instead of positional argument...
 - [`--use-double-quotes`](template-customization.md#use-double-quotes) - Use double quotes for string literals in generated code.
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator) - Use enum values in discriminator mappings for union types.

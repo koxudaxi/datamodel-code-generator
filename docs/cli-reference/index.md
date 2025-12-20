@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 26 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 27 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -160,6 +160,7 @@ This documentation is auto-generated from test cases.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of)
 - [`--use-default`](model-customization.md#use-default)
+- [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models)
 - [`--use-default-kwarg`](model-customization.md#use-default-kwarg)
 - [`--use-double-quotes`](template-customization.md#use-double-quotes)
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator)
