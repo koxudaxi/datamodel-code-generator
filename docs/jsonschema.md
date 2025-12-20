@@ -49,19 +49,19 @@ datamodel-codegen --input person.json --input-file-type jsonschema --output mode
 
 from __future__ import annotations
 
-from typing import Any, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, conint
 
 
 class Person(BaseModel):
-    firstName: Optional[str] = Field(None, description="The person's first name.")
-    lastName: Optional[str] = Field(None, description="The person's last name.")
-    age: Optional[conint(ge=0)] = Field(
+    firstName: str | None = Field(None, description="The person's first name.")
+    lastName: str | None = Field(None, description="The person's last name.")
+    age: conint(ge=0) | None = Field(
         None, description='Age in years which must be equal to or greater than zero.'
     )
-    friends: Optional[List] = None
-    comment: Optional[Any] = None
+    friends: list | None = None
+    comment: Any | None = None
 ```
 
 ## Tuple validation
@@ -107,8 +107,6 @@ datamodel-code-generator emits precise tuple annotations.
 ```
 
 ```py
-from typing import Tuple
-
 from pydantic import BaseModel
 
 
@@ -117,7 +115,7 @@ class Span(BaseModel):
 
 
 class Defaults(BaseModel):
-    a: Tuple[Span, str]
+    a: tuple[Span, str]
 ```
 
 ---

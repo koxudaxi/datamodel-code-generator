@@ -54,7 +54,7 @@ type Query {
 
 from __future__ import annotations
 
-from typing import List, Optional, TypeAlias
+from typing import TypeAlias
 
 from pydantic import BaseModel, Field
 from typing_extensions import Literal
@@ -72,29 +72,29 @@ String: TypeAlias = str
 
 
 class Author(BaseModel):
-    books: Optional[List[Optional[Book]]] = Field(default_factory=list)
+    books: list[Book | None] | None = Field(default_factory=list)
     id: ID
-    name: Optional[String] = None
-    typename__: Optional[Literal['Author']] = Field('Author', alias='__typename')
+    name: String | None = None
+    typename__: Literal['Author'] | None = Field('Author', alias='__typename')
 
 
 class Book(BaseModel):
-    author: Optional[Author] = None
+    author: Author | None = None
     id: ID
-    title: Optional[String] = None
-    typename__: Optional[Literal['Book']] = Field('Book', alias='__typename')
+    title: String | None = None
+    typename__: Literal['Book'] | None = Field('Book', alias='__typename')
 
 
 class AuthorBooksInput(BaseModel):
     id: ID
-    typename__: Optional[Literal['AuthorBooksInput']] = Field(
+    typename__: Literal['AuthorBooksInput'] | None = Field(
         'AuthorBooksInput', alias='__typename'
     )
 
 
 class BooksInput(BaseModel):
-    ids: List[ID]
-    typename__: Optional[Literal['BooksInput']] = Field(
+    ids: list[ID]
+    typename__: Literal['BooksInput'] | None = Field(
         'BooksInput', alias='__typename'
     )
 
