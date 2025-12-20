@@ -1,11 +1,9 @@
 """Tests to track CLI documentation coverage.
 
-These tests verify that options intended to be documented have:
-1. A cli_doc marker in tests
-2. An entry in CLI_OPTION_META
+These tests verify that all CLI options (defined in arguments.py) have
+a cli_doc marker in tests (unless in MANUAL_DOCS).
 
-The DOCUMENTED_OPTIONS set defines which options should be documented.
-This allows gradual expansion of documentation coverage.
+This ensures that every CLI option has corresponding test documentation.
 """
 
 from __future__ import annotations
@@ -24,15 +22,6 @@ from datamodel_code_generator.cli_options import (
 )
 
 COLLECTION_PATH = Path(__file__).parent / ".cli_doc_collection.json"
-
-# Options that should be documented (gradually expand this set)
-# Options in this set MUST have:
-#   1. A cli_doc marker in tests
-#   2. An entry in CLI_OPTION_META
-DOCUMENTED_OPTIONS: frozenset[str] = frozenset({
-    "--frozen-dataclasses",
-    # Add more as cli_doc markers are added to tests...
-})
 
 
 @pytest.fixture(scope="module")
@@ -57,34 +46,27 @@ def collected_options(collection_data: dict[str, Any]) -> set[str]:  # pragma: n
 class TestCLIDocCoverage:  # pragma: no cover
     """Documentation coverage tests."""
 
-    def test_documented_options_have_cli_doc_markers(  # noqa: PLR6301
+    def test_all_options_have_cli_doc_markers(  # noqa: PLR6301
         self, collected_options: set[str]
     ) -> None:
-        """Verify that DOCUMENTED_OPTIONS have cli_doc markers in tests."""
-        missing = DOCUMENTED_OPTIONS - collected_options
+        """Verify that all CLI options (except MANUAL_DOCS) have cli_doc markers."""
+        all_options = get_all_canonical_options()
+        documentable_options = all_options - MANUAL_DOCS
+        missing = documentable_options - collected_options
         if missing:
             pytest.fail(
-                "Options in DOCUMENTED_OPTIONS but missing cli_doc marker:\n"
+                "CLI options missing cli_doc marker:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(missing))
                 + "\n\nAdd @pytest.mark.cli_doc(...) to tests for these options."
             )
 
-    def test_documented_options_have_meta(self) -> None:  # noqa: PLR6301
-        """Verify that DOCUMENTED_OPTIONS have CLI_OPTION_META entries."""
-        missing = DOCUMENTED_OPTIONS - set(CLI_OPTION_META.keys())
-        if missing:
-            pytest.fail(
-                "Options in DOCUMENTED_OPTIONS but missing CLI_OPTION_META:\n"
-                + "\n".join(f"  - {opt}" for opt in sorted(missing))
-                + "\n\nAdd entries to CLI_OPTION_META in cli_options.py."
-            )
-
-    def test_documented_options_not_manual(self) -> None:  # noqa: PLR6301
-        """Verify that DOCUMENTED_OPTIONS are not in MANUAL_DOCS."""
-        overlap = DOCUMENTED_OPTIONS & MANUAL_DOCS
+    def test_meta_options_not_manual(self) -> None:  # noqa: PLR6301
+        """Verify that CLI_OPTION_META options are not in MANUAL_DOCS."""
+        meta_options = set(CLI_OPTION_META.keys())
+        overlap = meta_options & MANUAL_DOCS
         if overlap:
             pytest.fail(
-                "Options in both DOCUMENTED_OPTIONS and MANUAL_DOCS:\n"
+                "Options in both CLI_OPTION_META and MANUAL_DOCS:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
             )
 
