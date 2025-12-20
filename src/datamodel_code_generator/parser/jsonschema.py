@@ -1068,7 +1068,10 @@ class JsonSchemaParser(Parser):
                 data_types=[_get_data_type(t, obj.format or "default") for t in obj.type if t != "null"],
                 is_optional="null" in obj.type,
             )
-        return _get_data_type(obj.type, obj.format or "default")
+        data_type = _get_data_type(obj.type, obj.format or "default")
+        if self.strict_nullable and obj.nullable:
+            return self.data_type(data_types=[data_type], is_optional=True)
+        return data_type
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string."""

@@ -4518,3 +4518,20 @@ def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
         expected_file="allof_root_model_constraints.py",
         extra_args=["--allof-merge-mode", "none"],
     )
+
+
+@pytest.mark.benchmark
+def test_main_nullable_array_items_strict_nullable(output_file: Path) -> None:
+    """Test nullable array items with strict-nullable flag (issue #1815)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_array_items.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_array_items_strict_nullable.py",
+        extra_args=[
+            "--strict-nullable",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
