@@ -473,8 +473,9 @@ def test_skip_root_model_command_line(output_file: Path) -> None:
 @pytest.mark.cli_doc(
     options=["--check"],
     input_schema="jsonschema/person.json",
-    cli_args=["--disable-timestamp", "--check"],
+    cli_args=["--disable-timestamp", "--use-union-operator", "--use-standard-collections", "--check"],
     golden_output="person.py",
+    related_options=["--use-union-operator", "--use-standard-collections"],
 )
 def test_check_file_matches(output_file: Path) -> None:
     """Verify generated code matches existing output without modifying files.
@@ -488,13 +489,13 @@ def test_check_file_matches(output_file: Path) -> None:
         input_path=input_path,
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--disable-timestamp"],
+        extra_args=["--disable-timestamp", "--use-union-operator", "--use-standard-collections"],
     )
     run_main_and_assert(
         input_path=input_path,
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--disable-timestamp", "--check"],
+        extra_args=["--disable-timestamp", "--use-union-operator", "--use-standard-collections", "--check"],
         expected_exit=Exit.OK,
     )
 
