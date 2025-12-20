@@ -1,0 +1,27 @@
+properties:
+  list1:
+    type: array
+    items:
+      type: string
+      nullable: true
+  list2:
+    type: array
+    items:
+      type: integer
+      nullable: true
+  list3:
+    type: array
+    items:
+      type: string
+  nested_list:
+    type: array
+    items:
+      type: array
+      items:
+        type: number
+        nullable: true
+required:
+  - list1
+  - list2
+  - list3
+  - nested_list
