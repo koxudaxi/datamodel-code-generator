@@ -1168,12 +1168,14 @@ The `--check` flag compares the generated output with existing files and exits w
 a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
 and generated code stay in sync. Works with both single files and directory outputs.
 
+**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections), [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+
 **See also:** [CI/CD Integration](../ci-cd.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --disable-timestamp --check # (1)!
+    datamodel-codegen --input schema.json --disable-timestamp --use-union-operator --use-standard-collections --check # (1)!
     ```
 
     1. :material-arrow-left: `--check` - the option documented here
@@ -1219,18 +1221,18 @@ and generated code stay in sync. Works with both single files and directory outp
     
     from __future__ import annotations
     
-    from typing import Any, List, Optional
+    from typing import Any
     
     from pydantic import BaseModel, Field, conint
     
     
     class Person(BaseModel):
-        firstName: Optional[str] = Field(None, description="The person's first name.")
-        lastName: Optional[str] = Field(None, description="The person's last name.")
-        age: Optional[conint(ge=0)] = Field(
+        firstName: str | None = Field(None, description="The person's first name.")
+        lastName: str | None = Field(None, description="The person's last name.")
+        age: conint(ge=0) | None = Field(
             None, description='Age in years which must be equal to or greater than zero.'
         )
-        friends: Optional[List[Any]] = None
+        friends: list[Any] | None = None
         comment: None = None
     ```
 
