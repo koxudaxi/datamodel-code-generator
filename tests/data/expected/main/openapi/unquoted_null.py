@@ -8,7 +8,7 @@ from pydantic import BaseModel, RootModel
 
 
 class Thing(BaseModel):
-    value: str | None = None
+    value: str | None
 
 
 class NullThing(RootModel[None]):
