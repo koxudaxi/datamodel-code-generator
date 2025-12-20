@@ -31,7 +31,16 @@ jobs:
         github.event.sender.login == 'ilovelinux'))
     runs-on: ubuntu-latest
     steps:
+      # Checkout for forks (no PAT available)
       - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      # Checkout for same-repo PRs, pushes, and pull_request_target
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
@@ -48,6 +57,7 @@ jobs:
       - name: Update README
         run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
       - name: Commit and push if changed
+        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
