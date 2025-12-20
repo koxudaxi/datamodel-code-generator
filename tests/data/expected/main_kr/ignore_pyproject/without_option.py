@@ -3,11 +3,9 @@
 
 from __future__ import annotations
 
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 
 class Model(BaseModel):
-    first_name: Optional[str] = Field(None, alias='firstName')
-    last_name: Optional[str] = Field(None, alias='lastName')
+    first_name: str | None = Field(None, alias='firstName')
+    last_name: str | None = Field(None, alias='lastName')
