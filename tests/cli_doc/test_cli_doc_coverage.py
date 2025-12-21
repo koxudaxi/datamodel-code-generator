@@ -8,8 +8,6 @@ This ensures that every CLI option has corresponding test documentation.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,24 +19,16 @@ from datamodel_code_generator.cli_options import (
     get_canonical_option,
 )
 
-COLLECTION_PATH = Path(__file__).parent / ".cli_doc_collection.json"
-
 
 @pytest.fixture(scope="module")
-def collection_data() -> dict[str, Any]:  # pragma: no cover
-    """Load the CLI doc collection data."""
-    if not COLLECTION_PATH.exists():
-        pytest.skip(f"CLI doc collection not found at {COLLECTION_PATH}. Run: pytest --collect-cli-docs -p no:xdist")
+def collected_options(request: pytest.FixtureRequest) -> set[str]:  # pragma: no cover
+    """Extract canonical options from collected cli_doc markers.
 
-    with Path(COLLECTION_PATH).open(encoding="utf-8") as f:
-        return json.load(f)
-
-
-@pytest.fixture(scope="module")
-def collected_options(collection_data: dict[str, Any]) -> set[str]:  # pragma: no cover
-    """Extract canonical options from collection data."""
+    Uses config._cli_doc_items populated by conftest.py during test collection.
+    """
+    items: list[dict[str, Any]] = getattr(request.config, "_cli_doc_items", [])
     options: set[str] = set()
-    for item in collection_data.get("items", []):
+    for item in items:
         options.update(get_canonical_option(opt) for opt in item["marker_kwargs"].get("options", []))
     return options
 
@@ -67,12 +57,6 @@ class TestCLIDocCoverage:  # pragma: no cover
                 "Options in both CLI_OPTION_META and MANUAL_DOCS:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
             )
-
-    def test_collection_schema_version(self, collection_data: dict[str, Any]) -> None:
-        """Verify that collection data has expected schema version."""
-        version = collection_data.get("schema_version")
-        assert version is not None, "Collection data missing 'schema_version'"
-        assert version == 1, f"Unexpected schema version: {version}"
 
 
 class TestCoverageStats:  # pragma: no cover
