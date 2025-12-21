@@ -3468,6 +3468,26 @@ def test_main_openapi_type_alias_recursive(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_type_alias_recursive_pydantic_v2(output_file: Path) -> None:
+    """Test recursive RootModel with forward references in Pydantic v2.
+
+    Without --use-type-alias, recursive schemas generate RootModel classes.
+    Forward references in the generic parameter must be quoted to avoid
+    NameError at class definition time.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_openapi_type_alias_cross_module_collision_a(output_file: Path) -> None:
     """Test TypeAlias generation for module A in cross-module collision scenario."""
     run_main_and_assert(
