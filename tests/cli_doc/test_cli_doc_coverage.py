@@ -29,7 +29,10 @@ def collected_options(request: pytest.FixtureRequest) -> set[str]:  # pragma: no
     items: list[dict[str, Any]] = getattr(request.config, "_cli_doc_items", [])
     options: set[str] = set()
     for item in items:
-        options.update(get_canonical_option(opt) for opt in item["marker_kwargs"].get("options", []))
+        marker_options = item.get("marker_kwargs", {}).get("options", [])
+        if not isinstance(marker_options, list):
+            continue
+        options.update(get_canonical_option(opt) for opt in marker_options if isinstance(opt, str))
     return options
 
 
