@@ -29,6 +29,11 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.imports import Import
 
+HOSTNAME_REGEX = (
+    r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
+    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
+)
+
 
 class PydanticV2DataType(DataType):
     """Pydantic v2-specific DataType with SerializeAsAny support."""
@@ -62,6 +67,7 @@ class DataTypeManager(_DataTypeManager):
     """Type manager for Pydantic v2 with pattern key support."""
 
     PATTERN_KEY: ClassVar[str] = "pattern"
+    HOSTNAME_REGEX: ClassVar[str] = HOSTNAME_REGEX
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,

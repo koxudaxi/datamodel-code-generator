@@ -791,6 +791,11 @@ class DataTypeManager(ABC):
     Subclasses implement get_data_type() to map schema types to DataType objects.
     """
 
+    HOSTNAME_REGEX: ClassVar[str] = (
+        r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
+        r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$"
+    )
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         python_version: PythonVersion = PythonVersionMin,

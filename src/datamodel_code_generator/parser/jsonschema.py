@@ -1018,6 +1018,8 @@ class JsonSchemaParser(Parser):
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
         constraints = field.dict() if self.is_constraints_field(field) else None
+        if constraints is not None and self.field_constraints and field.format == "hostname":
+            constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
         if (
             constraints
@@ -1065,6 +1067,7 @@ class JsonSchemaParser(Parser):
         def _get_data_type(type_: str, format__: str) -> DataType:
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
+                field_constraints=self.field_constraints,
                 **obj.dict() if not self.field_constraints else {},
             )
 
@@ -2578,6 +2581,9 @@ class JsonSchemaParser(Parser):
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
+        constraints = obj.dict() if self.field_constraints else {}
+        if self.field_constraints and obj.format == "hostname":
+            constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[
@@ -2585,7 +2591,7 @@ class JsonSchemaParser(Parser):
                     data_type=data_type,
                     default=obj.default,
                     required=required,
-                    constraints=obj.dict() if self.field_constraints else {},
+                    constraints=constraints,
                     nullable=obj.nullable
                     if self.strict_nullable and obj.nullable is not None
                     else (False if self.strict_nullable and obj.has_default else None),
@@ -2640,6 +2646,9 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
 
+        constraints = obj.dict() if self.field_constraints else {}
+        if self.field_constraints and obj.format == "hostname":
+            constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[
@@ -2647,7 +2656,7 @@ class JsonSchemaParser(Parser):
                     data_type=self.data_type(data_types=data_types),
                     default=obj.default,
                     required=required,
-                    constraints=obj.dict() if self.field_constraints else {},
+                    constraints=constraints,
                     nullable=obj.type_has_null if self.strict_nullable else None,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),

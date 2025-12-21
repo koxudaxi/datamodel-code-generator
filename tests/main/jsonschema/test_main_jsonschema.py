@@ -1675,6 +1675,66 @@ def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None
     )
 
 
+def test_main_hostname_field_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format uses Field(pattern=) instead of constr with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_field_constraints_pydantic_v1(output_file: Path) -> None:
+    """Test hostname format uses Field(regex=) instead of constr with --field-constraints for v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_field_constraints_strict_pydantic_v1(output_file: Path) -> None:
+    """Test hostname format uses StrictStr with --field-constraints and --strict-types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_strict_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints", "--strict-types", "str"],
+    )
+
+
+def test_main_hostname_root_type_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format in root type uses Field(pattern=) with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_root_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_root_type_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format with multiple types uses Field(pattern=) with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_multiple_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_multiple_types_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
 def test_main_jsonschema_special_enum(output_file: Path) -> None:
     """Test special enum handling."""
     run_main_and_assert(
