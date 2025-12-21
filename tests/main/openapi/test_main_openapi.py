@@ -1480,7 +1480,7 @@ def test_main_openapi_nullable(output_file: Path) -> None:
     golden_output="openapi/nullable_strict_nullable.py",
 )
 def test_main_openapi_nullable_strict_nullable(output_file: Path) -> None:
-    """Strictly handle nullable types in OpenAPI schemas.
+    """Treat default field as a non-nullable field.
 
     The `--strict-nullable` flag configures the code generation behavior.
     """

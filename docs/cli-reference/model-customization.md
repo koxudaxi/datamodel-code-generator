@@ -20,7 +20,7 @@
 | [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
 | [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
 | [`--skip-root-model`](#skip-root-model) | Skip generation of root model when schema contains nested de... |
-| [`--strict-nullable`](#strict-nullable) | Strictly handle nullable types in OpenAPI schemas. |
+| [`--strict-nullable`](#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--strip-default-none`](#strip-default-none) | Remove fields with None as default value from generated mode... |
 | [`--target-python-version`](#target-python-version) | Target Python version for generated code syntax and imports.... |
 | [`--union-mode`](#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_... |
@@ -4079,7 +4079,7 @@ object is just a container for $defs and not a meaningful model itself.
 
 ## `--strict-nullable` {#strict-nullable}
 
-Strictly handle nullable types in OpenAPI schemas.
+Treat default field as a non-nullable field.
 
 The `--strict-nullable` flag configures the code generation behavior.
 
