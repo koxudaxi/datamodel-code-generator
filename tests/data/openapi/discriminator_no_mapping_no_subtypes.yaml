@@ -1,0 +1,38 @@
+openapi: 3.1.0
+info:
+  title: Test
+  description: "Test API"
+  version: 0.0.0
+paths:
+  /item:
+    get:
+      responses:
+        '200':
+          description: "Item"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemContainer"
+components:
+  schemas:
+    ItemContainer:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: "#/components/schemas/BaseItem"
+    BaseItem:
+      type: object
+      required:
+        - itemType
+      properties:
+        itemType:
+          type: string
+      discriminator:
+        propertyName: itemType
+    FooItem:
+      type: object
+      properties:
+        fooValue:
+          type: string

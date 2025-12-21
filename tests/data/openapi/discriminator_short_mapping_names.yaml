@@ -1,0 +1,50 @@
+# Tests discriminator with short mapping names (not full $ref paths)
+# Per OpenAPI spec, mapping values can be short names like "FooItem" instead of "#/components/schemas/FooItem"
+
+openapi: 3.1.0
+info:
+  title: Test
+  description: "Test API"
+  version: 0.0.0
+paths:
+  /item:
+    get:
+      responses:
+        '200':
+          description: "Item"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ItemContainer"
+components:
+  schemas:
+    ItemContainer:
+      type: object
+      required:
+        - item
+      properties:
+        item:
+          $ref: "#/components/schemas/BaseItem"
+    BaseItem:
+      type: object
+      required:
+        - itemType
+      properties:
+        itemType:
+          type: string
+      discriminator:
+        propertyName: itemType
+        mapping:
+          # Short names without full $ref paths
+          foo: FooItem
+          bar: BarItem
+    FooItem:
+      type: object
+      properties:
+        fooValue:
+          type: string
+    BarItem:
+      type: object
+      properties:
+        barValue:
+          type: integer
