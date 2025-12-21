@@ -147,10 +147,12 @@ def pytest_collection_modifyitems(
     config: pytest.Config,
     items: list[pytest.Item],
 ) -> None:  # pragma: no cover
-    """Collect CLI doc metadata from tests with cli_doc marker."""
-    if not config.getoption("--collect-cli-docs"):
-        return
+    """Collect CLI doc metadata from tests with cli_doc marker.
 
+    Always collects metadata for use by test_cli_doc_coverage.py.
+    Only validates markers when --collect-cli-docs is used.
+    """
+    collect_cli_docs = config.getoption("--collect-cli-docs", default=False)
     validation_errors: list[tuple[str, list[str]]] = []
 
     for item in items:
@@ -158,10 +160,11 @@ def pytest_collection_modifyitems(
         if marker is None:
             continue
 
-        errors = _validate_cli_doc_marker(item.nodeid, marker.kwargs)
-        if errors:
-            validation_errors.append((item.nodeid, errors))
-            continue
+        if collect_cli_docs:
+            errors = _validate_cli_doc_marker(item.nodeid, marker.kwargs)
+            if errors:
+                validation_errors.append((item.nodeid, errors))
+                continue
 
         docstring = ""
         func = getattr(item, "function", None)
