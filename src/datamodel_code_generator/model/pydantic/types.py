@@ -158,11 +158,17 @@ escape_characters = str.maketrans({
     "\t": r"\t",
 })
 
+HOSTNAME_REGEX = (  # Pydantic v1 requires \Z anchor (not $) to avoid matching trailing newline
+    r"^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
+    r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z"
+)
+
 
 class DataTypeManager(_DataTypeManager):
     """Manage data type mappings for Pydantic v1 models."""
 
     PATTERN_KEY: ClassVar[str] = "regex"
+    HOSTNAME_REGEX: ClassVar[str] = HOSTNAME_REGEX
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
@@ -334,6 +340,8 @@ class DataTypeManager(_DataTypeManager):
     def get_data_type(  # noqa: PLR0911
         self,
         types: Types,
+        *,
+        field_constraints: bool = False,
         **kwargs: Any,
     ) -> DataType:
         """Get data type with appropriate constraints for the given type."""
@@ -349,5 +357,10 @@ class DataTypeManager(_DataTypeManager):
             return self.get_data_bytes_type(types, **kwargs)
         if types == Types.boolean and StrictTypes.bool in self.strict_types:
             return self.strict_type_map[StrictTypes.bool]
+        if types == Types.hostname and field_constraints:
+            strict = StrictTypes.str in self.strict_types
+            if strict:
+                return self.strict_type_map[StrictTypes.str]
+            return self.data_type(type="str")
 
         return self.type_map[types]

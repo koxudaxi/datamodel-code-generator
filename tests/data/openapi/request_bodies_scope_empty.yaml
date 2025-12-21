@@ -1,0 +1,13 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test API with empty requestBodies
+paths: {}
+components:
+  requestBodies: {}
+  schemas:
+    Pet:
+      type: object
+      properties:
+        name:
+          type: string

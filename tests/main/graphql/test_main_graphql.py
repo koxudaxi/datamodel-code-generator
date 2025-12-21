@@ -582,9 +582,9 @@ def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
 
     The `--keyword-only` flag generates dataclasses where all fields must be
     specified as keyword arguments (kw_only=True). This is only available for
-    Python 3.10+. When combined with `--frozen`, it creates immutable dataclasses
-    with keyword-only arguments, improving code clarity and preventing positional
-    argument errors.
+    Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
+    dataclasses with keyword-only arguments, improving code clarity and preventing
+    positional argument errors.
     """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
@@ -595,9 +595,21 @@ def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "dataclasses.dataclass",
-            "--frozen",
+            "--frozen-dataclasses",
             "--keyword-only",
             "--target-python-version",
             "3.10",
         ],
+    )
+
+
+def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
+    """Test that union type references are not converted to snake_case."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union_snake_case_field.py",
+        extra_args=["--snake-case-field", "--output-model-type", "pydantic_v2.BaseModel"],
     )

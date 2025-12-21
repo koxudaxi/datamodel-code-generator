@@ -46,9 +46,7 @@ def collected_options(collection_data: dict[str, Any]) -> set[str]:  # pragma: n
 class TestCLIDocCoverage:  # pragma: no cover
     """Documentation coverage tests."""
 
-    def test_all_options_have_cli_doc_markers(  # noqa: PLR6301
-        self, collected_options: set[str]
-    ) -> None:
+    def test_all_options_have_cli_doc_markers(self, collected_options: set[str]) -> None:
         """Verify that all CLI options (except MANUAL_DOCS) have cli_doc markers."""
         all_options = get_all_canonical_options()
         documentable_options = all_options - MANUAL_DOCS
@@ -60,7 +58,7 @@ class TestCLIDocCoverage:  # pragma: no cover
                 + "\n\nAdd @pytest.mark.cli_doc(...) to tests for these options."
             )
 
-    def test_meta_options_not_manual(self) -> None:  # noqa: PLR6301
+    def test_meta_options_not_manual(self) -> None:
         """Verify that CLI_OPTION_META options are not in MANUAL_DOCS."""
         meta_options = set(CLI_OPTION_META.keys())
         overlap = meta_options & MANUAL_DOCS
@@ -70,9 +68,7 @@ class TestCLIDocCoverage:  # pragma: no cover
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
             )
 
-    def test_collection_schema_version(  # noqa: PLR6301
-        self, collection_data: dict[str, Any]
-    ) -> None:
+    def test_collection_schema_version(self, collection_data: dict[str, Any]) -> None:
         """Verify that collection data has expected schema version."""
         version = collection_data.get("schema_version")
         assert version is not None, "Collection data missing 'schema_version'"
@@ -83,7 +79,7 @@ class TestCoverageStats:  # pragma: no cover
     """Informational tests for coverage statistics."""
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_coverage_stats(self, collected_options: set[str]) -> None:  # noqa: PLR6301
+    def test_show_coverage_stats(self, collected_options: set[str]) -> None:
         """Display documentation coverage statistics."""
         all_options = get_all_canonical_options()
         documentable = all_options - MANUAL_DOCS
@@ -94,9 +90,7 @@ class TestCoverageStats:  # pragma: no cover
             print(f"  {opt}")  # noqa: T201
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_documented_options(  # noqa: PLR6301
-        self, collected_options: set[str]
-    ) -> None:
+    def test_show_documented_options(self, collected_options: set[str]) -> None:
         """Display currently documented options."""
         print(f"\nDocumented options ({len(collected_options)}):")  # noqa: T201
         for opt in sorted(collected_options):

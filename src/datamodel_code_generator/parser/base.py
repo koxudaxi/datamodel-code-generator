@@ -1824,6 +1824,8 @@ class Parser(ABC):
         for model in models:
             if "Enum" in model.base_class:
                 continue
+            if not model.BASE_CLASS:
+                continue
 
             for field in model.fields:
                 filed_name = field.name
@@ -1909,11 +1911,11 @@ class Parser(ABC):
 
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
-        """Update type aliases to properly handle forward references per PEP 484."""
+        """Update type aliases and RootModels to properly handle forward references per PEP 484."""
         model_index: dict[str, int] = {m.class_name: i for i, m in enumerate(models)}
 
         for i, model in enumerate(models):
-            if not isinstance(model, TypeAliasBase):
+            if not isinstance(model, (TypeAliasBase, pydantic_model_v2.RootModel)):
                 continue
             if isinstance(model, TypeStatement):
                 continue

@@ -2671,9 +2671,9 @@ Generate dataclasses with keyword-only fields (Python 3.10+).
 
 The `--keyword-only` flag generates dataclasses where all fields must be
 specified as keyword arguments (kw_only=True). This is only available for
-Python 3.10+. When combined with `--frozen`, it creates immutable dataclasses
-with keyword-only arguments, improving code clarity and preventing positional
-argument errors.
+Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
+dataclasses with keyword-only arguments, improving code clarity and preventing
+positional argument errors.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
 

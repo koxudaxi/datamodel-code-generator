@@ -31,7 +31,7 @@ def test_get_canonical_option() -> None:
 class TestCLIOptionMetaSync:  # pragma: no cover
     """Synchronization tests for CLI_OPTION_META."""
 
-    def test_all_registered_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
+    def test_all_registered_options_exist_in_argparse(self) -> None:
         """Verify that all options in CLI_OPTION_META exist in argparse."""
         argparse_options = get_all_canonical_options()
         registered = set(CLI_OPTION_META.keys())
@@ -44,7 +44,7 @@ class TestCLIOptionMetaSync:  # pragma: no cover
                 + "\n\nRemove them from CLI_OPTION_META or add them to arguments.py."
             )
 
-    def test_manual_doc_options_exist_in_argparse(self) -> None:  # noqa: PLR6301
+    def test_manual_doc_options_exist_in_argparse(self) -> None:
         """Verify that all options in MANUAL_DOCS exist in argparse."""
         argparse_options = get_all_canonical_options()
 
@@ -56,7 +56,7 @@ class TestCLIOptionMetaSync:  # pragma: no cover
                 + "\n\nRemove them from MANUAL_DOCS or add them to arguments.py."
             )
 
-    def test_no_overlap_between_meta_and_manual(self) -> None:  # noqa: PLR6301
+    def test_no_overlap_between_meta_and_manual(self) -> None:
         """Verify that CLI_OPTION_META and MANUAL_DOCS don't overlap."""
         overlap = set(CLI_OPTION_META.keys()) & MANUAL_DOCS
         if overlap:
@@ -66,7 +66,7 @@ class TestCLIOptionMetaSync:  # pragma: no cover
                 + "\n\nAn option should be in one or the other, not both."
             )
 
-    def test_meta_names_match_keys(self) -> None:  # noqa: PLR6301
+    def test_meta_names_match_keys(self) -> None:
         """Verify that CLIOptionMeta.name matches the dict key."""
         mismatches = []
         for key, meta in CLI_OPTION_META.items():
@@ -76,7 +76,7 @@ class TestCLIOptionMetaSync:  # pragma: no cover
         if mismatches:
             pytest.fail("CLIOptionMeta.name mismatches:\n" + "\n".join(mismatches))
 
-    def test_all_argparse_options_are_documented_or_excluded(self) -> None:  # noqa: PLR6301
+    def test_all_argparse_options_are_documented_or_excluded(self) -> None:
         """Verify that all argparse options are either documented or explicitly excluded.
 
         This test fails when a new CLI option is added to arguments.py
@@ -96,7 +96,7 @@ class TestCLIOptionMetaSync:  # pragma: no cover
                 "or add to MANUAL_DOCS if they should have manual documentation."
             )
 
-    def test_canonical_option_determination_is_stable(self) -> None:  # noqa: PLR6301
+    def test_canonical_option_determination_is_stable(self) -> None:
         """Verify that canonical option determination is deterministic.
 
         The canonical option should be the longest option string for each action.

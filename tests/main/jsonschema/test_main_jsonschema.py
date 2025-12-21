@@ -314,7 +314,7 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
 @pytest.mark.cli_doc(
     options=["--keyword-only"],
     input_schema="jsonschema/person.json",
-    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen", "--keyword-only"],
+    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses", "--keyword-only"],
     golden_output="main/jsonschema/general_dataclass_frozen_kw_only.py",
     related_options=["--frozen-dataclasses", "--output-model-type"],
 )
@@ -323,7 +323,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
 
     The `--keyword-only` flag generates all dataclass fields as keyword-only,
     requiring explicit parameter names when instantiating models. Combined with
-    `--frozen`, creates immutable models with keyword-only constructors.
+    `--frozen-dataclasses`, creates immutable models with keyword-only constructors.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
@@ -334,7 +334,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
         extra_args=[
             "--output-model-type",
             "dataclasses.dataclass",
-            "--frozen",
+            "--frozen-dataclasses",
             "--keyword-only",
             "--target-python-version",
             "3.10",
@@ -1672,6 +1672,66 @@ def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None
         assert_func=assert_file_content,
         expected_file="strict_types_all_field_constraints.py",
         extra_args=["--strict-types", "str", "bytes", "int", "float", "bool", "--field-constraints"],
+    )
+
+
+def test_main_hostname_field_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format uses Field(pattern=) instead of constr with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_field_constraints_pydantic_v1(output_file: Path) -> None:
+    """Test hostname format uses Field(regex=) instead of constr with --field-constraints for v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_field_constraints_strict_pydantic_v1(output_file: Path) -> None:
+    """Test hostname format uses StrictStr with --field-constraints and --strict-types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_field_constraints_strict_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints", "--strict-types", "str"],
+    )
+
+
+def test_main_hostname_root_type_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format in root type uses Field(pattern=) with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_root_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_root_type_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
+    """Test hostname format with multiple types uses Field(pattern=) with --field-constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "hostname_multiple_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_multiple_types_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
     )
 
 
@@ -4005,7 +4065,7 @@ def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> 
             "tree",
             "--output-model-type",
             "dataclasses.dataclass",
-            "--frozen",
+            "--frozen-dataclasses",
         ],
     )
 
@@ -4590,6 +4650,202 @@ def test_main_allof_root_model_constraints_none(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="allof_root_model_constraints.py",
         extra_args=["--allof-merge-mode", "none"],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) -> None:
+    """Test allOf with root model constraints in Pydantic v2 (issue #2232).
+
+    When merging pattern constraints that use lookaround assertions,
+    the generated RootModel should use the base type in the generic
+    (e.g., RootModel[str]) rather than the constrained type
+    (e.g., RootModel[constr(pattern=...)]) to avoid regex evaluation
+    before model_config with regex_engine='python-re' is processed.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_model_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_model_constraints_merge_pydantic_v2.py",
+        extra_args=[
+            "--allof-merge-mode",
+            "constraints",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_nested_lookaround_array_pydantic_v2(output_file: Path) -> None:
+    """Test nested lookaround pattern detection in array items (issue #2232).
+
+    When array items have patterns with lookaround assertions, the lookaround
+    should be detected in nested types and regex_engine='python-re' should be
+    added. The RootModel generic should use the base type (list[str]) rather
+    than the constrained type (list[constr(pattern=...)]).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_lookaround_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_lookaround_array_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_anyof_nullable_pydantic_v2(output_file: Path) -> None:
+    """Test lookaround pattern with anyOf null for union/optional path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_anyof_nullable.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_anyof_nullable_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@LEGACY_BLACK_SKIP
+@pytest.mark.benchmark
+def test_main_lookaround_mixed_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test lookaround pattern with union of constr and conint to test base_type_hint fallback for non-constr types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_mixed_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_mixed_constraints_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_dict_pydantic_v2(output_file: Path) -> None:
+    """Test lookaround pattern in dict values for base_type_hint dict path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_dict_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_union_types_pydantic_v2(output_file: Path) -> None:
+    """Test lookaround pattern in union for base_type_hint union path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_union_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_union_types_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_nested_lookaround_array_generic_container(output_file: Path) -> None:
+    """Test lookaround pattern with --use-generic-container-types for Sequence path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_lookaround_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_lookaround_array_generic_container.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-container-types",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_dict_generic_container(output_file: Path) -> None:
+    """Test lookaround dict pattern with --use-generic-container-types for Mapping path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_dict_generic_container.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-container-types",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_nested_lookaround_array_standard_collections(output_file: Path) -> None:
+    """Test lookaround pattern with --use-standard-collections for list path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_lookaround_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_lookaround_array_standard_collections.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-standard-collections",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_dict_standard_collections(output_file: Path) -> None:
+    """Test lookaround dict pattern with --use-standard-collections for dict path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_dict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_dict_standard_collections.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-standard-collections",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_lookaround_dict_key_pydantic_v2(output_file: Path) -> None:
+    """Test lookaround pattern on dict key for dict_key.all_data_types path."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "lookaround_dict_key.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="lookaround_dict_key_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
     )
 
 

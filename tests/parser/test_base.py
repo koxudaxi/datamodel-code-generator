@@ -39,7 +39,7 @@ class C(Parser):
     def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         """Parse raw data into models."""
 
-    def parse(self) -> str:  # noqa: PLR6301
+    def parse(self) -> str:
         """Parse and return results."""
         return "parsed"
 

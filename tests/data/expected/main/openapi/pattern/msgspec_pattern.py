@@ -10,7 +10,15 @@ from msgspec import UNSET, Meta, Struct, UnsetType
 
 
 class Info(Struct):
-    hostName: str | UnsetType = UNSET
+    hostName: (
+        Annotated[
+            str,
+            Meta(
+                pattern='^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]{0,61}[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]{0,61}[A-Za-z0-9])$'
+            ),
+        ]
+        | UnsetType
+    ) = UNSET
     arn: (
         Annotated[
             str,
@@ -22,5 +30,5 @@ class Info(Struct):
         Annotated[str, Meta(pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')] | UnsetType
     ) = UNSET
     comment: (
-        Annotated[str, Meta(pattern='[^\\b\\f\\n\\r\\t\\\\a+.?\'"|()]+$')] | UnsetType
+        Annotated[str, Meta(pattern='[^\\x08\\f\\n\\r\\t\\\\a+.?\'"|()]+$')] | UnsetType
     ) = UNSET
