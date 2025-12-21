@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HostnameMultiple",
+  "type": ["object", "string"],
+  "format": "hostname",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  }
+}
