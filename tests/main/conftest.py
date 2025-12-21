@@ -18,6 +18,7 @@ from packaging import version
 
 from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.util import PYDANTIC_V2
 from tests.conftest import (
     AssertFileContent,
@@ -52,6 +53,9 @@ BLACK_PY314_SKIP = pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_314),
     reason=f"Installed black ({black.__version__}) doesn't support Python 3.14",
 )
+
+CURRENT_PYTHON_VERSION = f"{sys.version_info[0]}.{sys.version_info[1]}"
+"""Current Python version as string (e.g., '3.13')."""
 
 DATA_PATH: Path = Path(__file__).parent.parent / "data"
 EXPECTED_MAIN_PATH: Path = DATA_PATH / "expected" / "main"
@@ -102,6 +106,21 @@ def output_dir(tmp_path: Path) -> Path:
     return tmp_path / "model"
 
 
+def get_current_version_args(*extra_args: str) -> list[str]:
+    """Create CLI args list with --target-python-version set to current version.
+
+    This is a convenience function for tests that want to use the current
+    Python version to enable exec() validation.
+
+    Example:
+        run_main_and_assert(
+            ...,
+            extra_args=get_current_version_args("--use-field-description"),
+        )
+    """
+    return ["--target-python-version", CURRENT_PYTHON_VERSION, *extra_args]
+
+
 def _copy_files(copy_files: CopyFilesMapping | None) -> None:
     """Copy files from source to destination paths."""
     if copy_files is not None:
@@ -113,6 +132,34 @@ def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> N
     """Assert exit code matches expected value."""
     if return_code != expected_exit:  # pragma: no cover
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
+
+
+def _get_valid_cli_options() -> frozenset[str]:
+    """Get all valid CLI option names from arg_parser."""
+    valid_options: set[str] = set()
+    for action in arg_parser._actions:
+        valid_options.update(action.option_strings)
+    return frozenset(valid_options)
+
+
+_VALID_CLI_OPTIONS = _get_valid_cli_options()
+
+
+def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
+    """Validate that all option-like arguments in extra_args are valid CLI options."""
+    if extra_args is None:
+        return
+    invalid_args: list[str] = [
+        arg
+        for arg in extra_args
+        if (
+            (arg.startswith("--") and "=" not in arg)
+            or (arg.startswith("-") and not arg.startswith("--") and len(arg) == 2)
+        )
+        and arg not in _VALID_CLI_OPTIONS
+    ]
+    if invalid_args:  # pragma: no cover
+        pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(_VALID_CLI_OPTIONS)}")
 
 
 def _extend_args(
@@ -130,6 +177,7 @@ def _extend_args(
         args.extend(["--output", str(output_path)])
     if input_file_type is not None:
         args.extend(["--input-file-type", input_file_type])
+    _validate_extra_args(extra_args)
     if extra_args is not None:
         args.extend(extra_args)
 
@@ -223,6 +271,7 @@ def run_main_and_assert(  # noqa: PLR0912
     monkeypatch: pytest.MonkeyPatch | None = None,
     # Code validation options
     skip_code_validation: bool = False,
+    force_exec_validation: bool = False,
 ) -> None:
     """Execute main() and assert output.
 
@@ -259,6 +308,13 @@ def run_main_and_assert(  # noqa: PLR0912
         expected_stderr: Assert exact stderr match
         expected_stderr_contains: Assert stderr contains string
         assert_no_stderr: Assert stderr is empty
+
+    Code validation options:
+        skip_code_validation: Skip all code validation (compile and exec)
+        force_exec_validation: Run exec() even when target Python version differs from
+            the test environment (only effective when target <= runtime). This catches
+            runtime errors that would otherwise be missed. Has no effect when target >
+            runtime since compile is skipped in that case.
     """
     __tracebackhide__ = True
 
@@ -349,7 +405,7 @@ def run_main_and_assert(  # noqa: PLR0912
         assert_func(output_path, expected_file, transform=transform)
 
     if output_path is not None and not skip_code_validation:
-        _validate_output_files(output_path, extra_args)
+        _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
 
 
 def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
@@ -380,8 +436,15 @@ def _should_skip_compile(extra_arguments: Sequence[str] | None) -> bool:
     return target_version > sys.version_info[:2]
 
 
-def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
-    """Check if exec should be skipped based on model type, pydantic version, and Python version."""
+def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool = False) -> bool:
+    """Check if exec should be skipped based on model type, pydantic version, and Python version.
+
+    Args:
+        extra_arguments: CLI arguments passed to the test.
+        force_exec: If True, skip version mismatch check and allow exec on current Python version.
+            This only works when target version <= runtime version (older target on newer runtime).
+            When target > runtime, compile will be skipped entirely regardless of this flag.
+    """
     output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
     is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
     if (is_pydantic_v1 and PYDANTIC_V2) or (
@@ -390,16 +453,30 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None) -> bool:
         return True
     if (target_version := _parse_target_version(extra_arguments)) is None:
         return True
-    if target_version != sys.version_info[:2]:
+    if not force_exec and target_version != sys.version_info[:2]:
         return True
     return _get_argument_value(extra_arguments, "--base-class") is not None
 
 
-def _validate_output_files(output_path: Path, extra_arguments: Sequence[str] | None = None) -> None:
-    """Validate generated Python files by compiling/executing them."""
+def _validate_output_files(
+    output_path: Path,
+    extra_arguments: Sequence[str] | None = None,
+    *,
+    force_exec_validation: bool = False,
+) -> None:
+    """Validate generated Python files by compiling/executing them.
+
+    Args:
+        output_path: Path to output file or directory to validate.
+        extra_arguments: CLI arguments passed to the test.
+        force_exec_validation: If True, run exec even when target Python version differs from
+            the test environment (only when target <= runtime). This helps catch runtime errors
+            that would otherwise be missed. Has no effect when target > runtime since compile
+            is skipped in that case.
+    """
     if _should_skip_compile(extra_arguments):
         return
-    should_exec = not _should_skip_exec(extra_arguments)
+    should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
     elif output_path.is_dir():  # pragma: no cover
@@ -471,6 +548,7 @@ def run_main_url_and_assert(
     expected_file: str | Path,
     extra_args: Sequence[str] | None = None,
     transform: Callable[[str], str] | None = None,
+    force_exec_validation: bool = False,
 ) -> None:
     """Execute main() with URL input and assert output.
 
@@ -482,10 +560,12 @@ def run_main_url_and_assert(
         expected_file: Expected output filename
         extra_args: Additional CLI arguments
         transform: Optional function to transform output before comparison
+        force_exec_validation: Run exec() even when target Python version differs from
+            the test environment (only effective when target <= runtime).
     """
     __tracebackhide__ = True
     return_code = _run_main_url(url, output_path, input_file_type, extra_args=extra_args)
     _assert_exit_code(return_code, Exit.OK, f"URL: {url}")
     assert_func(output_path, expected_file, transform=transform)
 
-    _validate_output_files(output_path, extra_args)
+    _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)

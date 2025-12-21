@@ -22,5 +22,5 @@ class Info(Struct):
         Annotated[str, Meta(pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')] | UnsetType
     ) = UNSET
     comment: (
-        Annotated[str, Meta(pattern='[^\\b\\f\\n\\r\\t\\\\a+.?\'"|()]+$')] | UnsetType
+        Annotated[str, Meta(pattern='[^\\x08\\f\\n\\r\\t\\\\a+.?\'"|()]+$')] | UnsetType
     ) = UNSET

@@ -16,8 +16,8 @@ class ModelEnum(Enum):
     field__1 = '\n'
     field__ = '\r\n'
     field__2 = '\t'
-    field__3 = '\b'
-    field__4 = '\\'
+    field_x08 = '\\x08'
+    field__3 = '\\'
 
 
 class Model(BaseModel):

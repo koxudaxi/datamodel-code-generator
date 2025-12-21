@@ -1,0 +1,35 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test API for RequestBodies Scope
+paths: {}
+components:
+  requestBodies:
+    CreatePet:
+      description: Request body for creating a pet
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+              age:
+                type: integer
+    UpdatePet:
+      description: Request body for updating a pet
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PetUpdate'
+    EmptyContent:
+      description: Request body with no schema
+      content:
+        application/json: {}
+  schemas:
+    PetUpdate:
+      type: object
+      properties:
+        name:
+          type: string

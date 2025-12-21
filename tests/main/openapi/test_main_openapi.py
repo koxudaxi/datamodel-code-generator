@@ -3526,6 +3526,26 @@ def test_main_openapi_type_alias_recursive(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_type_alias_recursive_pydantic_v2(output_file: Path) -> None:
+    """Test recursive RootModel with forward references in Pydantic v2.
+
+    Without --use-type-alias, recursive schemas generate RootModel classes.
+    Forward references in the generic parameter must be quoted to avoid
+    NameError at class definition time.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive_pydantic_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_openapi_type_alias_cross_module_collision_a(output_file: Path) -> None:
     """Test TypeAlias generation for module A in cross-module collision scenario."""
     run_main_and_assert(
@@ -4348,4 +4368,30 @@ def test_main_openapi_use_status_code_in_response_name(output_file: Path) -> Non
         assert_func=assert_file_content,
         expected_file="use_status_code_in_response_name.py",
         extra_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_main_openapi_request_bodies_scope(output_file: Path) -> None:
+    """Test generating models from components/requestBodies using requestbodies scope."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "request_bodies_scope.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="request_bodies_scope.py",
+        extra_args=["--openapi-scopes", "requestbodies", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_main_openapi_request_bodies_scope_with_ref(output_file: Path) -> None:
+    """Test generating models from components/requestBodies with $ref at requestBody level."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "request_bodies_scope_with_ref.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="request_bodies_scope_with_ref.py",
+        extra_args=["--openapi-scopes", "requestbodies", "--output-model-type", "pydantic_v2.BaseModel"],
     )

@@ -585,7 +585,7 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
         "\n",
         "\r\n",
         "\t",
-        "\b",
+        "\\x08",
         null,
         "\\"
       ]
@@ -613,8 +613,8 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
         field_ = '\n'
         field__ = '\r\n'
         field__1 = '\t'
-        field__2 = '\b'
-        field__3 = '\\'
+        field_x08 = '\\x08'
+        field__2 = '\\'
     
     
     class Model(BaseModel):
@@ -2225,7 +2225,7 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
         "\n",
         "\r\n",
         "\t",
-        "\b",
+        "\\x08",
         null,
         "\\"
       ]
@@ -2253,8 +2253,8 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
         special__1 = '\n'
         special__ = '\r\n'
         special__2 = '\t'
-        special__3 = '\b'
-        special__4 = '\\'
+        special_x08 = '\\x08'
+        special__3 = '\\'
     
     
     class Model(BaseModel):
