@@ -4656,6 +4656,7 @@ def test_main_lookaround_anyof_nullable_pydantic_v2(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
 @pytest.mark.benchmark
 def test_main_lookaround_mixed_constraints_pydantic_v2(output_file: Path) -> None:
     """Test lookaround pattern with union of constr and conint to test base_type_hint fallback for non-constr types."""
