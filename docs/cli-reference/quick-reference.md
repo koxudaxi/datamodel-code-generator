@@ -89,7 +89,7 @@ datamodel-codegen [OPTIONS]
 | [`--reuse-model`](model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
 | [`--reuse-scope`](model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
 | [`--skip-root-model`](model-customization.md#skip-root-model) | Skip generation of root model when schema contains nested definitions. |
-| [`--strict-nullable`](field-customization.md#strict-nullable) | Treat default field as a non-nullable field. |
+| [`--strict-nullable`](model-customization.md#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--strip-default-none`](model-customization.md#strip-default-none) | Remove fields with None as default value from generated models. |
 | [`--target-python-version`](model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
 | [`--union-mode`](model-customization.md#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_to_right). |
@@ -241,7 +241,7 @@ All options sorted alphabetically:
 - [`--skip-root-model`](model-customization.md#skip-root-model) - Skip generation of root model when schema contains nested de...
 - [`--snake-case-field`](field-customization.md#snake-case-field) - Convert field names to snake_case format.
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix) - Prefix to add to special field names (like reserved keywords...
-- [`--strict-nullable`](field-customization.md#strict-nullable) - Treat default field as a non-nullable field.
+- [`--strict-nullable`](model-customization.md#strict-nullable) - Treat default field as a non-nullable field.
 - [`--strict-types`](typing-customization.md#strict-types) - Enable strict type validation for specified Python types.
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
 - [`--target-python-version`](model-customization.md#target-python-version) - Target Python version for generated code syntax and imports.

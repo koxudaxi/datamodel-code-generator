@@ -18,7 +18,6 @@
 | [`--set-default-enum-member`](#set-default-enum-member) | Set the first enum member as the default value for enum fiel... |
 | [`--snake-case-field`](#snake-case-field) | Convert field names to snake_case format. |
 | [`--special-field-name-prefix`](#special-field-name-prefix) | Prefix to add to special field names (like reserved keywords... |
-| [`--strict-nullable`](#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--use-attribute-docstrings`](#use-attribute-docstrings) | Generate field descriptions as attribute docstrings instead ... |
 | [`--use-enum-values-in-discriminator`](#use-enum-values-in-discriminator) | Use enum values in discriminator mappings for union types. |
 | [`--use-field-description`](#use-field-description) | Include schema descriptions as Field docstrings. |
@@ -2260,52 +2259,6 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
     
     class Model(BaseModel):
         __root__: ModelEnum | None = None
-    ```
-
----
-
-## `--strict-nullable` {#strict-nullable}
-
-Treat default field as a non-nullable field.
-
-The `--strict-nullable` flag configures the code generation behavior.
-
-!!! tip "Usage"
-
-    ```bash
-    datamodel-codegen --input schema.json --strict-nullable # (1)!
-    ```
-
-    1. :material-arrow-left: `--strict-nullable` - the option documented here
-
-??? example "Examples"
-
-    **Input Schema:**
-
-    ```json
-    {
-      "type": "object",
-      "properties": {
-        "bar": {
-          "type": "integer",
-          "default": 5
-        }
-      }
-    }
-    ```
-
-    **Without `--strict-nullable`:**
-
-    ```python
-    class Model(BaseModel):
-        bar: int | None = 5
-    ```
-
-    **With `--strict-nullable`:**
-
-    ```python
-    class Model(BaseModel):
-        bar: int = 5
     ```
 
 ---
