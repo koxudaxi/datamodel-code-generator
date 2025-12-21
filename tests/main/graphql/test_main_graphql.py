@@ -601,3 +601,15 @@ def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
             "3.10",
         ],
     )
+
+
+def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
+    """Test that union type references are not converted to snake_case."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union_snake_case_field.py",
+        extra_args=["--snake-case-field", "--output-model-type", "pydantic_v2.BaseModel"],
+    )

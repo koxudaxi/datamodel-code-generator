@@ -1805,6 +1805,8 @@ class Parser(ABC):
         for model in models:
             if "Enum" in model.base_class:
                 continue
+            if not model.BASE_CLASS:
+                continue
 
             for field in model.fields:
                 filed_name = field.name
