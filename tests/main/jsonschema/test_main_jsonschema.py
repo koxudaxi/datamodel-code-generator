@@ -314,7 +314,7 @@ def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) ->
 @pytest.mark.cli_doc(
     options=["--keyword-only"],
     input_schema="jsonschema/person.json",
-    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen", "--keyword-only"],
+    cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses", "--keyword-only"],
     golden_output="main/jsonschema/general_dataclass_frozen_kw_only.py",
     related_options=["--frozen-dataclasses", "--output-model-type"],
 )
@@ -323,7 +323,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
 
     The `--keyword-only` flag generates all dataclass fields as keyword-only,
     requiring explicit parameter names when instantiating models. Combined with
-    `--frozen`, creates immutable models with keyword-only constructors.
+    `--frozen-dataclasses`, creates immutable models with keyword-only constructors.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
@@ -334,7 +334,7 @@ def test_main_jsonschema_dataclass_frozen_keyword_only(output_file: Path) -> Non
         extra_args=[
             "--output-model-type",
             "dataclasses.dataclass",
-            "--frozen",
+            "--frozen-dataclasses",
             "--keyword-only",
             "--target-python-version",
             "3.10",
@@ -4005,7 +4005,7 @@ def test_main_jsonschema_reuse_scope_tree_dataclass_frozen(output_dir: Path) -> 
             "tree",
             "--output-model-type",
             "dataclasses.dataclass",
-            "--frozen",
+            "--frozen-dataclasses",
         ],
     )
 
