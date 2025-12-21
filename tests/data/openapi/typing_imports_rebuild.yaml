@@ -1,0 +1,23 @@
+openapi: "3.1.0"
+info:
+  title: Test
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        name:
+          type: string
+    Container:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+        optional_item:
+          oneOf:
+            - $ref: "#/components/schemas/Item"
+            - type: "null"

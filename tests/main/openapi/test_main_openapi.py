@@ -4291,3 +4291,15 @@ def test_main_openapi_use_status_code_in_response_name(output_file: Path) -> Non
         expected_file="use_status_code_in_response_name.py",
         extra_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
     )
+
+
+def test_main_openapi_typing_imports_rebuild(output_file: Path) -> None:
+    """Test model_rebuild() is generated for models with typing imports when using deferred annotations."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "typing_imports_rebuild.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="typing_imports_rebuild.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--no-use-union-operator"],
+    )

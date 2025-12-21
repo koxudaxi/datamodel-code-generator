@@ -42,8 +42,15 @@ from datamodel_code_generator.format import (
 )
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
+    IMPORT_DICT,
+    IMPORT_FROZEN_SET,
+    IMPORT_LIST,
     IMPORT_LITERAL,
+    IMPORT_MAPPING,
     IMPORT_OPTIONAL,
+    IMPORT_SEQUENCE,
+    IMPORT_SET,
+    IMPORT_TUPLE,
     IMPORT_UNION,
     Import,
     Imports,
@@ -98,6 +105,18 @@ ComponentEdges: TypeAlias = dict[ComponentId, set[ComponentId]]
 
 ClassNode: TypeAlias = tuple[ModelName, ...]
 ClassGraph: TypeAlias = dict[ClassNode, set[ClassNode]]
+
+TYPING_IMPORTS_REQUIRING_REBUILD: tuple[Import, ...] = (
+    IMPORT_DICT,
+    IMPORT_FROZEN_SET,
+    IMPORT_LIST,
+    IMPORT_MAPPING,
+    IMPORT_OPTIONAL,
+    IMPORT_SEQUENCE,
+    IMPORT_SET,
+    IMPORT_TUPLE,
+    IMPORT_UNION,
+)
 
 
 class _KeepModelOrderDeps(NamedTuple):
@@ -2376,41 +2395,47 @@ class Parser(ABC):
 
         if (
             use_deferred_annotations
-            and required_paths_in_module
             and self.dump_resolve_reference_action is pydantic_model_v2.dump_resolve_reference_action
         ):
-            module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
-            module_model_names = set(module_positions)
+            typing_import_paths = {
+                m.path
+                for m in models
+                if m.reference and any(i in TYPING_IMPORTS_REQUIRING_REBUILD for f in m.fields for i in f.imports)
+            }
+            required_paths_in_module |= typing_import_paths
 
-            forward_needed: set[str] = set()
-            for model in models:
-                if model.path not in required_paths_in_module or not model.reference:
-                    continue
-                name = model.reference.short_name
-                pos = module_positions[name]
-                refs = {
-                    t.reference.short_name
-                    for f in model.fields
-                    for t in f.data_type.all_data_types
-                    if t.reference and t.reference.short_name in module_model_names
-                }
-                if name in refs or any(module_positions.get(r, -1) > pos for r in refs):
-                    forward_needed.add(model.path)
+            if required_paths_in_module:
+                module_positions = {m.reference.short_name: i for i, m in enumerate(models) if m.reference}
+                module_model_names = set(module_positions)
 
-            # Propagate requirement through inheritance.
-            changed = True
-            required_filtered = set(forward_needed)
-            while changed:
-                changed = False
+                forward_needed: set[str] = set()
                 for model in models:
-                    if not model.reference or model.path in required_filtered:
+                    if model.path not in required_paths_in_module or not model.reference:
                         continue
-                    base_paths = {b.reference.path for b in model.base_classes if b.reference}
-                    if base_paths & required_filtered:
-                        required_filtered.add(model.path)
-                        changed = True
+                    name = model.reference.short_name
+                    pos = module_positions[name]
+                    refs = {
+                        t.reference.short_name
+                        for f in model.fields
+                        for t in f.data_type.all_data_types
+                        if t.reference and t.reference.short_name in module_model_names
+                    }
+                    if name in refs or any(module_positions.get(r, -1) > pos for r in refs):
+                        forward_needed.add(model.path)
 
-            required_paths_in_module = required_filtered
+                changed = True
+                required_filtered = set(forward_needed)
+                while changed:
+                    changed = False
+                    for model in models:
+                        if not model.reference or model.path in required_filtered:
+                            continue
+                        base_paths = {b.reference.path for b in model.base_classes if b.reference}
+                        if base_paths & required_filtered:
+                            required_filtered.add(model.path)
+                            changed = True
+
+                required_paths_in_module = required_filtered | typing_import_paths
 
         return [
             "\n",
