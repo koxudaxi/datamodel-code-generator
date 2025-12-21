@@ -186,10 +186,12 @@ lint.per-file-ignores."tests/**/*.py" = [
   "INP001",  # no implicit namespace
   "PLC0415", # local imports in tests are fine
   "PLC2701", # private import is fine
+  "PLR0904", # too many public methods in test classes is fine
   "PLR0913", # as many arguments as want
   "PLR0915", # can have longer test methods
   "PLR0917", # as many arguments as want
   "PLR2004", # Magic value used in comparison, consider replacing with a constant variable
+  "PLR6301", # test methods don't need to use self
   "S",       # no safety concerns
   "SLF001",  # can test private methods
 ]

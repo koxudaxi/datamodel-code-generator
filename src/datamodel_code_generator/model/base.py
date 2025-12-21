@@ -220,6 +220,15 @@ class DataModelFieldBase(_BaseModel):
             return f"Union[{', '.join(parts)}]"
         return None  # pragma: no cover
 
+    def _build_base_union_type_hint(self) -> str | None:  # pragma: no cover
+        """Build Union[] base type hint from data_type.data_types if forward reference requires it."""
+        if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
+            return None
+        parts = [dt.base_type_hint for dt in self.data_type.data_types if dt.base_type_hint]
+        if len(parts) > 1:
+            return f"Union[{', '.join(parts)}]"
+        return None
+
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
@@ -240,6 +249,33 @@ class DataModelFieldBase(_BaseModel):
         if self.fall_back_to_nullable:
             return get_optional_type(type_hint, self._use_union_operator)
         return type_hint
+
+    @property
+    def base_type_hint(self) -> str:
+        """Get the base type hint without constrained type kwargs.
+
+        This returns the type without kwargs (e.g., 'str' instead of 'constr(pattern=...)').
+        Used in RootModel generics when regex_engine config is needed for lookaround patterns.
+        """
+        base_hint = self._build_base_union_type_hint() or self.data_type.base_type_hint
+
+        if not base_hint:  # pragma: no cover
+            return NONE
+
+        needs_optional = (
+            (self.nullable is True)
+            or (self.required and self.type_has_null)
+            or (self.nullable is None and not self.required and self.fall_back_to_nullable)
+        )
+        skip_optional = (
+            self.has_default_factory
+            or (self.data_type.is_optional and self.data_type.type != ANY)
+            or (self.nullable is False)
+        )
+
+        if needs_optional and not skip_optional:  # pragma: no cover
+            return get_optional_type(base_hint, self._use_union_operator)
+        return base_hint
 
     @property
     def imports(self) -> tuple[Import, ...]:

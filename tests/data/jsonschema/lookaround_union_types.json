@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "LookaroundUnion": {
+      "description": "Union with lookaround pattern.",
+      "anyOf": [
+        {
+          "type": "string",
+          "pattern": "^(?=.*[A-Z]).+$"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "value": { "$ref": "#/definitions/LookaroundUnion" }
+  }
+}
