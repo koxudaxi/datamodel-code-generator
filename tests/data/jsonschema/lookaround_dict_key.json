@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "LookaroundKeyDict": {
+      "description": "Dict with lookaround pattern on key constraint via patternProperties.",
+      "type": "object",
+      "patternProperties": {
+        "^(?=.*[A-Z]).+$": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "data": { "$ref": "#/definitions/LookaroundKeyDict" }
+  }
+}

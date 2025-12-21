@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LookaroundMixedConstraints",
+  "description": "RootModel with union of constr (lookahead) and conint to test base_type_hint fallback.",
+  "oneOf": [
+    {
+      "type": "string",
+      "pattern": "^(?=.*[A-Z]).+$",
+      "minLength": 1
+    },
+    {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    }
+  ]
+}

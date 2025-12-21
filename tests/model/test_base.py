@@ -31,7 +31,7 @@ class A(TemplateBase):
         """Return the template file path."""
         return self._path
 
-    def render(self) -> str:  # noqa: PLR6301
+    def render(self) -> str:
         """Render the template."""
         return ""
 
