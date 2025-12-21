@@ -16,8 +16,8 @@ class ModelEnum(Enum):
     special__1 = '\n'
     special__ = '\r\n'
     special__2 = '\t'
-    special__3 = '\b'
-    special__4 = '\\'
+    special_x08 = '\\x08'
+    special__3 = '\\'
 
 
 class Model(BaseModel):

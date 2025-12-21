@@ -18,4 +18,4 @@ class Info(BaseModel):
         constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$') | None
     ) = None
     tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
-    comment: constr(regex=r'[^\b\f\n\r\t\\a+.?\'"|()]+$') | None = None
+    comment: constr(regex=r'[^\x08\f\n\r\t\\a+.?\'"|()]+$') | None = None
