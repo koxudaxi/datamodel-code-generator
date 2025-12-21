@@ -540,6 +540,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--strict-nullable",
+    help="Treat default field as a non-nullable field",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--strip-default-none",
     help="Strip default None on fields",
     action="store_true",
@@ -692,12 +698,6 @@ openapi_options.add_argument(
     help="Scopes of OpenAPI model generation (default: schemas)",
     choices=[o.value for o in OpenAPIScope],
     nargs="+",
-    default=None,
-)
-openapi_options.add_argument(
-    "--strict-nullable",
-    help="Treat default field as a non-nullable field (Only OpenAPI)",
-    action="store_true",
     default=None,
 )
 openapi_options.add_argument(

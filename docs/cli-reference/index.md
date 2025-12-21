@@ -142,7 +142,7 @@ This documentation is auto-generated from test cases.
 - [`--skip-root-model`](model-customization.md#skip-root-model)
 - [`--snake-case-field`](field-customization.md#snake-case-field)
 - [`--special-field-name-prefix`](field-customization.md#special-field-name-prefix)
-- [`--strict-nullable`](model-customization.md#strict-nullable)
+- [`--strict-nullable`](field-customization.md#strict-nullable)
 - [`--strict-types`](typing-customization.md#strict-types)
 - [`--strip-default-none`](model-customization.md#strip-default-none)
 
