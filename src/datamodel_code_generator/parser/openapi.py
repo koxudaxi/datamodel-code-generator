@@ -395,9 +395,53 @@ class OpenAPIParser(JsonSchemaParser):
 
         return super().get_data_type(obj)
 
+    def _normalize_discriminator_mapping_ref(self, mapping_value: str) -> str:  # noqa: PLR6301
+        """Normalize a discriminator mapping value to a full $ref path.
+
+        Per OpenAPI spec, mapping values can be either:
+        - Full refs: "#/components/schemas/Pet" or "./other.yaml#/components/schemas/Pet"
+        - Short names: "Pet" or "Pet.V1" (relative to #/components/schemas/)
+        - Relative paths: "schemas/Pet" or "./other.yaml"
+
+        Values containing "/" or "#" are treated as paths/refs and passed through.
+        All other values (including those with dots like "Pet.V1") are treated as
+        short schema names and normalized to full refs.
+
+        Note: Bare file references without path separators (e.g., "other.yaml") will be
+        treated as schema names. Use "./other.yaml" format for file references.
+
+        Note: This could be a staticmethod, but @snooper_to_methods() decorator
+        converts staticmethods to regular functions when pysnooper is installed.
+        """
+        if "/" in mapping_value or "#" in mapping_value:
+            return mapping_value
+        return f"#/components/schemas/{mapping_value}"
+
+    def _normalize_discriminator(self, discriminator: dict[str, Any]) -> dict[str, Any]:
+        """Return a copy of the discriminator dict with normalized mapping refs."""
+        result = discriminator.copy()
+        mapping = discriminator.get("mapping")
+        if mapping:
+            result["mapping"] = {
+                k: self._normalize_discriminator_mapping_ref(v) for k, v in mapping.items() if isinstance(v, str)
+            }
+        return result
+
     def _get_discriminator_union_type(self, ref: str) -> DataType | None:
-        """Create a union type for discriminator subtypes if available."""
+        """Create a union type for discriminator subtypes if available.
+
+        First tries to use allOf subtypes. If none found, falls back to using
+        the discriminator mapping to create the union type. This handles cases
+        where schemas don't use allOf inheritance but have explicit discriminator mappings.
+        """
         subtypes = self._discriminator_subtypes.get(ref, [])
+        if not subtypes:
+            discriminator = self._discriminator_schemas[ref]
+            mapping = discriminator.get("mapping", {})
+            if mapping:
+                subtypes = [
+                    self._normalize_discriminator_mapping_ref(v) for v in mapping.values() if isinstance(v, str)
+                ]
         if not subtypes:
             return None
         refs = map(self.model_resolver.add_ref, subtypes)
@@ -430,10 +474,11 @@ class OpenAPIParser(JsonSchemaParser):
                 and (discriminator := self._discriminator_schemas.get(field.ref))
             ):
                 new_field_type = self._get_discriminator_union_type(field.ref) or field_obj.data_type
+                normalized_discriminator = self._normalize_discriminator(discriminator)
                 field_obj = self.data_model_field_type(**{  # noqa: PLW2901
                     **field_obj.__dict__,
                     "data_type": new_field_type,
-                    "extras": {**field_obj.extras, "discriminator": discriminator},
+                    "extras": {**field_obj.extras, "discriminator": normalized_discriminator},
                 })
             result_fields.append(field_obj)
 

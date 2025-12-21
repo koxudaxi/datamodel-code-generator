@@ -271,6 +271,64 @@ def test_main_openapi_discriminator_allof_no_subtypes(output_file: Path) -> None
     )
 
 
+def test_main_openapi_discriminator_short_mapping_names(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator using short mapping names.
+
+    Per OpenAPI spec, mapping values can be short names like "FooItem" instead
+    of full refs like "#/components/schemas/FooItem". This tests that short
+    names are normalized correctly.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_short_mapping_names.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "short_mapping_names.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_openapi_discriminator_no_mapping(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator without mapping.
+
+    This tests the case where a discriminator has only propertyName but no mapping.
+    The subtypes are discovered via allOf inheritance.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_no_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "no_mapping.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_openapi_discriminator_no_mapping_no_subtypes(output_file: Path) -> None:
+    """Test OpenAPI generation with discriminator without mapping and no allOf subtypes.
+
+    This tests the edge case where a discriminator has no mapping and no schemas
+    inherit from it using allOf.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_no_mapping_no_subtypes.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "no_mapping_no_subtypes.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_openapi_allof_with_oneof_ref(output_file: Path) -> None:
     """Test OpenAPI generation with allOf referencing a oneOf schema.
 
