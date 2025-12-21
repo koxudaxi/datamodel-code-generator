@@ -18,6 +18,7 @@ from packaging import version
 
 from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.arguments import arg_parser
 from datamodel_code_generator.util import PYDANTIC_V2
 from tests.conftest import (
     AssertFileContent,
@@ -133,6 +134,34 @@ def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> N
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
+def _get_valid_cli_options() -> frozenset[str]:
+    """Get all valid CLI option names from arg_parser."""
+    valid_options: set[str] = set()
+    for action in arg_parser._actions:
+        valid_options.update(action.option_strings)
+    return frozenset(valid_options)
+
+
+_VALID_CLI_OPTIONS = _get_valid_cli_options()
+
+
+def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
+    """Validate that all option-like arguments in extra_args are valid CLI options."""
+    if extra_args is None:
+        return
+    invalid_args: list[str] = [
+        arg
+        for arg in extra_args
+        if (
+            (arg.startswith("--") and "=" not in arg)
+            or (arg.startswith("-") and not arg.startswith("--") and len(arg) == 2)
+        )
+        and arg not in _VALID_CLI_OPTIONS
+    ]
+    if invalid_args:  # pragma: no cover
+        pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(_VALID_CLI_OPTIONS)}")
+
+
 def _extend_args(
     args: list[str],
     *,
@@ -148,6 +177,7 @@ def _extend_args(
         args.extend(["--output", str(output_path)])
     if input_file_type is not None:
         args.extend(["--input-file-type", input_file_type])
+    _validate_extra_args(extra_args)
     if extra_args is not None:
         args.extend(extra_args)
 
