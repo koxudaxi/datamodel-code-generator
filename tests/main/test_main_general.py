@@ -1057,3 +1057,36 @@ def test_module_split_mode_single(output_dir: Path) -> None:
         ],
         expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "module_split_single",
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-standard-primitive-types"],
+    input_schema="jsonschema/use_standard_primitive_types.json",
+    cli_args=[
+        "--output-model-type",
+        "dataclasses.dataclass",
+        "--use-standard-primitive-types",
+    ],
+    golden_output="use_standard_primitive_types.py",
+    related_options=["--output-model-type", "--output-datetime-class"],
+)
+@freeze_time(TIMESTAMP)
+def test_use_standard_primitive_types(output_file: Path) -> None:
+    """Use Python standard library types for string formats instead of str.
+
+    The `--use-standard-primitive-types` flag configures the code generation to use
+    Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
+    string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
+    output types. Pydantic already uses these types by default.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_standard_primitive_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-standard-primitive-types",
+        ],
+        expected_file=EXPECTED_MAIN_PATH / "use_standard_primitive_types.py",
+    )
