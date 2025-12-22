@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     AllExportsScope,
     AllOfMergeMode,
     Error,
+    FieldTypeCollisionStrategy,
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -769,6 +770,7 @@ class Parser(ABC):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
@@ -924,6 +926,7 @@ class Parser(ABC):
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
         self.use_frozen_field: bool = use_frozen_field
         self.use_default_factory_for_optional_nested_models: bool = use_default_factory_for_optional_nested_models
+        self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = field_type_collision_strategy
 
     @property
     def field_name_model_type(self) -> ModelType:
@@ -1842,22 +1845,34 @@ class Parser(ABC):
     ) -> None:
         if not self.data_model_type.SUPPORTS_FIELD_RENAMING:
             return
+
+        rename_type = self.field_type_collision_strategy == FieldTypeCollisionStrategy.RenameType
+
         for model in models:
-            if "Enum" in model.base_class:
-                continue
-            if not model.BASE_CLASS:
+            if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
 
             for field in model.fields:
                 filed_name = field.name
                 filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
+                colliding_type: DataType | None = None
+
                 for data_type in field.data_type.all_data_types:
-                    if data_type.reference:
-                        filed_name_resolver.exclude_names.add(data_type.reference.short_name)
-                new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
-                if filed_name != new_filed_name:
-                    field.alias = filed_name
-                    field.name = new_filed_name
+                    if not data_type.reference:
+                        continue
+                    filed_name_resolver.exclude_names.add(data_type.reference.short_name)
+                    if rename_type and colliding_type is None and data_type.reference.short_name == filed_name:
+                        colliding_type = data_type
+
+                if colliding_type is not None:
+                    source = colliding_type.reference.source  # type: ignore[union-attr]
+                    if isinstance(source, DataModel):
+                        source.class_name = f"{source.class_name}_"
+                else:
+                    new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
+                    if filed_name != new_filed_name:
+                        field.alias = filed_name
+                        field.name = new_filed_name
 
     def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:

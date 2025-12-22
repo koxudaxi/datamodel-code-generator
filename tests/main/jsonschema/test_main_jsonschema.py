@@ -3572,6 +3572,46 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--field-type-collision-strategy"],
+    input_schema="jsonschema/field_type_collision_rename_type.json",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-type-collision-strategy", "rename-type"],
+    golden_output="field_type_collision_rename_type.py",
+)
+def test_main_jsonschema_field_type_collision_rename_type(output_file: Path) -> None:
+    """Test field-type collision with rename-type strategy."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_type_collision_rename_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_type_collision_rename_type.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-type-collision-strategy",
+            "rename-type",
+        ],
+    )
+
+
+def test_main_jsonschema_field_type_collision_rename_type_multi_model(output_file: Path) -> None:
+    """Test field-type collision with rename-type strategy across multiple models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_type_collision_rename_type_multi_model.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_type_collision_rename_type_multi_model.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-type-collision-strategy",
+            "rename-type",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_required_and_any_of_required(output_file: Path) -> None:
     """Test required field with anyOf required."""
