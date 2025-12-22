@@ -1866,9 +1866,6 @@ class Parser(ABC):
                         colliding_reference = data_type.reference
 
                 if colliding_reference is not None:
-                    # When a field name collides with a type name, the type's reference source
-                    # is always a DataModel (Enum, model class, etc.) because DataModel.__init__
-                    # sets reference.source = self
                     source = cast("DataModel", colliding_reference.source)
                     source.class_name = f"{source.class_name}_"
                 else:
