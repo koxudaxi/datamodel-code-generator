@@ -21,6 +21,7 @@ from datamodel_code_generator import (
     AllOfMergeMode,
     DataclassArguments,
     DataModelType,
+    FieldTypeCollisionStrategy,
     InputFileType,
     ModuleSplitMode,
     OpenAPIScope,
@@ -599,6 +600,14 @@ field_options.add_argument(
     "--union-mode",
     help="Union mode for only pydantic v2 field",
     choices=[u.value for u in UnionMode],
+    default=None,
+)
+field_options.add_argument(
+    "--field-type-collision-strategy",
+    help="Strategy for handling field name and type name collisions (Pydantic v2 only). "
+    "'rename-field': rename field with suffix and add alias (default). "
+    "'rename-type': rename type class with suffix to preserve field name.",
+    choices=[s.value for s in FieldTypeCollisionStrategy],
     default=None,
 )
 field_options.add_argument(

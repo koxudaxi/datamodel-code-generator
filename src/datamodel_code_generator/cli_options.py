@@ -135,6 +135,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-enum-values-in-discriminator": CLIOptionMeta(
         name="--use-enum-values-in-discriminator", category=OptionCategory.FIELD
     ),
+    "--field-type-collision-strategy": CLIOptionMeta(
+        name="--field-type-collision-strategy", category=OptionCategory.FIELD
+    ),
     # ==========================================================================
     # Typing Customization
     # ==========================================================================

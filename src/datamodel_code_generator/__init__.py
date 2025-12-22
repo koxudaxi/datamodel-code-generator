@@ -309,6 +309,17 @@ class ModuleSplitMode(Enum):
     Single = "single"
 
 
+class FieldTypeCollisionStrategy(Enum):
+    """Strategy for handling field name and type name collisions in Pydantic v2.
+
+    RenameField: Rename the field with a suffix (e.g., Fruit_1) and add alias (default).
+    RenameType: Rename the type class with a suffix (e.g., Fruit_) to preserve field name.
+    """
+
+    RenameField = "rename-field"
+    RenameType = "rename-type"
+
+
 class Error(Exception):
     """Base exception for datamodel-code-generator errors."""
 
@@ -485,6 +496,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     all_exports_scope: AllExportsScope | None = None,
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
     module_split_mode: ModuleSplitMode | None = None,
+    field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -730,6 +742,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
         read_only_write_only_model_type=read_only_write_only_model_type,
+        field_type_collision_strategy=field_type_collision_strategy,
         **kwargs,
     )
 
@@ -876,6 +889,7 @@ __all__ = [
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",
+    "FieldTypeCollisionStrategy",
     "InputFileType",
     "InvalidClassNameError",
     "LiteralType",

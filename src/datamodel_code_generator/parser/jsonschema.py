@@ -25,6 +25,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllOfMergeMode,
     DataclassArguments,
+    FieldTypeCollisionStrategy,
     InvalidClassNameError,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -605,6 +606,7 @@ class JsonSchemaParser(Parser):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -703,6 +705,7 @@ class JsonSchemaParser(Parser):
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
+            field_type_collision_strategy=field_type_collision_strategy,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
