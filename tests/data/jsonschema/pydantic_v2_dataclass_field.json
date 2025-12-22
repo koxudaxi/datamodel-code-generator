@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "Product",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer",
+      "description": "Product identifier"
+    },
+    "name": {
+      "type": "string",
+      "title": "Product Name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "price": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1000000,
+      "multipleOf": 0.01
+    },
+    "quantity": {
+      "type": "integer",
+      "default": 0,
+      "minimum": 0
+    },
+    "discount_rate": {
+      "type": "number",
+      "default": 0.0,
+      "minimum": 0,
+      "maximum": 1
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    },
+    "metadata": {
+      "type": "object",
+      "default": {}
+    }
+  },
+  "required": ["id", "name", "price"]
+}

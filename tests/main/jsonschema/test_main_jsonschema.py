@@ -1456,6 +1456,36 @@ def test_main_generate_pydantic_v2_dataclass_nested_frozen(tmp_path: Path) -> No
     assert_file_content(output_file, "pydantic_v2_dataclass_nested_frozen.py")
 
 
+def test_main_generate_pydantic_v2_dataclass_field(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with Field constraints and defaults."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_field.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_field.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_enum(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with enum types."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_enum.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_enum.py")
+
+
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
