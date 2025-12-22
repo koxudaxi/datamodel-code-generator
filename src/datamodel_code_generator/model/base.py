@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
-from jinja2 import Environment, FileSystemLoader, Template
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template
 from pydantic import Field
 from typing_extensions import Self
 
@@ -399,11 +399,53 @@ class DataModelFieldBase(_BaseModel):
 
 
 @lru_cache
-def get_template(template_file_path: Path) -> Template:
-    """Load and cache a Jinja2 template from the template directory."""
-    loader = FileSystemLoader(str(TEMPLATE_DIR / template_file_path.parent))
+def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir: Path | None) -> Template:
+    """Load and cache a Jinja2 template with optional custom directory support.
+
+    When custom_template_dir is provided, templates are searched in this order:
+    1. custom_template_dir/<template_subdir>/
+    2. TEMPLATE_DIR/<template_subdir>/ (fallback)
+
+    This allows users to override individual templates (including included ones)
+    while keeping other templates from the default directory.
+    """
+    template_subdir = template_file_path.parent
+    loaders: list[FileSystemLoader] = []
+
+    if custom_template_dir is not None:
+        custom_dir = custom_template_dir / template_subdir
+        if custom_dir.exists():
+            loaders.append(FileSystemLoader(str(custom_dir)))
+
+    loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
+
+    loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
     environment: Environment = Environment(loader=loader)  # noqa: S701
     return environment.get_template(template_file_path.name)
+
+
+@lru_cache
+def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdir: Path) -> Template:
+    """Load a Jinja2 template from an absolute path with fallback to built-in directory.
+
+    This handles backward compatibility for custom templates found at absolute paths.
+    Includes are searched in this order:
+    1. The directory containing the absolute template path
+    2. TEMPLATE_DIR/<builtin_subdir>/ (fallback for includes not in custom dir)
+    """
+    loaders: list[FileSystemLoader] = [
+        FileSystemLoader(str(absolute_template_path.parent)),
+        FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
+    ]
+    loader = ChoiceLoader(loaders)
+    environment: Environment = Environment(loader=loader)  # noqa: S701
+    return environment.get_template(absolute_template_path.name)
+
+
+@lru_cache
+def get_template(template_file_path: Path) -> Template:
+    """Load and cache a Jinja2 template from the template directory."""
+    return _get_template_with_custom_dir(template_file_path, None)
 
 
 def sanitize_module_name(name: str, *, treat_dot_as_module: bool | None) -> str:
@@ -650,6 +692,14 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             if custom_template_file_path.exists():
                 return custom_template_file_path
         return template_file_path
+
+    @cached_property
+    def template(self) -> Template:
+        """Get the Jinja2 template with custom directory support for includes."""
+        resolved_path = self.template_file_path
+        if resolved_path.is_absolute():
+            return _get_template_with_absolute_path(resolved_path, Path(self.TEMPLATE_FILE_PATH).parent)
+        return _get_template_with_custom_dir(Path(self.TEMPLATE_FILE_PATH), self._custom_template_dir)
 
     @property
     def imports(self) -> tuple[Import, ...]:
