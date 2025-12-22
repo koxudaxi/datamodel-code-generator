@@ -111,6 +111,7 @@ This documentation is auto-generated from test cases.
 
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
+- [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
@@ -149,7 +150,6 @@ This documentation is auto-generated from test cases.
 ### T {#t}
 
 - [`--target-python-version`](model-customization.md#target-python-version)
-- [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module)
 - [`--type-mappings`](typing-customization.md#type-mappings)
 
 ### U {#u}

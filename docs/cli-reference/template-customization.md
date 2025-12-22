@@ -16,7 +16,7 @@
 | [`--enable-version-header`](#enable-version-header) | Include tool version information in file header. |
 | [`--extra-template-data`](#extra-template-data) | Pass custom template variables from JSON file for code gener... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
-| [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
+| [`--no-treat-dot-as-module`](#no-treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
 | [`--wrap-string-literal`](#wrap-string-literal) | Wrap long string literals across multiple lines. |
@@ -2260,7 +2260,7 @@ Use this to customize formatting or disable formatters entirely.
 
 ---
 
-## `--treat-dot-as-module` {#treat-dot-as-module}
+## `--no-treat-dot-as-module` {#no-treat-dot-as-module}
 
 Treat dots in schema names as module separators.
 
@@ -2274,7 +2274,7 @@ The `--treat-dot-as-module` flag configures the code generation behavior.
     datamodel-codegen --input schema.json --treat-dot-as-module # (1)!
     ```
 
-    1. :material-arrow-left: `--treat-dot-as-module` - the option documented here
+    1. :material-arrow-left: `--no-treat-dot-as-module` - the option documented here
 
 ??? example "Examples"
 
