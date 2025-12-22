@@ -302,9 +302,7 @@ def test_sanitize_module_name(name: str, expected_true: str, expected_false: str
 @pytest.mark.parametrize(
     ("treat_dot_as_module", "expected"),
     [
-        # When treat_dot_as_module=True, dots are preserved in stem and name is split on dots
         (True, ["inputs", "array_commons.schema", "array-commons"]),
-        # When treat_dot_as_module=False, dots are replaced with underscores and no splitting occurs
         (False, ["inputs", "array_commons_schema"]),
     ],
 )
@@ -323,11 +321,7 @@ def test_get_module_path_without_file_path_treat_dot_true() -> None:
 
 
 def test_get_module_path_without_file_path_treat_dot_false() -> None:
-    """Test module path generation without a file path with treat_dot_as_module=False.
-
-    When treat_dot_as_module=False, dots are not used for module splitting,
-    so the result should be an empty list.
-    """
+    """Test module path generation without a file path with treat_dot_as_module=False."""
     result = get_module_path("my_module.submodule", None, treat_dot_as_module=False)
     expected: list[str] = []
     assert result == expected
@@ -339,7 +333,6 @@ def test_get_module_path_without_file_path_treat_dot_false() -> None:
         (True, "a.b.c", ["a", "b"]),
         (True, "simple", []),
         (True, "with.dot", ["with"]),
-        # When treat_dot_as_module=False, no splitting occurs
         (False, "a.b.c", []),
         (False, "simple", []),
         (False, "with.dot", []),

@@ -2353,15 +2353,20 @@ def test_main_use_union_operator(output_dir: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("as_module", [True, False])
-def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_as_module"),
+        (None, "treat_dot_not_as_module"),
+        (["--no-treat-dot-as-module"], "treat_dot_not_as_module"),
+    ],
+)
+def test_treat_dot_as_module(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
     """Test dot notation as module separator."""
-    path_extension = "treat_dot_as_module" if as_module else "treat_dot_not_as_module"
-    extra_args = ["--treat-dot-as-module"] if as_module else None
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module",
         output_path=output_dir,
-        expected_directory=EXPECTED_JSON_SCHEMA_PATH / path_extension,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
         extra_args=extra_args,
     )
 
