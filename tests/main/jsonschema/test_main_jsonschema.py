@@ -2430,6 +2430,24 @@ def test_treat_dot_as_module_version_style(
     )
 
 
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_complex_treat"),
+        (None, "treat_dot_complex_no_treat"),
+        (["--no-treat-dot-as-module"], "treat_dot_complex_no_treat"),
+    ],
+)
+def test_treat_dot_as_module_complex_refs(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
+    """Test dotted schema names with cross-file references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_complex",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
+        extra_args=extra_args,
+    )
+
+
 def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
     """Test duplicate name handling."""
     run_main_and_assert(
