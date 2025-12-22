@@ -9,7 +9,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 18 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 19 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 29 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
@@ -123,6 +123,7 @@ This documentation is auto-generated from test cases.
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes)
 - [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter)
 - [`--output`](base-options.md#output)
+- [`--output-date-class`](typing-customization.md#output-date-class)
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class)
 - [`--output-model-type`](model-customization.md#output-model-type)
 
