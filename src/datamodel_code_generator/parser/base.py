@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     AllExportsScope,
     AllOfMergeMode,
     Error,
+    FieldTypeCollisionStrategy,
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -770,6 +771,7 @@ class Parser(ABC):
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
+        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
@@ -926,6 +928,7 @@ class Parser(ABC):
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
         self.use_frozen_field: bool = use_frozen_field
         self.use_default_factory_for_optional_nested_models: bool = use_default_factory_for_optional_nested_models
+        self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = field_type_collision_strategy
 
     @property
     def field_name_model_type(self) -> ModelType:
@@ -1844,22 +1847,47 @@ class Parser(ABC):
     ) -> None:
         if not self.data_model_type.SUPPORTS_FIELD_RENAMING:
             return
+
+        rename_type = self.field_type_collision_strategy == FieldTypeCollisionStrategy.RenameType
+        all_class_names = {cast("str", m.class_name) for m in models if m.class_name}
+
         for model in models:
-            if "Enum" in model.base_class:
-                continue
-            if not model.BASE_CLASS:
+            if "Enum" in model.base_class or not model.BASE_CLASS:
                 continue
 
             for field in model.fields:
                 filed_name = field.name
-                filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
+                reference_type_names: set[str] = set()
+                colliding_reference: Reference | None = None
+
                 for data_type in field.data_type.all_data_types:
-                    if data_type.reference:
-                        filed_name_resolver.exclude_names.add(data_type.reference.short_name)
-                new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
-                if filed_name != new_filed_name:
-                    field.alias = filed_name
-                    field.name = new_filed_name
+                    if not data_type.reference:
+                        continue
+                    reference_type_names.add(data_type.reference.short_name)
+                    if rename_type and colliding_reference is None and data_type.reference.short_name == filed_name:
+                        colliding_reference = data_type.reference
+
+                if colliding_reference is not None:
+                    resolver = ModelResolver(
+                        exclude_names=all_class_names.copy(),
+                        snake_case_field=self.snake_case_field,
+                        remove_suffix_number=True,
+                    )
+                    source = cast("DataModel", colliding_reference.source)
+                    resolver.exclude_names.add(cast("str", filed_name))
+                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name
+                    source.class_name = new_class_name
+                    all_class_names.add(new_class_name)
+                elif not rename_type:
+                    resolver = ModelResolver(
+                        exclude_names=reference_type_names,
+                        snake_case_field=self.snake_case_field,
+                        remove_suffix_number=True,
+                    )
+                    new_filed_name = resolver.add(["field"], cast("str", filed_name)).name
+                    if filed_name != new_filed_name:
+                        field.alias = filed_name
+                        field.name = new_filed_name
 
     def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:

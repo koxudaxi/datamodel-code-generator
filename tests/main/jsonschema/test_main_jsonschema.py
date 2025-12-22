@@ -3635,6 +3635,73 @@ def test_main_jsonschema_field_has_same_name(output_model: str, expected_output:
     )
 
 
+def test_main_jsonschema_field_has_same_name_rename_type(output_file: Path) -> None:
+    """Test field type collision with rename-type strategy."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_has_same_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_has_same_name_rename_type.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-type-collision-strategy",
+            "rename-type",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--field-type-collision-strategy"],
+    input_schema="jsonschema/field_has_same_name.json",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--field-type-collision-strategy",
+        "rename-type",
+    ],
+    golden_output="jsonschema/field_has_same_name_rename_type.py",
+)
+def test_main_jsonschema_field_has_same_name_rename_type_cli_doc(output_file: Path) -> None:
+    """Rename type class instead of field when names collide (Pydantic v2 only).
+
+    The `--field-type-collision-strategy` flag controls how field name and type name
+    collisions are resolved. With `rename-type`, the type class is renamed with a suffix
+    to preserve the original field name, instead of renaming the field and adding an alias.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_has_same_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_has_same_name_rename_type.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-type-collision-strategy",
+            "rename-type",
+        ],
+    )
+
+
+def test_main_jsonschema_field_type_collision_rename_type_double(output_file: Path) -> None:
+    """Test field type collision with rename-type strategy when schema has existing _1 suffix."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_type_collision_rename_type_double.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_type_collision_rename_type_double.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-type-collision-strategy",
+            "rename-type",
+        ],
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_required_and_any_of_required(output_file: Path) -> None:
     """Test required field with anyOf required."""
