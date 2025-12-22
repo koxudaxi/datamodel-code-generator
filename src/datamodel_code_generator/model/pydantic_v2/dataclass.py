@@ -75,7 +75,6 @@ class DataClass(DataModel):
             treat_dot_as_module=treat_dot_as_module,
         )
 
-        # Handle dataclass decorator arguments
         if dataclass_arguments is not None:
             self.dataclass_arguments = dataclass_arguments
         else:
@@ -85,19 +84,15 @@ class DataClass(DataModel):
             if keyword_only:
                 self.dataclass_arguments["kw_only"] = True
 
-        # Handle ConfigDict for pydantic v2 dataclass
         config_parameters: dict[str, Any] = {}
 
-        # Handle extra fields configuration
         extra = self._get_config_extra()
         if extra:
             config_parameters["extra"] = extra
 
-        # Handle use_attribute_docstrings
         if self.extra_template_data.get("use_attribute_docstrings"):
             config_parameters["use_attribute_docstrings"] = True
 
-        # Check for custom types requiring arbitrary_types_allowed
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
                 config_parameters["arbitrary_types_allowed"] = True

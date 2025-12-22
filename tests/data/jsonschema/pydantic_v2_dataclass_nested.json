@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "title": "Parent",
+  "type": "object",
+  "definitions": {
+    "Child": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"}
+      },
+      "required": ["name"]
+    }
+  },
+  "properties": {
+    "id": {"type": "string"},
+    "child": {"$ref": "#/definitions/Child"},
+    "children": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/Child"}
+    }
+  },
+  "required": ["id", "child"]
+}

@@ -1410,6 +1410,52 @@ def test_main_generate_pydantic_v2_dataclass_extra_ignore(tmp_path: Path) -> Non
     assert_file_content(output_file, "pydantic_v2_dataclass_extra_ignore.py")
 
 
+def test_main_generate_pydantic_v2_dataclass_nested(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with nested models."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_nested.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_constraints(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with field constraints."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_constraints.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_constraints.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_nested_frozen(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with nested models and frozen=True."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        frozen_dataclasses=True,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_nested_frozen.py")
+
+
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
