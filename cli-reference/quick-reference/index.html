@@ -2083,6 +2083,10 @@
 <td>Include all schema keys in Field() json_schema_extra.</td>
 </tr>
 <tr>
+<td><a href="../field-customization/#field-type-collision-strategy"><code>--field-type-collision-strategy</code></a></td>
+<td>Rename type class instead of field when names collide (Pydantic v2 only).</td>
+</tr>
+<tr>
 <td><a href="../field-customization/#no-alias"><code>--no-alias</code></a></td>
 <td>Disable Field alias generation for non-Python-safe property names.</td>
 </tr>
@@ -2317,8 +2321,8 @@
 <td>Specify code formatters to apply to generated output.</td>
 </tr>
 <tr>
-<td><a href="../template-customization/#treat-dot-as-module"><code>--treat-dot-as-module</code></a></td>
-<td>Treat dots in schema names as module separators.</td>
+<td><a href="../template-customization/#no-treat-dot-as-module"><code>--no-treat-dot-as-module</code></a></td>
+<td>Keep dots in schema names as underscores for flat output.</td>
 </tr>
 <tr>
 <td><a href="../template-customization/#use-double-quotes"><code>--use-double-quotes</code></a></td>
@@ -2507,6 +2511,7 @@
 <li><a href="../field-customization/#field-extra-keys"><code>--field-extra-keys</code></a> - Include specific extra keys in Field() definitions.</li>
 <li><a href="../field-customization/#field-extra-keys-without-x-prefix"><code>--field-extra-keys-without-x-prefix</code></a> - Include specified schema extension keys in Field() without r...</li>
 <li><a href="../field-customization/#field-include-all-keys"><code>--field-include-all-keys</code></a> - Include all schema keys in Field() json_schema_extra.</li>
+<li><a href="../field-customization/#field-type-collision-strategy"><code>--field-type-collision-strategy</code></a> - Rename type class instead of field when names collide (Pydan...</li>
 <li><a href="../model-customization/#force-optional"><code>--force-optional</code></a> - Force all fields to be Optional regardless of required statu...</li>
 <li><a href="../template-customization/#formatters"><code>--formatters</code></a> - Specify code formatters to apply to generated output.</li>
 <li><a href="../model-customization/#frozen-dataclasses"><code>--frozen-dataclasses</code></a> - Generate frozen dataclasses with optional keyword-only field...</li>
@@ -2526,6 +2531,7 @@
 <li><a href="../general-options/#module-split-mode"><code>--module-split-mode</code></a> - Split generated models into separate files, one per model cl...</li>
 <li><a href="../field-customization/#no-alias"><code>--no-alias</code></a> - Disable Field alias generation for non-Python-safe property ...</li>
 <li><a href="../utility-options/#no-color"><code>--no-color</code></a> - Disable colorized output</li>
+<li><a href="../template-customization/#no-treat-dot-as-module"><code>--no-treat-dot-as-module</code></a> - Keep dots in schema names as underscores for flat output.</li>
 <li><a href="../typing-customization/#no-use-specialized-enum"><code>--no-use-specialized-enum</code></a> - Disable specialized Enum classes for Python 3.11+ code gener...</li>
 <li><a href="../typing-customization/#no-use-standard-collections"><code>--no-use-standard-collections</code></a> - Use built-in dict/list instead of typing.Dict/List.</li>
 <li><a href="../typing-customization/#no-use-union-operator"><code>--no-use-union-operator</code></a> - Test GraphQL annotated types with standard collections and u...</li>
@@ -2549,7 +2555,6 @@
 <li><a href="../typing-customization/#strict-types"><code>--strict-types</code></a> - Enable strict type validation for specified Python types.</li>
 <li><a href="../model-customization/#strip-default-none"><code>--strip-default-none</code></a> - Remove fields with None as default value from generated mode...</li>
 <li><a href="../model-customization/#target-python-version"><code>--target-python-version</code></a> - Target Python version for generated code syntax and imports.</li>
-<li><a href="../template-customization/#treat-dot-as-module"><code>--treat-dot-as-module</code></a> - Treat dots in schema names as module separators.</li>
 <li><a href="../typing-customization/#type-mappings"><code>--type-mappings</code></a> - Override default type mappings for schema formats.</li>
 <li><a href="../model-customization/#union-mode"><code>--union-mode</code></a> - Union mode for combining anyOf/oneOf schemas (smart or left_...</li>
 <li><a href="../base-options/#url"><code>--url</code></a> - Fetch schema from URL with custom HTTP headers.</li>
