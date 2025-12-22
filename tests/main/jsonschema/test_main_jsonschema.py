@@ -5275,3 +5275,46 @@ def test_main_builtin_field_names(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_root_model_config_populate_by_name(output_file: Path) -> None:
+    """Test that RootModel subclasses don't get populate_by_name config (issue #2483).
+
+    The populate_by_name config is meaningless for RootModel because it only has
+    a single 'root' field. Only BaseModel subclasses should have this config.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_config.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_config_populate_by_name.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--allow-population-by-field-name",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_root_model_config_frozen(output_file: Path) -> None:
+    """Test that RootModel subclasses DO get frozen config (issue #2483).
+
+    Unlike populate_by_name, the frozen config is meaningful for RootModel
+    because it prevents mutation of the root value. Both BaseModel and RootModel
+    subclasses should have this config when --enable-faux-immutability is used.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_config.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_config_frozen.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--enable-faux-immutability",
+        ],
+    )

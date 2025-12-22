@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ConstrainedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "Items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ConstrainedString"
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "items": {
+      "$ref": "#/definitions/Items"
+    }
+  },
+  "required": ["name"]
+}

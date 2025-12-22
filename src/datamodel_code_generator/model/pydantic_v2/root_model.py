@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, ClassVar, Literal
 
 from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
 
 
 class RootModel(BaseModel):
@@ -20,15 +21,24 @@ class RootModel(BaseModel):
         self,
         **kwargs: Any,
     ) -> None:
-        """Initialize RootModel and remove custom_base_class if present.
+        """Initialize RootModel without unnecessary model_config.
 
-        Remove custom_base_class for Pydantic V2 models; behaviour is different from Pydantic V1 as it will not
-        be treated as a root model. custom_base_class cannot both implement BaseModel and RootModel!
+        RootModel subclasses should not have model_config except when regex_engine is required
+        for lookaround patterns. Also removes custom_base_class as it cannot implement both
+        BaseModel and RootModel.
         """
         if "custom_base_class" in kwargs:
             kwargs.pop("custom_base_class")
 
         super().__init__(**kwargs)
+
+        config = self.extra_template_data.get("config")
+        has_meaningful_config = config is not None and (
+            getattr(config, "regex_engine", None) is not None or getattr(config, "frozen", None) is not None
+        )
+        if not has_meaningful_config:
+            self.extra_template_data.pop("config", None)
+            self._additional_imports = [imp for imp in self._additional_imports if imp != IMPORT_CONFIG_DICT]
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'"] | None:  # noqa: PLR6301
         # PydanticV2 RootModels cannot have extra fields
