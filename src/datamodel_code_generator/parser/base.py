@@ -2837,7 +2837,13 @@ class Parser(ABC):
 
         body = "\n".join(result)
         if config.code_formatter:
-            body = config.code_formatter.format_code(body)
+            try:
+                body = config.code_formatter.format_code(body)
+            except Exception as exc:  # noqa: BLE001
+                warn(
+                    f"Failed to format code: {exc!r}. Emitting unformatted output.",
+                    stacklevel=1,
+                )
 
         return Result(
             body=body,
@@ -2867,8 +2873,16 @@ class Parser(ABC):
                 parts = import_parts + (["\n"] if import_parts else [])
                 parts += [str(export_imports), "", export_imports.dump_all(multiline=True)]
                 body = "\n".join(parts)
+                if config.code_formatter:
+                    try:
+                        body = config.code_formatter.format_code(body)
+                    except Exception as exc:  # noqa: BLE001
+                        warn(
+                            f"Failed to format code: {exc!r}. Emitting unformatted output.",
+                            stacklevel=1,
+                        )
                 results[init_module] = Result(
-                    body=config.code_formatter.format_code(body) if config.code_formatter else body,
+                    body=body,
                     future_imports=future_imports_str,
                 )
 
