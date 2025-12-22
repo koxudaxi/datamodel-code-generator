@@ -2049,16 +2049,20 @@ class Parser(ABC):
         all_model_field_names: set[str],
     ) -> None:
         for _, model_field, data_type in iter_models_field_data_types(models):
-            if data_type and data_type.type in all_model_field_names and data_type.type == model_field.name:
+            if (
+                data_type
+                and data_type.import_
+                and data_type.type in all_model_field_names
+                and data_type.type == model_field.name
+            ):
                 alias = data_type.type + "_aliased"
                 data_type.type = alias
-                if data_type.import_:  # pragma: no cover
-                    data_type.import_ = Import(
-                        from_=data_type.import_.from_,
-                        import_=data_type.import_.import_,
-                        alias=alias,
-                        reference_path=data_type.import_.reference_path,
-                    )
+                data_type.import_ = Import(
+                    from_=data_type.import_.from_,
+                    import_=data_type.import_.import_,
+                    alias=alias,
+                    reference_path=data_type.import_.reference_path,
+                )
 
     def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
         self,
