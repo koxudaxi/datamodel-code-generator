@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DECIMAL,
@@ -51,6 +51,8 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
         Types.binary: data_type(type="bytes"),
         Types.date: data_type_str,
         Types.date_time: data_type_str,
+        Types.date_time_local: data_type_str,
+        Types.time_local: data_type_str,
         Types.timedelta: data_type.from_import(IMPORT_TIMEDELTA),
         Types.password: data_type_str,
         Types.email: data_type_str,
@@ -113,6 +115,7 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,  # noqa: ARG002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:

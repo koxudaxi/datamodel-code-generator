@@ -51,6 +51,16 @@ class DatetimeClassType(Enum):
     Datetime = "datetime"
     Awaredatetime = "AwareDatetime"
     Naivedatetime = "NaiveDatetime"
+    Pastdatetime = "PastDatetime"
+    Futuredatetime = "FutureDatetime"
+
+
+class DateClassType(Enum):
+    """Output date class type options."""
+
+    Date = "date"
+    Pastdate = "PastDate"
+    Futuredate = "FutureDate"
 
 
 class PythonVersion(Enum):

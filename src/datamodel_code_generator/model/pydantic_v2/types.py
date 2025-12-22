@@ -7,13 +7,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from datamodel_code_generator.format import DatetimeClassType
+from datamodel_code_generator.format import DateClassType, DatetimeClassType
 from datamodel_code_generator.model.pydantic import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.pydantic.imports import IMPORT_CONSTR
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_AWARE_DATETIME,
     IMPORT_BASE64STR,
+    IMPORT_FUTURE_DATE,
+    IMPORT_FUTURE_DATETIME,
     IMPORT_NAIVE_DATETIME,
+    IMPORT_PAST_DATE,
+    IMPORT_PAST_DATETIME,
     IMPORT_SERIALIZE_AS_ANY,
 )
 from datamodel_code_generator.types import (
@@ -81,10 +85,12 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002, ARG002
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize with pydantic v2-specific DataType."""
+        self._target_date_class = target_date_class
         super().__init__(
             python_version=python_version,
             use_standard_collections=use_standard_collections,
@@ -95,6 +101,7 @@ class DataTypeManager(_DataTypeManager):
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
+            target_date_class=target_date_class,
             treat_dot_as_module=treat_dot_as_module,
             use_serialize_as_any=use_serialize_as_any,
         )
@@ -119,8 +126,10 @@ class DataTypeManager(_DataTypeManager):
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,
     ) -> dict[Types, DataType]:
         """Create type mapping with Pydantic v2 specific types and datetime classes."""
+        effective_date_class = target_date_class or getattr(self, "_target_date_class", None)
         result = {
             **super().type_map_factory(
                 data_type,
@@ -131,7 +140,6 @@ class DataTypeManager(_DataTypeManager):
             Types.hostname: self.data_type.from_import(
                 IMPORT_CONSTR,
                 strict=StrictTypes.str in strict_types,
-                # https://github.com/horejsek/python-fastjsonschema/blob/61c6997a8348b8df9b22e029ca2ba35ef441fbb8/fastjsonschema/draft04.py#L31
                 kwargs={
                     pattern_key: r"r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*"
                     r"([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'",
@@ -142,9 +150,18 @@ class DataTypeManager(_DataTypeManager):
                 IMPORT_BASE64STR,
                 strict=StrictTypes.str in strict_types,
             ),
+            Types.date_time_local: data_type.from_import(IMPORT_NAIVE_DATETIME),
         }
         if target_datetime_class == DatetimeClassType.Awaredatetime:
             result[Types.date_time] = data_type.from_import(IMPORT_AWARE_DATETIME)
         elif target_datetime_class == DatetimeClassType.Naivedatetime:
             result[Types.date_time] = data_type.from_import(IMPORT_NAIVE_DATETIME)
+        elif target_datetime_class == DatetimeClassType.Pastdatetime:
+            result[Types.date_time] = data_type.from_import(IMPORT_PAST_DATETIME)
+        elif target_datetime_class == DatetimeClassType.Futuredatetime:
+            result[Types.date_time] = data_type.from_import(IMPORT_FUTURE_DATETIME)
+        if effective_date_class == DateClassType.Pastdate:
+            result[Types.date] = data_type.from_import(IMPORT_PAST_DATE)
+        elif effective_date_class == DateClassType.Futuredate:
+            result[Types.date] = data_type.from_import(IMPORT_FUTURE_DATE)
         return result

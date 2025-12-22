@@ -37,6 +37,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
+    DateClassType,
     DatetimeClassType,
     Formatter,
     PythonVersion,
@@ -125,6 +126,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "default": Types.integer,
         "date-time": Types.date_time,
         "unix-time": Types.int64,
+        "unixtime": Types.int64,
     },
     "number": {
         "float": Types.float,
@@ -134,6 +136,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "time": Types.time,
         "time-delta": Types.timedelta,
         "default": Types.number,
+        "unixtime": Types.int64,
     },
     "string": {
         "default": Types.string,
@@ -141,8 +144,10 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "binary": Types.binary,
         "date": Types.date,
         "date-time": Types.date_time,
+        "date-time-local": Types.date_time_local,
         "duration": Types.timedelta,
         "time": Types.time,
+        "time-local": Types.time_local,
         "password": Types.password,
         "path": Types.path,
         "email": Types.email,
@@ -162,6 +167,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "ipv6-network": Types.ipv6_network,
         "decimal": Types.decimal,
         "integer": Types.integer,
+        "unixtime": Types.int64,
     },
     "boolean": {"default": Types.boolean},
     "object": {"default": Types.object},
@@ -597,6 +603,7 @@ class JsonSchemaParser(Parser):
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,
         keyword_only: bool = False,
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
@@ -697,6 +704,7 @@ class JsonSchemaParser(Parser):
             use_exact_imports=use_exact_imports,
             default_field_extras=default_field_extras,
             target_datetime_class=target_datetime_class,
+            target_date_class=target_date_class,
             keyword_only=keyword_only,
             frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,

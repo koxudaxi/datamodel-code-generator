@@ -30,6 +30,7 @@ from pydantic import StrictBool, StrictInt, StrictStr, create_model
 from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
+    DateClassType,
     DatetimeClassType,
     PythonVersion,
     PythonVersionMin,
@@ -780,6 +781,8 @@ class Types(Enum):
     binary = auto()
     date = auto()
     date_time = auto()
+    date_time_local = auto()
+    time_local = auto()
     timedelta = auto()
     password = auto()
     path = auto()
@@ -826,6 +829,7 @@ class DataTypeManager(ABC):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002, ARG002
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
@@ -841,6 +845,7 @@ class DataTypeManager(ABC):
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
+        self.target_date_class: DateClassType | None = target_date_class
         self.treat_dot_as_module: bool = treat_dot_as_module or False
         self.use_serialize_as_any: bool = use_serialize_as_any
 
