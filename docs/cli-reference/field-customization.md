@@ -12,6 +12,7 @@
 | [`--field-extra-keys`](#field-extra-keys) | Include specific extra keys in Field() definitions. |
 | [`--field-extra-keys-without-x-prefix`](#field-extra-keys-without-x-prefix) | Include specified schema extension keys in Field() without r... |
 | [`--field-include-all-keys`](#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
+| [`--field-type-collision-strategy`](#field-type-collision-strategy) | Test field-type collision with rename-type strategy. |
 | [`--no-alias`](#no-alias) | Disable Field alias generation for non-Python-safe property ... |
 | [`--original-field-name-delimiter`](#original-field-name-delimiter) | Specify delimiter for original field names when using snake-... |
 | [`--remove-special-field-name-prefix`](#remove-special-field-name-prefix) | Remove the special prefix from field names. |
@@ -1810,6 +1811,43 @@ The `--field-include-all-keys` flag configures the code generation behavior.
         friends: list[Any] | None = None
         comment: None = None
     ```
+
+---
+
+## `--field-type-collision-strategy` {#field-type-collision-strategy}
+
+Test field-type collision with rename-type strategy.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --field-type-collision-strategy rename-type # (1)!
+    ```
+
+    1. :material-arrow-left: `--field-type-collision-strategy` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "title": "Test",
+      "type": "object",
+      "properties": {
+        "Fruit": {
+          "enum": [
+            "apple",
+            "banana"
+          ]
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: field_type_collision_rename_type.py
 
 ---
 
