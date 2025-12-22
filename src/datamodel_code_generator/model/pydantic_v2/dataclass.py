@@ -7,8 +7,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from datamodel_code_generator import DataclassArguments
-from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import has_field_assignment
@@ -25,6 +23,9 @@ from datamodel_code_generator.reference import Reference
 if TYPE_CHECKING:
     from collections import defaultdict
     from pathlib import Path
+
+    from datamodel_code_generator import DataclassArguments
+    from datamodel_code_generator.imports import Import
 
 
 class DataClass(DataModel):

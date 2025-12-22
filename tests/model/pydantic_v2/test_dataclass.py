@@ -46,9 +46,7 @@ def test_data_class_base_class() -> None:
 
 def test_data_class_optional() -> None:
     """Test DataClass generation with field default value."""
-    field = DataModelFieldBase(
-        name="a", data_type=DataType(type="str"), default="'abc'", required=False
-    )
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), default="'abc'", required=False)
 
     data_class = DataClass(
         fields=[field],
@@ -73,9 +71,7 @@ def test_data_class_get_data_type() -> None:
 
 def test_data_class_field_ordering() -> None:
     """Test that fields are sorted: required first, defaults last."""
-    required_field = DataModelFieldBase(
-        name="required_field", data_type=DataType(type="str"), required=True
-    )
+    required_field = DataModelFieldBase(name="required_field", data_type=DataType(type="str"), required=True)
     optional_field = DataModelFieldBase(
         name="optional_field", data_type=DataType(type="str"), default="None", required=False
     )
