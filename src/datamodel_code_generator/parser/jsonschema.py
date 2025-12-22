@@ -77,6 +77,9 @@ from datamodel_code_generator.util import (
     PYDANTIC_V2,
     BaseModel,
     field_validator,
+    get_fields_set,
+    model_dump,
+    model_validate,
     model_validator,
 )
 
@@ -408,12 +411,12 @@ class JsonSchemaObject(BaseModel):
     @cached_property
     def has_default(self) -> bool:
         """Check if the schema has a default value or default factory."""
-        return "default" in self.__fields_set__ or "default_factory" in self.extras
+        return "default" in get_fields_set(self) or "default_factory" in self.extras
 
     @cached_property
     def has_constraint(self) -> bool:
         """Check if the schema has any constraint fields set."""
-        return bool(self.__constraint_fields__ & self.__fields_set__)
+        return bool(self.__constraint_fields__ & get_fields_set(self))
 
     @cached_property
     def ref_type(self) -> JSONReference | None:
@@ -451,7 +454,7 @@ class JsonSchemaObject(BaseModel):
         """
         if not self.ref:
             return False
-        other_fields = self.__fields_set__ - {"ref"}
+        other_fields = get_fields_set(self) - {"ref"}
         schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         if self.extras:
             schema_affecting_extras = {k for k in self.extras if k not in self.__metadata_only_fields__}
@@ -1035,7 +1038,7 @@ class JsonSchemaParser(Parser):
         original_field_name: str | None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
-        constraints = field.dict() if self.is_constraints_field(field) else None
+        constraints = model_dump(field) if self.is_constraints_field(field) else None
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -1086,7 +1089,7 @@ class JsonSchemaParser(Parser):
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
                 field_constraints=self.field_constraints,
-                **obj.dict() if not self.field_constraints else {},
+                **model_dump(obj) if not self.field_constraints else {},
             )
 
         if isinstance(obj.type, list):
@@ -1174,7 +1177,7 @@ class JsonSchemaParser(Parser):
             pointer = [p for p in fragment.split("/") if p]
             target_schema = get_model_by_path(raw_doc, pointer)
 
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(target_schema)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, target_schema)
 
     def _merge_ref_with_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject:
         """Merge $ref schema with current schema's additional keywords.
@@ -1188,12 +1191,12 @@ class JsonSchemaParser(Parser):
             return obj
 
         ref_schema = self._load_ref_schema_object(obj.ref)
-        ref_dict = ref_schema.dict(exclude_unset=True, by_alias=True)
-        current_dict = obj.dict(exclude={"ref"}, exclude_unset=True, by_alias=True)
+        ref_dict = model_dump(ref_schema, exclude_unset=True, by_alias=True)
+        current_dict = model_dump(obj, exclude={"ref"}, exclude_unset=True, by_alias=True)
         merged = self._deep_merge(ref_dict, current_dict)
         merged.pop("$ref", None)
 
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, merged)
 
     def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge multiple primitive schemas by computing the intersection of their constraints."""
@@ -1203,7 +1206,7 @@ class JsonSchemaParser(Parser):
         base_dict: dict[str, Any] = {}
         for item in items:  # pragma: no branch
             if item.type:  # pragma: no branch
-                base_dict = item.dict(exclude_unset=True, by_alias=True)
+                base_dict = model_dump(item, exclude_unset=True, by_alias=True)
                 break
 
         for item in items:
@@ -1217,7 +1220,7 @@ class JsonSchemaParser(Parser):
                     else:
                         base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
 
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, base_dict)
 
     def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
         """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
@@ -1232,15 +1235,15 @@ class JsonSchemaParser(Parser):
 
         if self.allof_merge_mode != AllOfMergeMode.NoMerge:
             merged = self._merge_primitive_schemas(items)
-            merged_dict = merged.dict(exclude_unset=True, by_alias=True)
+            merged_dict = model_dump(merged, exclude_unset=True, by_alias=True)
             if merged_format:
                 merged_dict["format"] = merged_format
-            return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+            return model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
 
         base_dict: dict[str, Any] = {}
         for item in items:
             if item.type:
-                base_dict = item.dict(exclude_unset=True, by_alias=True)
+                base_dict = model_dump(item, exclude_unset=True, by_alias=True)
                 break
 
         for item in items:
@@ -1254,7 +1257,7 @@ class JsonSchemaParser(Parser):
         if merged_format:
             base_dict["format"] = merged_format
 
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(base_dict)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, base_dict)
 
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
@@ -1512,17 +1515,17 @@ class JsonSchemaParser(Parser):
                 merged_properties[prop_name] = child_prop
                 continue
 
-            parent_dict = parent_prop.dict(exclude_unset=True, by_alias=True)
-            child_dict = child_prop.dict(exclude_unset=True, by_alias=True)
+            parent_dict = model_dump(parent_prop, exclude_unset=True, by_alias=True)
+            child_dict = model_dump(child_prop, exclude_unset=True, by_alias=True)
             merged_dict = self._merge_property_schemas(parent_dict, child_dict)
-            merged_properties[prop_name] = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+            merged_properties[prop_name] = model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
 
-        merged_obj_dict = child_obj.dict(exclude_unset=True, by_alias=True)
+        merged_obj_dict = model_dump(child_obj, exclude_unset=True, by_alias=True)
         merged_obj_dict["properties"] = {
-            k: v.dict(exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
+            k: model_dump(v, exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
             for k, v in merged_properties.items()
         }
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_obj_dict)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, merged_obj_dict)
 
     def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
         """Get the data type for an inherited property from parent schemas."""
@@ -1552,7 +1555,7 @@ class JsonSchemaParser(Parser):
         """Normalize property schema for comparison across allOf items."""
         if isinstance(prop_schema, bool):
             return prop_schema
-        return json.dumps(prop_schema.dict(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+        return json.dumps(model_dump(prop_schema, exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
     def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:
         """Check if schema represents a root model (primitive type with constraints).
@@ -1631,9 +1634,9 @@ class JsonSchemaParser(Parser):
             return None
 
         if obj.description:
-            merged_dict = merged_schema.dict(exclude_unset=True, by_alias=True)
+            merged_dict = model_dump(merged_schema, exclude_unset=True, by_alias=True)
             merged_dict["description"] = obj.description
-            merged_schema = self.SCHEMA_OBJECT_TYPE.parse_obj(merged_dict)
+            merged_schema = model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
 
         return self.parse_root_type(name, merged_schema, path)
 
@@ -1663,15 +1666,17 @@ class JsonSchemaParser(Parser):
         if not any(len(signatures) > 1 for signatures in property_signatures.values()):
             return None
 
-        merged_schema: dict[str, Any] = obj.dict(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merged_schema: dict[str, Any] = model_dump(obj, exclude={"allOf"}, exclude_unset=True, by_alias=True)
         for resolved_item in resolved_items:
-            merged_schema = self._deep_merge(merged_schema, resolved_item.dict(exclude_unset=True, by_alias=True))
+            merged_schema = self._deep_merge(
+                merged_schema, model_dump(resolved_item, exclude_unset=True, by_alias=True)
+            )
 
         if "required" in merged_schema and isinstance(merged_schema["required"], list):
             merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
 
         merged_schema.pop("allOf", None)
-        return self.SCHEMA_OBJECT_TYPE.parse_obj(merged_schema)
+        return model_validate(self.SCHEMA_OBJECT_TYPE, merged_schema)
 
     def parse_combined_schema(
         self,
@@ -1681,7 +1686,7 @@ class JsonSchemaParser(Parser):
         target_attribute_name: str,
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
-        base_object = obj.dict(exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
+        base_object = model_dump(obj, exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
@@ -1689,8 +1694,9 @@ class JsonSchemaParser(Parser):
                 if target_attribute.has_ref_with_schema_keywords:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
                     combined_schemas.append(
-                        self.SCHEMA_OBJECT_TYPE.parse_obj(
-                            self._deep_merge(base_object, merged_attr.dict(exclude_unset=True, by_alias=True))
+                        model_validate(
+                            self.SCHEMA_OBJECT_TYPE,
+                            self._deep_merge(base_object, model_dump(merged_attr, exclude_unset=True, by_alias=True)),
                         )
                     )
                 else:
@@ -1698,11 +1704,12 @@ class JsonSchemaParser(Parser):
                     refs.append(index)
             else:
                 combined_schemas.append(
-                    self.SCHEMA_OBJECT_TYPE.parse_obj(
+                    model_validate(
+                        self.SCHEMA_OBJECT_TYPE,
                         self._deep_merge(
                             base_object,
-                            target_attribute.dict(exclude_unset=True, by_alias=True),
-                        )
+                            model_dump(target_attribute, exclude_unset=True, by_alias=True),
+                        ),
                     )
                 )
 
@@ -2469,7 +2476,7 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = obj.dict()
+        constraints = model_dump(obj)
         if suppress_item_constraints:
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
@@ -2599,7 +2606,7 @@ class JsonSchemaParser(Parser):
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
-        constraints = obj.dict() if self.field_constraints else {}
+        constraints = model_dump(obj) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -2664,7 +2671,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
 
-        constraints = obj.dict() if self.field_constraints else {}
+        constraints = model_dump(obj) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -3061,9 +3068,7 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
-        obj: JsonSchemaObject = (
-            self.SCHEMA_OBJECT_TYPE.model_validate(raw) if PYDANTIC_V2 else self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
-        )
+        obj: JsonSchemaObject = model_validate(self.SCHEMA_OBJECT_TYPE, raw)
         self.parse_obj(name, obj, path)
 
     def parse_obj(  # noqa: PLR0912
@@ -3208,7 +3213,7 @@ class JsonSchemaParser(Parser):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop("self", None)
                 # parse $id before parsing $ref
-                root_obj = self.SCHEMA_OBJECT_TYPE.parse_obj(raw)
+                root_obj = model_validate(self.SCHEMA_OBJECT_TYPE, raw)
                 self.parse_id(root_obj, path_parts)
                 definitions: dict[str, YamlValue] = {}
                 schema_path = ""
@@ -3221,13 +3226,13 @@ class JsonSchemaParser(Parser):
                         continue
 
                 for key, model in definitions.items():
-                    obj = self.SCHEMA_OBJECT_TYPE.parse_obj(model)
+                    obj = model_validate(self.SCHEMA_OBJECT_TYPE, model)
                     self.parse_id(obj, [*path_parts, schema_path, key])
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
-                    self.parse_obj(model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path)
+                    self.parse_obj(model_name, model_validate(self.SCHEMA_OBJECT_TYPE, models), path)
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model in definitions.items():
@@ -3247,7 +3252,7 @@ class JsonSchemaParser(Parser):
                         path = reserved_path.split("/")
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
-                        self.parse_obj(model_name, self.SCHEMA_OBJECT_TYPE.parse_obj(models), path)
+                        self.parse_obj(model_name, model_validate(self.SCHEMA_OBJECT_TYPE, models), path)
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])
                     if previous_reserved_refs == reserved_refs:

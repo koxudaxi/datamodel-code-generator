@@ -37,7 +37,7 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
+from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_copy, model_dump, model_validate
 
 __all__ = ["WrappedDefault"]
 
@@ -90,20 +90,20 @@ class ConstraintsBase(_BaseModel):
     @cached_property
     def has_constraints(self) -> bool:
         """Check if any constraint values are set."""
-        return any(v is not None for v in self.dict().values())
+        return any(v is not None for v in model_dump(self).values())
 
     @staticmethod
     def merge_constraints(a: ConstraintsBaseT | None, b: ConstraintsBaseT | None) -> ConstraintsBaseT | None:
         """Merge two constraint objects, with b taking precedence over a."""
         constraints_class = None
         if isinstance(a, ConstraintsBase):  # pragma: no cover
-            root_type_field_constraints = {k: v for k, v in a.dict(by_alias=True).items() if v is not None}
+            root_type_field_constraints = {k: v for k, v in model_dump(a, by_alias=True).items() if v is not None}
             constraints_class = a.__class__
         else:
             root_type_field_constraints = {}  # pragma: no cover
 
         if isinstance(b, ConstraintsBase):  # pragma: no cover
-            model_field_constraints = {k: v for k, v in b.dict(by_alias=True).items() if v is not None}
+            model_field_constraints = {k: v for k, v in model_dump(b, by_alias=True).items() if v is not None}
             constraints_class = constraints_class or b.__class__
         else:
             model_field_constraints = {}
@@ -111,10 +111,13 @@ class ConstraintsBase(_BaseModel):
         if constraints_class is None or not issubclass(constraints_class, ConstraintsBase):  # pragma: no cover
             return None
 
-        return constraints_class.parse_obj({
-            **root_type_field_constraints,
-            **model_field_constraints,
-        })
+        return model_validate(
+            constraints_class,
+            {
+                **root_type_field_constraints,
+                **model_field_constraints,
+            },
+        )
 
 
 class DataModelFieldBase(_BaseModel):
@@ -373,14 +376,14 @@ class DataModelFieldBase(_BaseModel):
 
     def copy_deep(self) -> Self:
         """Create a deep copy of this field to avoid mutating the original."""
-        copied = self.copy()
+        copied = model_copy(self)
         copied.parent = None
         copied.extras = deepcopy(self.extras)
-        copied.data_type = self.data_type.copy()
+        copied.data_type = model_copy(self.data_type)
         if self.data_type.data_types:
-            copied.data_type.data_types = [dt.copy() for dt in self.data_type.data_types]
+            copied.data_type.data_types = [model_copy(dt) for dt in self.data_type.data_types]
         if self.data_type.dict_key:
-            copied.data_type.dict_key = self.data_type.dict_key.copy()
+            copied.data_type.dict_key = model_copy(self.data_type.dict_key)
         return copied
 
     def replace_data_type(self, new_data_type: DataType, *, clear_old_parent: bool = True) -> None:

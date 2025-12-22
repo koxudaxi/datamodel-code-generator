@@ -47,6 +47,7 @@ from datamodel_code_generator.types import (
     _remove_none_from_union,
     chain_as_tuple,
 )
+from datamodel_code_generator.util import model_dump
 
 UNSET_TYPE = "UnsetType"
 
@@ -389,7 +390,7 @@ class DataModelField(DataModelFieldBase):
                 **data,
                 **{
                     k: self._get_strict_field_constraint_value(k, v)
-                    for k, v in self.constraints.dict().items()
+                    for k, v in model_dump(self.constraints).items()
                     if k in self._META_FIELD_KEYS
                 },
             }

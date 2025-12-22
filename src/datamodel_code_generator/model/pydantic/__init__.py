@@ -6,7 +6,7 @@ Pydantic v1 compatible data models.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 
@@ -35,6 +35,12 @@ class Config(_BaseModel):
     arbitrary_types_allowed: Optional[bool] = None  # noqa: UP045
     orm_mode: Optional[bool] = None  # noqa: UP045
     validate_assignment: Optional[bool] = None  # noqa: UP045
+
+    def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Version-compatible dict method for templates."""
+        from datamodel_code_generator.util import model_dump  # noqa: PLC0415
+
+        return model_dump(self, **kwargs)
 
 
 __all__ = [
