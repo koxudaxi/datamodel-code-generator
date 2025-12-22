@@ -56,7 +56,7 @@ datamodel-codegen [OPTIONS]
 | [`--field-extra-keys`](field-customization.md#field-extra-keys) | Include specific extra keys in Field() definitions. |
 | [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix) | Include specified schema extension keys in Field() without requiring 'x-' prefix... |
 | [`--field-include-all-keys`](field-customization.md#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
-| [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) | Test field-type collision with rename-type strategy. |
+| [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) | Configure how to resolve naming conflicts between field names and generated type... |
 | [`--no-alias`](field-customization.md#no-alias) | Disable Field alias generation for non-Python-safe property names. |
 | [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter) | Specify delimiter for original field names when using snake-case conversion. |
 | [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) | Remove the special prefix from field names. |
@@ -205,7 +205,7 @@ All options sorted alphabetically:
 - [`--field-extra-keys`](field-customization.md#field-extra-keys) - Include specific extra keys in Field() definitions.
 - [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix) - Include specified schema extension keys in Field() without r...
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys) - Include all schema keys in Field() json_schema_extra.
-- [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) - Test field-type collision with rename-type strategy.
+- [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy) - Configure how to resolve naming conflicts between field name...
 - [`--force-optional`](model-customization.md#force-optional) - Force all fields to be Optional regardless of required statu...
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
