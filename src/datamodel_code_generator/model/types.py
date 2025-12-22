@@ -11,7 +11,13 @@ from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVer
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
     IMPORT_DECIMAL,
+    IMPORT_IPV4ADDRESS,
+    IMPORT_IPV4NETWORK,
+    IMPORT_IPV6ADDRESS,
+    IMPORT_IPV6NETWORK,
+    IMPORT_PATH,
     IMPORT_TIMEDELTA,
+    IMPORT_UUID,
 )
 from datamodel_code_generator.types import DataType, StrictTypes, Types
 from datamodel_code_generator.types import DataTypeManager as _DataTypeManager
@@ -68,6 +74,28 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
     }
 
 
+def standard_primitive_type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
+    """Create type mapping for standard library primitive types.
+
+    Maps string formats to their corresponding Python standard library types
+    (UUID, IPv4Address, IPv6Address, Path, etc.) instead of plain str.
+    """
+    uuid_type = data_type.from_import(IMPORT_UUID)
+    return {
+        Types.uuid: uuid_type,
+        Types.uuid1: uuid_type,
+        Types.uuid2: uuid_type,
+        Types.uuid3: uuid_type,
+        Types.uuid4: uuid_type,
+        Types.uuid5: uuid_type,
+        Types.ipv4: data_type.from_import(IMPORT_IPV4ADDRESS),
+        Types.ipv6: data_type.from_import(IMPORT_IPV6ADDRESS),
+        Types.ipv4_network: data_type.from_import(IMPORT_IPV4NETWORK),
+        Types.ipv6_network: data_type.from_import(IMPORT_IPV6NETWORK),
+        Types.path: data_type.from_import(IMPORT_PATH),
+    }
+
+
 class DataTypeManager(_DataTypeManager):
     """Base type manager for model modules."""
 
@@ -83,26 +111,34 @@ class DataTypeManager(_DataTypeManager):
         use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
+        use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with basic type mapping."""
         super().__init__(
-            python_version,
-            use_standard_collections,
-            use_generic_container_types,
-            strict_types,
-            use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of,
-            use_union_operator,
-            use_pendulum,
-            target_datetime_class,
-            treat_dot_as_module,
-            use_serialize_as_any,
+            python_version=python_version,
+            use_standard_collections=use_standard_collections,
+            use_generic_container_types=use_generic_container_types,
+            strict_types=strict_types,
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
+            use_union_operator=use_union_operator,
+            use_pendulum=use_pendulum,
+            target_datetime_class=target_datetime_class,
+            treat_dot_as_module=treat_dot_as_module,
+            use_serialize_as_any=use_serialize_as_any,
         )
 
-        self.type_map: dict[Types, DataType] = type_map_factory(self.data_type)
+        standard_primitive_map = (
+            standard_primitive_type_map_factory(self.data_type) if use_standard_primitive_types else {}
+        )
+
+        self.type_map: dict[Types, DataType] = {
+            **type_map_factory(self.data_type),
+            **standard_primitive_map,
+        }
 
     def get_data_type(
         self,

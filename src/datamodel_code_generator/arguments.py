@@ -304,6 +304,14 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--use-standard-primitive-types",
+    help="Use Python standard library types for string formats (UUID, IPv4Address, etc.) "
+    "instead of str. Affects dataclass, msgspec, TypedDict output. "
+    "Pydantic already uses these types by default.",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--use-exact-imports",
     help='import exact types instead of modules, for example: "from .foo import Bar" instead of '
     '"from . import foo" with "foo.Bar"',

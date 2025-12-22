@@ -155,6 +155,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
     "--disable-future-imports": CLIOptionMeta(name="--disable-future-imports", category=OptionCategory.TYPING),
     "--use-pendulum": CLIOptionMeta(name="--use-pendulum", category=OptionCategory.TYPING),
+    "--use-standard-primitive-types": CLIOptionMeta(
+        name="--use-standard-primitive-types", category=OptionCategory.TYPING
+    ),
     "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
     "--use-decimal-for-multiple-of": CLIOptionMeta(
         name="--use-decimal-for-multiple-of", category=OptionCategory.TYPING

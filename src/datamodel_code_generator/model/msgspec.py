@@ -34,7 +34,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
-from datamodel_code_generator.model.types import type_map_factory
+from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
 from datamodel_code_generator.types import (
     NONE,
     OPTIONAL_PREFIX,
@@ -503,6 +503,7 @@ class DataTypeManager(_DataTypeManager):
         use_decimal_for_multiple_of: bool = False,  # noqa: FBT001, FBT002
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
+        use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
@@ -517,6 +518,7 @@ class DataTypeManager(_DataTypeManager):
             use_decimal_for_multiple_of,
             use_union_operator,
             use_pendulum,
+            use_standard_primitive_types,
             target_datetime_class,
             treat_dot_as_module,
             use_serialize_as_any,
@@ -533,7 +535,12 @@ class DataTypeManager(_DataTypeManager):
             else {}
         )
 
+        standard_primitive_map = (
+            standard_primitive_type_map_factory(self.data_type) if use_standard_primitive_types else {}
+        )
+
         self.type_map: dict[Types, DataType] = {
             **type_map_factory(self.data_type),
             **datetime_map,
+            **standard_primitive_map,
         }
