@@ -6413,7 +6413,11 @@ object is just a container for $defs and not a meaningful model itself.</p>
 <hr />
 <h2 id="strict-nullable"><code>--strict-nullable</code><a class="headerlink" href="#strict-nullable" title="Permanent link">&para;</a></h2>
 <p>Treat default field as a non-nullable field.</p>
-<p>The <code>--strict-nullable</code> flag configures the code generation behavior.</p>
+<p>The <code>--strict-nullable</code> flag ensures that fields with default values are generated
+with their exact schema type (non-nullable), rather than being made nullable.</p>
+<p>This is particularly useful when combined with <code>--use-default</code> to generate models
+where optional fields have defaults but cannot accept <code>None</code> values.</p>
+<p><strong>Related:</strong> <a href="../model-customization/#use-default"><code>--use-default</code></a></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-67-1"><a id="__codelineno-67-1" name="__codelineno-67-1" href="#__codelineno-67-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--strict-nullable<span class="w"> </span><span class="c1"># (1)!</span>
@@ -7087,7 +7091,9 @@ default to None.</p>
 <hr />
 <h2 id="use-default"><code>--use-default</code><a class="headerlink" href="#use-default" title="Permanent link">&para;</a></h2>
 <p>Use default values from schema in generated models.</p>
-<p>The <code>--use-default</code> flag configures the code generation behavior.</p>
+<p>The <code>--use-default</code> flag allows required fields with default values to be generated
+with their defaults, making them optional to provide when instantiating the model.</p>
+<p><strong>Related:</strong> <a href="../model-customization/#strict-nullable"><code>--strict-nullable</code></a></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-79-1"><a id="__codelineno-79-1" name="__codelineno-79-1" href="#__codelineno-79-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>--use-default<span class="w"> </span><span class="c1"># (1)!</span>
@@ -7095,6 +7101,21 @@ default to None.</p>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--use-default</code> - the option documented here</li>
 </ol>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Fields with defaults become nullable</p>
+<p>When using <code>--use-default</code>, fields with default values are generated as nullable
+types (e.g., <code>str | None</code> instead of <code>str</code>), even if the schema does not allow
+null values.</p>
+<p>If you want fields to strictly follow the schema's type definition (non-nullable),
+use <code>--strict-nullable</code> together with <code>--use-default</code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Future behavior change</p>
+<p>In a future major version, the default behavior of <code>--use-default</code> may change to
+generate non-nullable types that match the schema definition (equivalent to using
+<code>--strict-nullable</code>). If you rely on the current nullable behavior, consider
+explicitly handling this in your code.</p>
 </div>
 <details class="example">
 <summary>Examples</summary>
