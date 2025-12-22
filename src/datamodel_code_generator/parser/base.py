@@ -1488,9 +1488,6 @@ class Parser(ABC):
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:
                 if isinstance(model, Enum) or self.collapse_reuse_models:
-                    # For Enums or when collapse_reuse_models is enabled (module scope only),
-                    # replace all references to the duplicate with the canonical model.
-                    # Note: This block only runs when reuse_model=True and reuse_scope=Module.
                     model.replace_children_in_models(models, cached_model_reference)
                     duplicates.append(model)
                 else:
@@ -1578,8 +1575,6 @@ class Parser(ABC):
                 if module != duplicate_module or duplicate_model not in models:
                     continue
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
-                    # For Enums, model types without inheritance, or when collapse_reuse_models is enabled,
-                    # replace all references to the duplicate with the canonical model
                     duplicate_model.replace_children_in_models(models, shared_ref)
                     models.remove(duplicate_model)
                 else:
