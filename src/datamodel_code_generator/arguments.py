@@ -170,6 +170,13 @@ model_options.add_argument(
     help="Models generated with a root-type field will be merged into the models using that root-type model",
 )
 model_options.add_argument(
+    "--collapse-reuse-models",
+    action="store_true",
+    default=None,
+    help="When used with --reuse-model, collapse duplicate models by replacing references instead of creating "
+    "empty inheritance subclasses. This eliminates 'class Foo(Bar): pass' patterns",
+)
+model_options.add_argument(
     "--skip-root-model",
     action="store_true",
     default=None,

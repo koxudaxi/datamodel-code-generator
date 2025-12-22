@@ -742,6 +742,7 @@ class Parser(ABC):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        collapse_reuse_models: bool = False,
         skip_root_model: bool = False,
         use_type_alias: bool = False,
         special_field_name_prefix: str | None = None,
@@ -908,6 +909,7 @@ class Parser(ABC):
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
+        self.collapse_reuse_models = collapse_reuse_models
         self.skip_root_model = skip_root_model
         self.use_type_alias = use_type_alias
         self.capitalise_enum_members = capitalise_enum_members
@@ -1485,7 +1487,9 @@ class Parser(ABC):
             model_key = model.get_dedup_key()
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:
-                if isinstance(model, Enum):
+                if isinstance(model, Enum) or self.collapse_reuse_models:
+                    # For Enums or when collapse_reuse_models is enabled,
+                    # replace all references to the duplicate with the canonical model
                     model.replace_children_in_models(models, cached_model_reference)
                     duplicates.append(model)
                 else:
@@ -1572,7 +1576,9 @@ class Parser(ABC):
             for module, models in module_models:
                 if module != duplicate_module or duplicate_model not in models:
                     continue
-                if isinstance(duplicate_model, Enum) or not supports_inheritance:
+                if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
+                    # For Enums, model types without inheritance, or when collapse_reuse_models is enabled,
+                    # replace all references to the duplicate with the canonical model
                     duplicate_model.replace_children_in_models(models, shared_ref)
                     models.remove(duplicate_model)
                 else:
