@@ -44,7 +44,11 @@ class ConfigDict(_BaseModel):
 
     def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
         """Version-compatible dict method for templates."""
-        return self.model_dump(**kwargs)
+        from datamodel_code_generator.util import PYDANTIC_V2  # noqa: PLC0415
+
+        if PYDANTIC_V2:
+            return self.model_dump(**kwargs)
+        return super().dict(**kwargs)
 
 
 __all__ = [

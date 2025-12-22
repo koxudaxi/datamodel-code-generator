@@ -220,8 +220,6 @@ filterwarnings = [
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
-  # Test code uses deprecated pydantic methods directly (not production code)
-  "ignore:^.*The `parse_obj` method is deprecated.*:pydantic.warnings.PydanticDeprecatedSince20:tests.*",
 ]
 norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
