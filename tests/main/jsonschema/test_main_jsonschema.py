@@ -2395,6 +2395,7 @@ def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
     input_schema="jsonschema/treat_dot_as_module_single",
     cli_args=["--no-treat-dot-as-module"],
     golden_output="jsonschema/treat_dot_as_module_single_no_treat/",
+    primary=True,
 )
 def test_no_treat_dot_as_module_single_file(output_dir: Path) -> None:
     """Keep dots in schema names as underscores for flat output.
