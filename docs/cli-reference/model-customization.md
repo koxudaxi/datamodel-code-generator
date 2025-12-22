@@ -4138,7 +4138,13 @@ object is just a container for $defs and not a meaningful model itself.
 
 Treat default field as a non-nullable field.
 
-The `--strict-nullable` flag configures the code generation behavior.
+The `--strict-nullable` flag ensures that fields with default values are generated
+with their exact schema type (non-nullable), rather than being made nullable.
+
+This is particularly useful when combined with `--use-default` to generate models
+where optional fields have defaults but cannot accept `None` values.
+
+**Related:** [`--use-default`](model-customization.md#use-default)
 
 !!! tip "Usage"
 
@@ -4845,7 +4851,10 @@ The `--union-mode` flag configures the code generation behavior.
 
 Use default values from schema in generated models.
 
-The `--use-default` flag configures the code generation behavior.
+The `--use-default` flag allows required fields with default values to be generated
+with their defaults, making them optional to provide when instantiating the model.
+
+**Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
 
 !!! tip "Usage"
 
@@ -4854,6 +4863,21 @@ The `--use-default` flag configures the code generation behavior.
     ```
 
     1. :material-arrow-left: `--use-default` - the option documented here
+
+!!! warning "Fields with defaults become nullable"
+    When using `--use-default`, fields with default values are generated as nullable
+    types (e.g., `str | None` instead of `str`), even if the schema does not allow
+    null values.
+
+    If you want fields to strictly follow the schema's type definition (non-nullable),
+    use `--strict-nullable` together with `--use-default`.
+
+
+!!! note "Future behavior change"
+    In a future major version, the default behavior of `--use-default` may change to
+    generate non-nullable types that match the schema definition (equivalent to using
+    `--strict-nullable`). If you rely on the current nullable behavior, consider
+    explicitly handling this in your code.
 
 ??? example "Examples"
 

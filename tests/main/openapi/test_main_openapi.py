@@ -1511,11 +1511,16 @@ def test_main_openapi_nullable(output_file: Path) -> None:
     input_schema="openapi/nullable.yaml",
     cli_args=["--strict-nullable"],
     golden_output="openapi/nullable_strict_nullable.py",
+    related_options=["--use-default"],
 )
 def test_main_openapi_nullable_strict_nullable(output_file: Path) -> None:
     """Treat default field as a non-nullable field.
 
-    The `--strict-nullable` flag configures the code generation behavior.
+    The `--strict-nullable` flag ensures that fields with default values are generated
+    with their exact schema type (non-nullable), rather than being made nullable.
+
+    This is particularly useful when combined with `--use-default` to generate models
+    where optional fields have defaults but cannot accept `None` values.
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "nullable.yaml",
