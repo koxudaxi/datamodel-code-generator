@@ -1145,10 +1145,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#common-mappings" class="md-nav__link">
+  <a href="#avoiding-pydantic-optional-extras" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Mappings
+        Avoiding Pydantic Optional Extras
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-target-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Target Formats
       
     </span>
   </a>
@@ -1406,10 +1417,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#pattern-1-financial-application" class="md-nav__link">
+  <a href="#pattern-1-minimal-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pattern 1: Financial application
+        Pattern 1: Minimal dependencies
       
     </span>
   </a>
@@ -1428,10 +1439,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pattern-3-custom-type-library" class="md-nav__link">
+  <a href="#pattern-3-financial-application" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pattern 3: Custom type library
+        Pattern 3: Financial application
       
     </span>
   </a>
@@ -2136,10 +2147,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#common-mappings" class="md-nav__link">
+  <a href="#avoiding-pydantic-optional-extras" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Common Mappings
+        Avoiding Pydantic Optional Extras
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-target-formats" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Target Formats
       
     </span>
   </a>
@@ -2397,10 +2419,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#pattern-1-financial-application" class="md-nav__link">
+  <a href="#pattern-1-minimal-dependencies" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pattern 1: Financial application
+        Pattern 1: Minimal dependencies
       
     </span>
   </a>
@@ -2419,10 +2441,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#pattern-3-custom-type-library" class="md-nav__link">
+  <a href="#pattern-3-financial-application" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Pattern 3: Custom type library
+        Pattern 3: Financial application
       
     </span>
   </a>
@@ -2539,22 +2561,22 @@
 </table>
 <hr />
 <h2 id="-type-mappings"><code>--type-mappings</code><a class="headerlink" href="#-type-mappings" title="Permanent link">&para;</a></h2>
-<p>Maps schema types to custom Python types. This is the most flexible way to customize type output.</p>
+<p>Maps schema type+format combinations to other format names. This allows you to override how specific formats are interpreted.</p>
 <h3 id="format">Format<a class="headerlink" href="#format" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--type-mappings<span class="w"> </span>&lt;schema_type&gt;<span class="o">=</span>&lt;python_type&gt;<span class="w"> </span><span class="o">[</span>&lt;schema_type&gt;<span class="o">=</span>&lt;python_type&gt;<span class="w"> </span>...<span class="o">]</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>--type-mappings<span class="w"> </span>&lt;type+format&gt;<span class="o">=</span>&lt;target_format&gt;<span class="w"> </span><span class="o">[</span>&lt;type+format&gt;<span class="o">=</span>&lt;target_format&gt;<span class="w"> </span>...<span class="o">]</span>
 </span></code></pre></div>
 <h3 id="basic-examples">Basic Examples<a class="headerlink" href="#basic-examples" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Map string format to custom type</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Map binary format to string (generates str instead of bytes)</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;string+uri=pydantic.HttpUrl&quot;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;binary=string&quot;</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Map integer to custom ID type</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="c1"># Map email format to string (generates str instead of EmailStr)</span>
 </span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;integer=myproject.types.ID&quot;</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;string+email=string&quot;</span>
 </span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
 </span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Multiple mappings</span>
 </span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;string+date-time=datetime.datetime&quot;</span><span class="w"> </span><span class="s2">&quot;string+uri=str&quot;</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;string+email=string&quot;</span><span class="w"> </span><span class="s2">&quot;string+uuid=string&quot;</span>
 </span></code></pre></div>
 <h3 id="mapping-syntax">Mapping Syntax<a class="headerlink" href="#mapping-syntax" title="Permanent link">&para;</a></h3>
 <table>
@@ -2567,41 +2589,82 @@
 </thead>
 <tbody>
 <tr>
-<td><code>type</code></td>
-<td>Map base type</td>
-<td><code>integer=int</code></td>
+<td><code>format=target</code></td>
+<td>Map format (assumes string type)</td>
+<td><code>binary=string</code></td>
 </tr>
 <tr>
-<td><code>type+format</code></td>
+<td><code>type+format=target</code></td>
 <td>Map type with format</td>
-<td><code>string+uuid=uuid.UUID</code></td>
-</tr>
-<tr>
-<td><code>type+format+pattern</code></td>
-<td>Map with pattern</td>
-<td><code>string++^[A-Z]{2}$=CountryCode</code></td>
+<td><code>string+email=string</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="common-mappings">Common Mappings<a class="headerlink" href="#common-mappings" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Use AwareDatetime for timezone-aware datetimes</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;string+date-time=pydantic.AwareDatetime&quot;</span>
+<h3 id="avoiding-pydantic-optional-extras">Avoiding Pydantic Optional Extras<a class="headerlink" href="#avoiding-pydantic-optional-extras" title="Permanent link">&para;</a></h3>
+<p>Some Pydantic types require optional dependencies. Use <code>--type-mappings</code> to generate plain types instead:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Avoid pydantic[email] dependency (EmailStr requires email-validator)</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;string+email=string&quot;</span><span class="w"> </span><span class="s2">&quot;string+idn-email=string&quot;</span>
 </span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Use custom Email type</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;string+email=myapp.types.Email&quot;</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="c1"># Use pathlib.Path for file paths</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;string+uri-reference=pathlib.Path&quot;</span>
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>
-</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="c1"># Use Decimal for money</span>
-</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;number=decimal.Decimal&quot;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Generate str instead of UUID for uuid format</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>--type-mappings<span class="w"> </span><span class="s2">&quot;string+uuid=string&quot;</span>
 </span></code></pre></div>
+<h3 id="available-target-formats">Available Target Formats<a class="headerlink" href="#available-target-formats" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Generated Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>string</code></td>
+<td><code>str</code></td>
+</tr>
+<tr>
+<td><code>integer</code></td>
+<td><code>int</code></td>
+</tr>
+<tr>
+<td><code>number</code></td>
+<td><code>float</code></td>
+</tr>
+<tr>
+<td><code>boolean</code></td>
+<td><code>bool</code></td>
+</tr>
+<tr>
+<td><code>binary</code></td>
+<td><code>bytes</code></td>
+</tr>
+<tr>
+<td><code>date</code></td>
+<td><code>datetime.date</code></td>
+</tr>
+<tr>
+<td><code>date-time</code></td>
+<td><code>datetime.datetime</code></td>
+</tr>
+<tr>
+<td><code>uuid</code></td>
+<td><code>UUID</code></td>
+</tr>
+<tr>
+<td><code>email</code></td>
+<td><code>EmailStr</code></td>
+</tr>
+<tr>
+<td><code>uri</code></td>
+<td><code>AnyUrl</code></td>
+</tr>
+</tbody>
+</table>
 <h3 id="pyprojecttoml-configuration">pyproject.toml Configuration<a class="headerlink" href="#pyprojecttoml-configuration" title="Permanent link">&para;</a></h3>
 <div class="language-toml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">[tool.datamodel-codegen]</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">type-mappings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="s2">&quot;string+date-time=datetime.datetime&quot;</span><span class="p">,</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="s2">&quot;string+uuid=uuid.UUID&quot;</span><span class="p">,</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="s2">&quot;number=decimal.Decimal&quot;</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="s2">&quot;string+email=string&quot;</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="s2">&quot;string+idn-email=string&quot;</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="s2">&quot;binary=string&quot;</span><span class="p">,</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="p">]</span>
 </span></code></pre></div>
 <hr />
@@ -2805,11 +2868,10 @@
 </ul>
 <hr />
 <h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="pattern-1-financial-application">Pattern 1: Financial application<a class="headerlink" href="#pattern-1-financial-application" title="Permanent link">&para;</a></h3>
+<h3 id="pattern-1-minimal-dependencies">Pattern 1: Minimal dependencies<a class="headerlink" href="#pattern-1-minimal-dependencies" title="Permanent link">&para;</a></h3>
+<p>Avoid optional Pydantic dependencies by mapping special formats to plain types:</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--use-decimal-for-multiple-of<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;number=decimal.Decimal&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="w">  </span>--strict-types<span class="w"> </span>str<span class="w"> </span>int
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="s2">&quot;string+email=string&quot;</span><span class="w"> </span><span class="s2">&quot;string+idn-email=string&quot;</span>
 </span></code></pre></div>
 <h3 id="pattern-2-strict-api-validation">Pattern 2: Strict API validation<a class="headerlink" href="#pattern-2-strict-api-validation" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
@@ -2817,12 +2879,10 @@
 </span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--output-datetime-class<span class="w"> </span>AwareDatetime<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="w">  </span>--field-constraints
 </span></code></pre></div>
-<h3 id="pattern-3-custom-type-library">Pattern 3: Custom type library<a class="headerlink" href="#pattern-3-custom-type-library" title="Permanent link">&para;</a></h3>
+<h3 id="pattern-3-financial-application">Pattern 3: Financial application<a class="headerlink" href="#pattern-3-financial-application" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--type-mappings<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span><span class="s2">&quot;string+email=myapp.types.Email&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="s2">&quot;string+uri=myapp.types.URL&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">    </span><span class="s2">&quot;integer=myapp.types.ID&quot;</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--use-decimal-for-multiple-of<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--strict-types<span class="w"> </span>str<span class="w"> </span>int
 </span></code></pre></div>
 <h3 id="pattern-4-pendulum-datetime-handling">Pattern 4: Pendulum datetime handling<a class="headerlink" href="#pattern-4-pendulum-datetime-handling" title="Permanent link">&para;</a></h3>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span><span class="se">\</span>
@@ -2837,24 +2897,19 @@
 <tr>
 <th>Schema Format</th>
 <th>Default Type</th>
-<th>Common Custom Mapping</th>
+<th>With <code>--type-mappings "format=string"</code></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>date-time</code></td>
-<td><code>datetime</code></td>
-<td><code>pydantic.AwareDatetime</code>, <code>pendulum.DateTime</code></td>
+<td><code>email</code></td>
+<td><code>EmailStr</code></td>
+<td><code>str</code></td>
 </tr>
 <tr>
-<td><code>date</code></td>
-<td><code>date</code></td>
-<td><code>pendulum.Date</code></td>
-</tr>
-<tr>
-<td><code>time</code></td>
-<td><code>time</code></td>
-<td><code>pendulum.Time</code></td>
+<td><code>idn-email</code></td>
+<td><code>EmailStr</code></td>
+<td><code>str</code></td>
 </tr>
 <tr>
 <td><code>uuid</code></td>
@@ -2862,22 +2917,21 @@
 <td><code>str</code></td>
 </tr>
 <tr>
-<td><code>email</code></td>
-<td><code>EmailStr</code></td>
-<td><code>str</code>, custom Email class</td>
-</tr>
-<tr>
 <td><code>uri</code></td>
 <td><code>AnyUrl</code></td>
-<td><code>str</code>, <code>pydantic.HttpUrl</code></td>
+<td><code>str</code></td>
 </tr>
 <tr>
 <td><code>binary</code></td>
 <td><code>bytes</code></td>
-<td><code>str</code> (base64-encoded)</td>
+<td><code>str</code></td>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Other type customization options</p>
+<p>For datetime types, use <code>--output-datetime-class</code> or <code>--use-pendulum</code> instead of <code>--type-mappings</code>.</p>
+</div>
 <hr />
 <h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
