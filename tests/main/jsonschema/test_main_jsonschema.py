@@ -2390,6 +2390,25 @@ def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--no-treat-dot-as-module"],
+    input_schema="jsonschema/treat_dot_as_module_single",
+    cli_args=["--no-treat-dot-as-module"],
+    golden_output="jsonschema/treat_dot_as_module_single_no_treat/",
+)
+def test_no_treat_dot_as_module_single_file(output_dir: Path) -> None:
+    """Keep dots in schema names as underscores for flat output.
+
+    The `--no-treat-dot-as-module` flag prevents splitting dotted schema names.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module_single",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "treat_dot_as_module_single_no_treat",
+        extra_args=["--no-treat-dot-as-module"],
+    )
+
+
 def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
     """Test duplicate name handling."""
     run_main_and_assert(
