@@ -470,11 +470,27 @@ def test_main_null_and_array(output_model: str, expected_output: str, output_fil
     input_schema="jsonschema/use_default_with_const.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-default"],
     golden_output="jsonschema/use_default_with_const.py",
+    related_options=["--strict-nullable"],
 )
 def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> None:
     """Use default values from schema in generated models.
 
-    The `--use-default` flag configures the code generation behavior.
+    The `--use-default` flag allows required fields with default values to be generated
+    with their defaults, making them optional to provide when instantiating the model.
+
+    !!! warning "Fields with defaults become nullable"
+        When using `--use-default`, fields with default values are generated as nullable
+        types (e.g., `str | None` instead of `str`), even if the schema does not allow
+        null values.
+
+        If you want fields to strictly follow the schema's type definition (non-nullable),
+        use `--strict-nullable` together with `--use-default`.
+
+    !!! note "Future behavior change"
+        In a future major version, the default behavior of `--use-default` may change to
+        generate non-nullable types that match the schema definition (equivalent to using
+        `--strict-nullable`). If you rely on the current nullable behavior, consider
+        explicitly handling this in your code.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_default_with_const.json",

@@ -181,6 +181,94 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--no-color": "Disable colorized output",
 }
 
+# Regex pattern for detecting MkDocs Material admonitions in docstrings
+# Matches: !!! type "title" or !!! type (without title)
+ADMONITION_PATTERN = re.compile(r'^(!{3}\s+\w+(?:\s+"[^"]*")?)', re.MULTILINE)
+
+
+@dataclass
+class ParsedDocstring:
+    """Parsed docstring with description and admonitions separated."""
+
+    description: str
+    admonitions: list[str]
+
+
+def parse_docstring(docstring: str) -> ParsedDocstring:
+    """Parse docstring to separate description from admonitions.
+
+    Admonitions are MkDocs Material syntax blocks starting with !!!
+    Example:
+        '''Short description.
+
+        Longer description paragraph.
+
+        !!! warning "Title"
+            Warning content here.
+            Can be multiple lines.
+
+        !!! note "Another"
+            Note content.
+        '''
+
+    Returns:
+        ParsedDocstring with description and list of admonition blocks.
+    """
+    if not docstring:
+        return ParsedDocstring(description="", admonitions=[])
+
+    lines = docstring.strip().split("\n")
+    description_lines: list[str] = []
+    admonitions: list[str] = []
+    current_admonition: list[str] = []
+    in_admonition = False
+    admonition_indent = 0
+
+    for line in lines:
+        # Check if this line starts a new admonition
+        if ADMONITION_PATTERN.match(line.lstrip()):
+            # Save previous admonition if exists
+            if current_admonition:
+                admonitions.append("\n".join(current_admonition))
+            current_admonition = [line.lstrip()]
+            in_admonition = True
+            # Calculate the base indent for admonition content (typically 4 spaces)
+            admonition_indent = len(line) - len(line.lstrip())
+        elif in_admonition:
+            stripped = line.lstrip()
+            current_indent = len(line) - len(line.lstrip())
+            # Check if we're still in the admonition (indented content or empty line)
+            if not stripped:
+                # Empty line - could be part of admonition or separator
+                current_admonition.append("")
+            elif current_indent > admonition_indent or line.startswith("    "):
+                # Indented content belongs to admonition
+                # Remove the base indentation and add standard 4-space indent
+                content = line[admonition_indent:] if current_indent >= admonition_indent else line
+                current_admonition.append(content)
+            else:
+                # Not indented - end of admonition, start of new content
+                if current_admonition:
+                    admonitions.append("\n".join(current_admonition))
+                current_admonition = []
+                in_admonition = False
+                description_lines.append(line)
+        else:
+            description_lines.append(line)
+
+    # Don't forget the last admonition
+    if current_admonition:
+        admonitions.append("\n".join(current_admonition))
+
+    # Clean up description - remove trailing empty lines
+    while description_lines and not description_lines[-1].strip():
+        description_lines.pop()
+
+    return ParsedDocstring(
+        description="\n".join(description_lines).strip(),
+        admonitions=admonitions,
+    )
+
 
 def scan_docs_for_cli_option_tags() -> dict[str, list[tuple[str, str]]]:
     """Scan markdown files in docs/ for related-cli-options tags.
@@ -489,9 +577,13 @@ def generate_option_section(
 
     md = f"## `{option}` {{#{slugify(option)}}}\n\n"
 
+    # Parse docstring to separate description from admonitions
     docstring = cli_doc_option.get_docstring()
-    if docstring:
-        md += f"{docstring.strip()}\n\n"
+    parsed = parse_docstring(docstring) if docstring else ParsedDocstring(description="", admonitions=[])
+
+    # Output description (without admonitions)
+    if parsed.description:
+        md += f"{parsed.description}\n\n"
 
     meta_parts = []
     aliases = cli_doc_option.get_aliases()
@@ -537,6 +629,10 @@ def generate_option_section(
     md += " # (1)!\n"
     md += "    ```\n\n"
     md += f"    1. :material-arrow-left: `{option}` - the option documented here\n\n"
+
+    # Output admonitions (warnings, notes, etc.) after Usage section
+    for admonition in parsed.admonitions:
+        md += f"{admonition}\n\n"
 
     # Group examples by schema type
     examples_by_type: dict[str, list[CLIDocExample]] = defaultdict(list)
