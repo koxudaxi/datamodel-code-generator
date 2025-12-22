@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 27 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 28 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -167,6 +167,7 @@ This documentation is auto-generated from test cases.
 - [`--use-exact-imports`](template-customization.md#use-exact-imports)
 - [`--use-field-description`](field-customization.md#use-field-description)
 - [`--use-frozen-field`](model-customization.md#use-frozen-field)
+- [`--use-generic-base-class`](model-customization.md#use-generic-base-class)
 - [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
 - [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
 - [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types)

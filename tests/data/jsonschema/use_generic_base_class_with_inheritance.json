@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Animal": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "Dog": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Animal"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "breed": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

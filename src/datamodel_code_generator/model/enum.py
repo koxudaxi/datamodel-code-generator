@@ -42,6 +42,7 @@ class Enum(DataModel):
     TEMPLATE_FILE_PATH: ClassVar[str] = "Enum.jinja2"
     BASE_CLASS: ClassVar[str] = "enum.Enum"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ENUM,)
+    SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = False
 
     def __init__(  # noqa: PLR0913
         self,

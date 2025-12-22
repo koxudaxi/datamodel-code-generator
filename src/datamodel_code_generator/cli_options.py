@@ -100,6 +100,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
     "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
+    "--use-generic-base-class": CLIOptionMeta(name="--use-generic-base-class", category=OptionCategory.MODEL),
     # ==========================================================================
     # Field Customization
     # ==========================================================================

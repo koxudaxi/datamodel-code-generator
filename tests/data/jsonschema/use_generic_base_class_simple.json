@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "title": "Simple",
+  "properties": {
+    "x": {
+      "type": "integer",
+      "description": "X value"
+    }
+  }
+}

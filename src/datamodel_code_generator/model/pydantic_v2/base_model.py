@@ -7,12 +7,14 @@ with support for Field() constraints and ConfigDict.
 from __future__ import annotations
 
 import re
+from collections import defaultdict
 from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field
 
-from datamodel_code_generator.model.base import UNDEFINED, DataModelFieldBase
+from datamodel_code_generator.imports import Import
+from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
 )
@@ -22,11 +24,10 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_CONFIG_DICT
+from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
 from datamodel_code_generator.util import field_validator, model_validator
 
 if TYPE_CHECKING:
-    from collections import defaultdict
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
@@ -171,6 +172,8 @@ class BaseModel(BaseModelBase):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
+    BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
+    BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
@@ -271,3 +274,45 @@ class BaseModel(BaseModelBase):
                 if pattern and lookaround_regex.search(pattern):
                     return True
         return False
+
+    @classmethod
+    def create_base_class_model(
+        cls,
+        config: dict[str, Any],
+        reference: Reference,
+        custom_template_dir: Path | None = None,
+        keyword_only: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+    ) -> BaseModel | None:
+        """Create a shared base class model for DRY configuration.
+
+        Creates a BaseModel that inherits from pydantic's BaseModel (aliased as _BaseModel)
+        with the specified configuration. Updates the reference path and name in place.
+        """
+        reference.path = f"#/{cls.BASE_CLASS_NAME}"
+        reference.name = cls.BASE_CLASS_NAME
+
+        extra_data: defaultdict[str, dict[str, Any]] = defaultdict(dict)
+        for key, value in config.items():
+            extra_data[ALL_MODEL][key] = value
+
+        base_model = cls(
+            reference=reference,
+            fields=[],
+            custom_template_dir=custom_template_dir,
+            extra_template_data=extra_data,
+            keyword_only=keyword_only,
+            treat_dot_as_module=treat_dot_as_module,
+        )
+
+        base_model.base_classes = [BaseClassDataType(type=cls.BASE_CLASS_ALIAS)]
+        base_model._additional_imports = [
+            imp
+            for imp in base_model._additional_imports
+            if not (imp.from_ == IMPORT_BASE_MODEL.from_ and imp.import_ == IMPORT_BASE_MODEL.import_)
+        ]
+        base_model._additional_imports.append(
+            Import(from_=IMPORT_BASE_MODEL.from_, import_=IMPORT_BASE_MODEL.import_, alias=cls.BASE_CLASS_ALIAS)
+        )
+
+        return base_model
