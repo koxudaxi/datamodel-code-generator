@@ -764,9 +764,6 @@ The `--allow-population-by-field-name` flag configures the code generation behav
         
         
         class Pets(RootModel[list[Pet]]):
-            model_config = ConfigDict(
-                populate_by_name=True,
-            )
             root: list[Pet]
         
         
@@ -780,23 +777,14 @@ The `--allow-population-by-field-name` flag configures the code generation behav
         
         
         class Users(RootModel[list[User]]):
-            model_config = ConfigDict(
-                populate_by_name=True,
-            )
             root: list[User]
         
         
         class Id(RootModel[str]):
-            model_config = ConfigDict(
-                populate_by_name=True,
-            )
             root: str
         
         
         class Rules(RootModel[list[str]]):
-            model_config = ConfigDict(
-                populate_by_name=True,
-            )
             root: list[str]
         
         
@@ -827,9 +815,6 @@ The `--allow-population-by-field-name` flag configures the code generation behav
         
         
         class Apis(RootModel[list[Api]]):
-            model_config = ConfigDict(
-                populate_by_name=True,
-            )
             root: list[Api]
         
         
