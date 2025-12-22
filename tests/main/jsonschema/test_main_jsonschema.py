@@ -137,6 +137,13 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     'from __future__ import annotations' to the output. This is useful when
     you need compatibility with tools or environments that don't support
     postponed evaluation of annotations (PEP 563).
+
+    **Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
+    with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
+    deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
+
+    - Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
+    - Use this `--disable-future-imports` flag as a workaround
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
