@@ -42,6 +42,8 @@ class DataClass(DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_DATACLASS,)
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
+    SUPPORTS_KW_ONLY: ClassVar[bool] = True
 
     def __init__(  # noqa: PLR0913
         self,
