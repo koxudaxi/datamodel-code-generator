@@ -18,62 +18,72 @@ datamodel-code-generator allows you to customize how schema types are mapped to 
 
 ## `--type-mappings`
 
-Maps schema types to custom Python types. This is the most flexible way to customize type output.
+Maps schema type+format combinations to other format names. This allows you to override how specific formats are interpreted.
 
 ### Format
 
 ```bash
---type-mappings <schema_type>=<python_type> [<schema_type>=<python_type> ...]
+--type-mappings <type+format>=<target_format> [<type+format>=<target_format> ...]
 ```
 
 ### Basic Examples
 
 ```bash
-# Map string format to custom type
+# Map binary format to string (generates str instead of bytes)
 datamodel-codegen --input schema.json --output models.py \
-  --type-mappings "string+uri=pydantic.HttpUrl"
+  --type-mappings "binary=string"
 
-# Map integer to custom ID type
+# Map email format to string (generates str instead of EmailStr)
 datamodel-codegen --input schema.json --output models.py \
-  --type-mappings "integer=myproject.types.ID"
+  --type-mappings "string+email=string"
 
 # Multiple mappings
 datamodel-codegen --input schema.json --output models.py \
-  --type-mappings "string+date-time=datetime.datetime" "string+uri=str"
+  --type-mappings "string+email=string" "string+uuid=string"
 ```
 
 ### Mapping Syntax
 
 | Syntax | Description | Example |
 |--------|-------------|---------|
-| `type` | Map base type | `integer=int` |
-| `type+format` | Map type with format | `string+uuid=uuid.UUID` |
-| `type+format+pattern` | Map with pattern | `string++^[A-Z]{2}$=CountryCode` |
+| `format=target` | Map format (assumes string type) | `binary=string` |
+| `type+format=target` | Map type with format | `string+email=string` |
 
-### Common Mappings
+### Avoiding Pydantic Optional Extras
+
+Some Pydantic types require optional dependencies. Use `--type-mappings` to generate plain types instead:
 
 ```bash
-# Use AwareDatetime for timezone-aware datetimes
---type-mappings "string+date-time=pydantic.AwareDatetime"
+# Avoid pydantic[email] dependency (EmailStr requires email-validator)
+--type-mappings "string+email=string" "string+idn-email=string"
 
-# Use custom Email type
---type-mappings "string+email=myapp.types.Email"
-
-# Use pathlib.Path for file paths
---type-mappings "string+uri-reference=pathlib.Path"
-
-# Use Decimal for money
---type-mappings "number=decimal.Decimal"
+# Generate str instead of UUID for uuid format
+--type-mappings "string+uuid=string"
 ```
+
+### Available Target Formats
+
+| Target | Generated Type |
+|--------|----------------|
+| `string` | `str` |
+| `integer` | `int` |
+| `number` | `float` |
+| `boolean` | `bool` |
+| `binary` | `bytes` |
+| `date` | `datetime.date` |
+| `date-time` | `datetime.datetime` |
+| `uuid` | `UUID` |
+| `email` | `EmailStr` |
+| `uri` | `AnyUrl` |
 
 ### pyproject.toml Configuration
 
 ```toml
 [tool.datamodel-codegen]
 type-mappings = [
-    "string+date-time=datetime.datetime",
-    "string+uuid=uuid.UUID",
-    "number=decimal.Decimal",
+    "string+email=string",
+    "string+idn-email=string",
+    "binary=string",
 ]
 ```
 
@@ -264,13 +274,13 @@ class Product(BaseModel):
 
 ## Common Patterns
 
-### Pattern 1: Financial application
+### Pattern 1: Minimal dependencies
+
+Avoid optional Pydantic dependencies by mapping special formats to plain types:
 
 ```bash
 datamodel-codegen --input schema.json --output models.py \
-  --use-decimal-for-multiple-of \
-  --type-mappings "number=decimal.Decimal" \
-  --strict-types str int
+  --type-mappings "string+email=string" "string+idn-email=string"
 ```
 
 ### Pattern 2: Strict API validation
@@ -282,14 +292,12 @@ datamodel-codegen --input schema.json --output models.py \
   --field-constraints
 ```
 
-### Pattern 3: Custom type library
+### Pattern 3: Financial application
 
 ```bash
 datamodel-codegen --input schema.json --output models.py \
-  --type-mappings \
-    "string+email=myapp.types.Email" \
-    "string+uri=myapp.types.URL" \
-    "integer=myapp.types.ID"
+  --use-decimal-for-multiple-of \
+  --strict-types str int
 ```
 
 ### Pattern 4: Pendulum datetime handling
@@ -306,15 +314,16 @@ datamodel-codegen --input schema.json --output models.py \
 
 ### Common Format Mappings
 
-| Schema Format | Default Type | Common Custom Mapping |
-|---------------|--------------|----------------------|
-| `date-time` | `datetime` | `pydantic.AwareDatetime`, `pendulum.DateTime` |
-| `date` | `date` | `pendulum.Date` |
-| `time` | `time` | `pendulum.Time` |
+| Schema Format | Default Type | With `--type-mappings "format=string"` |
+|---------------|--------------|----------------------------------------|
+| `email` | `EmailStr` | `str` |
+| `idn-email` | `EmailStr` | `str` |
 | `uuid` | `UUID` | `str` |
-| `email` | `EmailStr` | `str`, custom Email class |
-| `uri` | `AnyUrl` | `str`, `pydantic.HttpUrl` |
-| `binary` | `bytes` | `str` (base64-encoded) |
+| `uri` | `AnyUrl` | `str` |
+| `binary` | `bytes` | `str` |
+
+!!! note "Other type customization options"
+    For datetime types, use `--output-datetime-class` or `--use-pendulum` instead of `--type-mappings`.
 
 ---
 
