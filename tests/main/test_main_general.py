@@ -9,6 +9,7 @@ import black
 import pytest
 
 from datamodel_code_generator import (
+    AllExportsScope,
     DataModelType,
     Error,
     InputFileType,
@@ -19,6 +20,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -1118,8 +1120,6 @@ def test_format_code_fallback_on_error(tmp_path: Path, mocker: MockerFixture) ->
 
 def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: MockerFixture) -> None:
     """Test that __init__.py generation continues with unformatted output when formatting fails."""
-    from datamodel_code_generator import AllExportsScope
-
     output_dir = tmp_path / "output"
 
     def mock_format_code(_self: CodeFormatter, _code: str) -> str:
@@ -1137,4 +1137,22 @@ def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: Mock
         )
 
     init_content = (output_dir / "__init__.py").read_text()
+    assert "__all__" in init_content or "from ." in init_content
+
+
+def test_init_exports_without_formatting(tmp_path: Path) -> None:
+    """Test that __init__.py exports work correctly when formatting is disabled."""
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    parser = OpenAPIParser(source=OPEN_API_DATA_PATH / "modular.yaml")
+    results = parser.parse(
+        format_=False,
+        all_exports_scope=AllExportsScope.Children,
+    )
+
+    assert isinstance(results, dict)
+    init_key = ("__init__.py",)
+    assert init_key in results
+    init_content = results[init_key].body
     assert "__all__" in init_content or "from ." in init_content
