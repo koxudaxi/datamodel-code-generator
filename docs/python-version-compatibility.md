@@ -309,6 +309,41 @@ This can happen when `__future__.annotations` interacts poorly with Pydantic's t
 
 **Solution:** Try `--disable-future-imports` or update to Pydantic v2.
 
+### Python 3.13 DeprecationWarning with `typing._eval_type`
+
+When running on Python 3.13+ with `from __future__ import annotations`, you may see:
+
+```
+DeprecationWarning: Failing to pass a value to the 'type_params' parameter
+of 'typing._eval_type' is deprecated...
+```
+
+This occurs because Python 3.13 deprecated calling `typing._eval_type()` without the `type_params` parameter. Libraries that evaluate forward references (like older Pydantic versions) trigger this warning.
+
+**Solutions:**
+
+1. **Upgrade Pydantic** (recommended):
+   - Pydantic v1: Upgrade to version 1.10.18 or later
+   - Pydantic v2: Upgrade to the latest version
+
+2. **Use `--disable-future-imports`** as a workaround:
+   ```bash
+   datamodel-codegen --input schema.json --output models.py --disable-future-imports
+   ```
+
+3. **Suppress the warning** in pytest (temporary fix):
+   ```toml
+   # pyproject.toml
+   [tool.pytest.ini_options]
+   filterwarnings = [
+       "ignore::DeprecationWarning:pydantic.v1.typing",
+   ]
+   ```
+
+!!! note
+    Python 3.14+ will use native deferred annotations (PEP 649), and the generator
+    will no longer add `from __future__ import annotations` for those versions.
+
 ### IDE shows type errors
 
 Some IDEs don't fully understand `from __future__ import annotations`.
