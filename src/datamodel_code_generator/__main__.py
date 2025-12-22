@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     DataclassArguments,
     DataModelType,
     Error,
+    FieldTypeCollisionStrategy,
     InputFileType,
     InvalidClassNameError,
     ModuleSplitMode,
@@ -470,6 +471,7 @@ class Config(BaseModel):
     use_status_code_in_response_name: bool = False
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
     all_exports_collision_strategy: Optional[AllExportsCollisionStrategy] = None  # noqa: UP045
+    field_type_collision_strategy: Optional[FieldTypeCollisionStrategy] = None  # noqa: UP045
     module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
     watch: bool = False
     watch_delay: float = 0.5
@@ -777,6 +779,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_status_code_in_response_name=config.use_status_code_in_response_name,
         all_exports_scope=config.all_exports_scope,
         all_exports_collision_strategy=config.all_exports_collision_strategy,
+        field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
     )
 

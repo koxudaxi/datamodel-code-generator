@@ -21,6 +21,7 @@ from datamodel_code_generator import (
     AllOfMergeMode,
     DataclassArguments,
     DataModelType,
+    FieldTypeCollisionStrategy,
     InputFileType,
     ModuleSplitMode,
     OpenAPIScope,
@@ -619,6 +620,14 @@ field_options.add_argument(
     help="Use default_factory for optional nested model fields instead of None default. "
     "E.g., `field: Model | None = Field(default_factory=Model)` instead of `field: Model | None = None`",
     action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--field-type-collision-strategy",
+    help="Strategy for handling field name and type name collisions (Pydantic v2 only). "
+    "'rename-field': rename field with suffix and add alias (default). "
+    "'rename-type': rename type class with suffix to preserve field name.",
+    choices=[s.value for s in FieldTypeCollisionStrategy],
     default=None,
 )
 

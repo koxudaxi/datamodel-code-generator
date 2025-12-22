@@ -270,6 +270,17 @@ class AllExportsCollisionStrategy(Enum):
     FullPrefix = "full-prefix"
 
 
+class FieldTypeCollisionStrategy(Enum):
+    """Strategy for handling field name and type name collisions.
+
+    rename_field: Rename the field with a suffix and add alias (default).
+    rename_type: Rename the type class with a suffix to preserve field name.
+    """
+
+    RenameField = "rename-field"
+    RenameType = "rename-type"
+
+
 class AllOfMergeMode(Enum):
     """Mode for field merging in allOf schemas.
 
@@ -484,6 +495,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_status_code_in_response_name: bool = False,
     all_exports_scope: AllExportsScope | None = None,
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+    field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     module_split_mode: ModuleSplitMode | None = None,
 ) -> None:
     """Generate Python data models from schema definitions or structured data.
@@ -730,6 +742,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
         read_only_write_only_model_type=read_only_write_only_model_type,
+        field_type_collision_strategy=field_type_collision_strategy,
         **kwargs,
     )
 

@@ -1,0 +1,22 @@
+{
+  "title": "Order",
+  "type": "object",
+  "properties": {
+    "Status": {
+      "$ref": "#/definitions/Status"
+    }
+  },
+  "definitions": {
+    "Status": {
+      "title": "Status",
+      "enum": ["pending", "confirmed"]
+    },
+    "Status_1": {
+      "title": "Status_1",
+      "type": "object",
+      "properties": {
+        "code": {"type": "integer"}
+      }
+    }
+  }
+}

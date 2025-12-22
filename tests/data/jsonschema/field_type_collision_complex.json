@@ -1,0 +1,44 @@
+{
+  "title": "Order",
+  "type": "object",
+  "properties": {
+    "Status": {
+      "$ref": "#/definitions/Status"
+    },
+    "PaymentStatus": {
+      "$ref": "#/definitions/PaymentStatus"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/OrderItem"
+      }
+    }
+  },
+  "definitions": {
+    "Status": {
+      "title": "Status",
+      "enum": ["pending", "confirmed", "shipped", "delivered"]
+    },
+    "PaymentStatus": {
+      "title": "PaymentStatus",
+      "enum": ["unpaid", "paid", "refunded"]
+    },
+    "OrderItem": {
+      "title": "OrderItem",
+      "type": "object",
+      "properties": {
+        "Status": {
+          "$ref": "#/definitions/ItemStatus"
+        },
+        "product": {
+          "type": "string"
+        }
+      }
+    },
+    "ItemStatus": {
+      "title": "ItemStatus",
+      "enum": ["available", "out_of_stock", "discontinued"]
+    }
+  }
+}
