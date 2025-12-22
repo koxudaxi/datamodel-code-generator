@@ -2409,6 +2409,26 @@ def test_no_treat_dot_as_module_single_file(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_single"),
+        (None, "no_treat_dot_single"),
+        (["--no-treat-dot-as-module"], "no_treat_dot_single"),
+    ],
+)
+def test_treat_dot_as_module_version_style(
+    extra_args: list[str] | None, expected_suffix: str, output_dir: Path
+) -> None:
+    """Test dotted version-style schema names (e.g., v0.0.39.job.json)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "no_treat_dot_single",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
+        extra_args=extra_args,
+    )
+
+
 def test_main_jsonschema_duplicate_name(output_dir: Path) -> None:
     """Test duplicate name handling."""
     run_main_and_assert(
