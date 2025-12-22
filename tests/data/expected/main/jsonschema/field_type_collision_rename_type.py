@@ -9,10 +9,10 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-class Fruit_(Enum):
+class Fruit_1(Enum):
     apple = 'apple'
     banana = 'banana'
 
 
 class Test(BaseModel):
-    Fruit: Fruit_ | None = None
+    Fruit: Fruit_1 | None = None

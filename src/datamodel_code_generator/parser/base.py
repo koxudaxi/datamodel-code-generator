@@ -1856,20 +1856,22 @@ class Parser(ABC):
 
             for field in model.fields:
                 filed_name = field.name
-                filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
+                resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
                 colliding_reference: Reference | None = None
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
                         continue
-                    filed_name_resolver.exclude_names.add(data_type.reference.short_name)
+                    resolver.exclude_names.add(data_type.reference.short_name)
                     if rename_type and colliding_reference is None and data_type.reference.short_name == filed_name:
                         colliding_reference = data_type.reference
 
                 if colliding_reference is not None:
                     source = cast("DataModel", colliding_reference.source)
-                    source.class_name = f"{source.class_name}_"
+                    resolver.exclude_names.add(cast("str", filed_name))
+                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name
+                    source.class_name = new_class_name
                 else:
-                    new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
+                    new_filed_name = resolver.add(["field"], cast("str", filed_name)).name
                     if filed_name != new_filed_name:
                         field.alias = filed_name
                         field.name = new_filed_name
