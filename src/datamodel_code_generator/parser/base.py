@@ -54,6 +54,8 @@ from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
+    GENERIC_BASE_CLASS_NAME,
+    GENERIC_BASE_CLASS_PATH,
     UNDEFINED,
     BaseClassDataType,
     ConstraintsBase,
@@ -645,7 +647,7 @@ class Parser(ABC):
     parse_raw() to handle specific schema formats.
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
+    def __init__(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
@@ -668,6 +670,7 @@ class Parser(ABC):
         apply_default_values_for_required_fields: bool = False,
         allow_extra_fields: bool = False,
         extra_fields: str | None = None,
+        use_generic_base_class: bool = False,
         force_optional_for_required_fields: bool = False,
         class_name: str | None = None,
         use_standard_collections: bool = False,
@@ -816,20 +819,38 @@ class Parser(ABC):
         self.custom_template_dir = custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = extra_template_data or defaultdict(dict)
 
+        self.use_generic_base_class: bool = use_generic_base_class
+        self.generic_base_class_config: dict[str, Any] = {}
+
         if allow_population_by_field_name:
-            self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
+            if use_generic_base_class:
+                self.generic_base_class_config["allow_population_by_field_name"] = True
+            else:
+                self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
 
         if allow_extra_fields:
-            self.extra_template_data[ALL_MODEL]["allow_extra_fields"] = True
+            if use_generic_base_class:
+                self.generic_base_class_config["allow_extra_fields"] = True
+            else:
+                self.extra_template_data[ALL_MODEL]["allow_extra_fields"] = True
 
         if extra_fields:
-            self.extra_template_data[ALL_MODEL]["extra_fields"] = extra_fields
+            if use_generic_base_class:
+                self.generic_base_class_config["extra_fields"] = extra_fields
+            else:
+                self.extra_template_data[ALL_MODEL]["extra_fields"] = extra_fields
 
         if enable_faux_immutability:
-            self.extra_template_data[ALL_MODEL]["allow_mutation"] = False
+            if use_generic_base_class:
+                self.generic_base_class_config["allow_mutation"] = False
+            else:
+                self.extra_template_data[ALL_MODEL]["allow_mutation"] = False
 
         if use_attribute_docstrings:
-            self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+            if use_generic_base_class:
+                self.generic_base_class_config["use_attribute_docstrings"] = True
+            else:
+                self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
@@ -1988,6 +2009,98 @@ class Parser(ABC):
                         reference_path=data_type.import_.reference_path,
                     )
 
+    def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
+        self,
+        processed_models: Sequence[
+            tuple[tuple[str, ...], tuple[str, ...], list[DataModel], bool, Imports, ModelResolver]
+        ],
+    ) -> None:
+        if not self.use_generic_base_class or not self.generic_base_class_config:
+            return
+
+        all_target_models: set[DataModel] = set()
+        modules_with_targets: list[tuple[tuple[str, ...], list[DataModel], list[DataModel], Imports]] = []
+
+        for module, _mod_key, models, _init, imports, _scoped_model_resolver in processed_models:
+            if not models:  # pragma: no cover
+                continue
+
+            target_models = [
+                m for m in models if m.SUPPORTS_GENERIC_BASE_CLASS and not isinstance(m, self.data_model_root_type)
+            ]
+
+            if target_models:
+                modules_with_targets.append((module, models, target_models, imports))
+                all_target_models.update(target_models)
+
+        if not modules_with_targets:
+            return
+
+        root_modules: list[tuple[tuple[str, ...], list[DataModel], list[DataModel], Imports]] = []
+        for module_entry in modules_with_targets:
+            _module, _models, target_models, _imports = module_entry
+            has_root_model = False
+            for model in target_models:
+                parent_refs = [bc.reference for bc in model.base_classes if bc.reference]
+                has_target_model_parent = any(ref.source in all_target_models for ref in parent_refs)
+                if not has_target_model_parent:
+                    has_root_model = True
+                    break
+            if has_root_model:
+                root_modules.append(module_entry)
+
+        if not root_modules:  # pragma: no cover
+            root_modules = [modules_with_targets[0]]
+
+        first_root_module, first_root_models, first_root_target_models, _first_root_imports = root_modules[0]
+        first_root_file_path = first_root_target_models[0].file_path if first_root_target_models else None
+
+        base_class_ref = Reference(path=GENERIC_BASE_CLASS_PATH, name=GENERIC_BASE_CLASS_NAME)
+
+        base_class_model = self.data_model_type.create_base_class_model(
+            config=self.generic_base_class_config,
+            reference=base_class_ref,
+            custom_template_dir=self.custom_template_dir,
+            keyword_only=self.keyword_only,
+            treat_dot_as_module=self.treat_dot_as_module,
+        )
+
+        if base_class_model is None:
+            return
+
+        base_class_model.file_path = first_root_file_path
+        first_root_models.insert(0, base_class_model)
+
+        base_class_dt = BaseClassDataType(type=base_class_ref.name, reference=base_class_ref)
+
+        original_base_class = self.data_model_type.BASE_CLASS
+        original_import = Import.from_full_path(original_base_class) if original_base_class else None
+        first_root_module_name = ".".join(first_root_module[:-1]) if first_root_module else ""
+        for module, _models, target_models, imports in modules_with_targets:
+            current_module_name = ".".join(module[:-1]) if module else ""
+            is_first_root = module == first_root_module
+            for model in target_models:
+                if original_import:
+                    additional_imports = model._additional_imports  # noqa: SLF001
+                    model._additional_imports = [i for i in additional_imports if i != original_import]  # noqa: SLF001
+                parent_refs = [bc.reference for bc in model.base_classes if bc.reference]
+                has_target_model_parent = any(ref.source in all_target_models for ref in parent_refs)
+                if has_target_model_parent:
+                    pass
+                elif parent_refs:  # pragma: no cover
+                    model.base_classes.insert(0, base_class_dt)
+                else:
+                    model.base_classes = [base_class_dt]
+            if not is_first_root and original_import:
+                imports.remove(original_import)
+                from_ = relative(current_module_name, first_root_module_name)[0]
+                from_ = (
+                    f"{from_}{first_root_module[-1].replace('.py', '')}"
+                    if from_.endswith(".")
+                    else f"{from_}.{first_root_module[-1].replace('.py', '')}"
+                )
+                imports.append(Import(from_=from_, import_=base_class_ref.name))
+
     @classmethod
     def _collect_exports_for_init(
         cls,
@@ -2585,6 +2698,8 @@ class Parser(ABC):
             self.__update_type_aliases(models)
 
             processed_models.append(Processed(module, module_, models, init, imports, scoped_model_resolver))
+
+        self.__apply_generic_base_class(processed_models)
 
         for processed_model in processed_models:
             for model in processed_model.models:

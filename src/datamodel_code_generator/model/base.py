@@ -49,6 +49,8 @@ if TYPE_CHECKING:
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
 ALL_MODEL: str = "#all#"
+GENERIC_BASE_CLASS_PATH: str = "#/__datamodel_code_generator__/generic_base_class__"
+GENERIC_BASE_CLASS_NAME: str = "__generic_base_class__"
 
 
 def repr_set_sorted(value: set[Any]) -> str:
@@ -474,7 +476,8 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     TEMPLATE_FILE_PATH: ClassVar[str] = ""
     BASE_CLASS: ClassVar[str] = ""
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
-    IS_ALIAS: bool = False
+    IS_ALIAS: ClassVar[bool] = False
+    SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913
@@ -706,6 +709,22 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def is_alias(self) -> bool:
         """Whether is a type alias (i.e. not an instance of BaseModel/RootModel)."""
         return self.IS_ALIAS
+
+    @classmethod
+    def create_base_class_model(
+        cls,
+        config: dict[str, Any],  # noqa: ARG003
+        reference: Reference,  # noqa: ARG003
+        custom_template_dir: Path | None = None,  # noqa: ARG003
+        keyword_only: bool = False,  # noqa: ARG003, FBT001, FBT002
+        treat_dot_as_module: bool = False,  # noqa: ARG003, FBT001, FBT002
+    ) -> DataModel | None:
+        """Create a shared base class model for DRY configuration.
+
+        Returns the base model or None if not supported. Updates reference in place.
+        Each model type should override this to provide appropriate implementation.
+        """
+        return None
 
     @property
     def nullable(self) -> bool:

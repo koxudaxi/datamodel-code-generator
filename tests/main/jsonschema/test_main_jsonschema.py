@@ -27,6 +27,7 @@ from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     DATA_PATH,
+    EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
@@ -3709,6 +3710,265 @@ def test_main_extra_fields(extra_fields: str, output_model: str, expected_output
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=["--extra-fields", extra_fields, "--output-model-type", output_model],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-generic-base-class"],
+    input_schema="jsonschema/extra_fields.json",
+    cli_args=["--extra-fields", "forbid", "--output-model-type", "pydantic_v2.BaseModel", "--use-generic-base-class"],
+    golden_output="jsonschema/use_generic_base_class.py",
+)
+def test_main_use_generic_base_class(output_file: Path) -> None:
+    """Generate a shared base class with model configuration to avoid repetition (DRY)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extra_fields.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class.py",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_populate_by_name(output_file: Path) -> None:
+    """Test --use-generic-base-class with --allow-population-by-field-name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_populate_by_name.py",
+        extra_args=[
+            "--allow-population-by-field-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_allow_extra(output_file: Path) -> None:
+    """Test --use-generic-base-class with --allow-extra-fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_allow_extra.py",
+        extra_args=[
+            "--allow-extra-fields",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_frozen(output_file: Path) -> None:
+    """Test --use-generic-base-class with --enable-faux-immutability."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_frozen.py",
+        extra_args=[
+            "--enable-faux-immutability",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_attr_docstrings(output_file: Path) -> None:
+    """Test --use-generic-base-class with --use-attribute-docstrings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_attr_docstrings.py",
+        extra_args=[
+            "--use-attribute-docstrings",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_dataclass(output_file: Path) -> None:
+    """Test --use-generic-base-class with dataclasses (no effect)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_dataclass.py",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_enum_only(output_file: Path) -> None:
+    """Test --use-generic-base-class with enum-only schema (no ProjectBaseModel)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_enum_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_enum_only.py",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_with_inheritance(output_file: Path) -> None:
+    """Test --use-generic-base-class preserves schema inheritance (allOf)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_with_inheritance.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_with_inheritance.py",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_module_split(output_dir: Path) -> None:
+    """Test --use-generic-base-class with module split mode (cross-module inheritance)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_with_inheritance.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--module-split-mode",
+            "single",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_module_split",
+    )
+
+
+def test_main_use_generic_base_class_deep_inheritance(output_dir: Path) -> None:
+    """Test --use-generic-base-class with deep inheritance chain across modules."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_deep_inheritance.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--module-split-mode",
+            "single",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_deep_inheritance",
+    )
+
+
+def test_main_use_generic_base_class_multi_root(output_dir: Path) -> None:
+    """Test --use-generic-base-class with multiple independent inheritance trees."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_multi_root.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--module-split-mode",
+            "single",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_multi_root",
+    )
+
+
+def test_main_use_generic_base_class_circular(output_dir: Path) -> None:
+    """Test --use-generic-base-class with circular references (uses _internal.py pattern)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_circular.json",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--module-split-mode",
+            "single",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "use_generic_base_class_circular",
+    )
+
+
+def test_main_use_generic_base_class_msgspec(output_file: Path) -> None:
+    """Test --use-generic-base-class with msgspec.Struct."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_msgspec.py",
+        extra_args=[
+            "--allow-population-by-field-name",
+            "--enable-faux-immutability",
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-generic-base-class",
+        ],
+    )
+
+
+def test_main_use_generic_base_class_msgspec_forbid(output_file: Path) -> None:
+    """Test --use-generic-base-class with msgspec.Struct and --extra-fields forbid."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_msgspec_forbid.py",
+        extra_args=[
+            "--enable-faux-immutability",
+            "--extra-fields",
+            "forbid",
+            "--output-model-type",
+            "msgspec.Struct",
+            "--use-generic-base-class",
+        ],
     )
 
 

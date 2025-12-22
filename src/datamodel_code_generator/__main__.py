@@ -391,6 +391,7 @@ class Config(BaseModel):
     allow_population_by_field_name: bool = False
     allow_extra_fields: bool = False
     extra_fields: Optional[str] = None  # noqa: UP045
+    use_generic_base_class: bool = False
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None  # noqa: UP045
@@ -696,6 +697,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         allow_population_by_field_name=config.allow_population_by_field_name,
         allow_extra_fields=config.allow_extra_fields,
         extra_fields=config.extra_fields,
+        use_generic_base_class=config.use_generic_base_class,
         apply_default_values_for_required_fields=config.use_default,
         force_optional_for_required_fields=config.force_optional,
         class_name=config.class_name,

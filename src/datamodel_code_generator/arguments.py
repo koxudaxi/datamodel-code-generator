@@ -270,6 +270,13 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--use-generic-base-class",
+    help="Generate a shared base class with model configuration (e.g., extra='forbid') "
+    "instead of repeating the configuration in each model. Keeps code DRY.",
+    action="store_true",
+    default=None,
+)
+model_options.add_argument(
     "--use-schema-description",
     help="Use schema description to populate class docstring",
     action="store_true",

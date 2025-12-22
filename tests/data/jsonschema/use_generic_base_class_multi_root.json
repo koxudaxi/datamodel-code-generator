@@ -1,0 +1,43 @@
+{
+  "$defs": {
+    "Animal": {
+      "type": "object",
+      "title": "Animal",
+      "properties": {
+        "name": {"type": "string"}
+      }
+    },
+    "Dog": {
+      "type": "object",
+      "title": "Dog",
+      "allOf": [
+        {"$ref": "#/$defs/Animal"},
+        {
+          "properties": {
+            "breed": {"type": "string"}
+          }
+        }
+      ]
+    },
+    "Vehicle": {
+      "type": "object",
+      "title": "Vehicle",
+      "properties": {
+        "wheels": {"type": "integer"}
+      }
+    },
+    "Car": {
+      "type": "object",
+      "title": "Car",
+      "allOf": [
+        {"$ref": "#/$defs/Vehicle"},
+        {
+          "properties": {
+            "brand": {"type": "string"}
+          }
+        }
+      ]
+    }
+  },
+  "type": "object"
+}
