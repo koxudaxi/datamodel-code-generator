@@ -1,5 +1,51 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 reviews:
+  # Path filters to reduce review scope and save rate limits
+  # Exclude patterns use ! prefix
+  path_filters:
+    # Include source code
+    - "src/**/*.py"
+    - "tests/**/*.py"
+    # Include expected output (important for review)
+    - "tests/data/expected/**/*.py"
+    # Include documentation
+    - "docs/**/*.md"
+    - "README.md"
+    # Include project config
+    - "pyproject.toml"
+    - "tox.ini"
+    - "zensical.toml"
+    - "Dockerfile"
+    - ".pre-commit-config.yaml"
+    - ".pre-commit-hooks.yaml"
+    - "action.yml"
+    # Include GitHub Actions and config
+    - ".github/**/*.yaml"
+    - ".github/**/*.yml"
+    - ".github/**/*.md"
+    # Include scripts
+    - "scripts/**"
+    # Exclude test input fixtures (json/yaml/graphql schemas)
+    - "!tests/data/**/*.json"
+    - "!tests/data/**/*.yaml"
+    - "!tests/data/**/*.yml"
+    - "!tests/data/**/*.graphql"
+    - "!tests/data/**/*.csv"
+    - "!tests/data/**/*.txt"
+    # Exclude generated/cached files
+    - "!**/__pycache__/**"
+    - "!**/*.pyc"
+    - "!.tox/**"
+    - "!site/**"
+    - "!.coverage"
+    - "!**/*.lock"
+    - "!.benchmarks/**"
+    - "!.cache/**"
+    - "!.pytest_cache/**"
+    - "!.ruff_cache/**"
+    # Exclude IDE/editor files
+    - "!.idea/**"
+    - "!.vscode/**"
   tools:
     ruff:
       enabled: true
