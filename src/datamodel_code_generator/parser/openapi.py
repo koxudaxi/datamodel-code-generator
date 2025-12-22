@@ -22,7 +22,6 @@ from datamodel_code_generator import (
     AllOfMergeMode,
     DataclassArguments,
     Error,
-    FieldTypeCollisionStrategy,
     LiteralType,
     OpenAPIScope,
     PythonVersion,
@@ -278,7 +277,6 @@ class OpenAPIParser(JsonSchemaParser):
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
         use_status_code_in_response_name: bool = False,
-        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -377,7 +375,6 @@ class OpenAPIParser(JsonSchemaParser):
             read_only_write_only_model_type=read_only_write_only_model_type,
             use_frozen_field=use_frozen_field,
             use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-            field_type_collision_strategy=field_type_collision_strategy,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters

@@ -18,7 +18,6 @@ from datamodel_code_generator import (
     AllOfMergeMode,
     DataclassArguments,
     DefaultPutDict,
-    FieldTypeCollisionStrategy,
     LiteralType,
     PythonVersion,
     PythonVersionMin,
@@ -194,7 +193,6 @@ class GraphQLParser(Parser):
         use_serialize_as_any: bool = False,
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
-        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -292,7 +290,6 @@ class GraphQLParser(Parser):
             use_serialize_as_any=use_serialize_as_any,
             use_frozen_field=use_frozen_field,
             use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-            field_type_collision_strategy=field_type_collision_strategy,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

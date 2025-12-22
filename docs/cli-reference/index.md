@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 29 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
@@ -75,7 +75,6 @@ This documentation is auto-generated from test cases.
 - [`--field-extra-keys`](field-customization.md#field-extra-keys)
 - [`--field-extra-keys-without-x-prefix`](field-customization.md#field-extra-keys-without-x-prefix)
 - [`--field-include-all-keys`](field-customization.md#field-include-all-keys)
-- [`--field-type-collision-strategy`](field-customization.md#field-type-collision-strategy)
 - [`--force-optional`](model-customization.md#force-optional)
 - [`--formatters`](template-customization.md#formatters)
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses)
