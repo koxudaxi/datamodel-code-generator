@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template, select_autoescape
 from pydantic import Field
 from typing_extensions import Self
 
@@ -420,7 +420,10 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
     loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    environment: Environment = Environment(loader=loader)  # noqa: S701
+    environment: Environment = Environment(
+        loader=loader,
+        autoescape=select_autoescape(["html", "xml"]),
+    )
     return environment.get_template(template_file_path.name)
 
 
@@ -438,7 +441,10 @@ def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdi
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
     ]
     loader = ChoiceLoader(loaders)
-    environment: Environment = Environment(loader=loader)  # noqa: S701
+    environment: Environment = Environment(
+        loader=loader,
+        autoescape=select_autoescape(["html", "xml"]),
+    )
     return environment.get_template(absolute_template_path.name)
 
 
