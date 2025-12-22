@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 17 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 20 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 28 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 29 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -41,6 +41,7 @@ This documentation is auto-generated from test cases.
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members)
 - [`--check`](general-options.md#check)
 - [`--class-name`](model-customization.md#class-name)
+- [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models)
 - [`--collapse-root-models`](model-customization.md#collapse-root-models)
 - [`--custom-file-header`](template-customization.md#custom-file-header)
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path)
