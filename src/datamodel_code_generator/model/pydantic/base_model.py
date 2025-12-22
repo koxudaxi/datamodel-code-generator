@@ -328,6 +328,7 @@ class BaseModel(BaseModelBase):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic/BaseModel.jinja2"
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
 
     def __init__(  # noqa: PLR0912, PLR0913
         self,

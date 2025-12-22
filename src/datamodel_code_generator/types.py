@@ -429,6 +429,24 @@ class DataType(_BaseModel):
             yield from self.dict_key.all_data_types
         yield self
 
+    def walk(
+        self,
+        visitor: Callable[[DataType], None],
+        visited: set[int] | None = None,
+    ) -> None:
+        """Recursively walk this DataType tree, calling visitor on each node."""
+        if visited is None:
+            visited = set()
+        node_id = id(self)
+        if node_id in visited:
+            return
+        visited.add(node_id)
+        visitor(self)
+        for child in self.data_types:
+            child.walk(visitor, visited)
+        if self.dict_key:
+            self.dict_key.walk(visitor, visited)
+
     def find_source(self, source_type: type[SourceT]) -> SourceT | None:
         """Find the first reference source matching the given type from all nested data types."""
         for data_type in self.all_data_types:  # pragma: no branch

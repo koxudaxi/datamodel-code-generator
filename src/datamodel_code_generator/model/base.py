@@ -478,6 +478,10 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
     IS_ALIAS: ClassVar[bool] = False
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
+    SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
+    SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
+    SUPPORTS_KW_ONLY: ClassVar[bool] = False
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913

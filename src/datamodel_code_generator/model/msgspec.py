@@ -113,6 +113,7 @@ class Struct(DataModel):
     BASE_CLASS_NAME: ClassVar[str] = "Struct"
     BASE_CLASS_ALIAS: ClassVar[str] = "_Struct"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = ()
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     CONFIG_MAPPING: ClassVar[dict[tuple[str, Any], tuple[str, Any] | None]] = {
         ("allow_mutation", False): ("frozen", True),
         ("extra_fields", "forbid"): ("forbid_unknown_fields", True),

@@ -168,6 +168,33 @@ class Imports(defaultdict[str | None, set[str]]):
         items = ", ".join(f'"{name}"' for name in name_list)
         return f"__all__ = [{items}]"
 
+    def get_effective_name(self, from_: str | None, import_: str) -> str:
+        """Get the effective name after alias resolution."""
+        return self.alias.get(from_, {}).get(import_, import_)
+
+    def remove_unused(self, used_names: set[str]) -> None:
+        """Remove imports not referenced in used_names.
+
+        Note: Checks both effective name (after alias) and original name to handle
+        cases where code may reference either form (e.g., type annotations may use
+        original name while runtime code uses alias).
+        """
+        unused = [
+            (from_, import_)
+            for from_, imports_ in self.items()
+            for import_ in imports_
+            if not {self.get_effective_name(from_, import_), import_}.intersection(used_names)
+        ]
+        for from_, import_ in unused:
+            alias = self.alias.get(from_, {}).get(import_)
+            reference_path = next(
+                (p for p, i in self.reference_paths.items() if i.from_ == from_ and i.import_ == import_),
+                None,
+            )
+            import_obj = Import(from_=from_, import_=import_, alias=alias, reference_path=reference_path)
+            while self.counter.get((from_, import_), 0) > 0:
+                self.remove(import_obj)
+
 
 IMPORT_ANNOTATED = Import.from_full_path("typing.Annotated")
 IMPORT_ANY = Import.from_full_path("typing.Any")

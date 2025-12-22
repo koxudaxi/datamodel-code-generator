@@ -174,6 +174,9 @@ class BaseModel(BaseModelBase):
     BASE_CLASS: ClassVar[str] = "pydantic.BaseModel"
     BASE_CLASS_NAME: ClassVar[str] = "BaseModel"
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
+    SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
+    SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
+    SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = True
     CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
