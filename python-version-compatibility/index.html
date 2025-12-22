@@ -1473,6 +1473,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#python-313-deprecationwarning-with-typing_eval_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python 3.13 DeprecationWarning with typing._eval_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ide-shows-type-errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2414,6 +2425,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#python-313-deprecationwarning-with-typing_eval_type" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python 3.13 DeprecationWarning with typing._eval_type
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#ide-shows-type-errors" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2757,6 +2779,42 @@
 <h3 id="pydantic-validation-fails-with-forward-references">Pydantic validation fails with forward references<a class="headerlink" href="#pydantic-validation-fails-with-forward-references" title="Permanent link">&para;</a></h3>
 <p>This can happen when <code>__future__.annotations</code> interacts poorly with Pydantic's type resolution.</p>
 <p><strong>Solution:</strong> Try <code>--disable-future-imports</code> or update to Pydantic v2.</p>
+<h3 id="python-313-deprecationwarning-with-typing_eval_type">Python 3.13 DeprecationWarning with <code>typing._eval_type</code><a class="headerlink" href="#python-313-deprecationwarning-with-typing_eval_type" title="Permanent link">&para;</a></h3>
+<p>When running on Python 3.13+ with <code>from __future__ import annotations</code>, you may see:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>DeprecationWarning: Failing to pass a value to the &#39;type_params&#39; parameter
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>of &#39;typing._eval_type&#39; is deprecated...
+</span></code></pre></div>
+<p>This occurs because Python 3.13 deprecated calling <code>typing._eval_type()</code> without the <code>type_params</code> parameter. Libraries that evaluate forward references (like older Pydantic versions) trigger this warning.</p>
+<p><strong>Solutions:</strong></p>
+<ol>
+<li><strong>Upgrade Pydantic</strong> (recommended):</li>
+<li>Pydantic v1: Upgrade to version 1.10.18 or later</li>
+<li>
+<p>Pydantic v2: Upgrade to the latest version</p>
+</li>
+<li>
+<p><strong>Use <code>--disable-future-imports</code></strong> as a workaround:
+   <div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span>--disable-future-imports
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Suppress the warning</strong> in pytest (temporary fix):
+   <div class="language-toml highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># pyproject.toml</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="k">[tool.pytest.ini_options]</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="n">filterwarnings</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">    </span><span class="c1"># For Pydantic v2&#39;s v1 compatibility layer (pydantic.v1)</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">    </span><span class="s2">&quot;ignore::DeprecationWarning:pydantic.v1.typing&quot;</span><span class="p">,</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a><span class="w">    </span><span class="c1"># For standalone Pydantic v1</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="w">    </span><span class="s2">&quot;ignore::DeprecationWarning:pydantic.typing&quot;</span><span class="p">,</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="p">]</span>
+</span></code></pre></div></p>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Python 3.14+ will use native deferred annotations (PEP 649), and the generator
+will no longer add <code>from __future__ import annotations</code> for those versions.</p>
+</div>
 <h3 id="ide-shows-type-errors">IDE shows type errors<a class="headerlink" href="#ide-shows-type-errors" title="Permanent link">&para;</a></h3>
 <p>Some IDEs don't fully understand <code>from __future__ import annotations</code>.</p>
 <p><strong>Solution:</strong> Configure your IDE's Python version or use explicit type syntax matching your runtime version.</p>

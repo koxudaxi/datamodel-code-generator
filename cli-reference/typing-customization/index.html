@@ -2847,6 +2847,13 @@ other properties separate.</p>
 'from <strong>future</strong> import annotations' to the output. This is useful when
 you need compatibility with tools or environments that don't support
 postponed evaluation of annotations (PEP 563).</p>
+<p><strong>Python 3.13+ Deprecation Warning:</strong> When using <code>from __future__ import annotations</code>
+with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
+deprecation warnings related to <code>typing._eval_type()</code>. To avoid these warnings:</p>
+<ul>
+<li>Upgrade to Pydantic v1 &gt;= 1.10.18 or Pydantic v2 (recommended)</li>
+<li>Use this <code>--disable-future-imports</code> flag as a workaround</li>
+</ul>
 <p><strong>See also:</strong> <a href="../../python-version-compatibility/">Python Version Compatibility</a></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
