@@ -36,6 +36,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
+    DateClassType,
     DatetimeClassType,
     Formatter,
     PythonVersion,
@@ -762,6 +763,7 @@ class Parser(ABC):
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,
         keyword_only: bool = False,
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
@@ -788,6 +790,7 @@ class Parser(ABC):
             use_pendulum=use_pendulum,
             use_standard_primitive_types=use_standard_primitive_types,
             target_datetime_class=target_datetime_class,
+            target_date_class=target_date_class,
             treat_dot_as_module=treat_dot_as_module or False,
             use_serialize_as_any=use_serialize_as_any,
         )

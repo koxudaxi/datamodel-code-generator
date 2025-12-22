@@ -1286,6 +1286,8 @@ def test_main_original_field_name_delimiter_without_snake_case_field(
         ("pydantic.BaseModel", "datetime.py", "AwareDatetime"),
         ("pydantic_v2.BaseModel", "datetime_pydantic_v2.py", "AwareDatetime"),
         ("pydantic_v2.BaseModel", "datetime_pydantic_v2_datetime.py", "datetime"),
+        ("pydantic_v2.BaseModel", "datetime_pydantic_v2_past_datetime.py", "PastDatetime"),
+        ("pydantic_v2.BaseModel", "datetime_pydantic_v2_future_datetime.py", "FutureDatetime"),
         ("dataclasses.dataclass", "datetime_dataclass.py", "datetime"),
         ("msgspec.Struct", "datetime_msgspec.py", "datetime"),
     ],
@@ -1337,6 +1339,37 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=["--output-model-type", output_model],
+    )
+
+
+@pytest.mark.parametrize(
+    ("date_class", "expected_output"),
+    [
+        ("PastDate", "date_class_past_date.py"),
+        ("FutureDate", "date_class_future_date.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--output-date-class"],
+    input_schema="openapi/date_class.yaml",
+    cli_args=["--output-date-class", "PastDate"],
+    golden_output="openapi/date_class_past_date.py",
+)
+@freeze_time(TIMESTAMP)
+def test_main_openapi_date_class(date_class: str, expected_output: str, output_file: Path) -> None:
+    """Specify date class type for date schema fields.
+
+    The `--output-date-class` flag controls which date type to use for fields
+    with date format. Options include 'PastDate' for past dates only
+    or 'FutureDate' for future dates only. This is a Pydantic v2 only feature.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "date_class.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-date-class", date_class, "--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 

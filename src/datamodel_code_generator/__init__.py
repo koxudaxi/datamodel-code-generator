@@ -32,6 +32,7 @@ from typing_extensions import TypeAliasType, TypedDict
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
+    DateClassType,
     DatetimeClassType,
     Formatter,
     PythonVersion,
@@ -481,6 +482,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_exact_imports: bool = False,
     union_mode: UnionMode | None = None,
     output_datetime_class: DatetimeClassType | None = None,
+    output_date_class: DateClassType | None = None,
     keyword_only: bool = False,
     frozen_dataclasses: bool = False,
     no_alias: bool = False,
@@ -733,6 +735,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_exact_imports=use_exact_imports,
         default_field_extras=default_field_extras,
         target_datetime_class=output_datetime_class,
+        target_date_class=output_date_class,
         keyword_only=keyword_only,
         frozen_dataclasses=frozen_dataclasses,
         no_alias=no_alias,
@@ -888,6 +891,7 @@ __all__ = [
     "MIN_VERSION",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
+    "DateClassType",
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",

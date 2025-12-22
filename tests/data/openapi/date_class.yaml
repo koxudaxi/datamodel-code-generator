@@ -1,0 +1,12 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    Event:
+      type: object
+      required:
+        - eventDate
+      properties:
+        eventDate:
+          type: string
+          format: date
+          example: 2023-12-25

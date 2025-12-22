@@ -159,6 +159,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--use-standard-primitive-types", category=OptionCategory.TYPING
     ),
     "--output-datetime-class": CLIOptionMeta(name="--output-datetime-class", category=OptionCategory.TYPING),
+    "--output-date-class": CLIOptionMeta(name="--output-date-class", category=OptionCategory.TYPING),
     "--use-decimal-for-multiple-of": CLIOptionMeta(
         name="--use-decimal-for-multiple-of", category=OptionCategory.TYPING
     ),

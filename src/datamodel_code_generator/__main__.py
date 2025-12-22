@@ -41,6 +41,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
+    DateClassType,
     DatetimeClassType,
     Formatter,
     PythonVersion,
@@ -458,6 +459,7 @@ class Config(BaseModel):
     use_exact_imports: bool = False
     union_mode: Optional[UnionMode] = None  # noqa: UP045
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
+    output_date_class: Optional[DateClassType] = None  # noqa: UP045
     keyword_only: bool = False
     frozen_dataclasses: bool = False
     dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
@@ -766,6 +768,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_exact_imports=config.use_exact_imports,
         union_mode=config.union_mode,
         output_datetime_class=config.output_datetime_class,
+        output_date_class=config.output_date_class,
         keyword_only=config.keyword_only,
         frozen_dataclasses=config.frozen_dataclasses,
         no_alias=config.no_alias,

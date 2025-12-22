@@ -1,0 +1,12 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    LocalEvent:
+      type: object
+      required:
+        - localDateTime
+      properties:
+        localDateTime:
+          type: string
+          format: date-time-local
+          example: 2023-12-25T10:30:00

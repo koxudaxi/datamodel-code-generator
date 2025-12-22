@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
 
-from datamodel_code_generator import DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
@@ -505,23 +505,24 @@ class DataTypeManager(_DataTypeManager):
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
+        target_date_class: DateClassType | None = None,  # noqa: ARG002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with optional datetime type mapping."""
         super().__init__(
-            python_version,
-            use_standard_collections,
-            use_generic_container_types,
-            strict_types,
-            use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of,
-            use_union_operator,
-            use_pendulum,
-            use_standard_primitive_types,
-            target_datetime_class,
-            treat_dot_as_module,
-            use_serialize_as_any,
+            python_version=python_version,
+            use_standard_collections=use_standard_collections,
+            use_generic_container_types=use_generic_container_types,
+            strict_types=strict_types,
+            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
+            use_union_operator=use_union_operator,
+            use_pendulum=use_pendulum,
+            use_standard_primitive_types=use_standard_primitive_types,
+            target_datetime_class=target_datetime_class,
+            treat_dot_as_module=treat_dot_as_module,
+            use_serialize_as_any=use_serialize_as_any,
         )
 
         datetime_map = (

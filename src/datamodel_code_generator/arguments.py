@@ -28,7 +28,7 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
 )
-from datamodel_code_generator.format import DatetimeClassType, Formatter, PythonVersion
+from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
@@ -320,9 +320,16 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--output-datetime-class",
-    help="Choose Datetime class between AwareDatetime, NaiveDatetime or datetime. "
+    help="Choose Datetime class between AwareDatetime, NaiveDatetime, PastDatetime, FutureDatetime or datetime. "
     "Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)",
     choices=[i.value for i in DatetimeClassType],
+    default=None,
+)
+model_options.add_argument(
+    "--output-date-class",
+    help="Choose Date class between PastDate, FutureDate or date. (Pydantic v2 only) "
+    "Each output model has its default mapping.",
+    choices=[i.value for i in DateClassType],
     default=None,
 )
 model_options.add_argument(
