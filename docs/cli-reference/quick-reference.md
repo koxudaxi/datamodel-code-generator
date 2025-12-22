@@ -78,6 +78,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alias). |
 | [`--base-class`](model-customization.md#base-class) | Specify a custom base class for generated models. |
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
+| [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
 | [`--dataclass-arguments`](model-customization.md#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutation=False). |
@@ -181,6 +182,7 @@ All options sorted alphabetically:
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
+- [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) - Collapse duplicate models by replacing references instead of...
 - [`--collapse-root-models`](model-customization.md#collapse-root-models) - Inline root model definitions instead of creating separate w...
 - [`--custom-file-header`](template-customization.md#custom-file-header) - Add custom header text to the generated file.
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - Add custom header content from file to generated code.

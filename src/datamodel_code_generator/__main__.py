@@ -440,6 +440,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    collapse_reuse_models: bool = False
     skip_root_model: bool = False
     use_type_alias: bool = False
     special_field_name_prefix: Optional[str] = None  # noqa: UP045
@@ -745,6 +746,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         original_field_name_delimiter=config.original_field_name_delimiter,
         use_double_quotes=config.use_double_quotes,
         collapse_root_models=config.collapse_root_models,
+        collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
         use_type_alias=config.use_type_alias,
         use_union_operator=config.use_union_operator,

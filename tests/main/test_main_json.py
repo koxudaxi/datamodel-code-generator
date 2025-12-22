@@ -105,6 +105,29 @@ def test_main_json_reuse_model_pydantic2(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--collapse-reuse-models"],
+    input_schema="json/duplicate_models.json",
+    cli_args=["--reuse-model", "--collapse-reuse-models"],
+    golden_output="json/json_collapse_reuse_model.py",
+    related_options=["--reuse-model"],
+)
+def test_main_json_collapse_reuse_model(output_file: Path) -> None:
+    """Collapse duplicate models by replacing references instead of inheritance.
+
+    The `--collapse-reuse-models` flag, when used with `--reuse-model`,
+    eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
+    by replacing all references to duplicate models with the canonical model.
+    """
+    run_main_and_assert(
+        input_path=JSON_DATA_PATH / "duplicate_models.json",
+        output_path=output_file,
+        input_file_type="json",
+        assert_func=assert_file_content,
+        extra_args=["--reuse-model", "--collapse-reuse-models"],
+    )
+
+
 def test_simple_json_snake_case_field(output_file: Path) -> None:
     """Test JSON code generation with snake case field naming."""
     with chdir(JSON_DATA_PATH):

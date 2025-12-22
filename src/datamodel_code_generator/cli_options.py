@@ -78,6 +78,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--reuse-model": CLIOptionMeta(name="--reuse-model", category=OptionCategory.MODEL),
     "--reuse-scope": CLIOptionMeta(name="--reuse-scope", category=OptionCategory.MODEL),
     "--collapse-root-models": CLIOptionMeta(name="--collapse-root-models", category=OptionCategory.MODEL),
+    "--collapse-reuse-models": CLIOptionMeta(name="--collapse-reuse-models", category=OptionCategory.MODEL),
     "--keep-model-order": CLIOptionMeta(name="--keep-model-order", category=OptionCategory.MODEL),
     "--allow-extra-fields": CLIOptionMeta(name="--allow-extra-fields", category=OptionCategory.MODEL),
     "--allow-population-by-field-name": CLIOptionMeta(
