@@ -200,7 +200,7 @@ class BaseModel(BaseModelBase):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
     ) -> None:
         """Initialize BaseModel with ConfigDict generation from template data."""
         super().__init__(
@@ -285,7 +285,7 @@ class BaseModel(BaseModelBase):
         reference: Reference,
         custom_template_dir: Path | None = None,
         keyword_only: bool = False,  # noqa: FBT001, FBT002
-        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: FBT001
     ) -> BaseModel | None:
         """Create a shared base class model for DRY configuration.
 

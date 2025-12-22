@@ -406,8 +406,12 @@ def get_template(template_file_path: Path) -> Template:
     return environment.get_template(template_file_path.name)
 
 
-def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
-    """Sanitize a module name by replacing invalid characters."""
+def sanitize_module_name(name: str, *, treat_dot_as_module: bool | None) -> str:
+    """Sanitize a module name by replacing invalid characters.
+
+    If treat_dot_as_module is True, dots are preserved in the name.
+    If treat_dot_as_module is False or None (default), dots are replaced with underscores.
+    """
     pattern = r"[^0-9a-zA-Z_.]" if treat_dot_as_module else r"[^0-9a-zA-Z_]"
     sanitized = re.sub(pattern, "_", name)
     if sanitized and sanitized[0].isdigit():
@@ -415,19 +419,28 @@ def sanitize_module_name(name: str, *, treat_dot_as_module: bool) -> str:
     return sanitized
 
 
-def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> list[str]:
-    """Get the module path components from a name and file path."""
+def get_module_path(name: str, file_path: Path | None, *, treat_dot_as_module: bool | None) -> list[str]:
+    """Get the module path components from a name and file path.
+
+    The treat_dot_as_module flag controls behavior:
+    - None (default): Split names on dots (backward compat), but sanitize file names (replace dots)
+    - True: Split names on dots AND keep dots in file names (for modular output)
+    - False: Don't split names on dots AND sanitize file names (new feature for flat output)
+    """
+    should_split_names = treat_dot_as_module is not False
+    should_keep_dots_in_files = treat_dot_as_module is True
     if file_path:
-        sanitized_stem = sanitize_module_name(file_path.stem, treat_dot_as_module=treat_dot_as_module)
+        sanitized_stem = sanitize_module_name(file_path.stem, treat_dot_as_module=should_keep_dots_in_files)
+        module_parts = name.split(".")[:-1] if should_split_names else []
         return [
             *file_path.parts[:-1],
             sanitized_stem,
-            *name.split(".")[:-1],
+            *module_parts,
         ]
-    return name.split(".")[:-1]
+    return name.split(".")[:-1] if should_split_names else []
 
 
-def get_module_name(name: str, file_path: Path | None, *, treat_dot_as_module: bool) -> str:
+def get_module_name(name: str, file_path: Path | None, *, treat_dot_as_module: bool | None) -> str:
     """Get the full module name from a name and file path."""
     return ".".join(get_module_path(name, file_path, treat_dot_as_module=treat_dot_as_module))
 
@@ -501,7 +514,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         nullable: bool = False,
         keyword_only: bool = False,
         frozen: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
         dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize a data model with fields, base classes, and configuration."""
@@ -561,7 +574,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self._additional_imports.extend(self.DEFAULT_IMPORTS)
         self.default: Any = default
         self._nullable: bool = nullable
-        self._treat_dot_as_module: bool = treat_dot_as_module
+        self._treat_dot_as_module: bool | None = treat_dot_as_module
 
     def _validate_fields(self, fields: list[DataModelFieldBase]) -> list[DataModelFieldBase]:
         names: set[str] = set()
@@ -721,7 +734,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         reference: Reference,  # noqa: ARG003
         custom_template_dir: Path | None = None,  # noqa: ARG003
         keyword_only: bool = False,  # noqa: ARG003, FBT001, FBT002
-        treat_dot_as_module: bool = False,  # noqa: ARG003, FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: ARG003, FBT001
     ) -> DataModel | None:
         """Create a shared base class model for DRY configuration.
 

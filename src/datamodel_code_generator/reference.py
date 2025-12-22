@@ -515,7 +515,7 @@ class ModelResolver:  # noqa: PLR0904
         no_alias: bool = False,  # noqa: FBT001, FBT002
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
-        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: FBT001
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -854,7 +854,7 @@ class ModelResolver:  # noqa: PLR0904
         singular_name_suffix: str | None = None,
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
-        if "." in name:
+        if "." in name and self.treat_dot_as_module is not False:
             split_name = name.split(".")
             prefix = ".".join(
                 # TODO: create a validate for class name
@@ -865,7 +865,7 @@ class ModelResolver:  # noqa: PLR0904
             class_name = split_name[-1]
         else:
             prefix = ""
-            class_name = name
+            class_name = name.replace(".", "_") if "." in name else name
 
         class_name = self.class_name_generator(class_name)
 

@@ -288,7 +288,7 @@ class BaseModelBase(DataModel, ABC):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
     ) -> None:
         """Initialize the BaseModel with fields and configuration."""
         methods: list[str] = [field.method for field in fields if field.method]
@@ -345,7 +345,7 @@ class BaseModel(BaseModelBase):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
     ) -> None:
         """Initialize the BaseModel with Config and extra fields support."""
         super().__init__(

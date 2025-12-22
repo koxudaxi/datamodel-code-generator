@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "integer"
+    },
+    "name": {
+      "type": "string"
+    },
+    "address": {
+      "$ref": "api.v1.address.json"
+    },
+    "status": {
+      "$ref": "common.types.status.json"
+    }
+  },
+  "required": ["id", "name"]
+}

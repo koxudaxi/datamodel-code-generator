@@ -272,8 +272,9 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--treat-dot-as-module",
-    help="treat dotted module names as modules",
-    action="store_true",
+    help="Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' "
+    "becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.",
+    action=BooleanOptionalAction,
     default=None,
 )
 model_options.add_argument(

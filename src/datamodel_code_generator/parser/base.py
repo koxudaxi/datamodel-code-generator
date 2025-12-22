@@ -756,7 +756,7 @@ class Parser(ABC):
         custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
         use_exact_imports: bool = False,
         default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = None,
@@ -784,7 +784,7 @@ class Parser(ABC):
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
             target_datetime_class=target_datetime_class,
-            treat_dot_as_module=treat_dot_as_module,
+            treat_dot_as_module=treat_dot_as_module or False,
             use_serialize_as_any=use_serialize_as_any,
         )
         self.data_model_type: type[DataModel] = data_model_type

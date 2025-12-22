@@ -140,7 +140,7 @@ class Struct(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
     ) -> None:
         """Initialize msgspec Struct with fields sorted by field assignment requirement."""
         super().__init__(
@@ -174,7 +174,7 @@ class Struct(DataModel):
         reference: Reference,
         custom_template_dir: Path | None = None,
         keyword_only: bool = False,  # noqa: FBT001, FBT002
-        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: FBT001
     ) -> Struct | None:
         """Create a shared base class model for DRY configuration.
 
@@ -504,7 +504,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
-        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with optional datetime type mapping."""

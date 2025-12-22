@@ -2353,15 +2353,20 @@ def test_main_use_union_operator(output_dir: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("as_module", [True, False])
-def test_treat_dot_as_module(as_module: bool, output_dir: Path) -> None:
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_as_module"),
+        (None, "treat_dot_not_as_module"),
+        (["--no-treat-dot-as-module"], "treat_dot_not_as_module"),
+    ],
+)
+def test_treat_dot_as_module(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
     """Test dot notation as module separator."""
-    path_extension = "treat_dot_as_module" if as_module else "treat_dot_not_as_module"
-    extra_args = ["--treat-dot-as-module"] if as_module else None
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module",
         output_path=output_dir,
-        expected_directory=EXPECTED_JSON_SCHEMA_PATH / path_extension,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
         extra_args=extra_args,
     )
 
@@ -2382,6 +2387,64 @@ def test_treat_dot_as_module_single_file(output_dir: Path) -> None:
         output_path=output_dir,
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "treat_dot_as_module_single",
         extra_args=["--treat-dot-as-module"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--no-treat-dot-as-module"],
+    input_schema="jsonschema/treat_dot_as_module_single",
+    cli_args=["--no-treat-dot-as-module"],
+    golden_output="jsonschema/treat_dot_as_module_single_no_treat/",
+    primary=True,
+)
+def test_no_treat_dot_as_module_single_file(output_dir: Path) -> None:
+    """Keep dots in schema names as underscores for flat output.
+
+    The `--no-treat-dot-as-module` flag prevents splitting dotted schema names.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_as_module_single",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "treat_dot_as_module_single_no_treat",
+        extra_args=["--no-treat-dot-as-module"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_single"),
+        (None, "no_treat_dot_single"),
+        (["--no-treat-dot-as-module"], "no_treat_dot_single"),
+    ],
+)
+def test_treat_dot_as_module_version_style(
+    extra_args: list[str] | None, expected_suffix: str, output_dir: Path
+) -> None:
+    """Test dotted version-style schema names (e.g., v0.0.39.job.json)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "no_treat_dot_single",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
+        extra_args=extra_args,
+    )
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_suffix"),
+    [
+        (["--treat-dot-as-module"], "treat_dot_complex_treat"),
+        (None, "treat_dot_complex_no_treat"),
+        (["--no-treat-dot-as-module"], "treat_dot_complex_no_treat"),
+    ],
+)
+def test_treat_dot_as_module_complex_refs(extra_args: list[str] | None, expected_suffix: str, output_dir: Path) -> None:
+    """Test dotted schema names with cross-file references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "treat_dot_complex",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / expected_suffix,
+        extra_args=extra_args,
     )
 
 
