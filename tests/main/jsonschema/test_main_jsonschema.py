@@ -5254,3 +5254,24 @@ def test_main_nullable_array_items_strict_nullable(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_builtin_field_names(output_file: Path) -> None:
+    """Test that builtin type names as field names don't break code generation (issue #2431).
+
+    When a field has a name that matches a Python builtin (int, float, bool, str),
+    the generated code should still use the builtin type directly without aliasing,
+    since builtin types don't require imports.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
