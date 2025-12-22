@@ -24,6 +24,7 @@ from datamodel_code_generator.model.pydantic.imports import (
 )
 from datamodel_code_generator.model.pydantic.types import DataTypeManager
 from datamodel_code_generator.types import DataType, Types, UnionIntFloat
+from datamodel_code_generator.util import model_dump
 
 
 @pytest.mark.parametrize(
@@ -143,8 +144,8 @@ def test_get_data_int_type(
     data_type_manager = DataTypeManager(
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types
     )
-    assert (
-        data_type_manager.get_data_int_type(types, **params).dict() == data_type_manager.data_type(**data_type).dict()
+    assert model_dump(data_type_manager.get_data_int_type(types, **params)) == model_dump(
+        data_type_manager.data_type(**data_type)
     )
 
 
