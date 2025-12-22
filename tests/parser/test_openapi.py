@@ -458,7 +458,6 @@ def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     monkeypatch.chdir(tmp_path)
     parser = OpenAPIParser(
         Path(DATA_PATH / "alias.yaml"),
-        treat_dot_as_module=True,  # Enable modular output for this test
     )
     delimiter = "\\" if platform.system() == "Windows" else "/"
     results = {delimiter.join(p): r for p, r in parser.parse().items()}
@@ -468,11 +467,7 @@ def test_openapi_parser_parse_alias(tmp_path: Path, monkeypatch: pytest.MonkeyPa
 def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test parsing OpenAPI with modular structure."""
     monkeypatch.chdir(tmp_path)
-    parser = OpenAPIParser(
-        Path(DATA_PATH / "modular.yaml"),
-        data_model_field_type=DataModelFieldBase,
-        treat_dot_as_module=True,  # Enable modular output for this test
-    )
+    parser = OpenAPIParser(Path(DATA_PATH / "modular.yaml"), data_model_field_type=DataModelFieldBase)
     modules = parser.parse()
     assert_parser_modules(modules, EXPECTED_OPEN_API_PATH / "openapi_parser_parse_modular")
 
