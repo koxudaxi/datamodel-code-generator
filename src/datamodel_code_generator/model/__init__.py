@@ -56,7 +56,7 @@ def get_data_model_types(
     from .types import DataTypeManager  # noqa: PLC0415
 
     # Pydantic v2 requires TypeAliasType; other output types use TypeAlias for better compatibility
-    if data_model_type == DataModelType.PydanticV2BaseModel:
+    if data_model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}:
         if target_python_version.has_type_statement:
             type_alias_class = type_alias.TypeStatement
             scalar_class = scalar.DataTypeScalarTypeStatement
@@ -91,6 +91,18 @@ def get_data_model_types(
             field_model=pydantic_v2.DataModelField,
             data_type_manager=pydantic_v2.DataTypeManager,
             dump_resolve_reference_action=pydantic_v2.dump_resolve_reference_action,
+            scalar_model=scalar_class,
+            union_model=union_class,
+        )
+    if data_model_type == DataModelType.PydanticV2Dataclass:
+        from .pydantic_v2 import dataclass as pydantic_v2_dataclass  # noqa: PLC0415
+
+        return DataModelSet(
+            data_model=pydantic_v2_dataclass.DataClass,
+            root_model=type_alias_class,
+            field_model=pydantic_v2_dataclass.DataModelField,
+            data_type_manager=pydantic_v2.DataTypeManager,
+            dump_resolve_reference_action=None,
             scalar_model=scalar_class,
             union_model=union_class,
         )

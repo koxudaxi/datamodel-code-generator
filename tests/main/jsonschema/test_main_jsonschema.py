@@ -1301,6 +1301,115 @@ def test_main_generate_non_pydantic_output(tmp_path: Path) -> None:
     assert_file_content(output_file, "generate_non_pydantic_output.py")
 
 
+def test_main_generate_pydantic_v2_dataclass(tmp_path: Path) -> None:
+    """Test generation with pydantic_v2.dataclass output model."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "generate_pydantic_v2_dataclass.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_with_config(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with ConfigDict from additionalProperties."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_config.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_config.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_additional_props_true(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with additionalProperties: true."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_additional_props_true.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_additional_props_true.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with use_attribute_docstrings."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        use_attribute_docstrings=True,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_use_attribute_docstrings.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_extra_allow(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with extra='allow'."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        extra_fields="allow",
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_extra_allow.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_extra_forbid(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with extra='forbid'."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        extra_fields="forbid",
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_extra_forbid.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_extra_ignore(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with extra='ignore'."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        extra_fields="ignore",
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_extra_ignore.py")
+
+
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
