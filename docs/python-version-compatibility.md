@@ -313,7 +313,7 @@ This can happen when `__future__.annotations` interacts poorly with Pydantic's t
 
 When running on Python 3.13+ with `from __future__ import annotations`, you may see:
 
-```
+```text
 DeprecationWarning: Failing to pass a value to the 'type_params' parameter
 of 'typing._eval_type' is deprecated...
 ```
@@ -336,7 +336,10 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
    # pyproject.toml
    [tool.pytest.ini_options]
    filterwarnings = [
+       # For Pydantic v2's v1 compatibility layer (pydantic.v1)
        "ignore::DeprecationWarning:pydantic.v1.typing",
+       # For standalone Pydantic v1
+       "ignore::DeprecationWarning:pydantic.typing",
    ]
    ```
 
