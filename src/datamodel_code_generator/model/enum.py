@@ -61,7 +61,7 @@ class Enum(DataModel):
         default: Any = UNDEFINED,
         nullable: bool = False,
         keyword_only: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
     ) -> None:
         """Initialize Enum with optional specialized base class based on type."""
         super().__init__(

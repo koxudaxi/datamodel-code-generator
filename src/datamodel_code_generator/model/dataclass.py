@@ -62,7 +62,7 @@ class DataClass(DataModel):
         nullable: bool = False,
         keyword_only: bool = False,
         frozen: bool = False,
-        treat_dot_as_module: bool = False,
+        treat_dot_as_module: bool | None = None,
         dataclass_arguments: DataclassArguments | None = None,
     ) -> None:
         """Initialize dataclass with fields sorted by field assignment requirement."""
@@ -218,7 +218,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-        treat_dot_as_module: bool = False,  # noqa: FBT001, FBT002
+        treat_dot_as_module: bool | None = None,  # noqa: FBT001
         use_serialize_as_any: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize type manager with datetime type mapping."""

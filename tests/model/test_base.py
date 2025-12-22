@@ -302,8 +302,10 @@ def test_sanitize_module_name(name: str, expected_true: str, expected_false: str
 @pytest.mark.parametrize(
     ("treat_dot_as_module", "expected"),
     [
+        # When treat_dot_as_module=True, dots are preserved in stem and name is split on dots
         (True, ["inputs", "array_commons.schema", "array-commons"]),
-        (False, ["inputs", "array_commons_schema", "array-commons"]),
+        # When treat_dot_as_module=False, dots are replaced with underscores and no splitting occurs
+        (False, ["inputs", "array_commons_schema"]),
     ],
 )
 def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: list[str]) -> None:
@@ -313,11 +315,21 @@ def test_get_module_path_with_file_path(treat_dot_as_module: bool, expected: lis
     assert result == expected
 
 
-@pytest.mark.parametrize("treat_dot_as_module", [True, False])
-def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
-    """Test module path generation without a file path."""
-    result = get_module_path("my_module.submodule", None, treat_dot_as_module=treat_dot_as_module)
+def test_get_module_path_without_file_path_treat_dot_true() -> None:
+    """Test module path generation without a file path with treat_dot_as_module=True."""
+    result = get_module_path("my_module.submodule", None, treat_dot_as_module=True)
     expected = ["my_module"]
+    assert result == expected
+
+
+def test_get_module_path_without_file_path_treat_dot_false() -> None:
+    """Test module path generation without a file path with treat_dot_as_module=False.
+
+    When treat_dot_as_module=False, dots are not used for module splitting,
+    so the result should be an empty list.
+    """
+    result = get_module_path("my_module.submodule", None, treat_dot_as_module=False)
+    expected: list[str] = []
     assert result == expected
 
 
@@ -327,9 +339,10 @@ def test_get_module_path_without_file_path(treat_dot_as_module: bool) -> None:
         (True, "a.b.c", ["a", "b"]),
         (True, "simple", []),
         (True, "with.dot", ["with"]),
-        (False, "a.b.c", ["a", "b"]),
+        # When treat_dot_as_module=False, no splitting occurs
+        (False, "a.b.c", []),
         (False, "simple", []),
-        (False, "with.dot", ["with"]),
+        (False, "with.dot", []),
     ],
 )
 def test_get_module_path_without_file_path_parametrized(

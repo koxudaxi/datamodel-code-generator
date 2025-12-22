@@ -464,7 +464,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     custom_formatters_kwargs: dict[str, Any] | None = None,
     use_pendulum: bool = False,
     http_query_parameters: Sequence[tuple[str, str]] | None = None,
-    treat_dot_as_module: bool = False,
+    treat_dot_as_module: bool | None = None,
     use_exact_imports: bool = False,
     union_mode: UnionMode | None = None,
     output_datetime_class: DatetimeClassType | None = None,
