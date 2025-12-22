@@ -1855,19 +1855,20 @@ class Parser(ABC):
             for field in model.fields:
                 filed_name = field.name
                 filed_name_resolver = ModelResolver(snake_case_field=self.snake_case_field, remove_suffix_number=True)
-                colliding_type: DataType | None = None
-
+                colliding_reference: Reference | None = None
                 for data_type in field.data_type.all_data_types:
                     if not data_type.reference:
                         continue
                     filed_name_resolver.exclude_names.add(data_type.reference.short_name)
-                    if rename_type and colliding_type is None and data_type.reference.short_name == filed_name:
-                        colliding_type = data_type
+                    if rename_type and colliding_reference is None and data_type.reference.short_name == filed_name:
+                        colliding_reference = data_type.reference
 
-                if colliding_type is not None:
-                    source = colliding_type.reference.source  # type: ignore[union-attr]
-                    if isinstance(source, DataModel):
-                        source.class_name = f"{source.class_name}_"
+                if colliding_reference is not None:
+                    # When a field name collides with a type name, the type's reference source
+                    # is always a DataModel (Enum, model class, etc.) because DataModel.__init__
+                    # sets reference.source = self
+                    source = cast("DataModel", colliding_reference.source)
+                    source.class_name = f"{source.class_name}_"
                 else:
                     new_filed_name = filed_name_resolver.add(["field"], cast("str", filed_name)).name
                     if filed_name != new_filed_name:
