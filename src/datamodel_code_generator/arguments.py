@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     FieldTypeCollisionStrategy,
     InputFileType,
     ModuleSplitMode,
+    NamingStrategy,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -334,8 +335,26 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--parent-scoped-naming",
-    help="Set name of models defined inline from the parent model",
+    help="[Deprecated: use --naming-strategy parent-prefixed] Set name of models defined inline from the parent model",
     action="store_true",
+    default=None,
+)
+model_options.add_argument(
+    "--naming-strategy",
+    help="Strategy for generating unique model names when duplicates occur. "
+    "'numbered': append numeric suffix (Address1, Address2) [default]. "
+    "'parent-prefixed': prefix with parent model name (CustomerAddress). "
+    "'full-path': use full schema path for unique names. "
+    "'primary-first': prioritize primary schema definitions.",
+    choices=[s.value for s in NamingStrategy],
+    default=None,
+)
+model_options.add_argument(
+    "--duplicate-name-suffix",
+    help="JSON mapping of type to suffix for resolving name conflicts. "
+    "Keys: 'model', 'enum', 'type_alias', 'default'. "
+    'Default: \'{"model": "Model", "enum": "Enum"}\'',
+    type=str,
     default=None,
 )
 model_options.add_argument(

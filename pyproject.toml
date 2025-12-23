@@ -216,6 +216,7 @@ filterwarnings = [
   "ignore:^.*The `dict` method is deprecated; use `model_dump` instead.*",
   "ignore:^.*The `copy` method is deprecated; use `model_copy` instead.*",
   "ignore:^.*`--validation` option is deprecated.*",
+  "ignore:^.*--parent-scoped-naming is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",
   "ignore:^.*unclosed file.*",

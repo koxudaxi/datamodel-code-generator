@@ -5341,3 +5341,86 @@ def test_main_root_model_config_frozen(output_file: Path) -> None:
             "--enable-faux-immutability",
         ],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--naming-strategy"],
+    input_schema="jsonschema/naming_strategy/input.json",
+    cli_args=["--naming-strategy", "parent-prefixed"],
+    golden_output="main/jsonschema/naming_strategy/parent_prefixed/output.py",
+    related_options=["--duplicate-name-suffix", "--parent-scoped-naming"],
+)
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_parent_prefixed(output_file: Path) -> None:
+    """Use parent-prefixed naming strategy for duplicate model names.
+
+    The `--naming-strategy parent-prefixed` flag prefixes model names with their
+    parent model name when duplicates occur. For example, if both `Order` and
+    `Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "parent-prefixed",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_full_path(output_file: Path) -> None:
+    """Use full-path naming strategy for duplicate model names.
+
+    The `--naming-strategy full-path` flag uses the full schema path
+    to generate unique names by concatenating ancestor names.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/full_path/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "full-path",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--duplicate-name-suffix"],
+    input_schema="jsonschema/naming_strategy/input.json",
+    cli_args=["--duplicate-name-suffix", '{"model": "Schema"}'],
+    golden_output="main/jsonschema/naming_strategy/duplicate_name_suffix/output.py",
+    related_options=["--naming-strategy"],
+)
+@freeze_time("2019-07-26")
+def test_main_duplicate_name_suffix(output_file: Path) -> None:
+    """Customize suffix for duplicate model names.
+
+    The `--duplicate-name-suffix` flag allows specifying custom suffixes for
+    resolving duplicate names by type. The value is a JSON mapping where keys
+    are type names ('model', 'enum', 'default') and values are suffix strings.
+    For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/duplicate_name_suffix/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--duplicate-name-suffix",
+            '{"model": "Schema"}',
+        ],
+    )

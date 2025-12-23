@@ -97,7 +97,14 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--use-default-factory-for-optional-nested-models", category=OptionCategory.MODEL
     ),
     "--union-mode": CLIOptionMeta(name="--union-mode", category=OptionCategory.MODEL),
-    "--parent-scoped-naming": CLIOptionMeta(name="--parent-scoped-naming", category=OptionCategory.MODEL),
+    "--parent-scoped-naming": CLIOptionMeta(
+        name="--parent-scoped-naming",
+        category=OptionCategory.MODEL,
+        deprecated=True,
+        deprecated_message="Use --naming-strategy parent-prefixed instead.",
+    ),
+    "--naming-strategy": CLIOptionMeta(name="--naming-strategy", category=OptionCategory.MODEL),
+    "--duplicate-name-suffix": CLIOptionMeta(name="--duplicate-name-suffix", category=OptionCategory.MODEL),
     "--use-one-literal-as-default": CLIOptionMeta(name="--use-one-literal-as-default", category=OptionCategory.MODEL),
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
     "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
