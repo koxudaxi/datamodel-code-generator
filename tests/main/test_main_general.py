@@ -189,6 +189,142 @@ def test_frozen_dataclasses_command_line(output_file: Path, extra_args: list[str
 
 
 @freeze_time(TIMESTAMP)
+def test_class_decorators(tmp_path: Path) -> None:
+    """Test --class-decorators flag functionality."""
+    output_file = tmp_path / "output.py"
+    generate(
+        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.DataclassesDataclass,
+        class_decorators=["@dataclass_json"],
+        additional_imports=["dataclasses_json.dataclass_json"],
+    )
+    assert_file_content(output_file, "class_decorators_dataclass.py")
+
+
+@pytest.mark.cli_doc(
+    options=["--class-decorators"],
+    input_schema="jsonschema/simple_frozen_test.json",
+    cli_args=[
+        "--output-model-type",
+        "dataclasses.dataclass",
+        "--class-decorators",
+        "@dataclass_json",
+        "--additional-imports",
+        "dataclasses_json.dataclass_json",
+    ],
+    golden_output="class_decorators_dataclass.py",
+    related_options=["--additional-imports", "--output-model-type"],
+)
+@freeze_time(TIMESTAMP)
+def test_class_decorators_command_line(output_file: Path) -> None:
+    """Add custom decorators to generated model classes.
+
+    The `--class-decorators` option adds custom decorators to all generated model classes.
+    This is useful for integrating with serialization libraries like `dataclasses_json`.
+
+    Use with `--additional-imports` to add the required imports for the decorators.
+    The `@` prefix is optional and will be added automatically if missing.
+    """
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_decorators_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@dataclass_json",
+            "--additional-imports",
+            "dataclasses_json.dataclass_json",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_class_decorators_without_at_prefix(output_file: Path) -> None:
+    """Test --class-decorators auto-adds @ prefix when missing."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_decorators_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "dataclass_json",
+            "--additional-imports",
+            "dataclasses_json.dataclass_json",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_class_decorators_with_empty_entries(output_file: Path) -> None:
+    """Test --class-decorators filters out empty entries from comma-separated list."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_decorators_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@dataclass_json, ,",
+            "--additional-imports",
+            "dataclasses_json.dataclass_json",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        ("pydantic.BaseModel", "class_decorators_pydantic_BaseModel.py"),
+        ("pydantic_v2.BaseModel", "class_decorators_pydantic_v2_BaseModel.py"),
+        ("pydantic_v2.dataclass", "class_decorators_pydantic_v2_dataclass.py"),
+        ("dataclasses.dataclass", "class_decorators_dataclasses_dataclass.py"),
+        ("msgspec.Struct", "class_decorators_msgspec_Struct.py"),
+        # Note: TypedDict is excluded because its template doesn't support decorators
+    ],
+    ids=[
+        "pydantic_v1",
+        "pydantic_v2",
+        "pydantic_v2_dataclass",
+        "dataclasses",
+        "msgspec",
+    ],
+)
+def test_class_decorators_all_output_types(
+    output_file: Path, output_model_type: str, expected_file: str
+) -> None:
+    """Test --class-decorators works with all output model types that support decorators."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--class-decorators",
+            "@my_decorator",
+            "--additional-imports",
+            "my_module.my_decorator",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_use_attribute_docstrings(tmp_path: Path) -> None:
     """Test --use-attribute-docstrings flag functionality."""
     output_file = tmp_path / "output.py"

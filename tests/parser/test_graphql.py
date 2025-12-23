@@ -90,3 +90,17 @@ def test_create_data_model_dataclass_arguments(
     result = parser._create_data_model(**kwargs)
     assert isinstance(result, DataClass)
     assert result.dataclass_arguments == expected
+
+
+def test_create_data_model_class_decorators() -> None:
+    """Test _create_data_model applies class_decorators correctly."""
+    parser = GraphQLParser(
+        source="type Query { id: ID }",
+        data_model_type=DataClass,
+        class_decorators=["@dataclass_json"],
+    )
+
+    reference = Reference(path="test", original_name="Test", name="Test")
+    result = parser._create_data_model(reference=reference, fields=[])
+    assert isinstance(result, DataClass)
+    assert result.decorators == ["@dataclass_json"]

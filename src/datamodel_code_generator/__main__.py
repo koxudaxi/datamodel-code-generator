@@ -239,6 +239,21 @@ class Config(BaseModel):
             values["custom_formatters"] = custom_formatters.split(",")
         return values
 
+    @model_validator(mode="before")
+    def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Validate and split class decorators, adding @ prefix if missing."""
+        class_decorators = values.get("class_decorators")
+        if class_decorators is not None:
+            decorators = []
+            for raw_decorator in class_decorators.split(","):
+                stripped = raw_decorator.strip()
+                if stripped:
+                    if not stripped.startswith("@"):
+                        stripped = f"@{stripped}"
+                    decorators.append(stripped)
+            values["class_decorators"] = decorators
+        return values
+
     __validate_output_datetime_class_err: ClassVar[str] = (
         '`--output-datetime-class` only allows "datetime" for '
         f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
@@ -384,6 +399,7 @@ class Config(BaseModel):
     base_class: str = ""
     base_class_map: Optional[dict[str, str]] = None  # noqa: UP045
     additional_imports: Optional[list[str]] = None  # noqa: UP045
+    class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
     validation: bool = False
@@ -698,6 +714,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         base_class=config.base_class,
         base_class_map=config.base_class_map,
         additional_imports=config.additional_imports,
+        class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,
         validation=config.validation,
         field_constraints=config.field_constraints,

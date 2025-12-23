@@ -471,6 +471,24 @@ def test_no_additional_imports() -> None:
     assert len(new_parser.imports) == 0
 
 
+def test_class_decorators() -> None:
+    """Test that class decorators are stored in parser."""
+    new_parser = JsonSchemaParser(source="", class_decorators=["@dataclass_json"])
+    assert new_parser.class_decorators == ["@dataclass_json"]
+
+
+def test_class_decorators_multiple() -> None:
+    """Test that multiple class decorators are stored in parser."""
+    new_parser = JsonSchemaParser(source="", class_decorators=["@dataclass_json", "@my_decorator"])
+    assert new_parser.class_decorators == ["@dataclass_json", "@my_decorator"]
+
+
+def test_no_class_decorators() -> None:
+    """Test that no class decorators results in empty list."""
+    new_parser = JsonSchemaParser(source="")
+    assert new_parser.class_decorators == []
+
+
 @pytest.mark.parametrize(
     ("source_obj", "generated_classes"),
     [
