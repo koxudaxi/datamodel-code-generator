@@ -2440,7 +2440,7 @@ Test GraphQL annotated types with standard collections and union operator.
                   rating:
                     type: number
                     minimum: 0
-                    exclusiveMinimum: True
+                    exclusiveMinimum: true
                     maximum: 5
         
             Id:
@@ -3650,7 +3650,7 @@ to true, enforcing uniqueness at the type level.
               rating:
                 type: number
                 minimum: 0
-                exclusiveMinimum: True
+                exclusiveMinimum: true
                 maximum: 5
     
         Id:

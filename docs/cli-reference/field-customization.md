@@ -1179,7 +1179,7 @@ Output differs between Pydantic v1 and v2 due to API changes.
                   rating:
                     type: number
                     minimum: 0
-                    exclusiveMinimum: True
+                    exclusiveMinimum: true
                     maximum: 5
         
             Id:

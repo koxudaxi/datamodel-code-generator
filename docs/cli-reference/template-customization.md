@@ -1145,7 +1145,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
               rating:
                 type: number
                 minimum: 0
-                exclusiveMinimum: True
+                exclusiveMinimum: true
                 maximum: 5
     
         Id:
