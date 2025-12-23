@@ -73,6 +73,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--target-python-version": CLIOptionMeta(name="--target-python-version", category=OptionCategory.MODEL),
     "--target-pydantic-version": CLIOptionMeta(name="--target-pydantic-version", category=OptionCategory.MODEL),
     "--base-class": CLIOptionMeta(name="--base-class", category=OptionCategory.MODEL),
+    "--base-class-map": CLIOptionMeta(name="--base-class-map", category=OptionCategory.MODEL),
     "--class-name": CLIOptionMeta(name="--class-name", category=OptionCategory.MODEL),
     "--frozen-dataclasses": CLIOptionMeta(name="--frozen-dataclasses", category=OptionCategory.MODEL),
     "--keyword-only": CLIOptionMeta(name="--keyword-only", category=OptionCategory.MODEL),

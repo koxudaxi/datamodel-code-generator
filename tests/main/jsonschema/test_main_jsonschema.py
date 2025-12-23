@@ -2405,6 +2405,31 @@ def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--base-class-map"],
+    input_schema="jsonschema/base_class_map.json",
+    cli_args=[
+        "--base-class-map",
+        '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
+    ],
+    golden_output="base_class_map.py",
+    related_options=["--base-class"],
+)
+def test_main_jsonschema_base_class_map(output_file: Path) -> None:
+    """Test --base-class-map option for model-specific base classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map.py",
+        extra_args=[
+            "--base-class-map",
+            '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
+        ],
+    )
+
+
 def test_long_description(output_file: Path) -> None:
     """Test long description handling."""
     run_main_and_assert(

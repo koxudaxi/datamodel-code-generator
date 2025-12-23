@@ -381,6 +381,7 @@ class Config(BaseModel):
     target_python_version: PythonVersion = PythonVersionMin
     target_pydantic_version: Optional[TargetPydanticVersion] = None  # noqa: UP045
     base_class: str = ""
+    base_class_map: Optional[dict[str, str]] = None  # noqa: UP045
     additional_imports: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
@@ -692,6 +693,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         target_python_version=config.target_python_version,
         target_pydantic_version=config.target_pydantic_version,
         base_class=config.base_class,
+        base_class_map=config.base_class_map,
         additional_imports=config.additional_imports,
         custom_template_dir=config.custom_template_dir,
         validation=config.validation,
