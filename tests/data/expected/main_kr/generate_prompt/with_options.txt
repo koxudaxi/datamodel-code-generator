@@ -103,6 +103,7 @@ What other options should I use?
 
 ### Template Customization
 - `--additional-imports`: Add custom imports to generated output files.
+- `--class-decorators`: Add custom decorators to generated model classes.
 - `--custom-file-header`: Add custom header text to the generated file.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
 - `--custom-formatters`: Apply custom Python code formatters to generated output.
@@ -158,6 +159,12 @@ For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator
   --additional-imports ADDITIONAL_IMPORTS
                         Custom imports for output (delimited list input). For
                         example "datetime.date,datetime.datetime"
+  --class-decorators CLASS_DECORATORS
+                        Custom decorators for generated model classes
+                        (delimited list input). For example
+                        "@dataclass_json(letter_case=LetterCase.CAMEL)". The
+                        "@" prefix is optional and will be added automatically
+                        if missing.
   --custom-formatters CUSTOM_FORMATTERS
                         List of modules with custom formatter (delimited list
                         input).

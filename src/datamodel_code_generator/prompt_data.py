@@ -18,6 +18,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--base-class-map": "Test --base-class-map option for model-specific base classes.",
     "--capitalize-enum-members": "Capitalize enum member names to UPPER_CASE format.",
     "--check": "Verify generated code matches existing output without modifying files.",
+    "--class-decorators": "Add custom decorators to generated model classes.",
     "--class-name": "Override the auto-generated class name with a custom name.",
     "--collapse-reuse-models": "Collapse duplicate models by replacing references instead of inheritance.",
     "--collapse-root-models": "Inline root model definitions instead of creating separate wrapper classes.",
