@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 19 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 29 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 31 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -57,6 +57,7 @@ This documentation is auto-generated from test cases.
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)
 - [`--disable-warnings`](general-options.md#disable-warnings)
+- [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix)
 
 ### E {#e}
 
@@ -111,6 +112,7 @@ This documentation is auto-generated from test cases.
 
 ### N {#n}
 
+- [`--naming-strategy`](model-customization.md#naming-strategy)
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
