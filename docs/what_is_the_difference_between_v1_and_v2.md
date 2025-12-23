@@ -9,6 +9,7 @@ datamodel-code-generator supports multiple output model types. This page compare
 | Model Type | Validation | Serialization | Performance | Use Case |
 |------------|------------|---------------|-------------|----------|
 | **Pydantic v2** | Runtime | Built-in | Fast | New projects, APIs, data validation |
+| **Pydantic v2 dataclass** | Runtime | Built-in | Fast | Pydantic validation with dataclass syntax |
 | **Pydantic v1** | Runtime | Built-in | Moderate | Legacy compatibility |
 | **dataclasses** | None | Manual | Fastest | Simple data containers, no validation needed |
 | **TypedDict** | Static only | Dict-compatible | N/A | Type hints for dicts, JSON APIs |
@@ -43,6 +44,35 @@ class Pets(RootModel[list[Pet]]):
 - New projects without Pydantic v1 dependencies
 - APIs requiring data validation
 - Projects needing JSON Schema generation from models
+
+---
+
+## Pydantic v2 dataclass
+
+**Use `--output-model-type pydantic_v2.dataclass`**
+
+Pydantic v2 dataclass combines the familiar dataclass syntax with Pydantic's validation capabilities.
+
+```bash
+datamodel-codegen --input schema.json --output-model-type pydantic_v2.dataclass --output model.py
+```
+
+```python
+from pydantic.dataclasses import dataclass
+from typing import Optional
+
+@dataclass
+class Pet:
+    id: int
+    name: str
+    tag: Optional[str] = None
+```
+
+### When to use
+
+- Want to use dataclass syntax with Pydantic validation
+- Migrating from dataclasses but need validation
+- Prefer decorator-based class definition
 
 ---
 
@@ -196,18 +226,21 @@ graph TD
     B -->|Yes| D[msgspec.Struct]
     B -->|No| E[Pydantic v1 dependency?]
     E -->|Yes| F[pydantic.BaseModel]
-    E -->|No| G[pydantic_v2.BaseModel]
-    C -->|Yes| H[typing.TypedDict]
-    C -->|No| I[dataclasses.dataclass]
+    E -->|No| G[Prefer dataclass syntax?]
+    G -->|Yes| H[pydantic_v2.dataclass]
+    G -->|No| I[pydantic_v2.BaseModel]
+    C -->|Yes| J[typing.TypedDict]
+    C -->|No| K[dataclasses.dataclass]
 ```
 
 ### Decision Guide
 
 1. **API with validation** → Pydantic v2
-2. **Legacy Pydantic v1 project** → Pydantic v1
-3. **High-performance serialization** → msgspec
-4. **Simple data containers** → dataclasses
-5. **Dict-based JSON handling** → TypedDict
+2. **Validation with dataclass syntax** → Pydantic v2 dataclass
+3. **Legacy Pydantic v1 project** → Pydantic v1
+4. **High-performance serialization** → msgspec
+5. **Simple data containers** → dataclasses
+6. **Dict-based JSON handling** → TypedDict
 
 ---
 
