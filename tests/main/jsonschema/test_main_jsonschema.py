@@ -5424,3 +5424,70 @@ def test_main_duplicate_name_suffix(output_file: Path) -> None:
             '{"model": "Schema"}',
         ],
     )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_numbered(output_file: Path) -> None:
+    """Test numbered strategy with complex nested schema and multiple duplicates.
+
+    Tests deeply nested structures (Company > employees > employee > address)
+    and multiple models with same name (4 different Address definitions).
+    Expected: Address, Address1, Address2, Address3.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_numbered/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_parent_prefixed(output_file: Path) -> None:
+    """Test parent-prefixed strategy with complex nested schema.
+
+    Tests deeply nested structures where each Address gets a unique name
+    based on its parent hierarchy.
+    Expected: ModelCompanyAddress, ModelCompanyEmployeeAddress,
+    ModelCustomerAddress, ModelWarehouseAddress.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "parent-prefixed",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_duplicate_suffix(output_file: Path) -> None:
+    """Test duplicate-name-suffix with complex schema having multiple duplicates.
+
+    Tests that custom suffix is applied consistently across multiple duplicates.
+    Expected: Address, AddressSchema, AddressSchema1, AddressSchema2.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_duplicate_suffix/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--duplicate-name-suffix",
+            '{"model": "Schema"}',
+        ],
+    )

@@ -342,18 +342,23 @@ model_options.add_argument(
 model_options.add_argument(
     "--naming-strategy",
     help="Strategy for generating unique model names when duplicates occur. "
-    "'numbered': append numeric suffix (Address1, Address2) [default]. "
-    "'parent-prefixed': prefix with parent model name (CustomerAddress). "
-    "'full-path': use full schema path for unique names. "
-    "'primary-first': prioritize primary schema definitions.",
+    "'numbered' (default): Append numeric suffix (Address, Address1, Address2). "
+    "Simple but names don't indicate context. "
+    "'parent-prefixed': Prefix with parent model name using underscore "
+    "(Company_Address, Company_Employee_Address for nested). Names show hierarchy. "
+    "'full-path': Similar to parent-prefixed but joins with CamelCase "
+    "(CompanyAddress, CompanyEmployeeAddress). More readable for deep nesting. "
+    "'primary-first': Keep clean names for primary definitions (in /definitions/ or "
+    "/components/schemas/), only add suffix to inline/nested duplicates.",
     choices=[s.value for s in NamingStrategy],
     default=None,
 )
 model_options.add_argument(
     "--duplicate-name-suffix",
-    help="JSON mapping of type to suffix for resolving name conflicts. "
-    "Keys: 'model', 'enum', 'type_alias', 'default'. "
-    'Default: \'{"model": "Model", "enum": "Enum"}\'',
+    help="JSON mapping of type to suffix for resolving duplicate name conflicts. "
+    'Example: \'{"model": "Schema"}\' changes Address1 to AddressSchema. '
+    "Keys: 'model' (for classes), 'enum' (for enums), 'default' (fallback). "
+    "When not specified, uses numeric suffix (Address1, Address2).",
     type=str,
     default=None,
 )
