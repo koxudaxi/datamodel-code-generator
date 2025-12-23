@@ -1150,3 +1150,11 @@ def test_handle_allof_root_model_ref_to_non_root() -> None:
     )
     result = parser._handle_allof_root_model_with_constraints("Test", obj, ["test"])
     assert result is None
+
+
+def test_timestamp_with_time_zone_format() -> None:
+    """Test that PostgreSQL timestamp with time zone format maps to datetime."""
+    from datamodel_code_generator.parser.jsonschema import json_schema_data_formats
+
+    # Verify the format is mapped correctly
+    assert json_schema_data_formats["string"]["timestamp with time zone"] == Types.date_time
