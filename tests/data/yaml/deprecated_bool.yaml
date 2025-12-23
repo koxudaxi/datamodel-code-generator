@@ -1,0 +1,15 @@
+openapi: "3.0.0"
+info:
+  title: "test"
+  version: "0.1"
+
+components:
+  schemas:
+    Model:
+      type: object
+      properties:
+        id:
+          type: integer
+        active:
+          type: boolean
+          default: True

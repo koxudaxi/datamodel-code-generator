@@ -55,3 +55,13 @@ def test_main_yaml_invalid_root_list(output_file: Path, capsys: pytest.CaptureFi
         capsys=capsys,
         expected_stderr_contains="Invalid file format",
     )
+
+
+def test_main_yaml_deprecated_bool(output_file: Path) -> None:
+    """Test YAML file with deprecated bool syntax emits deprecation warning."""
+    with pytest.warns(DeprecationWarning, match=r"YAML bool 'True' is deprecated"):
+        run_main_and_assert(
+            input_path=YAML_DATA_PATH / "deprecated_bool.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+        )

@@ -52,6 +52,30 @@ pip install 'datamodel-code-generator[http]'
 
 📎 Related: [#215](https://github.com/koxudaxi/datamodel-code-generator/issues/215)
 
+### 🔤 YAML bool keywords (YES, NO, true, false) in string enums
+
+YAML 1.1 treats unquoted keywords like `YES`, `NO`, `on`, `off`, `true`, `false` as boolean values. This tool preserves them as strings to avoid unexpected conversions in schema contexts:
+
+```yaml
+# Input YAML
+enum:
+  - YES
+  - NO
+  - NOT_APPLICABLE
+```
+
+```python
+# Generated code (strings preserved)
+class MyEnum(Enum):
+    YES = 'YES'
+    NO = 'NO'
+    NOT_APPLICABLE = 'NOT_APPLICABLE'
+```
+
+This matches the expected behavior when `type: string` is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please [open an issue](https://github.com/koxudaxi/datamodel-code-generator/issues) describing your use case.
+
+📎 Related: [#1653](https://github.com/koxudaxi/datamodel-code-generator/issues/1653), [#1766](https://github.com/koxudaxi/datamodel-code-generator/issues/1766), [#2338](https://github.com/koxudaxi/datamodel-code-generator/issues/2338)
+
 ---
 
 ## 🔍 Type Checking
