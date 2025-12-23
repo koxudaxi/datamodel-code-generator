@@ -72,6 +72,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
     "generate_pyproject_config",
     "generate_cli_command",
+    "generate_prompt",
     "ignore_pyproject",
     "profile",
     "version",
@@ -818,6 +819,14 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if namespace.generate_pyproject_config:
         config_output = generate_pyproject_config(namespace)
         print(config_output)  # noqa: T201
+        return Exit.OK
+
+    if namespace.generate_prompt is not None:
+        from datamodel_code_generator.prompt import generate_prompt  # noqa: PLC0415
+
+        help_text = arg_parser.format_help()
+        prompt_output = generate_prompt(namespace, help_text)
+        print(prompt_output)  # noqa: T201
         return Exit.OK
 
     # Handle --ignore-pyproject and --profile options

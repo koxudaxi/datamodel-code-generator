@@ -223,6 +223,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
+    "--generate-prompt": CLIOptionMeta(name="--generate-prompt", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),
     "--shared-module-name": CLIOptionMeta(name="--shared-module-name", category=OptionCategory.GENERAL),
     "--all-exports-scope": CLIOptionMeta(name="--all-exports-scope", category=OptionCategory.GENERAL),

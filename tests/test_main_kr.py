@@ -1596,3 +1596,69 @@ def test_target_pydantic_version(output_file: Path) -> None:
             "pydantic_v2.BaseModel",
         ],
     )
+
+
+EXPECTED_GENERATE_PROMPT_PATH = EXPECTED_MAIN_KR_PATH / "generate_prompt"
+
+
+@pytest.mark.cli_doc(
+    options=["--generate-prompt"],
+    cli_args=["--generate-prompt"],
+    expected_stdout="main_kr/generate_prompt/basic.txt",
+)
+def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
+    """Generate a prompt for consulting LLMs about CLI options.
+
+    The `--generate-prompt` flag outputs a formatted prompt containing:
+    - Current CLI options
+    - Options organized by category with descriptions
+    - Full help text
+
+    This prompt can be copied to ChatGPT, Claude, or other LLMs to get
+    recommendations for appropriate CLI options.
+    """
+    run_main_with_args(
+        ["--generate-prompt"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "basic.txt",
+    )
+
+
+def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-prompt with a question argument."""
+    run_main_with_args(
+        ["--generate-prompt", "How do I convert enums to Literal types?"],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_question.txt",
+    )
+
+
+def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-prompt with other CLI options set."""
+    run_main_with_args(
+        [
+            "--input",
+            "schema.json",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+            "--generate-prompt",
+            "What other options should I use?",
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_options.txt",
+    )
+
+
+def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --generate-prompt with list options (e.g., --strict-types)."""
+    run_main_with_args(
+        [
+            "--strict-types",
+            "str",
+            "int",
+            "--generate-prompt",
+        ],
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_list_options.txt",
+    )
