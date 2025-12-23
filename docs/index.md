@@ -153,13 +153,16 @@ See [pyproject.toml Configuration](pyproject_toml.md) for more options.
 
 ### 🔄 CI/CD Integration
 
-Verify generated code stays in sync with schemas using `--check`:
+Validate generated models in your CI pipeline:
 
-```bash
-datamodel-codegen --input schema.yaml --output models.py --disable-timestamp --check
+```yaml title=".github/workflows/validate-models.yml"
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schemas/api.yaml
+    output: src/models/api.py
 ```
 
-See [CI/CD Integration](ci-cd.md) for GitHub Actions and more.
+See [CI/CD Integration](ci-cd.md) for more options.
 
 ---
 
