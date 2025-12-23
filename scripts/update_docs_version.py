@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Update GitHub Action version references in documentation.
 
 Updates all occurrences of `koxudaxi/datamodel-code-generator@X.Y.Z`
@@ -62,11 +61,9 @@ def main() -> int:
         print(f"Error getting latest release: {e}", file=sys.stderr)
         return 1
 
-    updated_files: list[Path] = []
-
-    for md_file in DOCS_DIR.rglob("*.md"):
-        if update_file(md_file, version, check=args.check):
-            updated_files.append(md_file)
+    updated_files: list[Path] = [
+        md_file for md_file in DOCS_DIR.rglob("*.md") if update_file(md_file, version, check=args.check)
+    ]
 
     if args.check:
         if updated_files:
