@@ -899,7 +899,12 @@ general_options.add_argument(
     const="",
     default=None,
     metavar="QUESTION",
-    help="Generate a prompt for consulting LLMs about CLI options. Optionally provide your question as an argument.",
+    help=(
+        "Generate a prompt for consulting LLMs about CLI options. "
+        "Optionally provide your question as an argument. "
+        "Examples: Pipe to claude (`| claude`), codex (`| codex`), "
+        "or copy to clipboard (`| pbcopy` on macOS, `| xclip` on Linux) for ChatGPT/Claude web chat."
+    ),
 )
 general_options.add_argument(
     "--ignore-pyproject",
