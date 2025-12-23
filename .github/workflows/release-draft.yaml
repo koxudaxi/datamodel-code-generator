@@ -27,6 +27,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create labels if they don't exist (ignore errors if already exist)
+          gh label create "breaking-change-analyzed" --color "0E8A16" --description "PR has been analyzed for breaking changes" 2>/dev/null || true
+          gh label create "breaking-change" --color "D93F0B" --description "PR contains breaking changes" 2>/dev/null || true
+
       - name: Run Claude Code Analysis
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -74,7 +82,7 @@ jobs:
       - name: Parse Claude output
         id: parse
         env:
-          CLAUDE_OUTPUT: ${{ steps.claude.outputs.result }}
+          CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
         run: |
           # Parse structured output from Claude using env var to avoid shell injection
           HAS_BC=$(echo "$CLAUDE_OUTPUT" | jq -r '.has_breaking_changes // false')
