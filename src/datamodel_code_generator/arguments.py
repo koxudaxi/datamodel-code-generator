@@ -902,8 +902,8 @@ general_options.add_argument(
     help=(
         "Generate a prompt for consulting LLMs about CLI options. "
         "Optionally provide your question as an argument. "
-        "Examples: Pipe to claude (`| claude`), codex (`| codex`), "
-        "or copy to clipboard (`| pbcopy` on macOS, `| xclip` on Linux) for ChatGPT/Claude web chat."
+        "Pipe to CLI tools (e.g., claude, codex, llm, aichat, sgpt, mods) "
+        "or copy to clipboard (e.g., pbcopy, xclip, clip.exe) for web LLM chats (e.g., ChatGPT, Claude, Gemini)."
     ),
 )
 general_options.add_argument(
