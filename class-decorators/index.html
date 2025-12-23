@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/cli-reference/">
+        <link rel="canonical" href="https://koxudaxi.github.io/datamodel-code-generator/class-decorators/">
       
       
-        <link rel="prev" href="..">
-      
-      
-        <link rel="next" href="base-options/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>🖥️ CLI Reference - datamodel-code-generator</title>
+        <title>Custom Class Decorators - datamodel-code-generator</title>
       
     
     
@@ -128,7 +124,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#cli-reference" class="md-skip">
+        <a href="#custom-class-decorators" class="md-skip">
           Skip to content
         </a>
       
@@ -164,7 +160,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              🖥️ CLI Reference
+              Custom Class Decorators
             
           </span>
         </div>
@@ -307,8 +303,6 @@
       
   
   
-    
-  
   
   
     
@@ -321,11 +315,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
         
           
           <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
@@ -346,7 +342,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_2">
             <span class="md-nav__icon md-icon"></span>
             
@@ -361,37 +357,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Overview
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../cli-reference/" class="md-nav__link">
         
   
   
@@ -407,275 +376,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#categories" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        📂 Categories
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#all-options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        All Options
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="All Options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#a" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        A
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#b" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        B
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        C
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        E
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#f" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        F
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#g" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        G
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#h" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        H
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#i" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        I
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#k" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        K
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#m" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        M
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#n" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        N
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#o" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        O
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#p" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        P
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#r" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        R
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#t" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        T
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#u" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        U
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#v" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        V
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#w" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        W
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -688,7 +388,7 @@
   
   
     <li class="md-nav__item">
-      <a href="base-options/" class="md-nav__link">
+      <a href="../cli-reference/base-options/" class="md-nav__link">
         
   
   
@@ -716,7 +416,7 @@
   
   
     <li class="md-nav__item">
-      <a href="model-customization/" class="md-nav__link">
+      <a href="../cli-reference/model-customization/" class="md-nav__link">
         
   
   
@@ -744,7 +444,7 @@
   
   
     <li class="md-nav__item">
-      <a href="field-customization/" class="md-nav__link">
+      <a href="../cli-reference/field-customization/" class="md-nav__link">
         
   
   
@@ -772,7 +472,7 @@
   
   
     <li class="md-nav__item">
-      <a href="typing-customization/" class="md-nav__link">
+      <a href="../cli-reference/typing-customization/" class="md-nav__link">
         
   
   
@@ -800,7 +500,7 @@
   
   
     <li class="md-nav__item">
-      <a href="template-customization/" class="md-nav__link">
+      <a href="../cli-reference/template-customization/" class="md-nav__link">
         
   
   
@@ -828,7 +528,7 @@
   
   
     <li class="md-nav__item">
-      <a href="openapi-only-options/" class="md-nav__link">
+      <a href="../cli-reference/openapi-only-options/" class="md-nav__link">
         
   
   
@@ -856,7 +556,7 @@
   
   
     <li class="md-nav__item">
-      <a href="general-options/" class="md-nav__link">
+      <a href="../cli-reference/general-options/" class="md-nav__link">
         
   
   
@@ -884,7 +584,7 @@
   
   
     <li class="md-nav__item">
-      <a href="utility-options/" class="md-nav__link">
+      <a href="../cli-reference/utility-options/" class="md-nav__link">
         
   
   
@@ -912,7 +612,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quick-reference/" class="md-nav__link">
+      <a href="../cli-reference/quick-reference/" class="md-nav__link">
         
   
   
@@ -1933,10 +1633,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#categories" class="md-nav__link">
+  <a href="#why-use-this" class="md-nav__link">
     <span class="md-ellipsis">
       
-        📂 Categories
+        Why use this?
       
     </span>
   </a>
@@ -1944,22 +1644,22 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#all-options" class="md-nav__link">
+  <a href="#example-using-dataclasses_json" class="md-nav__link">
     <span class="md-ellipsis">
       
-        All Options
+        Example: Using dataclasses_json
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="All Options">
+    <nav class="md-nav" aria-label="Example: Using dataclasses_json">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#a" class="md-nav__link">
+  <a href="#without-class-decorators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A
+        Without --class-decorators
       
     </span>
   </a>
@@ -1967,208 +1667,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#b" class="md-nav__link">
+  <a href="#with-class-decorators" class="md-nav__link">
     <span class="md-ellipsis">
       
-        B
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#c" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        C
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#d" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        D
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#e" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        E
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#f" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        F
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#g" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        G
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#h" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        H
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#i" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        I
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#k" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        K
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#m" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        M
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#n" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        N
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#o" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        O
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#p" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        P
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#r" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        R
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#s" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        S
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#t" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        T
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#u" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        U
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#v" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        V
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#w" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        W
+        With --class-decorators
       
     </span>
   </a>
@@ -2177,6 +1679,50 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#usage-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Usage Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other Use Cases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#related-issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Related Issues
+      
+    </span>
+  </a>
   
 </li>
       
@@ -2198,243 +1744,101 @@
   
 
 
-<h1 id="cli-reference">🖥️ CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h1>
-<p>This documentation is auto-generated from test cases.</p>
-<p>🔍 <strong><a href="quick-reference/">Quick Reference</a></strong> - All options on one page for Ctrl+F search</p>
-<h2 id="categories">📂 Categories<a class="headerlink" href="#categories" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>Options</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>📁 <a href="base-options/">Base Options</a></td>
-<td>5</td>
-<td>Input/output configuration</td>
-</tr>
-<tr>
-<td>🔧 <a href="typing-customization/">Typing Customization</a></td>
-<td>22</td>
-<td>Type annotation and import behavior</td>
-</tr>
-<tr>
-<td>🏷️ <a href="field-customization/">Field Customization</a></td>
-<td>21</td>
-<td>Field naming and docstring behavior</td>
-</tr>
-<tr>
-<td>🏗️ <a href="model-customization/">Model Customization</a></td>
-<td>31</td>
-<td>Model generation behavior</td>
-</tr>
-<tr>
-<td>🎨 <a href="template-customization/">Template Customization</a></td>
-<td>17</td>
-<td>Output formatting and custom rendering</td>
-</tr>
-<tr>
-<td>📘 <a href="openapi-only-options/">OpenAPI-only Options</a></td>
-<td>6</td>
-<td>OpenAPI-specific features</td>
-</tr>
-<tr>
-<td>⚙️ <a href="general-options/">General Options</a></td>
-<td>14</td>
-<td>Utilities and meta options</td>
-</tr>
-<tr>
-<td>📝 <a href="utility-options/">Utility Options</a></td>
-<td>5</td>
-<td>Help, version, debug options</td>
-</tr>
-</tbody>
-</table>
-<h2 id="all-options">All Options<a class="headerlink" href="#all-options" title="Permanent link">&para;</a></h2>
-<p><strong>Jump to:</strong> <a href="#a">A</a> · <a href="#b">B</a> · <a href="#c">C</a> · <a href="#d">D</a> · <a href="#e">E</a> · <a href="#f">F</a> · <a href="#g">G</a> · <a href="#h">H</a> · <a href="#i">I</a> · <a href="#k">K</a> · <a href="#m">M</a> · <a href="#n">N</a> · <a href="#o">O</a> · <a href="#p">P</a> · <a href="#r">R</a> · <a href="#s">S</a> · <a href="#t">T</a> · <a href="#u">U</a> · <a href="#v">V</a> · <a href="#w">W</a></p>
-<h3 id="a">A<a class="headerlink" href="#a" title="Permanent link">&para;</a></h3>
+<!-- related-cli-options: --class-decorators, --additional-imports -->
+
+<h1 id="custom-class-decorators">Custom Class Decorators<a class="headerlink" href="#custom-class-decorators" title="Permanent link">&para;</a></h1>
+<p>The <code>--class-decorators</code> option adds custom decorators to all generated model classes. This is useful for integrating with serialization libraries like <code>dataclasses_json</code>, or adding custom behavior to your models.</p>
+<h2 id="why-use-this">Why use this?<a class="headerlink" href="#why-use-this" title="Permanent link">&para;</a></h2>
+<p>When using <code>dataclasses.dataclass</code> output with <code>--snake-case-field</code>, Python field names are snake_case but the original JSON keys may be camelCase. Libraries like <code>dataclasses_json</code> can handle this conversion automatically via decorators.</p>
+<h2 id="example-using-dataclasses_json">Example: Using dataclasses_json<a class="headerlink" href="#example-using-dataclasses_json" title="Permanent link">&para;</a></h2>
+<p>Convert a JSON Schema with camelCase properties to dataclasses with snake_case fields that serialize back to camelCase.</p>
+<p><strong>schema.json</strong>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;object&quot;</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;User&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;properties&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="nt">&quot;firstName&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="nt">&quot;lastName&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">},</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="nt">&quot;emailAddress&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;string&quot;</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">&quot;required&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;firstName&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;lastName&quot;</span><span class="p">]</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="p">}</span>
+</span></code></pre></div></p>
+<h3 id="without-class-decorators">Without <code>--class-decorators</code><a class="headerlink" href="#without-class-decorators" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--snake-case-field
+</span></code></pre></div>
+<p><strong>Generated model.py</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="nd">@dataclass</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">last_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">email_address</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div></p>
+<p>The field names are snake_case, but there's no way to map them back to the original camelCase JSON keys.</p>
+<hr />
+<h3 id="with-class-decorators">With <code>--class-decorators</code><a class="headerlink" href="#with-class-decorators" title="Permanent link">&para;</a></h3>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--output-model-type<span class="w"> </span>dataclasses.dataclass<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--snake-case-field<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--class-decorators<span class="w"> </span><span class="s2">&quot;@dataclass_json(letter_case=LetterCase.CAMEL)&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--additional-imports<span class="w"> </span><span class="s2">&quot;dataclasses_json.dataclass_json,dataclasses_json.LetterCase&quot;</span>
+</span></code></pre></div>
+<p><strong>Generated model.py</strong>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses_json</span><span class="w"> </span><span class="kn">import</span> <span class="n">LetterCase</span><span class="p">,</span> <span class="n">dataclass_json</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="nd">@dataclass_json</span><span class="p">(</span><span class="n">letter_case</span><span class="o">=</span><span class="n">LetterCase</span><span class="o">.</span><span class="n">CAMEL</span><span class="p">)</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="nd">@dataclass</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-4-12"><a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="n">last_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-4-13"><a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>    <span class="n">email_address</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span></code></pre></div></p>
+<p>Now serialization automatically converts between snake_case and camelCase:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="p">(</span><span class="n">first_name</span><span class="o">=</span><span class="s2">&quot;John&quot;</span><span class="p">,</span> <span class="n">last_name</span><span class="o">=</span><span class="s2">&quot;Doe&quot;</span><span class="p">)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">print</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">to_json</span><span class="p">())</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1"># {&quot;firstName&quot;: &quot;John&quot;, &quot;lastName&quot;: &quot;Doe&quot;, &quot;emailAddress&quot;: null}</span>
+</span></code></pre></div>
+<h2 id="usage-notes">Usage Notes<a class="headerlink" href="#usage-notes" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="template-customization/#additional-imports"><code>--additional-imports</code></a></li>
-<li><a href="field-customization/#aliases"><code>--aliases</code></a></li>
-<li><a href="general-options/#all-exports-collision-strategy"><code>--all-exports-collision-strategy</code></a></li>
-<li><a href="general-options/#all-exports-scope"><code>--all-exports-scope</code></a></li>
-<li><a href="typing-customization/#allof-merge-mode"><code>--allof-merge-mode</code></a></li>
-<li><a href="model-customization/#allow-extra-fields"><code>--allow-extra-fields</code></a></li>
-<li><a href="model-customization/#allow-population-by-field-name"><code>--allow-population-by-field-name</code></a></li>
+<li>
+<p><strong>Multiple decorators</strong>: Use comma separation for multiple decorators:
+  <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--class-decorators<span class="w"> </span><span class="s2">&quot;@decorator1,@decorator2&quot;</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>@ prefix is optional</strong>: Both <code>@dataclass_json</code> and <code>dataclass_json</code> work - the <code>@</code> is added automatically if missing.</p>
+</li>
+<li>
+<p><strong>Combine with <code>--additional-imports</code></strong>: Always add the required imports for your decorators using <code>--additional-imports</code>.</p>
+</li>
 </ul>
-<h3 id="b">B<a class="headerlink" href="#b" title="Permanent link">&para;</a></h3>
+<h2 id="other-use-cases">Other Use Cases<a class="headerlink" href="#other-use-cases" title="Permanent link">&para;</a></h2>
+<p>The <code>--class-decorators</code> option works with any output model type:</p>
 <ul>
-<li><a href="model-customization/#base-class"><code>--base-class</code></a></li>
-<li><a href="model-customization/#base-class-map"><code>--base-class-map</code></a></li>
+<li><strong>Pydantic models</strong>: Add custom validators or behavior</li>
+<li><strong>TypedDict</strong>: Add runtime type checking decorators</li>
+<li><strong>msgspec.Struct</strong>: Add custom serialization hooks</li>
 </ul>
-<h3 id="c">C<a class="headerlink" href="#c" title="Permanent link">&para;</a></h3>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="field-customization/#capitalize-enum-members"><code>--capitalize-enum-members</code></a></li>
-<li><a href="general-options/#check"><code>--check</code></a></li>
-<li><a href="template-customization/#class-decorators"><code>--class-decorators</code></a></li>
-<li><a href="model-customization/#class-name"><code>--class-name</code></a></li>
-<li><a href="model-customization/#collapse-reuse-models"><code>--collapse-reuse-models</code></a></li>
-<li><a href="model-customization/#collapse-root-models"><code>--collapse-root-models</code></a></li>
-<li><a href="template-customization/#custom-file-header"><code>--custom-file-header</code></a></li>
-<li><a href="template-customization/#custom-file-header-path"><code>--custom-file-header-path</code></a></li>
-<li><a href="template-customization/#custom-formatters"><code>--custom-formatters</code></a></li>
-<li><a href="template-customization/#custom-formatters-kwargs"><code>--custom-formatters-kwargs</code></a></li>
-<li><a href="template-customization/#custom-template-dir"><code>--custom-template-dir</code></a></li>
+<li><a href="../cli-reference/template-customization/#class-decorators">CLI Reference: <code>--class-decorators</code></a> - Detailed CLI option documentation</li>
+<li><a href="../cli-reference/template-customization/#additional-imports">CLI Reference: <code>--additional-imports</code></a> - Adding custom imports</li>
 </ul>
-<h3 id="d">D<a class="headerlink" href="#d" title="Permanent link">&para;</a></h3>
+<h2 id="related-issues">Related Issues<a class="headerlink" href="#related-issues" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="model-customization/#dataclass-arguments"><code>--dataclass-arguments</code></a></li>
-<li><a href="utility-options/#debug"><code>--debug</code></a></li>
-<li><a href="template-customization/#disable-appending-item-suffix"><code>--disable-appending-item-suffix</code></a></li>
-<li><a href="typing-customization/#disable-future-imports"><code>--disable-future-imports</code></a></li>
-<li><a href="template-customization/#disable-timestamp"><code>--disable-timestamp</code></a></li>
-<li><a href="general-options/#disable-warnings"><code>--disable-warnings</code></a></li>
-</ul>
-<h3 id="e">E<a class="headerlink" href="#e" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="field-customization/#empty-enum-field-name"><code>--empty-enum-field-name</code></a></li>
-<li><a href="template-customization/#enable-command-header"><code>--enable-command-header</code></a></li>
-<li><a href="model-customization/#enable-faux-immutability"><code>--enable-faux-immutability</code></a></li>
-<li><a href="template-customization/#enable-version-header"><code>--enable-version-header</code></a></li>
-<li><a href="base-options/#encoding"><code>--encoding</code></a></li>
-<li><a href="typing-customization/#enum-field-as-literal"><code>--enum-field-as-literal</code></a></li>
-<li><a href="field-customization/#extra-fields"><code>--extra-fields</code></a></li>
-<li><a href="template-customization/#extra-template-data"><code>--extra-template-data</code></a></li>
-</ul>
-<h3 id="f">F<a class="headerlink" href="#f" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="field-customization/#field-constraints"><code>--field-constraints</code></a></li>
-<li><a href="field-customization/#field-extra-keys"><code>--field-extra-keys</code></a></li>
-<li><a href="field-customization/#field-extra-keys-without-x-prefix"><code>--field-extra-keys-without-x-prefix</code></a></li>
-<li><a href="field-customization/#field-include-all-keys"><code>--field-include-all-keys</code></a></li>
-<li><a href="field-customization/#field-type-collision-strategy"><code>--field-type-collision-strategy</code></a></li>
-<li><a href="model-customization/#force-optional"><code>--force-optional</code></a></li>
-<li><a href="template-customization/#formatters"><code>--formatters</code></a></li>
-<li><a href="model-customization/#frozen-dataclasses"><code>--frozen-dataclasses</code></a></li>
-</ul>
-<h3 id="g">G<a class="headerlink" href="#g" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="general-options/#generate-cli-command"><code>--generate-cli-command</code></a></li>
-<li><a href="general-options/#generate-pyproject-config"><code>--generate-pyproject-config</code></a></li>
-</ul>
-<h3 id="h">H<a class="headerlink" href="#h" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="utility-options/#help"><code>--help</code></a></li>
-<li><a href="general-options/#http-headers"><code>--http-headers</code></a></li>
-<li><a href="general-options/#http-ignore-tls"><code>--http-ignore-tls</code></a></li>
-<li><a href="general-options/#http-query-parameters"><code>--http-query-parameters</code></a></li>
-</ul>
-<h3 id="i">I<a class="headerlink" href="#i" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="typing-customization/#ignore-enum-constraints"><code>--ignore-enum-constraints</code></a></li>
-<li><a href="general-options/#ignore-pyproject"><code>--ignore-pyproject</code></a></li>
-<li><a href="openapi-only-options/#include-path-parameters"><code>--include-path-parameters</code></a></li>
-<li><a href="base-options/#input"><code>--input</code></a></li>
-<li><a href="base-options/#input-file-type"><code>--input-file-type</code></a></li>
-</ul>
-<h3 id="k">K<a class="headerlink" href="#k" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="model-customization/#keep-model-order"><code>--keep-model-order</code></a></li>
-<li><a href="model-customization/#keyword-only"><code>--keyword-only</code></a></li>
-</ul>
-<h3 id="m">M<a class="headerlink" href="#m" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="general-options/#module-split-mode"><code>--module-split-mode</code></a></li>
-</ul>
-<h3 id="n">N<a class="headerlink" href="#n" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="field-customization/#no-alias"><code>--no-alias</code></a></li>
-<li><a href="utility-options/#no-color"><code>--no-color</code></a></li>
-<li><a href="template-customization/#no-treat-dot-as-module"><code>--no-treat-dot-as-module</code></a></li>
-<li><a href="typing-customization/#no-use-specialized-enum"><code>--no-use-specialized-enum</code></a></li>
-<li><a href="typing-customization/#no-use-standard-collections"><code>--no-use-standard-collections</code></a></li>
-<li><a href="typing-customization/#no-use-union-operator"><code>--no-use-union-operator</code></a></li>
-</ul>
-<h3 id="o">O<a class="headerlink" href="#o" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="openapi-only-options/#openapi-scopes"><code>--openapi-scopes</code></a></li>
-<li><a href="field-customization/#original-field-name-delimiter"><code>--original-field-name-delimiter</code></a></li>
-<li><a href="base-options/#output"><code>--output</code></a></li>
-<li><a href="typing-customization/#output-date-class"><code>--output-date-class</code></a></li>
-<li><a href="typing-customization/#output-datetime-class"><code>--output-datetime-class</code></a></li>
-<li><a href="model-customization/#output-model-type"><code>--output-model-type</code></a></li>
-</ul>
-<h3 id="p">P<a class="headerlink" href="#p" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="model-customization/#parent-scoped-naming"><code>--parent-scoped-naming</code></a></li>
-<li><a href="utility-options/#profile"><code>--profile</code></a></li>
-</ul>
-<h3 id="r">R<a class="headerlink" href="#r" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="openapi-only-options/#read-only-write-only-model-type"><code>--read-only-write-only-model-type</code></a></li>
-<li><a href="field-customization/#remove-special-field-name-prefix"><code>--remove-special-field-name-prefix</code></a></li>
-<li><a href="model-customization/#reuse-model"><code>--reuse-model</code></a></li>
-<li><a href="model-customization/#reuse-scope"><code>--reuse-scope</code></a></li>
-</ul>
-<h3 id="s">S<a class="headerlink" href="#s" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="field-customization/#set-default-enum-member"><code>--set-default-enum-member</code></a></li>
-<li><a href="general-options/#shared-module-name"><code>--shared-module-name</code></a></li>
-<li><a href="model-customization/#skip-root-model"><code>--skip-root-model</code></a></li>
-<li><a href="field-customization/#snake-case-field"><code>--snake-case-field</code></a></li>
-<li><a href="field-customization/#special-field-name-prefix"><code>--special-field-name-prefix</code></a></li>
-<li><a href="model-customization/#strict-nullable"><code>--strict-nullable</code></a></li>
-<li><a href="typing-customization/#strict-types"><code>--strict-types</code></a></li>
-<li><a href="model-customization/#strip-default-none"><code>--strip-default-none</code></a></li>
-</ul>
-<h3 id="t">T<a class="headerlink" href="#t" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="model-customization/#target-pydantic-version"><code>--target-pydantic-version</code></a></li>
-<li><a href="model-customization/#target-python-version"><code>--target-python-version</code></a></li>
-<li><a href="typing-customization/#type-mappings"><code>--type-mappings</code></a></li>
-<li><a href="typing-customization/#type-overrides"><code>--type-overrides</code></a></li>
-</ul>
-<h3 id="u">U<a class="headerlink" href="#u" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="model-customization/#union-mode"><code>--union-mode</code></a></li>
-<li><a href="base-options/#url"><code>--url</code></a></li>
-<li><a href="typing-customization/#use-annotated"><code>--use-annotated</code></a></li>
-<li><a href="field-customization/#use-attribute-docstrings"><code>--use-attribute-docstrings</code></a></li>
-<li><a href="typing-customization/#use-decimal-for-multiple-of"><code>--use-decimal-for-multiple-of</code></a></li>
-<li><a href="model-customization/#use-default"><code>--use-default</code></a></li>
-<li><a href="model-customization/#use-default-factory-for-optional-nested-models"><code>--use-default-factory-for-optional-nested-models</code></a></li>
-<li><a href="model-customization/#use-default-kwarg"><code>--use-default-kwarg</code></a></li>
-<li><a href="template-customization/#use-double-quotes"><code>--use-double-quotes</code></a></li>
-<li><a href="field-customization/#use-enum-values-in-discriminator"><code>--use-enum-values-in-discriminator</code></a></li>
-<li><a href="template-customization/#use-exact-imports"><code>--use-exact-imports</code></a></li>
-<li><a href="field-customization/#use-field-description"><code>--use-field-description</code></a></li>
-<li><a href="model-customization/#use-frozen-field"><code>--use-frozen-field</code></a></li>
-<li><a href="model-customization/#use-generic-base-class"><code>--use-generic-base-class</code></a></li>
-<li><a href="typing-customization/#use-generic-container-types"><code>--use-generic-container-types</code></a></li>
-<li><a href="field-customization/#use-inline-field-description"><code>--use-inline-field-description</code></a></li>
-<li><a href="typing-customization/#use-non-positive-negative-number-constrained-types"><code>--use-non-positive-negative-number-constrained-types</code></a></li>
-<li><a href="model-customization/#use-one-literal-as-default"><code>--use-one-literal-as-default</code></a></li>
-<li><a href="openapi-only-options/#use-operation-id-as-name"><code>--use-operation-id-as-name</code></a></li>
-<li><a href="typing-customization/#use-pendulum"><code>--use-pendulum</code></a></li>
-<li><a href="typing-customization/#use-root-model-type-alias"><code>--use-root-model-type-alias</code></a></li>
-<li><a href="field-customization/#use-schema-description"><code>--use-schema-description</code></a></li>
-<li><a href="model-customization/#use-serialize-as-any"><code>--use-serialize-as-any</code></a></li>
-<li><a href="typing-customization/#use-standard-primitive-types"><code>--use-standard-primitive-types</code></a></li>
-<li><a href="openapi-only-options/#use-status-code-in-response-name"><code>--use-status-code-in-response-name</code></a></li>
-<li><a href="model-customization/#use-subclass-enum"><code>--use-subclass-enum</code></a></li>
-<li><a href="field-customization/#use-title-as-name"><code>--use-title-as-name</code></a></li>
-<li><a href="typing-customization/#use-tuple-for-fixed-items"><code>--use-tuple-for-fixed-items</code></a></li>
-<li><a href="typing-customization/#use-type-alias"><code>--use-type-alias</code></a></li>
-<li><a href="typing-customization/#use-unique-items-as-set"><code>--use-unique-items-as-set</code></a></li>
-</ul>
-<h3 id="v">V<a class="headerlink" href="#v" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="openapi-only-options/#validation"><code>--validation</code></a></li>
-<li><a href="utility-options/#version"><code>--version</code></a></li>
-</ul>
-<h3 id="w">W<a class="headerlink" href="#w" title="Permanent link">&para;</a></h3>
-<ul>
-<li><a href="general-options/#watch"><code>--watch</code></a></li>
-<li><a href="general-options/#watch-delay"><code>--watch-delay</code></a></li>
-<li><a href="template-customization/#wrap-string-literal"><code>--wrap-string-literal</code></a></li>
+<li><a href="https://github.com/koxudaxi/datamodel-code-generator/issues/2358">#2358</a> - Feature request for dataclasses_json support</li>
 </ul>
 
 
