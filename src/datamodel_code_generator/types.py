@@ -338,8 +338,11 @@ class DataType(_BaseModel):
     treat_dot_as_module: bool = False
     use_serialize_as_any: bool = False
 
-    _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
+    _exclude_fields: ClassVar[set[str]] = {"parent", "children", "_unresolved_types_cache"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
+
+    # Cache for unresolved_types to avoid O(n²) tree traversal on every call
+    _unresolved_types_cache: frozenset[str] | None = None
 
     @classmethod
     def from_import(  # noqa: PLR0913
@@ -371,10 +374,14 @@ class DataType(_BaseModel):
     @property
     def unresolved_types(self) -> frozenset[str]:
         """Return set of unresolved type reference paths."""
-        return frozenset(
+        if self._unresolved_types_cache is not None:
+            return self._unresolved_types_cache
+        result = frozenset(
             {t.reference.path for data_types in self.data_types for t in data_types.all_data_types if t.reference}
             | ({self.reference.path} if self.reference else set())
         )
+        self._unresolved_types_cache = result
+        return result
 
     def replace_reference(self, reference: Reference | None) -> None:
         """Replace this DataType's reference with a new one."""
@@ -384,6 +391,7 @@ class DataType(_BaseModel):
         self_id = id(self)
         self.reference.children = [c for c in self.reference.children if id(c) != self_id]
         self.reference = reference
+        self._unresolved_types_cache = None
         if reference:
             reference.children.append(self)
 
@@ -518,12 +526,21 @@ class DataType(_BaseModel):
         if not TYPE_CHECKING:
             super().__init__(**values)
 
+        # Single-pass optimization: detect ANY+optional and non-ANY types together
+        any_optional_found = False
+        has_non_any = False
         for type_ in self.data_types:
             if type_.type == ANY and type_.is_optional:
-                if any(t for t in self.data_types if t.type != ANY):  # pragma: no cover
-                    self.is_optional = True
-                    self.data_types = [t for t in self.data_types if not (t.type == ANY and t.is_optional)]
-                break  # pragma: no cover
+                any_optional_found = True
+            elif type_.type != ANY:
+                has_non_any = True
+            # Early exit if both conditions met
+            if any_optional_found and has_non_any:  # pragma: no cover
+                break
+
+        if any_optional_found and has_non_any:  # pragma: no cover
+            self.is_optional = True
+            self.data_types = [t for t in self.data_types if not (t.type == ANY and t.is_optional)]
 
         for data_type in self.data_types:
             if data_type.reference or data_type.data_types:

@@ -570,6 +570,19 @@ class ModelResolver:  # noqa: PLR0904
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
         self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
 
+        # Cache for reference names to avoid O(n) set creation on every _get_unique_name call
+        self._reference_names_cache: set[str] | None = None
+
+    def _get_reference_names(self) -> set[str]:
+        """Get cached set of all reference names for uniqueness checking."""
+        if self._reference_names_cache is None:
+            self._reference_names_cache = {r.name for r in self.references.values()}
+        return self._reference_names_cache
+
+    def _invalidate_reference_names_cache(self) -> None:
+        """Invalidate the reference names cache when references change."""
+        self._reference_names_cache = None
+
     @property
     def current_base_path(self) -> Path | None:
         """Return the current base path for file resolution."""
@@ -788,17 +801,27 @@ class ModelResolver:  # noqa: PLR0904
         )
 
         self.references[path] = reference
+        self._invalidate_reference_names_cache()
         return reference
+
+    def _find_parent_reference(self, path: Sequence[str]) -> Reference | None:
+        """Find the closest parent reference for a given path.
+
+        Traverses up the path hierarchy to find the first existing parent reference.
+        Returns None if no parent reference is found.
+        """
+        parent_path = list(path[:-1])
+        while parent_path:
+            if parent_reference := self.references.get(self.join_path(parent_path)):
+                return parent_reference
+            parent_path = parent_path[:-1]
+        return None
 
     def _check_parent_scope_option(self, name: str, path: Sequence[str]) -> str:
         # Check for parent-prefixed naming via either the legacy flag or the new naming strategy
         use_parent_prefix = self.parent_scoped_naming or self.naming_strategy == NamingStrategy.ParentPrefixed
-        if use_parent_prefix:
-            parent_path = path[:-1]
-            while parent_path:
-                if parent_reference := self.references.get(self.join_path(parent_path)):
-                    return f"{parent_reference.name}_{name}"
-                parent_path = parent_path[:-1]
+        if use_parent_prefix and (parent_ref := self._find_parent_reference(path)):
+            return f"{parent_ref.name}_{name}"
         return name
 
     def _apply_full_path_naming(self, name: str, path: Sequence[str]) -> str:
@@ -811,12 +834,9 @@ class ModelResolver:  # noqa: PLR0904
             return name
 
         # Find the immediate parent reference to prefix the name
-        parent_path = path[:-1]
-        while parent_path:
-            if parent_reference := self.references.get(self.join_path(parent_path)):
-                # Use immediate parent's name (CamelCase join without underscore)
-                return f"{parent_reference.name}{snake_to_upper_camel(name)}"
-            parent_path = parent_path[:-1]
+        if parent_ref := self._find_parent_reference(path):
+            # Use immediate parent's name (CamelCase join without underscore)
+            return f"{parent_ref.name}{snake_to_upper_camel(name)}"
 
         return name
 
@@ -856,6 +876,7 @@ class ModelResolver:  # noqa: PLR0904
                     new_name = self._get_unique_name(name, camel=True)
                     ref.duplicate_name = ref.name
                     ref.name = new_name
+                    self._invalidate_reference_names_cache()
                     break
 
     def add(  # noqa: PLR0913
@@ -921,6 +942,7 @@ class ModelResolver:  # noqa: PLR0904
             reference.name = name
             reference.loaded = loaded
             reference.duplicate_name = duplicate_name
+            self._invalidate_reference_names_cache()
         else:
             reference = Reference(
                 path=joined_path,
@@ -930,6 +952,7 @@ class ModelResolver:  # noqa: PLR0904
                 duplicate_name=duplicate_name,
             )
             self.references[joined_path] = reference
+            self._invalidate_reference_names_cache()
         return reference
 
     def get(self, path: Sequence[str] | str) -> Reference | None:
@@ -941,6 +964,7 @@ class ModelResolver:  # noqa: PLR0904
         resolved = self.resolve_ref(path)
         if resolved in self.references:
             del self.references[resolved]
+            self._invalidate_reference_names_cache()
 
     def default_class_name_generator(self, name: str) -> str:
         """Generate a valid class name from a string."""
@@ -989,7 +1013,8 @@ class ModelResolver:  # noqa: PLR0904
     def _get_unique_name(self, name: str, camel: bool = False, model_type: str = "model") -> str:  # noqa: FBT001, FBT002
         unique_name: str = name
         count: int = 0 if self.remove_suffix_number else 1
-        reference_names = {r.name for r in self.references.values()} | self.exclude_names
+        # Use cached reference names for O(1) lookup instead of O(n) set creation
+        reference_names = self._get_reference_names() | self.exclude_names
 
         # Determine the suffix to use
         suffix = self._get_suffix_for_model_type(model_type)
