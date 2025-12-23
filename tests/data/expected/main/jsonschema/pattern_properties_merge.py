@@ -8,12 +8,6 @@ from pydantic import RootModel, constr
 
 
 class Model(
-    RootModel[
-        dict[constr(pattern=r'^implementations|^tests'), str]
-        | dict[constr(pattern=r'^count'), int]
-    ]
+    RootModel[dict[constr(pattern=r'^i-|^t-'), str] | dict[constr(pattern=r'^n-'), int]]
 ):
-    root: (
-        dict[constr(pattern=r'^implementations|^tests'), str]
-        | dict[constr(pattern=r'^count'), int]
-    )
+    root: dict[constr(pattern=r'^i-|^t-'), str] | dict[constr(pattern=r'^n-'), int]

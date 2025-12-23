@@ -2,13 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "patternProperties": {
-    "^implementations": {
+    "^i-": {
       "type": "string"
     },
-    "^tests": {
+    "^t-": {
       "type": "string"
     },
-    "^count": {
+    "^n-": {
       "type": "integer"
     }
   }
