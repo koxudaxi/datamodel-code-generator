@@ -5832,6 +5832,31 @@ def test_main_naming_strategy_primary_first(output_file: Path) -> None:
     )
 
 
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_primary_first_multi_file(output_file: Path) -> None:
+    """Test primary-first strategy with multiple files having same-named definitions.
+
+    When multiple JSON schema files have definitions with the same name,
+    the primary input file's definition should keep the clean name,
+    while external references get numeric suffixes.
+
+    This fixes GitHub issue #1300.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "primary_first_multi_file" / "main.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/primary_first_multi_file/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "primary-first",
+        ],
+    )
+
+
 def test_main_duplicate_name_suffix_invalid_json(output_file: Path) -> None:
     """Test that invalid JSON in --duplicate-name-suffix raises an error."""
     run_main_with_args(
