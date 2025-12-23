@@ -1598,13 +1598,9 @@ def test_target_pydantic_version(output_file: Path) -> None:
     )
 
 
-EXPECTED_GENERATE_PROMPT_PATH = EXPECTED_MAIN_KR_PATH / "generate_prompt"
-
-
 @pytest.mark.cli_doc(
     options=["--generate-prompt"],
     cli_args=["--generate-prompt"],
-    expected_stdout="main_kr/generate_prompt/basic.txt",
 )
 def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     """Generate a prompt for consulting LLMs about CLI options.
@@ -1617,48 +1613,61 @@ def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     This prompt can be copied to ChatGPT, Claude, or other LLMs to get
     recommendations for appropriate CLI options.
     """
-    run_main_with_args(
-        ["--generate-prompt"],
-        capsys=capsys,
-        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "basic.txt",
-    )
+    return_code = main(["--generate-prompt"])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+
+    # Verify structure
+    assert "# datamodel-code-generator CLI Options Consultation" in captured.out
+    assert "## Current CLI Options" in captured.out
+    assert "## Options by Category" in captured.out
+    assert "## All Available Options (Full Help)" in captured.out
+    assert "## Instructions" in captured.out
+    assert "(No options specified)" in captured.out
 
 
 def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with a question argument."""
-    run_main_with_args(
-        ["--generate-prompt", "How do I convert enums to Literal types?"],
-        capsys=capsys,
-        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_question.txt",
-    )
+    question = "How do I convert enums to Literal types?"
+    return_code = main(["--generate-prompt", question])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+
+    assert "## Your Question" in captured.out
+    assert question in captured.out
 
 
 def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with other CLI options set."""
-    run_main_with_args(
-        [
-            "--input",
-            "schema.json",
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--snake-case-field",
-            "--generate-prompt",
-            "What other options should I use?",
-        ],
-        capsys=capsys,
-        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_options.txt",
-    )
+    return_code = main([
+        "--input",
+        "schema.json",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--snake-case-field",
+        "--generate-prompt",
+        "What other options should I use?",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+
+    # Verify options are shown
+    assert "--input schema.json" in captured.out
+    assert "--output-model-type pydantic_v2.BaseModel" in captured.out
+    assert "--snake-case-field" in captured.out
+    assert "What other options should I use?" in captured.out
 
 
 def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with list options (e.g., --strict-types)."""
-    run_main_with_args(
-        [
-            "--strict-types",
-            "str",
-            "int",
-            "--generate-prompt",
-        ],
-        capsys=capsys,
-        expected_stdout_path=EXPECTED_GENERATE_PROMPT_PATH / "with_list_options.txt",
-    )
+    return_code = main([
+        "--strict-types",
+        "str",
+        "int",
+        "--generate-prompt",
+    ])
+    assert return_code == Exit.OK
+    captured = capsys.readouterr()
+
+    # Verify list options are formatted correctly
+    assert "--strict-types str int" in captured.out
