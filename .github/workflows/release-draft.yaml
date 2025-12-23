@@ -123,28 +123,20 @@ jobs:
           TMPFILE=$(mktemp)
           trap 'rm -f "$TMPFILE"' EXIT
 
-          if [ "$HAS_BC" = "true" ]; then
-            cat > "$TMPFILE" << 'COMMENT_EOF'
-## Breaking Change Analysis
-
-**Result**: Breaking changes detected
-
-COMMENT_EOF
-            printf '**Reasoning**: %s\n\n' "$REASONING" >> "$TMPFILE"
-            printf '### Content for Release Notes\n\n%s\n\n' "$BC_CONTENT" >> "$TMPFILE"
-            echo '---' >> "$TMPFILE"
-            echo '*This analysis was performed by Claude Code Action*' >> "$TMPFILE"
-          else
-            cat > "$TMPFILE" << 'COMMENT_EOF'
-## Breaking Change Analysis
-
-**Result**: No breaking changes detected
-
-COMMENT_EOF
-            printf '**Reasoning**: %s\n\n' "$REASONING" >> "$TMPFILE"
-            echo '---' >> "$TMPFILE"
-            echo '*This analysis was performed by Claude Code Action*' >> "$TMPFILE"
-          fi
+          # Build comment using printf to avoid YAML parsing issues with markdown
+          {
+            printf '## Breaking Change Analysis\n\n'
+            if [ "$HAS_BC" = "true" ]; then
+              printf 'Result: Breaking changes detected\n\n'
+              printf 'Reasoning: %s\n\n' "$REASONING"
+              printf '### Content for Release Notes\n\n%s\n\n' "$BC_CONTENT"
+            else
+              printf 'Result: No breaking changes detected\n\n'
+              printf 'Reasoning: %s\n\n' "$REASONING"
+            fi
+            printf -- '---\n'
+            printf '*This analysis was performed by Claude Code Action*\n'
+          } > "$TMPFILE"
 
           gh pr comment ${{ github.event.pull_request.number }} --body-file "$TMPFILE"
 
@@ -248,28 +240,18 @@ COMMENT_EOF
             fi
           fi
 
-          # Build final release body
+          # Build final release body using printf to avoid YAML parsing issues
           FINAL_BC=""
           if [ -n "$BC_CONTENT" ] && [ -n "$EXISTING_BC" ]; then
-            FINAL_BC="## Breaking Changes
-
-${EXISTING_BC}
-
-${BC_CONTENT}"
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s\n\n%s' "$EXISTING_BC" "$BC_CONTENT")
           elif [ -n "$BC_CONTENT" ]; then
-            FINAL_BC="## Breaking Changes
-
-${BC_CONTENT}"
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$BC_CONTENT")
           elif [ -n "$EXISTING_BC" ]; then
-            FINAL_BC="## Breaking Changes
-
-${EXISTING_BC}"
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$EXISTING_BC")
           fi
 
           if [ -n "$FINAL_BC" ]; then
-            RELEASE_BODY="${FINAL_BC}
-
-${GENERATED_NOTES}"
+            RELEASE_BODY=$(printf '%s\n\n%s' "$FINAL_BC" "$GENERATED_NOTES")
           else
             RELEASE_BODY="$GENERATED_NOTES"
           fi
