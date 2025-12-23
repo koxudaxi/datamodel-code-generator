@@ -158,6 +158,16 @@ datamodel-codegen --input schema.yaml --output models.py --disable-timestamp --c
 
 See [CI/CD Integration](ci-cd.md) for GitHub Actions and more.
 
+### 🤖 Get CLI Help from LLMs
+
+Generate a prompt to ask LLMs about CLI options:
+
+```bash
+datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude -p
+```
+
+See [LLM Integration](llm-integration.md) for more examples.
+
 ---
 
 ## 📚 Next Steps
