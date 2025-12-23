@@ -35,6 +35,10 @@ jobs:
           echo "" >> docs/changelog.md
           echo "Changelog will be available after the first release." >> docs/changelog.md
         fi
+    - name: Update GitHub Action version in docs
+      run: python scripts/update_docs_version.py
+      env:
+        GH_TOKEN: ${{ github.token }}
     - name: build site
       run: zensical build --clean
     - name: Deploy
