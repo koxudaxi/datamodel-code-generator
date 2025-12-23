@@ -759,6 +759,13 @@ class ModelResolver:  # noqa: PLR0904
             joined_path += "#"
         return joined_path
 
+    def _is_external_path(self, resolved_path: str) -> bool:
+        """Check if a resolved path belongs to an external file."""
+        current_root_path = self.join_path(self._current_root)
+        current_file = current_root_path.split("#")[0]
+        resolved_file = resolved_path.split("#", maxsplit=1)[0]
+        return current_file != resolved_file
+
     def add_ref(self, ref: str, resolved: bool = False) -> Reference:  # noqa: FBT001, FBT002
         """Add a reference and return the Reference object."""
         path = self.resolve_ref(ref) if not resolved else ref
@@ -769,7 +776,10 @@ class ModelResolver:  # noqa: PLR0904
             original_name = Path(split_ref[0].rstrip("#") if self.is_external_root_ref(path) else split_ref[0]).stem
         else:
             original_name = Path(split_ref[1].rstrip("#")).stem if self.is_external_root_ref(path) else split_ref[1]
-        name = self.get_class_name(original_name, unique=False).name
+        # For PrimaryFirst strategy, use unique=True for external references
+        # so that definitions in the main input file get priority for clean names
+        use_unique = self.naming_strategy == NamingStrategy.PrimaryFirst and self._is_external_path(path)
+        name = self.get_class_name(original_name, unique=use_unique).name
         reference = Reference(
             path=path,
             original_name=original_name,
@@ -829,6 +839,25 @@ class ModelResolver:  # noqa: PLR0904
                     return True
         return False
 
+    def _rename_external_ref_with_same_name(self, name: str, current_path: str) -> None:
+        """Rename an external reference that has the same name as a primary definition.
+
+        For PrimaryFirst strategy, when a primary definition in the main file
+        has the same name as an external reference, rename the external reference
+        so the primary definition can use the clean name.
+        """
+        for ref_path, ref in self.references.items():
+            if ref.name == name and ref_path != current_path:
+                # Check if this is an external reference (different file)
+                ref_file = ref_path.split("#")[0]
+                current_file = current_path.split("#", maxsplit=1)[0]
+                if ref_file != current_file:
+                    # Rename this external reference
+                    new_name = self._get_unique_name(name, camel=True)
+                    ref.duplicate_name = ref.name
+                    ref.name = new_name
+                    break
+
     def add(  # noqa: PLR0913
         self,
         path: Sequence[str],
@@ -860,7 +889,8 @@ class ModelResolver:  # noqa: PLR0904
             is_primary = self._is_primary_definition(path)
             if self.naming_strategy == NamingStrategy.PrimaryFirst and is_primary:
                 # For primary definitions, try to use the clean name first
-                # Only add suffix if absolutely necessary (duplicate with another primary)
+                # If an external reference has the same name, rename it
+                self._rename_external_ref_with_same_name(name, joined_path)
                 name, duplicate_name = self.get_class_name(
                     name=name,
                     unique=unique,

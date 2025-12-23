@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Combined": {
+      "allOf": [
+        {"$ref": "external1.json#/definitions/First"},
+        {"$ref": "external2.json#/definitions/Target"}
+      ]
+    },
+    "Wrapper": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "object",
+          "description": "Inline target in same file - should get suffix",
+          "properties": {
+            "source": {"type": "string", "const": "inline"}
+          }
+        }
+      }
+    },
+    "Target": {
+      "type": "object",
+      "description": "Target from main file - should keep clean name",
+      "properties": {
+        "source": {"type": "string", "const": "main"}
+      }
+    }
+  }
+}
