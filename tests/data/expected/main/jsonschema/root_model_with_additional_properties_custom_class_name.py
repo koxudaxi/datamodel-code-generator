@@ -9,20 +9,20 @@ from enum import Enum
 from pydantic import BaseModel, Field
 
 
-class CustomNestedObjectResult(BaseModel):
+class CustomNested_object_result(BaseModel):
     status: int
 
 
-class CustomNestedEnumResult(Enum):
+class CustomNested_enum_result(Enum):
     red = 'red'
     green = 'green'
 
 
-class CustomOneOfResult(BaseModel):
+class CustomOne_of_result(BaseModel):
     description: str | None = None
 
 
-class CustomAnyOfResult(BaseModel):
+class CustomAny_of_result(BaseModel):
     description: str | None = None
 
 
@@ -30,7 +30,7 @@ class CustomUser(BaseModel):
     name: str | None = None
 
 
-class CustomAllOfResult(CustomUser):
+class CustomAll_of_result(CustomUser):
     description: str | None = None
 
 
@@ -38,11 +38,11 @@ class CustomModel(BaseModel):
     test_id: str = Field(..., description='test ID')
     test_ip: str = Field(..., description='test IP')
     result: dict[str, int]
-    nested_object_result: dict[str, CustomNestedObjectResult]
-    nested_enum_result: dict[str, CustomNestedEnumResult]
-    all_of_result: dict[str, CustomAllOfResult] | None = None
-    one_of_result: dict[str, CustomUser | CustomOneOfResult] | None = None
-    any_of_result: dict[str, CustomUser | CustomAnyOfResult] | None = None
+    nested_object_result: dict[str, CustomNested_object_result]
+    nested_enum_result: dict[str, CustomNested_enum_result]
+    all_of_result: dict[str, CustomAll_of_result] | None = None
+    one_of_result: dict[str, CustomUser | CustomOne_of_result] | None = None
+    any_of_result: dict[str, CustomUser | CustomAny_of_result] | None = None
     all_of_with_unknown_object: dict[str, CustomUser] | None = None
     objectRef: dict[str, CustomUser] | None = None
     deepNestedObjectRef: dict[str, dict[str, dict[str, CustomUser]]] | None = None

@@ -1114,11 +1114,11 @@ class Parser(ABC):
                     )
                 models.remove(duplicate_model)
 
-    @classmethod
-    def __replace_duplicate_name_in_module(cls, models: list[DataModel]) -> None:
+    def __replace_duplicate_name_in_module(self, models: list[DataModel]) -> None:
         scoped_model_resolver = ModelResolver(
             exclude_names={i.alias or i.import_ for m in models for i in m.imports},
             duplicate_name_suffix="Model",
+            custom_class_name_generator=(lambda name: name) if self.custom_class_name_generator else None,
         )
 
         model_names: dict[str, DataModel] = {}
