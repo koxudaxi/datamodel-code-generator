@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import re
+import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
@@ -49,12 +50,22 @@ SafeLoaderTemp.add_constructor(
     SafeLoaderTemp.yaml_constructors["tag:yaml.org,2002:str"],
 )
 
-# Use YAML 1.2-like bool semantics: only 'true', 'false', 'True', 'False', 'TRUE', 'FALSE'.
-# YAML 1.1 treats YES/NO/on/off/y/n as booleans, which causes issues with
-# string enums containing country codes like 'NO' (Norway).
-# We keep True/False/TRUE/FALSE for compatibility with Python-style YAML files.
-# Related issues: #1653, #1766, #2338
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
+_YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
+
+
+def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
+    value = loader.construct_scalar(node)
+    if value in _YAML_DEPRECATED_BOOL_VALUES:
+        warnings.warn(
+            f"YAML bool '{value}' is deprecated. Use lowercase 'true' or 'false' instead. "
+            f"In a future version, only lowercase booleans will be recognized.",
+            DeprecationWarning,
+            stacklevel=6,
+        )
+    return value in {"true", "True", "TRUE"}
+
+
 for key in list(SafeLoaderTemp.yaml_implicit_resolvers.keys()):
     SafeLoaderTemp.yaml_implicit_resolvers[key] = [
         (tag, pattern)
@@ -68,6 +79,7 @@ for key in ["t", "f", "T", "F"]:
         "tag:yaml.org,2002:bool",
         _YAML_1_2_BOOL_PATTERN,
     ))
+SafeLoaderTemp.add_constructor("tag:yaml.org,2002:bool", _construct_yaml_bool_with_warning)
 
 SafeLoader = SafeLoaderTemp
 

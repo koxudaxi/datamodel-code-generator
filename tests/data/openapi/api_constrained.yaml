@@ -178,7 +178,7 @@ components:
           rating:
             type: number
             minimum: 0
-            exclusiveMinimum: True
+            exclusiveMinimum: true
             maximum: 5
 
     Id:
