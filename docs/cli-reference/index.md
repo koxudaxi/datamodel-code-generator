@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 19 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 30 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 31 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -35,6 +35,7 @@ This documentation is auto-generated from test cases.
 ### B {#b}
 
 - [`--base-class`](model-customization.md#base-class)
+- [`--base-class-map`](model-customization.md#base-class-map)
 
 ### C {#c}
 

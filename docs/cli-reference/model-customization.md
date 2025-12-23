@@ -7,6 +7,7 @@
 | [`--allow-extra-fields`](#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allo... |
 | [`--allow-population-by-field-name`](#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alia... |
 | [`--base-class`](#base-class) | Specify a custom base class for generated models. |
+| [`--base-class-map`](#base-class-map) | Test --base-class-map option for model-specific base classes... |
 | [`--class-name`](#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](#collapse-reuse-models) | Collapse duplicate models by replacing references instead of... |
 | [`--collapse-root-models`](#collapse-root-models) | Inline root model definitions instead of creating separate w... |
@@ -1108,6 +1109,56 @@ The `--base-class` flag configures the code generation behavior.
     class Result(Base):
         event: Event | None = None
     ```
+
+---
+
+## `--base-class-map` {#base-class-map}
+
+Test --base-class-map option for model-specific base classes.
+
+**Related:** [`--base-class`](model-customization.md#base-class)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --base-class-map "{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}" # (1)!
+    ```
+
+    1. :material-arrow-left: `--base-class-map` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "Person": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"}
+          }
+        },
+        "Animal": {
+          "type": "object",
+          "properties": {
+            "species": {"type": "string"}
+          }
+        },
+        "Car": {
+          "type": "object",
+          "properties": {
+            "model": {"type": "string"}
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: base_class_map.py
 
 ---
 

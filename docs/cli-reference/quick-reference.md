@@ -79,6 +79,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allow'). |
 | [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alias). |
 | [`--base-class`](model-customization.md#base-class) | Specify a custom base class for generated models. |
+| [`--base-class-map`](model-customization.md#base-class-map) | Test --base-class-map option for model-specific base classes. |
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
@@ -182,6 +183,7 @@ All options sorted alphabetically:
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) - Allow Pydantic model population by field name (not just alia...
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
+- [`--base-class-map`](model-customization.md#base-class-map) - Test --base-class-map option for model-specific base classes...
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
