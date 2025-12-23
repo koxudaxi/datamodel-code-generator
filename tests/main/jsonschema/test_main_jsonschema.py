@@ -4092,6 +4092,40 @@ def test_main_use_generic_base_class_populate_by_name(output_file: Path) -> None
     )
 
 
+def test_main_use_generic_base_class_target_pydantic_v2_11(output_file: Path) -> None:
+    """Test --use-generic-base-class with --target-pydantic-version 2.11."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_generic_base_class_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_generic_base_class_target_pydantic_v2_11.py",
+        extra_args=[
+            "--allow-population-by-field-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-generic-base-class",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+def test_main_allof_list_any_inheritance(output_file: Path) -> None:
+    """Test allOf with List[Any] type inheritance from parent."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_list_any_inheritance.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_list_any_inheritance.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_use_generic_base_class_allow_extra(output_file: Path) -> None:
     """Test --use-generic-base-class with --allow-extra-fields."""
     run_main_and_assert(

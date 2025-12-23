@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BaseWithList": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ChildOverrideListAny": {
+      "allOf": [
+        {"$ref": "#/definitions/BaseWithList"},
+        {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {}
+            }
+          }
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/ChildOverrideListAny"
+    }
+  }
+}
