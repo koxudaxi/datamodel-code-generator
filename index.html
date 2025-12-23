@@ -448,6 +448,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#get-cli-help-from-llms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤖 Get CLI Help from LLMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#http-extra-option" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -463,17 +474,6 @@
     <span class="md-ellipsis">
       
         ⚙️ Use with pyproject.toml
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#snake-case-field-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🐍 Snake-case field names
       
     </span>
   </a>
@@ -1747,6 +1747,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1977,6 +2005,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#get-cli-help-from-llms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🤖 Get CLI Help from LLMs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#http-extra-option" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1992,17 +2031,6 @@
     <span class="md-ellipsis">
       
         ⚙️ Use with pyproject.toml
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#snake-case-field-names" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        🐍 Snake-case field names
       
     </span>
   </a>
@@ -2230,29 +2258,33 @@
 <p>See <a href="supported-data-types/">Supported Data Types</a> for the full list.</p>
 <hr />
 <h2 id="common-recipes">🍳 Common Recipes<a class="headerlink" href="#common-recipes" title="Permanent link">&para;</a></h2>
+<h3 id="get-cli-help-from-llms">🤖 Get CLI Help from LLMs<a class="headerlink" href="#get-cli-help-from-llms" title="Permanent link">&para;</a></h3>
+<p>Generate a prompt to ask LLMs about CLI options:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="s2">&quot;Best options for Pydantic v2?&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>claude<span class="w"> </span>-p
+</span></code></pre></div>
+<p>See <a href="llm-integration/">LLM Integration</a> for more examples.</p>
 <h3 id="http-extra-option">🌐 Generate from URL<a class="headerlink" href="#http-extra-option" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://example.com/api/openapi.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://example.com/api/openapi.yaml<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
 <h3 id="use-with-pyprojecttoml">⚙️ Use with pyproject.toml<a class="headerlink" href="#use-with-pyprojecttoml" title="Permanent link">&para;</a></h3>
-<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models.py&quot;</span>
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="n">snake-case-field</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<div class="language-toml highlight"><span class="filename">pyproject.toml</span><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="n">input</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;schema.yaml&quot;</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="n">output</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;src/models.py&quot;</span>
+</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
 </span></code></pre></div>
 <p>Then simply run:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>datamodel-codegen
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen
 </span></code></pre></div>
 <p>See <a href="pyproject_toml/">pyproject.toml Configuration</a> for more options.</p>
-<h3 id="snake-case-field-names">🐍 Snake-case field names<a class="headerlink" href="#snake-case-field-names" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span>--snake-case-field<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--output<span class="w"> </span>model.py
-</span></code></pre></div>
 <h3 id="cicd-integration">🔄 CI/CD Integration<a class="headerlink" href="#cicd-integration" title="Permanent link">&para;</a></h3>
-<p>Verify generated code stays in sync with schemas using <code>--check</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py<span class="w"> </span>--disable-timestamp<span class="w"> </span>--check
+<p>Validate generated models in your CI pipeline:</p>
+<div class="language-yaml highlight"><span class="filename">.github/workflows/validate-models.yml</span><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">uses</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">koxudaxi/datamodel-code-generator@0.47.0</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span><span class="nt">with</span><span class="p">:</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">    </span><span class="nt">input</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">schemas/api.yaml</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="nt">output</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">src/models/api.py</span>
 </span></code></pre></div>
-<p>See <a href="ci-cd/">CI/CD Integration</a> for GitHub Actions and more.</p>
+<p>See <a href="ci-cd/">CI/CD Integration</a> for more options.</p>
 <hr />
 <h2 id="next-steps">📚 Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>

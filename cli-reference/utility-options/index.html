@@ -671,6 +671,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#generate-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --generate-prompt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#help" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1627,6 +1638,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../llm-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1773,6 +1812,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#generate-prompt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        --generate-prompt
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#help" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1849,6 +1899,10 @@
 <td>Show debug messages during code generation</td>
 </tr>
 <tr>
+<td><a href="#generate-prompt"><code>--generate-prompt</code></a></td>
+<td></td>
+</tr>
+<tr>
 <td><a href="#help"><code>--help</code></a></td>
 <td>Show help message and exit</td>
 </tr>
@@ -1886,13 +1940,42 @@ or code generation. Requires the <code>debug</code> extra to be installed.</p>
 </span></code></pre></div>
 </div>
 <hr />
+<h2 id="generate-prompt"><code>--generate-prompt</code><a class="headerlink" href="#generate-prompt" title="Permanent link">&para;</a></h2>
+<p>Generate a prompt for consulting LLMs about CLI options.</p>
+<p>Outputs a formatted prompt containing your current options, all available
+options by category, and full help text. Pipe to CLI LLM tools or copy
+to clipboard for web-based LLM chats.</p>
+<p><strong>See also:</strong> <a href="../../../llm-integration/">LLM Integration</a> for detailed usage examples</p>
+<div class="admonition tip">
+<p class="admonition-title">Usage</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="c1"># (1)!</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="s2">&quot;How do I generate strict types?&quot;</span><span class="w"> </span><span class="c1"># (2)!</span>
+</span></code></pre></div>
+<ol>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--generate-prompt</code> - generate prompt without a question</li>
+<li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> Include a specific question in the prompt</li>
+</ol>
+</div>
+<details class="example">
+<summary>Quick Examples</summary>
+<p><strong>Pipe to CLI tools:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="p">|</span><span class="w"> </span>claude<span class="w"> </span>-p<span class="w">    </span><span class="c1"># Claude Code</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="p">|</span><span class="w"> </span>codex<span class="w"> </span><span class="nb">exec</span><span class="w">   </span><span class="c1"># OpenAI Codex</span>
+</span></code></pre></div></p>
+<p><strong>Copy to clipboard:</strong>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="p">|</span><span class="w"> </span>pbcopy<span class="w">      </span><span class="c1"># macOS</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="p">|</span><span class="w"> </span>xclip<span class="w"> </span>-selection<span class="w"> </span>clipboard<span class="w">  </span><span class="c1"># Linux</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>datamodel-codegen<span class="w"> </span>--generate-prompt<span class="w"> </span><span class="p">|</span><span class="w"> </span>clip.exe<span class="w">    </span><span class="c1"># WSL2</span>
+</span></code></pre></div></p>
+</details>
+<hr />
 <h2 id="help"><code>--help</code><a class="headerlink" href="#help" title="Permanent link">&para;</a></h2>
 <p>Show help message and exit.</p>
 <p>Displays all available command-line options with their descriptions and default values.</p>
 <p><strong>Aliases:</strong> <code>-h</code></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>datamodel-codegen<span class="w"> </span>--help<span class="w"> </span><span class="c1"># (1)!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>datamodel-codegen<span class="w"> </span>--help<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--help</code> - the option documented here</li>
@@ -1900,14 +1983,14 @@ or code generation. Requires the <code>debug</code> extra to be installed.</p>
 </div>
 <details class="example">
 <summary>Output</summary>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>usage: datamodel-codegen [-h] [--input INPUT] [--url URL] ...
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>Generate Python data models from schema files.
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>options:
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  -h, --help            show this help message and exit
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>  --input INPUT         Input file path (default: stdin)
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>  ...
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>usage: datamodel-codegen [-h] [--input INPUT] [--url URL] ...
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>Generate Python data models from schema files.
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>options:
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>  -h, --help            show this help message and exit
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>  --input INPUT         Input file path (default: stdin)
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  ...
 </span></code></pre></div>
 </details>
 <hr />
@@ -1918,7 +2001,7 @@ Use this option to disable colors, which is useful for CI/CD pipelines
 or when redirecting output to files.</p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--no-color<span class="w"> </span><span class="c1"># (1)!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--no-color<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--no-color</code> - the option documented here</li>
@@ -1927,7 +2010,7 @@ or when redirecting output to files.</p>
 <div class="admonition note">
 <p class="admonition-title">Environment variable</p>
 <p>You can also disable colors by setting the <code>NO_COLOR</code> environment variable:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nv">NO_COLOR</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nv">NO_COLOR</span><span class="o">=</span><span class="m">1</span><span class="w"> </span>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json
 </span></code></pre></div>
 </div>
 <hr />
@@ -1938,7 +2021,7 @@ file. Each profile can override the default settings with its own set of options
 <p><strong>Related:</strong> <a href="../../../pyproject_toml/">pyproject.toml Configuration</a></p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict<span class="w"> </span><span class="c1"># (1)!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--profile</code> - the option documented here</li>
@@ -1946,25 +2029,25 @@ file. Each profile can override the default settings with its own set of options
 </div>
 <details class="example">
 <summary>Configuration (pyproject.toml)</summary>
-<div class="language-toml highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">[tool.datamodel-codegen]</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Default configuration</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="k">[tool.datamodel-codegen.profiles.strict]</span>
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="c1"># Strict profile with additional options</span>
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;str&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;int&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bool&quot;</span><span class="p">]</span>
-</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="n">strict-nullable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="k">[tool.datamodel-codegen.profiles.legacy]</span>
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="c1"># Legacy profile for Pydantic v1</span>
-</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic.BaseModel&quot;</span>
+<div class="language-toml highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">[tool.datamodel-codegen]</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># Default configuration</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic_v2.BaseModel&quot;</span>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="k">[tool.datamodel-codegen.profiles.strict]</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="c1"># Strict profile with additional options</span>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="n">strict-types</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;str&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;int&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;float&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;bool&quot;</span><span class="p">]</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="n">strict-nullable</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+</span><span id="__span-10-9"><a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>
+</span><span id="__span-10-10"><a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a><span class="k">[tool.datamodel-codegen.profiles.legacy]</span>
+</span><span id="__span-10-11"><a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1"># Legacy profile for Pydantic v1</span>
+</span><span id="__span-10-12"><a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="n">output-model-type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;pydantic.BaseModel&quot;</span>
 </span></code></pre></div>
 <p>Use profiles:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Use the strict profile</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Use the legacy profile</span>
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>legacy
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Use the strict profile</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>strict
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Use the legacy profile</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--profile<span class="w"> </span>legacy
 </span></code></pre></div>
 </details>
 <hr />
@@ -1973,7 +2056,7 @@ file. Each profile can override the default settings with its own set of options
 <p>Displays the installed version of datamodel-code-generator.</p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>datamodel-codegen<span class="w"> </span>--version<span class="w"> </span><span class="c1"># (1)!</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>datamodel-codegen<span class="w"> </span>--version<span class="w"> </span><span class="c1"># (1)!</span>
 </span></code></pre></div>
 <ol>
 <li><span class="twemoji"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg></span> <code>--version</code> - the option documented here</li>
@@ -1981,7 +2064,7 @@ file. Each profile can override the default settings with its own set of options
 </div>
 <details class="example">
 <summary>Output</summary>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>datamodel-codegen version: 0.x.x
+<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen version: 0.x.x
 </span></code></pre></div>
 </details>
 <hr />
