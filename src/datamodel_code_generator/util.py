@@ -43,10 +43,32 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 SafeLoaderTemp = copy.deepcopy(SafeLoader)
 SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
+SafeLoaderTemp.yaml_implicit_resolvers = copy.deepcopy(SafeLoader.yaml_implicit_resolvers)
 SafeLoaderTemp.add_constructor(
     "tag:yaml.org,2002:timestamp",
     SafeLoaderTemp.yaml_constructors["tag:yaml.org,2002:str"],
 )
+
+# Use YAML 1.2-like bool semantics: only 'true', 'false', 'True', 'False', 'TRUE', 'FALSE'.
+# YAML 1.1 treats YES/NO/on/off/y/n as booleans, which causes issues with
+# string enums containing country codes like 'NO' (Norway).
+# We keep True/False/TRUE/FALSE for compatibility with Python-style YAML files.
+# Related issues: #1653, #1766, #2338
+_YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
+for key in list(SafeLoaderTemp.yaml_implicit_resolvers.keys()):
+    SafeLoaderTemp.yaml_implicit_resolvers[key] = [
+        (tag, pattern)
+        for tag, pattern in SafeLoaderTemp.yaml_implicit_resolvers[key]
+        if tag != "tag:yaml.org,2002:bool"
+    ]
+    if not SafeLoaderTemp.yaml_implicit_resolvers[key]:
+        del SafeLoaderTemp.yaml_implicit_resolvers[key]
+for key in ["t", "f", "T", "F"]:
+    SafeLoaderTemp.yaml_implicit_resolvers.setdefault(key, []).append((
+        "tag:yaml.org,2002:bool",
+        _YAML_1_2_BOOL_PATTERN,
+    ))
+
 SafeLoader = SafeLoaderTemp
 
 Model = TypeVar("Model", bound=_BaseModel)
