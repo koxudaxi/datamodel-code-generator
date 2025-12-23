@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "description": "Primary address definition - should keep clean name",
+      "properties": {
+        "street": {"type": "string"},
+        "city": {"type": "string"},
+        "zip": {"type": "string"}
+      }
+    },
+    "Company": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "address": {
+          "type": "object",
+          "description": "Inline address - should get suffix",
+          "properties": {
+            "street": {"type": "string"},
+            "building": {"type": "string"}
+          }
+        }
+      }
+    },
+    "Customer": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"},
+        "address": {
+          "type": "object",
+          "description": "Another inline address - should get suffix",
+          "properties": {
+            "street": {"type": "string"},
+            "apartment": {"type": "string"}
+          }
+        }
+      }
+    }
+  }
+}

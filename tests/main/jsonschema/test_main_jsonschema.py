@@ -5789,6 +5789,66 @@ def test_main_naming_strategy_complex_duplicate_suffix(output_file: Path) -> Non
     )
 
 
+@freeze_time("2019-07-26")
+@pytest.mark.cli_doc(
+    options=["--naming-strategy"],
+    input_schema="jsonschema/naming_strategy/primary_first_input.json",
+    cli_args=["--naming-strategy", "primary-first"],
+    golden_output="jsonschema/naming_strategy/complex_primary_first/output.py",
+)
+def test_main_naming_strategy_primary_first(output_file: Path) -> None:
+    """Test primary-first strategy keeps clean names for primary definitions.
+
+    Primary definitions (directly under #/definitions/, #/components/schemas/, #/$defs/)
+    keep their clean names. Inline/nested definitions get numeric suffixes.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "primary_first_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_primary_first/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "primary-first",
+        ],
+    )
+
+
+def test_main_duplicate_name_suffix_invalid_json(output_file: Path) -> None:
+    """Test that invalid JSON in --duplicate-name-suffix raises an error."""
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json"),
+            "--output",
+            str(output_file),
+            "--duplicate-name-suffix",
+            "invalid json",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_parent_scoped_naming_backward_compat(output_file: Path) -> None:
+    """Test --parent-scoped-naming backward compatibility (deprecated flag)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--parent-scoped-naming",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--use-root-model-type-alias"],
     input_schema="jsonschema/root_model_type_alias.json",
