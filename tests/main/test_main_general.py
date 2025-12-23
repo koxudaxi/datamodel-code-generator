@@ -303,9 +303,7 @@ def test_class_decorators_with_empty_entries(output_file: Path) -> None:
         "msgspec",
     ],
 )
-def test_class_decorators_all_output_types(
-    output_file: Path, output_model_type: str, expected_file: str
-) -> None:
+def test_class_decorators_all_output_types(output_file: Path, output_model_type: str, expected_file: str) -> None:
     """Test --class-decorators works with all output model types that support decorators."""
     run_main_and_assert(
         input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
