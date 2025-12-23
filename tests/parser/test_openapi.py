@@ -24,7 +24,7 @@ from datamodel_code_generator.parser.openapi import (
     RequestBodyObject,
     ResponseObject,
 )
-from datamodel_code_generator.util import model_validate
+from datamodel_code_generator.util import model_dump, model_validate
 from tests.conftest import assert_output, assert_parser_modules, assert_parser_results
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
@@ -585,7 +585,7 @@ def test_openapi_model_resolver(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     parser.parse()
 
     references = {
-        k: v.dict(exclude={"source", "module_name", "actual_module_name"})
+        k: model_dump(v, exclude={"source", "module_name", "actual_module_name", "children"})
         for k, v in parser.model_resolver.references.items()
     }
     assert references == {
