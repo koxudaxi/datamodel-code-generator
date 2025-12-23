@@ -774,6 +774,14 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--class-decorators",
+    help="Custom decorators for generated model classes (delimited list input). "
+    'For example "@dataclass_json(letter_case=LetterCase.CAMEL)". '
+    'The "@" prefix is optional and will be added automatically if missing.',
+    type=str,
+    default=None,
+)
+base_options.add_argument(
     "--formatters",
     help="Formatters for output (default: [black, isort])",
     choices=[f.value for f in Formatter],
