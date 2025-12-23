@@ -66,7 +66,10 @@ def build_prompt_data(*, check: bool = False) -> int:
         # Truncate description if line would exceed 120 characters
         max_desc_len = 120 - len(f'    "{opt}": "",')
         if len(escaped_desc) > max_desc_len:
-            escaped_desc = escaped_desc[: max_desc_len - 3] + "..."
+            truncated = escaped_desc[: max_desc_len - 3]
+            # Ensure we don't break escape sequences by checking for trailing backslash
+            truncated = truncated.removesuffix("\\")
+            escaped_desc = truncated + "..."
         lines.append(f'    "{opt}": "{escaped_desc}",')
     lines.extend(("}", ""))
 
