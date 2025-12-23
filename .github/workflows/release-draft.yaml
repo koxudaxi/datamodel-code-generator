@@ -1,0 +1,291 @@
+name: Release Draft
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+# Prevent race conditions when multiple PRs merge simultaneously
+concurrency:
+  group: release-draft
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  analyze-and-draft:
+    # Only run on merged PRs that haven't been analyzed yet
+    if: |
+      github.event.pull_request.merged == true &&
+      !contains(github.event.pull_request.labels.*.name, 'breaking-change-analyzed')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create labels if they don't exist (ignore errors if already exist)
+          gh label create "breaking-change-analyzed" --color "0E8A16" --description "PR has been analyzed for breaking changes" 2>/dev/null || true
+          gh label create "breaking-change" --color "D93F0B" --description "PR contains breaking changes" 2>/dev/null || true
+
+      - name: Run Claude Code Analysis
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          # OAuth authentication for Max plan subscribers
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Analyze PR #${{ github.event.pull_request.number }} for breaking changes.
+
+            PR Title: ${{ github.event.pull_request.title }}
+            PR Body:
+            ${{ github.event.pull_request.body }}
+
+            Analyze the merged changes and determine if this PR contains breaking changes.
+
+            Breaking changes for datamodel-code-generator include:
+            1. Code Generation Changes - Changes to generated code output that may break existing users
+            2. Custom Template Update Required - Changes requiring users to update their Jinja2 templates
+            3. API/CLI Changes - Changes to command-line options or Python API
+            4. Default Behavior Changes - Changes to default values or behavior
+            5. Python Version Changes - Dropping Python version support
+            6. Error Handling Changes - Changes to how errors are reported or handled
+
+            If breaking changes are found, format them EXACTLY like this CHANGELOG.md format:
+
+            ### Category Name
+            * Description of breaking change - Detailed explanation (#${{ github.event.pull_request.number }})
+
+            Rules:
+            - Each category should be a ### heading (Code Generation Changes, Custom Template Update Required, etc.)
+            - Each item starts with "* " followed by a brief title, then " - " and detailed explanation
+            - Include PR number at the end as (#NUMBER)
+            - If code examples help, include them in markdown code blocks
+            - Only include categories that have actual breaking changes
+            - Return empty string for breaking_changes_content if no breaking changes
+
+          claude_args: |
+            --model claude-opus-4-5-20251101
+            --max-turns 3
+            --output-format json
+            --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
+        timeout-minutes: 10
+
+      - name: Parse Claude output
+        id: parse
+        env:
+          CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
+        run: |
+          # Parse structured output from Claude using env var to avoid shell injection
+          HAS_BC=$(echo "$CLAUDE_OUTPUT" | jq -r '.has_breaking_changes // false')
+          BC_CONTENT=$(echo "$CLAUDE_OUTPUT" | jq -r '.breaking_changes_content // ""')
+          REASONING=$(echo "$CLAUDE_OUTPUT" | jq -r '.reasoning // ""')
+
+          echo "has_breaking_changes=$HAS_BC" >> $GITHUB_OUTPUT
+
+          # Use unique delimiter to avoid collision with content
+          DELIMITER="EOF_$(date +%s%N)"
+
+          # Use heredoc for multiline content with unique delimiter
+          {
+            echo "breaking_changes_content<<$DELIMITER"
+            printf '%s\n' "$BC_CONTENT"
+            echo "$DELIMITER"
+          } >> $GITHUB_OUTPUT
+
+          {
+            echo "reasoning<<$DELIMITER"
+            printf '%s\n' "$REASONING"
+            echo "$DELIMITER"
+          } >> $GITHUB_OUTPUT
+
+      - name: Add breaking-change-analyzed label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "breaking-change-analyzed"
+
+      - name: Add breaking-change label if applicable
+        if: steps.parse.outputs.has_breaking_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit ${{ github.event.pull_request.number }} --add-label "breaking-change"
+
+      - name: Post analysis result to PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAS_BC: ${{ steps.parse.outputs.has_breaking_changes }}
+          BC_CONTENT: ${{ steps.parse.outputs.breaking_changes_content }}
+          REASONING: ${{ steps.parse.outputs.reasoning }}
+        run: |
+          # Use temp file to avoid shell escaping issues with special characters
+          TMPFILE=$(mktemp)
+          trap 'rm -f "$TMPFILE"' EXIT
+
+          # Build comment using printf to avoid YAML parsing issues with markdown
+          {
+            printf '## Breaking Change Analysis\n\n'
+            if [ "$HAS_BC" = "true" ]; then
+              printf 'Result: Breaking changes detected\n\n'
+              printf 'Reasoning: %s\n\n' "$REASONING"
+              printf '### Content for Release Notes\n\n%s\n\n' "$BC_CONTENT"
+            else
+              printf 'Result: No breaking changes detected\n\n'
+              printf 'Reasoning: %s\n\n' "$REASONING"
+            fi
+            printf -- '---\n'
+            printf '*This analysis was performed by Claude Code Action*\n'
+          } > "$TMPFILE"
+
+          gh pr comment ${{ github.event.pull_request.number }} --body-file "$TMPFILE"
+
+      - name: Calculate version and update draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HAS_BC: ${{ steps.parse.outputs.has_breaking_changes }}
+          BC_CONTENT: ${{ steps.parse.outputs.breaking_changes_content }}
+        run: |
+          set -euo pipefail
+
+          # Get latest published release tag and strip "v" prefix if present
+          LATEST_TAG_RAW=$(gh release list --limit 1 --exclude-drafts --json tagName --jq '.[0].tagName // "0.0.0"')
+          LATEST_TAG="${LATEST_TAG_RAW#v}"
+          LATEST_TAG="${LATEST_TAG#V}"
+          echo "Latest published tag: $LATEST_TAG_RAW (parsed as: $LATEST_TAG)"
+
+          # Parse version components (format: 0.xx.yy)
+          MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+          MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+          PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+
+          # Validate version components are numeric
+          if ! [[ "$MAJOR" =~ ^[0-9]+$ ]] || ! [[ "$MINOR" =~ ^[0-9]+$ ]] || ! [[ "$PATCH" =~ ^[0-9]+$ ]]; then
+            echo "Warning: Could not parse version from tag '$LATEST_TAG_RAW', using 0.0.0"
+            MAJOR=0
+            MINOR=0
+            PATCH=0
+          fi
+
+          # Check if draft release exists (use jq to extract first draft tag safely)
+          # Keep raw tag name for gh commands, strip prefix only for version comparison
+          DRAFT_TAG_RAW=$(gh release list --json tagName,isDraft --jq '[.[] | select(.isDraft == true)] | .[0].tagName // ""')
+          DRAFT_TAG="${DRAFT_TAG_RAW#v}"
+          DRAFT_TAG="${DRAFT_TAG#V}"
+
+          # Determine next version
+          if [ -n "$DRAFT_TAG" ]; then
+            echo "Existing draft: $DRAFT_TAG_RAW"
+            DRAFT_MINOR=$(echo "$DRAFT_TAG" | cut -d. -f2)
+            DRAFT_PATCH=$(echo "$DRAFT_TAG" | cut -d. -f3)
+
+            # If this PR has breaking changes and draft is a patch release, upgrade to minor
+            if [ "$HAS_BC" = "true" ] && [ "$DRAFT_PATCH" != "0" ]; then
+              echo "Upgrading from patch to minor release due to breaking changes"
+              NEW_MINOR=$((MINOR + 1))
+              NEXT_VERSION="${MAJOR}.${NEW_MINOR}.0"
+              OLD_DRAFT_TAG="$DRAFT_TAG_RAW"
+              DRAFT_TAG_RAW=""
+              DRAFT_TAG=""
+            else
+              NEXT_VERSION="$DRAFT_TAG"
+              OLD_DRAFT_TAG=""
+            fi
+          else
+            OLD_DRAFT_TAG=""
+            # No draft exists, calculate new version
+            if [ "$HAS_BC" = "true" ]; then
+              NEW_MINOR=$((MINOR + 1))
+              NEXT_VERSION="${MAJOR}.${NEW_MINOR}.0"
+            else
+              NEW_PATCH=$((PATCH + 1))
+              NEXT_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+            fi
+          fi
+
+          echo "Next version: $NEXT_VERSION"
+
+          # Generate release notes using gh (same as GitHub UI)
+          # Only include previous_tag_name if a prior release exists
+          if [ -n "$LATEST_TAG_RAW" ] && [ "$LATEST_TAG_RAW" != "0.0.0" ]; then
+            GENERATED_NOTES=$(gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              /repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="$NEXT_VERSION" \
+              -f previous_tag_name="$LATEST_TAG_RAW" \
+              --jq '.body')
+          else
+            # First release - generate notes without previous tag
+            GENERATED_NOTES=$(gh api \
+              --method POST \
+              -H "Accept: application/vnd.github+json" \
+              /repos/${{ github.repository }}/releases/generate-notes \
+              -f tag_name="$NEXT_VERSION" \
+              --jq '.body')
+          fi
+
+          # Get existing draft body if updating (only if DRAFT_TAG_RAW is set, meaning we're updating same version)
+          EXISTING_BC=""
+          if [ -n "$DRAFT_TAG_RAW" ]; then
+            EXISTING_BODY=$(gh release view "$DRAFT_TAG_RAW" --json body --jq '.body // ""')
+            # Extract existing Breaking Changes section content
+            # Use awk for precise extraction - stops at any ## header that's not "## Breaking Changes"
+            if echo "$EXISTING_BODY" | grep -q '^## Breaking Changes$'; then
+              EXISTING_BC=$(echo "$EXISTING_BODY" | awk '
+                /^## Breaking Changes$/ { found=1; next }
+                found && /^## / { exit }
+                found { print }
+              ')
+            fi
+          fi
+
+          # Build final release body using printf to avoid YAML parsing issues
+          FINAL_BC=""
+          if [ -n "$BC_CONTENT" ] && [ -n "$EXISTING_BC" ]; then
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s\n\n%s' "$EXISTING_BC" "$BC_CONTENT")
+          elif [ -n "$BC_CONTENT" ]; then
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$BC_CONTENT")
+          elif [ -n "$EXISTING_BC" ]; then
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$EXISTING_BC")
+          fi
+
+          if [ -n "$FINAL_BC" ]; then
+            RELEASE_BODY=$(printf '%s\n\n%s' "$FINAL_BC" "$GENERATED_NOTES")
+          else
+            RELEASE_BODY="$GENERATED_NOTES"
+          fi
+
+          # Create or update draft release
+          if [ -n "$DRAFT_TAG_RAW" ] && [ "$DRAFT_TAG" = "$NEXT_VERSION" ]; then
+            echo "Updating existing draft release: $DRAFT_TAG_RAW"
+            echo "$RELEASE_BODY" | gh release edit "$DRAFT_TAG_RAW" \
+              --title "$NEXT_VERSION" \
+              --notes-file -
+          else
+            echo "Creating new draft release: $NEXT_VERSION"
+            # Create new draft first, then delete old one (to prevent data loss)
+            if echo "$RELEASE_BODY" | gh release create "$NEXT_VERSION" \
+              --title "$NEXT_VERSION" \
+              --notes-file - \
+              --draft; then
+              # Only delete old draft after successful creation
+              if [ -n "$OLD_DRAFT_TAG" ]; then
+                echo "Deleting old draft: $OLD_DRAFT_TAG"
+                gh release delete "$OLD_DRAFT_TAG" --yes 2>/dev/null || true
+              fi
+            else
+              echo "Failed to create new draft release"
+              exit 1
+            fi
+          fi
+
+          echo "Draft release updated: $NEXT_VERSION"
