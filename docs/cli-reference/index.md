@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 19 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 29 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 30 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -152,6 +152,7 @@ This documentation is auto-generated from test cases.
 
 ### T {#t}
 
+- [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
 - [`--target-python-version`](model-customization.md#target-python-version)
 - [`--type-mappings`](typing-customization.md#type-mappings)
 

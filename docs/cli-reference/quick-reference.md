@@ -95,6 +95,7 @@ datamodel-codegen [OPTIONS]
 | [`--skip-root-model`](model-customization.md#skip-root-model) | Skip generation of root model when schema contains nested definitions. |
 | [`--strict-nullable`](model-customization.md#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--strip-default-none`](model-customization.md#strip-default-none) | Remove fields with None as default value from generated models. |
+| [`--target-pydantic-version`](model-customization.md#target-pydantic-version) | Target Pydantic version for generated code compatibility. |
 | [`--target-python-version`](model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
 | [`--union-mode`](model-customization.md#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_to_right). |
 | [`--use-default`](model-customization.md#use-default) | Use default values from schema in generated models. |
@@ -253,6 +254,7 @@ All options sorted alphabetically:
 - [`--strict-nullable`](model-customization.md#strict-nullable) - Treat default field as a non-nullable field.
 - [`--strict-types`](typing-customization.md#strict-types) - Enable strict type validation for specified Python types.
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
+- [`--target-pydantic-version`](model-customization.md#target-pydantic-version) - Target Pydantic version for generated code compatibility.
 - [`--target-python-version`](model-customization.md#target-python-version) - Target Python version for generated code syntax and imports.
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
