@@ -168,34 +168,52 @@ class Pet(BaseModel):
 
 ## 🍳 Common Recipes
 
-### 🆕 Generate Pydantic v2 models
+### 🤖 Get CLI Help from LLMs
+
+Generate a prompt to ask LLMs about CLI options:
+
 ```bash
-datamodel-codegen --input schema.json --input-file-type jsonschema --output-model-type pydantic_v2.BaseModel --output model.py
+datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude -p
 ```
 
+See [LLM Integration](https://koxudaxi.github.io/datamodel-code-generator/llm-integration/) for more examples.
+
 ### 🌐 Generate from URL
+
 ```bash
 pip install 'datamodel-code-generator[http]'
-datamodel-codegen --url https://example.com/api/openapi.yaml --input-file-type openapi --output-model-type pydantic_v2.BaseModel --output model.py
+datamodel-codegen --url https://example.com/api/openapi.yaml --output model.py
 ```
 
 ### ⚙️ Use with pyproject.toml
+
 ```toml
 [tool.datamodel-codegen]
 input = "schema.yaml"
-input-file-type = "openapi"
 output = "src/models.py"
 output-model-type = "pydantic_v2.BaseModel"
+```
+
+Then simply run:
+
+```bash
+datamodel-codegen
 ```
 
 See [pyproject.toml Configuration](https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/) for more options.
 
 ### 🔄 CI/CD Integration
-```bash
-datamodel-codegen --check
+
+Validate generated models in your CI pipeline:
+
+```yaml
+- uses: koxudaxi/datamodel-code-generator@0.44.0
+  with:
+    input: schemas/api.yaml
+    output: src/models/api.py
 ```
 
-Verify generated code stays in sync with schemas. See [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) for GitHub Actions and pre-commit hooks.
+See [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) for more options.
 
 ---
 

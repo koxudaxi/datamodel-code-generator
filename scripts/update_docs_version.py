@@ -16,7 +16,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-DOCS_DIR = Path(__file__).parent.parent / "docs"
+ROOT_DIR = Path(__file__).parent.parent
+DOCS_DIR = ROOT_DIR / "docs"
+README_FILE = ROOT_DIR / "README.md"
 PATTERN = re.compile(r"(koxudaxi/datamodel-code-generator@)(\d+\.\d+\.\d+)")
 
 
@@ -61,9 +63,12 @@ def main() -> int:
         print(f"Error getting latest release: {e}", file=sys.stderr)
         return 1
 
-    updated_files: list[Path] = [
-        md_file for md_file in DOCS_DIR.rglob("*.md") if update_file(md_file, version, check=args.check)
-    ]
+    # Update docs directory and README.md
+    target_files = list(DOCS_DIR.rglob("*.md"))
+    if README_FILE.exists():
+        target_files.append(README_FILE)
+
+    updated_files: list[Path] = [md_file for md_file in target_files if update_file(md_file, version, check=args.check)]
 
     if args.check:
         if updated_files:
