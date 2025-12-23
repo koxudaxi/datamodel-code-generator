@@ -283,6 +283,21 @@ class FieldTypeCollisionStrategy(Enum):
     RenameType = "rename-type"
 
 
+class NamingStrategy(Enum):
+    """Strategy for generating unique model names when duplicates occur.
+
+    numbered: Append numeric suffix (Address1, Address2) [default].
+    parent_prefixed: Prefix with parent model name (CustomerAddress, UserAddress).
+    full_path: Use full schema path for unique names (OrdersItemsAddress).
+    primary_first: Prioritize primary schema definitions, others get suffix.
+    """
+
+    Numbered = "numbered"
+    ParentPrefixed = "parent-prefixed"
+    FullPath = "full-path"
+    PrimaryFirst = "primary-first"
+
+
 class AllOfMergeMode(Enum):
     """Mode for field merging in allOf schemas.
 
@@ -508,6 +523,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     formatters: list[Formatter] = DEFAULT_FORMATTERS,
     settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
+    naming_strategy: NamingStrategy | None = None,
+    duplicate_name_suffix: dict[str, str] | None = None,
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
@@ -770,6 +787,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         formatters=formatters,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
+        naming_strategy=naming_strategy,
+        duplicate_name_suffix=duplicate_name_suffix,
         dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
         type_overrides=type_overrides,
@@ -927,6 +946,7 @@ __all__ = [
     "InvalidClassNameError",
     "LiteralType",
     "ModuleSplitMode",
+    "NamingStrategy",
     "PythonVersion",
     "ReadOnlyWriteOnlyModelType",
     "TargetPydanticVersion",

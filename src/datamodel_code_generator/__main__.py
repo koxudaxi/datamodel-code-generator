@@ -32,6 +32,7 @@ from datamodel_code_generator import (
     InputFileType,
     InvalidClassNameError,
     ModuleSplitMode,
+    NamingStrategy,
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
@@ -236,6 +237,30 @@ class Config(BaseModel):
         custom_formatters = values.get("custom_formatters")
         if custom_formatters is not None:
             values["custom_formatters"] = custom_formatters.split(",")
+        return values
+
+    @model_validator(mode="before")
+    def validate_duplicate_name_suffix(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Validate and parse duplicate_name_suffix JSON string."""
+        duplicate_name_suffix = values.get("duplicate_name_suffix")
+        if duplicate_name_suffix is not None and isinstance(duplicate_name_suffix, str):
+            try:
+                values["duplicate_name_suffix"] = json.loads(duplicate_name_suffix)
+            except json.JSONDecodeError as e:
+                msg = f"Invalid JSON for --duplicate-name-suffix: {e}"
+                raise Error(msg) from e
+        return values
+
+    @model_validator(mode="before")
+    def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
+        if values.get("parent_scoped_naming") and not values.get("naming_strategy"):
+            values["naming_strategy"] = NamingStrategy.ParentPrefixed
+            warnings.warn(
+                "--parent-scoped-naming is deprecated. Use --naming-strategy parent-prefixed instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         return values
 
     @model_validator(mode="before")
@@ -489,6 +514,8 @@ class Config(BaseModel):
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] = DEFAULT_FORMATTERS
     parent_scoped_naming: bool = False
+    naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
+    duplicate_name_suffix: Optional[dict[str, str]] = None  # noqa: UP045
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
     type_overrides: Optional[dict[str, str]] = None  # noqa: UP045
@@ -804,6 +831,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         formatters=config.formatters,
         settings_path=settings_path,
         parent_scoped_naming=config.parent_scoped_naming,
+        naming_strategy=config.naming_strategy,
+        duplicate_name_suffix=config.duplicate_name_suffix,
         dataclass_arguments=config.dataclass_arguments,
         disable_future_imports=config.disable_future_imports,
         type_mappings=config.type_mappings,
