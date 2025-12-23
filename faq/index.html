@@ -1668,6 +1668,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#yaml-bool-keywords-yes-no-true-false-in-string-enums" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔤 YAML bool keywords (YES, NO, true, false) in string enums
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2130,6 +2141,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#yaml-bool-keywords-yes-no-true-false-in-string-enums" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        🔤 YAML bool keywords (YES, NO, true, false) in string enums
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2509,66 +2531,82 @@
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
 </span></code></pre></div>
 <p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/215">#215</a></p>
+<h3 id="yaml-bool-keywords-yes-no-true-false-in-string-enums">🔤 YAML bool keywords (YES, NO, true, false) in string enums<a class="headerlink" href="#yaml-bool-keywords-yes-no-true-false-in-string-enums" title="Permanent link">&para;</a></h3>
+<p>YAML 1.1 treats unquoted keywords like <code>YES</code>, <code>NO</code>, <code>on</code>, <code>off</code>, <code>true</code>, <code>false</code> as boolean values. This tool preserves them as strings to avoid unexpected conversions in schema contexts:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Input YAML</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nt">enum</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">YES</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NO</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">NOT_APPLICABLE</span>
+</span></code></pre></div>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Generated code (strings preserved)</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyEnum</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>    <span class="n">YES</span> <span class="o">=</span> <span class="s1">&#39;YES&#39;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="n">NO</span> <span class="o">=</span> <span class="s1">&#39;NO&#39;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="n">NOT_APPLICABLE</span> <span class="o">=</span> <span class="s1">&#39;NOT_APPLICABLE&#39;</span>
+</span></code></pre></div>
+<p>This matches the expected behavior when <code>type: string</code> is specified in your schema. If you need the previous behavior where YAML bool keywords were converted to Python booleans, please <a href="https://github.com/koxudaxi/datamodel-code-generator/issues">open an issue</a> describing your use case.</p>
+<p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/1653">#1653</a>, <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/1766">#1766</a>, <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/2338">#2338</a></p>
 <hr />
 <h2 id="type-checking">🔍 Type Checking<a class="headerlink" href="#type-checking" title="Permanent link">&para;</a></h2>
 <h3 id="mypy-complains-about-field-constraints">⚠️ mypy complains about Field constraints<a class="headerlink" href="#mypy-complains-about-field-constraints" title="Permanent link">&para;</a></h3>
 <p>If mypy reports errors about <code>conint</code>, <code>constr</code>, or other constrained types, use <code>--field-constraints</code> or <code>--use-annotated</code>:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Use Field(..., ge=0) instead of conint(ge=0)</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>datamodel-codegen<span class="w"> </span>--field-constraints<span class="w"> </span>...
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Use Annotated[int, Field(ge=0)]</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>datamodel-codegen<span class="w"> </span>--use-annotated<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Use Field(..., ge=0) instead of conint(ge=0)</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>datamodel-codegen<span class="w"> </span>--field-constraints<span class="w"> </span>...
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Use Annotated[int, Field(ge=0)]</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>datamodel-codegen<span class="w"> </span>--use-annotated<span class="w"> </span>...
 </span></code></pre></div>
 <p>See <a href="../field-constraints/">Field Constraints</a> for more information.</p>
 <h3 id="type-checker-doesnt-understand-generated-types">🤔 Type checker doesn't understand generated types<a class="headerlink" href="#type-checker-doesnt-understand-generated-types" title="Permanent link">&para;</a></h3>
 <p>Ensure you're using the correct target Python version:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>datamodel-codegen<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.11<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>datamodel-codegen<span class="w"> </span>--target-python-version<span class="w"> </span><span class="m">3</span>.11<span class="w"> </span>...
 </span></code></pre></div>
 <p>This affects type syntax generation (e.g., <code>list[str]</code> vs <code>List[str]</code>, <code>X | Y</code> vs <code>Union[X, Y]</code>).</p>
 <hr />
 <h2 id="field-naming">🏷️ Field Naming<a class="headerlink" href="#field-naming" title="Permanent link">&para;</a></h2>
 <h3 id="property-names-conflict-with-python-reserved-words">🚫 Property names conflict with Python reserved words<a class="headerlink" href="#property-names-conflict-with-python-reserved-words" title="Permanent link">&para;</a></h3>
 <p>Properties like <code>class</code>, <code>from</code>, <code>import</code> are automatically renamed with a <code>field_</code> prefix. Control this behavior:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Custom prefix (default: &quot;field&quot;)</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>datamodel-codegen<span class="w"> </span>--special-field-name-prefix<span class="w"> </span>my_prefix<span class="w"> </span>...
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Remove special prefix entirely</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>datamodel-codegen<span class="w"> </span>--remove-special-field-name-prefix<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Custom prefix (default: &quot;field&quot;)</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>datamodel-codegen<span class="w"> </span>--special-field-name-prefix<span class="w"> </span>my_prefix<span class="w"> </span>...
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Remove special prefix entirely</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>datamodel-codegen<span class="w"> </span>--remove-special-field-name-prefix<span class="w"> </span>...
 </span></code></pre></div>
 <h3 id="field-names-have-special-characters">🔣 Field names have special characters<a class="headerlink" href="#field-names-have-special-characters" title="Permanent link">&para;</a></h3>
 <p>JSON/YAML property names with spaces, dashes, or special characters are converted to valid Python identifiers. An alias is automatically generated to preserve the original name:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">my_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">&#39;my-field&#39;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">Model</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">my_field</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">&#39;my-field&#39;</span><span class="p">)</span>
 </span></code></pre></div>
 <p>To disable aliases:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>datamodel-codegen<span class="w"> </span>--no-alias<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>datamodel-codegen<span class="w"> </span>--no-alias<span class="w"> </span>...
 </span></code></pre></div>
 <p>See <a href="../aliases/">Field Aliases</a> for custom alias mappings.</p>
 <h3 id="want-snake_case-field-names-from-camelcase">🐍 Want snake_case field names from camelCase<a class="headerlink" href="#want-snake_case-field-names-from-camelcase" title="Permanent link">&para;</a></h3>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>datamodel-codegen<span class="w"> </span>--snake-case-field<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>datamodel-codegen<span class="w"> </span>--snake-case-field<span class="w"> </span>...
 </span></code></pre></div>
 <p>This generates snake_case field names with camelCase aliases:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">&#39;firstName&#39;</span><span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>    <span class="n">first_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="o">...</span><span class="p">,</span> <span class="n">alias</span><span class="o">=</span><span class="s1">&#39;firstName&#39;</span><span class="p">)</span>
 </span></code></pre></div>
 <hr />
 <h2 id="output-stability">🔄 Output Stability<a class="headerlink" href="#output-stability" title="Permanent link">&para;</a></h2>
 <h3 id="generated-output-changes-on-every-run">⏰ Generated output changes on every run<a class="headerlink" href="#generated-output-changes-on-every-run" title="Permanent link">&para;</a></h3>
 <p>The timestamp in the header changes on each run. Disable it for reproducible output:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>datamodel-codegen<span class="w"> </span>--disable-timestamp<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span>--disable-timestamp<span class="w"> </span>...
 </span></code></pre></div>
 <h3 id="output-differs-between-environments">🌍 Output differs between environments<a class="headerlink" href="#output-differs-between-environments" title="Permanent link">&para;</a></h3>
 <p>Ensure consistent formatting across environments:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Explicitly set formatters</span>
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>black<span class="w"> </span>isort<span class="w"> </span>...
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-</span><span id="__span-12-4"><a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Or disable formatting entirely for raw output</span>
-</span><span id="__span-12-5"><a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Explicitly set formatters</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>black<span class="w"> </span>isort<span class="w"> </span>...
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># Or disable formatting entirely for raw output</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>datamodel-codegen<span class="w"> </span>--formatters<span class="w"> </span>...
 </span></code></pre></div>
 <p>Also ensure the same Python version and formatter configurations (<code>pyproject.toml</code>) are used.</p>
 <h3 id="ci-fails-because-generated-code-is-different">🤖 CI fails because generated code is different<a class="headerlink" href="#ci-fails-because-generated-code-is-different" title="Permanent link">&para;</a></h3>
 <p>Use <code>--check</code> mode in CI to verify generated files are up-to-date:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>datamodel-codegen<span class="w"> </span>--check<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>datamodel-codegen<span class="w"> </span>--check<span class="w"> </span>--input<span class="w"> </span>schema.yaml<span class="w"> </span>--output<span class="w"> </span>models.py
 </span></code></pre></div>
 <p>This exits with code 1 if the output would differ, without modifying files.</p>
 <hr />
@@ -2580,7 +2618,7 @@
 <li>Consider splitting schemas into multiple files</li>
 <li>Use <code>--disable-warnings</code> to reduce output</li>
 </ol>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>datamodel-codegen<span class="w"> </span>--reuse-model<span class="w"> </span>--disable-warnings<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>datamodel-codegen<span class="w"> </span>--reuse-model<span class="w"> </span>--disable-warnings<span class="w"> </span>...
 </span></code></pre></div>
 <p>See <a href="../model-reuse/">Model Reuse and Deduplication</a> for details.</p>
 <hr />
@@ -2594,36 +2632,36 @@
 <li><strong>msgspec</strong>: High-performance serialization.</li>
 </ul>
 <p>See <a href="../what_is_the_difference_between_v1_and_v2/">Output Model Types</a> for a detailed comparison.</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># For new projects</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># For new projects</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
 </span></code></pre></div>
 <p>See <a href="../what_is_the_difference_between_v1_and_v2/">Pydantic v1 vs v2</a> for migration details.</p>
 <p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/803">#803</a></p>
 <h3 id="generated-code-doesnt-work-with-my-pydantic-version">💥 Generated code doesn't work with my Pydantic version<a class="headerlink" href="#generated-code-doesnt-work-with-my-pydantic-version" title="Permanent link">&para;</a></h3>
 <p>Ensure the output model type matches your installed Pydantic version:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Check your Pydantic version</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import pydantic; print(pydantic.VERSION)&quot;</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Generate for Pydantic v2</span>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="c1"># Generate for Pydantic v1</span>
-</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic.BaseModel<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Check your Pydantic version</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import pydantic; print(pydantic.VERSION)&quot;</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Generate for Pydantic v2</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># Generate for Pydantic v1</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>datamodel-codegen<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic.BaseModel<span class="w"> </span>...
 </span></code></pre></div>
 <hr />
 <h2 id="remote-schemas">🌐 Remote Schemas<a class="headerlink" href="#remote-schemas" title="Permanent link">&para;</a></h2>
 <h3 id="cannot-fetch-schema-from-url">📡 Cannot fetch schema from URL<a class="headerlink" href="#cannot-fetch-schema-from-url" title="Permanent link">&para;</a></h3>
 <p>Install the HTTP extra:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>pip<span class="w"> </span>install<span class="w"> </span><span class="s1">&#39;datamodel-code-generator[http]&#39;</span>
 </span></code></pre></div>
 <p>For authenticated endpoints:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://api.example.com/schema.yaml<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">    </span>--http-headers<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">    </span>--output<span class="w"> </span>model.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://api.example.com/schema.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">    </span>--http-headers<span class="w"> </span><span class="s2">&quot;Authorization: Bearer TOKEN&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">    </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
 <h3 id="ssl-certificate-errors">🔒 SSL certificate errors<a class="headerlink" href="#ssl-certificate-errors" title="Permanent link">&para;</a></h3>
 <p>For development/testing with self-signed certificates:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://...<span class="w"> </span>--http-ignore-tls<span class="w"> </span>--output<span class="w"> </span>model.py
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>datamodel-codegen<span class="w"> </span>--url<span class="w"> </span>https://...<span class="w"> </span>--http-ignore-tls<span class="w"> </span>--output<span class="w"> </span>model.py
 </span></code></pre></div>
 <div class="admonition warning">
 <p class="admonition-title">⚠️ Security Notice</p>
@@ -2633,23 +2671,23 @@
 <h2 id="openapi-specific">📘 OpenAPI Specific<a class="headerlink" href="#openapi-specific" title="Permanent link">&para;</a></h2>
 <h3 id="how-to-handle-readonlywriteonly-properties">📝 How to handle readOnly/writeOnly properties?<a class="headerlink" href="#how-to-handle-readonlywriteonly-properties" title="Permanent link">&para;</a></h3>
 <p>Use <code>--read-only-write-only-model-type</code> to generate separate Request/Response models:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Generate Request/Response models only</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>datamodel-codegen<span class="w"> </span>--read-only-write-only-model-type<span class="w"> </span>request-response<span class="w"> </span>...
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Generate Base + Request + Response models</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>datamodel-codegen<span class="w"> </span>--read-only-write-only-model-type<span class="w"> </span>all<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Generate Request/Response models only</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>datamodel-codegen<span class="w"> </span>--read-only-write-only-model-type<span class="w"> </span>request-response<span class="w"> </span>...
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Generate Base + Request + Response models</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>datamodel-codegen<span class="w"> </span>--read-only-write-only-model-type<span class="w"> </span>all<span class="w"> </span>...
 </span></code></pre></div>
 <p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/727">#727</a></p>
 <h3 id="why-are-nullable-fields-not-optional">❓ Why are nullable fields not Optional?<a class="headerlink" href="#why-are-nullable-fields-not-optional" title="Permanent link">&para;</a></h3>
 <p>Use <code>--strict-nullable</code> to treat nullable fields as truly optional:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>datamodel-codegen<span class="w"> </span>--strict-nullable<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>datamodel-codegen<span class="w"> </span>--strict-nullable<span class="w"> </span>...
 </span></code></pre></div>
 <p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/327">#327</a></p>
 <hr />
 <h2 id="advanced">🔧 Advanced<a class="headerlink" href="#advanced" title="Permanent link">&para;</a></h2>
 <h3 id="how-to-use-typealias-instead-of-rootmodel">📦 How to use TypeAlias instead of RootModel?<a class="headerlink" href="#how-to-use-typealias-instead-of-rootmodel" title="Permanent link">&para;</a></h3>
 <p>Use <code>--use-type-alias</code> (experimental) to generate type aliases instead of root models:</p>
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>datamodel-codegen<span class="w"> </span>--use-type-alias<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>datamodel-codegen<span class="w"> </span>--use-type-alias<span class="w"> </span>--output-model-type<span class="w"> </span>pydantic_v2.BaseModel<span class="w"> </span>...
 </span></code></pre></div>
 <p>See <a href="../root-model-and-type-alias/">Root Models and Type Aliases</a> for details.</p>
 <p>📎 Related: <a href="https://github.com/koxudaxi/datamodel-code-generator/issues/2505">#2505</a></p>
