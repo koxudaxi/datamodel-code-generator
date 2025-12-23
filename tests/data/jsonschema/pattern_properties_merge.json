@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "patternProperties": {
+    "^i-": {
+      "type": "string"
+    },
+    "^t-": {
+      "type": "string"
+    },
+    "^n-": {
+      "type": "integer"
+    }
+  }
+}

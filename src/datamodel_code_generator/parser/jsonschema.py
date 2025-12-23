@@ -2303,13 +2303,11 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> DataType:
         """Parse patternProperties into a dict data type with regex keys."""
-        data_types: list[DataType] = []
+        pattern_value_pairs: list[tuple[str, DataType]] = []
         for i, (pattern, schema) in enumerate(pattern_properties.items()):
-            # false = no keys matching this pattern allowed (skip - can't express in type system)
             if schema is False:
                 continue
 
-            # true = any value allowed for keys matching this pattern
             if schema is True:
                 value_type = self.data_type_manager.get_data_type(Types.any)
             else:
@@ -2318,19 +2316,33 @@ class JsonSchemaParser(Parser):
                     schema,
                     get_special_path(f"patternProperties/{i}", path),
                 )
+            pattern_value_pairs.append((pattern, value_type))
 
+        if not pattern_value_pairs:
+            return self.data_type(data_types=[])
+
+        groups: dict[str, tuple[list[str], DataType]] = {}
+        for pattern, value_type in pattern_value_pairs:
+            key = value_type.type_hint
+            if key not in groups:
+                groups[key] = ([], value_type)
+            groups[key][0].append(pattern)
+
+        data_types: list[DataType] = []
+        for patterns, value_type in groups.values():
+            merged_pattern = patterns[0] if len(patterns) == 1 else "|".join(patterns)
             data_types.append(
                 self.data_type(
                     data_types=[value_type],
                     is_dict=True,
                     dict_key=self.data_type_manager.get_data_type(
                         Types.string,
-                        pattern=pattern if not self.field_constraints else None,
+                        pattern=merged_pattern if not self.field_constraints else None,
                     ),
                 )
             )
 
-        return self.data_type(data_types=data_types) if data_types else EmptyDataType()
+        return self.data_type(data_types=data_types)
 
     def parse_item(  # noqa: PLR0911, PLR0912
         self,

@@ -3065,6 +3065,36 @@ def test_main_jsonschema_pattern_properties_boolean(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_pattern_properties_merge(output_file: Path) -> None:
+    """Test merging multiple patternProperties with same value type into single regex pattern."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_merge.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_merge.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
+    """Test patternProperties with all false values are ignored."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_all_false.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_all_false.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_dataclass_field(output_file: Path) -> None:
     """Test dataclass field generation."""
     run_main_and_assert(
