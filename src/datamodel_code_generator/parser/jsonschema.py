@@ -533,6 +533,7 @@ class JsonSchemaParser(Parser):
         base_class: str | None = None,
         base_class_map: dict[str, str] | None = None,
         additional_imports: list[str] | None = None,
+        class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersionMin,
@@ -638,6 +639,7 @@ class JsonSchemaParser(Parser):
             base_class=base_class,
             base_class_map=base_class_map,
             additional_imports=additional_imports,
+            class_decorators=class_decorators,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
             target_python_version=target_python_version,
@@ -1760,6 +1762,9 @@ class JsonSchemaParser(Parser):
 
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
+        # Add class decorators if not already provided
+        if "decorators" not in kwargs and self.class_decorators:
+            kwargs["decorators"] = list(self.class_decorators)
         data_model_class = model_type or self.data_model_type
         if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments

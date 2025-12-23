@@ -184,6 +184,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--custom-file-header": CLIOptionMeta(name="--custom-file-header", category=OptionCategory.TEMPLATE),
     "--custom-file-header-path": CLIOptionMeta(name="--custom-file-header-path", category=OptionCategory.TEMPLATE),
     "--additional-imports": CLIOptionMeta(name="--additional-imports", category=OptionCategory.TEMPLATE),
+    "--class-decorators": CLIOptionMeta(name="--class-decorators", category=OptionCategory.TEMPLATE),
     "--use-double-quotes": CLIOptionMeta(name="--use-double-quotes", category=OptionCategory.TEMPLATE),
     "--use-exact-imports": CLIOptionMeta(name="--use-exact-imports", category=OptionCategory.TEMPLATE),
     "--disable-appending-item-suffix": CLIOptionMeta(

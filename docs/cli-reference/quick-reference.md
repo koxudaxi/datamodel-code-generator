@@ -116,6 +116,7 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--additional-imports`](template-customization.md#additional-imports) | Add custom imports to generated output files. |
+| [`--class-decorators`](template-customization.md#class-decorators) | Add custom decorators to generated model classes. |
 | [`--custom-file-header`](template-customization.md#custom-file-header) | Add custom header text to the generated file. |
 | [`--custom-file-header-path`](template-customization.md#custom-file-header-path) | Add custom header content from file to generated code. |
 | [`--custom-formatters`](template-customization.md#custom-formatters) | Apply custom Python code formatters to generated output. |
@@ -189,6 +190,7 @@ All options sorted alphabetically:
 - [`--base-class-map`](model-customization.md#base-class-map) - Test --base-class-map option for model-specific base classes...
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
+- [`--class-decorators`](template-customization.md#class-decorators) - Add custom decorators to generated model classes.
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
 - [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) - Collapse duplicate models by replacing references instead of...
 - [`--collapse-root-models`](model-customization.md#collapse-root-models) - Inline root model definitions instead of creating separate w...

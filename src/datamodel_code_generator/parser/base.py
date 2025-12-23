@@ -687,6 +687,7 @@ class Parser(ABC):
         base_class: str | None = None,
         base_class_map: dict[str, str] | None = None,
         additional_imports: list[str] | None = None,
+        class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersionMin,
@@ -807,6 +808,7 @@ class Parser(ABC):
         self.imports: Imports = Imports(use_exact_imports)
         self.use_exact_imports: bool = use_exact_imports
         self._append_additional_imports(additional_imports=additional_imports)
+        self.class_decorators: list[str] = class_decorators or []
 
         self.base_class: str | None = base_class
         self.base_class_map: dict[str, str] | None = base_class_map
