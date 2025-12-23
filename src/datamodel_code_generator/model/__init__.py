@@ -35,10 +35,11 @@ class DataModelSet(NamedTuple):
     known_third_party: list[str] | None = None
 
 
-def get_data_model_types(
+def get_data_model_types(  # noqa: PLR0912
     data_model_type: DataModelType,
     target_python_version: PythonVersion = DEFAULT_TARGET_PYTHON_VERSION,
     use_type_alias: bool = False,  # noqa: FBT001, FBT002
+    use_root_model_type_alias: bool = False,  # noqa: FBT001, FBT002
 ) -> DataModelSet:
     """Get the appropriate model types for the given output format and Python version."""
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
@@ -85,9 +86,15 @@ def get_data_model_types(
             union_model=union_class,
         )
     if data_model_type == DataModelType.PydanticV2BaseModel:
+        if use_type_alias:
+            root_model_class: type[DataModel] = type_alias_class
+        elif use_root_model_type_alias:
+            root_model_class = pydantic_v2.RootModelTypeAlias
+        else:
+            root_model_class = pydantic_v2.RootModel
         return DataModelSet(
             data_model=pydantic_v2.BaseModel,
-            root_model=type_alias_class if use_type_alias else pydantic_v2.RootModel,
+            root_model=root_model_class,
             field_model=pydantic_v2.DataModelField,
             data_type_manager=pydantic_v2.DataTypeManager,
             dump_resolve_reference_action=pydantic_v2.dump_resolve_reference_action,

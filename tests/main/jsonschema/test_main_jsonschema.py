@@ -5637,3 +5637,27 @@ def test_main_root_model_config_frozen(output_file: Path) -> None:
             "--enable-faux-immutability",
         ],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-root-model-type-alias"],
+    input_schema="jsonschema/root_model_type_alias.json",
+    cli_args=["--use-root-model-type-alias", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/root_model_type_alias.py",
+)
+def test_main_use_root_model_type_alias(output_file: Path) -> None:
+    """Generate RootModel as type alias format for better mypy support (issue #1903)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_type_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_type_alias.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-type-alias",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
