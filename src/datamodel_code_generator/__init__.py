@@ -915,5 +915,6 @@ __all__ = [
     "ModuleSplitMode",
     "PythonVersion",
     "ReadOnlyWriteOnlyModelType",
+    "TargetPydanticVersion",
     "generate",
 ]
