@@ -436,6 +436,58 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
         _dataclass_arguments(json_str)
 
 
+@pytest.mark.cli_doc(
+    options=["--type-overrides"],
+    input_schema="jsonschema/type_overrides_test.json",
+    cli_args=["--type-overrides", '{"CustomType": "my_app.types.CustomType"}'],
+    golden_output="main/type_overrides_model_level.py",
+    primary=True,
+)
+@freeze_time(TIMESTAMP)
+def test_type_overrides_model_level(output_file: Path) -> None:
+    """Replace schema model types with custom Python types via JSON mapping."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--type-overrides",
+            '{"CustomType": "my_app.types.CustomType"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_scoped(output_file: Path) -> None:
+    """Test --type-overrides with scoped override replaces specific field only."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_scoped.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--type-overrides",
+            '{"User.address": "my_app.Address"}',
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
+def test_type_overrides_nested_types(output_file: Path) -> None:
+    """Test --type-overrides with nested types like List[CustomType]."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_nested.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--type-overrides",
+            '{"Tag": "my_app.Tag"}',
+        ],
+    )
+
+
 def test_skip_root_model(tmp_path: Path) -> None:
     """Test --skip-root-model flag functionality using generate()."""
     output_file = tmp_path / "output.py"

@@ -37,12 +37,15 @@ datamodel-codegen [OPTIONS]
 | [`--output-datetime-class`](typing-customization.md#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](typing-customization.md#strict-types) | Enable strict type validation for specified Python types. |
 | [`--type-mappings`](typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
+| [`--type-overrides`](typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
 | [`--use-annotated`](typing-customization.md#use-annotated) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use typing.Dict/List instead of dict/list for container types. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date/time fields instead of datetime module. |
+| [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support (issue #1903). |
 | [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types) | Use Python standard library types for string formats instead of str. |
+| [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](typing-customization.md#use-type-alias) | Use TypeAlias instead of root models for type definitions (experimental). |
 | [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
@@ -79,6 +82,7 @@ datamodel-codegen [OPTIONS]
 | [`--allow-extra-fields`](model-customization.md#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allow'). |
 | [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alias). |
 | [`--base-class`](model-customization.md#base-class) | Specify a custom base class for generated models. |
+| [`--base-class-map`](model-customization.md#base-class-map) | Test --base-class-map option for model-specific base classes. |
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
@@ -97,6 +101,7 @@ datamodel-codegen [OPTIONS]
 | [`--skip-root-model`](model-customization.md#skip-root-model) | Skip generation of root model when schema contains nested definitions. |
 | [`--strict-nullable`](model-customization.md#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--strip-default-none`](model-customization.md#strip-default-none) | Remove fields with None as default value from generated models. |
+| [`--target-pydantic-version`](model-customization.md#target-pydantic-version) | Target Pydantic version for generated code compatibility. |
 | [`--target-python-version`](model-customization.md#target-python-version) | Target Python version for generated code syntax and imports. |
 | [`--union-mode`](model-customization.md#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_to_right). |
 | [`--use-default`](model-customization.md#use-default) | Use default values from schema in generated models. |
@@ -183,6 +188,7 @@ All options sorted alphabetically:
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) - Allow Pydantic model population by field name (not just alia...
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
+- [`--base-class-map`](model-customization.md#base-class-map) - Test --base-class-map option for model-specific base classes...
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
@@ -257,8 +263,10 @@ All options sorted alphabetically:
 - [`--strict-nullable`](model-customization.md#strict-nullable) - Treat default field as a non-nullable field.
 - [`--strict-types`](typing-customization.md#strict-types) - Enable strict type validation for specified Python types.
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
+- [`--target-pydantic-version`](model-customization.md#target-pydantic-version) - Target Pydantic version for generated code compatibility.
 - [`--target-python-version`](model-customization.md#target-python-version) - Target Python version for generated code syntax and imports.
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
+- [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
 - [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Test GraphQL annotated types with standard collections and u...
@@ -279,12 +287,14 @@ All options sorted alphabetically:
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) - Use single literal value as default when enum has only one o...
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name) - Use OpenAPI operationId as the generated function/class name...
 - [`--use-pendulum`](typing-customization.md#use-pendulum) - Use pendulum types for date/time fields instead of datetime ...
+- [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) - Generate RootModel as type alias format for better mypy supp...
 - [`--use-schema-description`](field-customization.md#use-schema-description) - Use schema description as class docstring.
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) - Wrap fields with subtypes in Pydantic's SerializeAsAny.
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types) - Use Python standard library types for string formats instead...
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name) - Include HTTP status code in response model names.
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum) - Generate typed Enum subclasses for enums with specific field...
 - [`--use-title-as-name`](field-customization.md#use-title-as-name) - Use schema title as the generated class name.
+- [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) - Generate tuple types for arrays with items array syntax.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...

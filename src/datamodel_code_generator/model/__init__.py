@@ -35,10 +35,11 @@ class DataModelSet(NamedTuple):
     known_third_party: list[str] | None = None
 
 
-def get_data_model_types(
+def get_data_model_types(  # noqa: PLR0912
     data_model_type: DataModelType,
     target_python_version: PythonVersion = DEFAULT_TARGET_PYTHON_VERSION,
     use_type_alias: bool = False,  # noqa: FBT001, FBT002
+    use_root_model_type_alias: bool = False,  # noqa: FBT001, FBT002
 ) -> DataModelSet:
     """Get the appropriate model types for the given output format and Python version."""
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
@@ -56,7 +57,7 @@ def get_data_model_types(
     from .types import DataTypeManager  # noqa: PLC0415
 
     # Pydantic v2 requires TypeAliasType; other output types use TypeAlias for better compatibility
-    if data_model_type == DataModelType.PydanticV2BaseModel:
+    if data_model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}:
         if target_python_version.has_type_statement:
             type_alias_class = type_alias.TypeStatement
             scalar_class = scalar.DataTypeScalarTypeStatement
@@ -85,12 +86,30 @@ def get_data_model_types(
             union_model=union_class,
         )
     if data_model_type == DataModelType.PydanticV2BaseModel:
+        if use_type_alias:
+            root_model_class: type[DataModel] = type_alias_class
+        elif use_root_model_type_alias:
+            root_model_class = pydantic_v2.RootModelTypeAlias
+        else:
+            root_model_class = pydantic_v2.RootModel
         return DataModelSet(
             data_model=pydantic_v2.BaseModel,
-            root_model=type_alias_class if use_type_alias else pydantic_v2.RootModel,
+            root_model=root_model_class,
             field_model=pydantic_v2.DataModelField,
             data_type_manager=pydantic_v2.DataTypeManager,
             dump_resolve_reference_action=pydantic_v2.dump_resolve_reference_action,
+            scalar_model=scalar_class,
+            union_model=union_class,
+        )
+    if data_model_type == DataModelType.PydanticV2Dataclass:
+        from .pydantic_v2 import dataclass as pydantic_v2_dataclass  # noqa: PLC0415
+
+        return DataModelSet(
+            data_model=pydantic_v2_dataclass.DataClass,
+            root_model=type_alias_class,
+            field_model=pydantic_v2_dataclass.DataModelField,
+            data_type_manager=pydantic_v2.DataTypeManager,
+            dump_resolve_reference_action=None,
             scalar_model=scalar_class,
             union_model=union_class,
         )

@@ -6,13 +6,12 @@ Pydantic v1 compatible data models.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 
 from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
-from .dataclass import DataClass
 from .types import DataTypeManager
 
 if TYPE_CHECKING:
@@ -37,11 +36,20 @@ class Config(_BaseModel):
     orm_mode: Optional[bool] = None  # noqa: UP045
     validate_assignment: Optional[bool] = None  # noqa: UP045
 
+    def dict(  # type: ignore[override]
+        self, **kwargs: Any
+    ) -> dict[str, Any]:
+        """Version-compatible dict method for templates."""
+        from datamodel_code_generator.util import PYDANTIC_V2  # noqa: PLC0415
+
+        if PYDANTIC_V2:
+            return self.model_dump(**kwargs)
+        return super().dict(**kwargs)
+
 
 __all__ = [
     "BaseModel",
     "CustomRootType",
-    "DataClass",
     "DataModelField",
     "DataTypeManager",
     "dump_resolve_reference_action",

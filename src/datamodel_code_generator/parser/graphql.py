@@ -25,6 +25,7 @@ from datamodel_code_generator import (
     PythonVersionMin,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
@@ -32,6 +33,7 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
@@ -107,6 +109,7 @@ class GraphQLParser(Parser):
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
+        base_class_map: dict[str, str] | None = None,
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
@@ -155,6 +158,7 @@ class GraphQLParser(Parser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
@@ -195,11 +199,13 @@ class GraphQLParser(Parser):
         duplicate_name_suffix: dict[str, str] | None = None,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        type_overrides: dict[str, str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         use_serialize_as_any: bool = False,
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -209,6 +215,7 @@ class GraphQLParser(Parser):
             data_type_manager_type=data_type_manager_type,
             data_model_field_type=data_model_field_type,
             base_class=base_class,
+            base_class_map=base_class_map,
             additional_imports=additional_imports,
             custom_template_dir=custom_template_dir,
             extra_template_data=extra_template_data,
@@ -259,6 +266,7 @@ class GraphQLParser(Parser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            use_tuple_for_fixed_items=use_tuple_for_fixed_items,
             allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
@@ -297,11 +305,13 @@ class GraphQLParser(Parser):
             duplicate_name_suffix=duplicate_name_suffix,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            type_overrides=type_overrides,
             read_only_write_only_model_type=read_only_write_only_model_type,
             use_serialize_as_any=use_serialize_as_any,
             use_frozen_field=use_frozen_field,
             use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
             field_type_collision_strategy=field_type_collision_strategy,
+            target_pydantic_version=target_pydantic_version,
         )
 
         self.data_model_scalar_type = data_model_scalar_type
@@ -358,7 +368,7 @@ class GraphQLParser(Parser):
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, DataClass):
+        if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
             # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
             dataclass_arguments = kwargs.pop("dataclass_arguments", None)
@@ -451,7 +461,7 @@ class GraphQLParser(Parser):
                     data_type=data_type,
                 )
             ],
-            custom_base_class=self.base_class,
+            custom_base_class=self._resolve_base_class(enum_object.name),
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -471,7 +481,7 @@ class GraphQLParser(Parser):
                     data_type=data_type,
                 )
             ],
-            custom_base_class=self.base_class,
+            custom_base_class=self._resolve_base_class(enum_object.name),
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -621,7 +631,7 @@ class GraphQLParser(Parser):
             reference=self.references[obj.name],
             fields=fields,
             base_classes=base_classes,
-            custom_base_class=self.base_class,
+            custom_base_class=self._resolve_base_class(obj.name),
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,
@@ -651,7 +661,7 @@ class GraphQLParser(Parser):
         data_model_type = self.data_model_union_type(
             reference=self.references[union_object.name],
             fields=fields,
-            custom_base_class=self.base_class,
+            custom_base_class=self._resolve_base_class(union_object.name),
             custom_template_dir=self.custom_template_dir,
             extra_template_data=self.extra_template_data,
             path=self.current_source_path,

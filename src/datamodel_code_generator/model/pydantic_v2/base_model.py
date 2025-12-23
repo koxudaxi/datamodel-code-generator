@@ -25,7 +25,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
-from datamodel_code_generator.util import field_validator, model_validator
+from datamodel_code_generator.util import field_validator, model_validate, model_validator
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -177,9 +177,18 @@ class BaseModel(BaseModelBase):
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = True
-    CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
+    # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
+    # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
+    _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [
         ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
         ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
+        ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
+        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
+    ]
+    _CONFIG_ATTRIBUTES_V2_11: ClassVar[list[ConfigAttribute]] = [
+        ConfigAttribute("allow_population_by_field_name", "validate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("populate_by_name", "validate_by_name", False),  # noqa: FBT003
         ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
         ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
         ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
@@ -224,7 +233,9 @@ class BaseModel(BaseModelBase):
         if extra:
             config_parameters["extra"] = extra
 
-        for from_, to, invert in self.CONFIG_ATTRIBUTES:
+        # Select CONFIG_ATTRIBUTES based on target_pydantic_version
+        config_attributes = self._get_config_attributes()
+        for from_, to, invert in config_attributes:
             if from_ in self.extra_template_data:
                 config_parameters[to] = (
                     not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
@@ -244,7 +255,7 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
-            self.extra_template_data["config"] = ConfigDict.parse_obj(config_parameters)  # pyright: ignore[reportArgumentType]
+            self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
@@ -264,6 +275,19 @@ class BaseModel(BaseModelBase):
         elif additional_properties is False:
             config_extra = "'forbid'"
         return config_extra
+
+    def _get_config_attributes(self) -> list[ConfigAttribute]:
+        """Get config attributes based on target Pydantic version.
+
+        If target_pydantic_version is V2_11, use validate_by_name.
+        Otherwise (V2 or not specified), use populate_by_name for compatibility.
+        """
+        from datamodel_code_generator import TargetPydanticVersion  # noqa: PLC0415
+
+        target_version = self.extra_template_data.get("target_pydantic_version")
+        if target_version == TargetPydanticVersion.V2_11:
+            return self._CONFIG_ATTRIBUTES_V2_11
+        return self._CONFIG_ATTRIBUTES_V2
 
     def _has_lookaround_pattern(self) -> bool:
         """Check if any field has a regex pattern with lookaround assertions."""

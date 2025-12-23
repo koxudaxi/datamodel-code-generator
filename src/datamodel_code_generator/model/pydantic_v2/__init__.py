@@ -6,12 +6,13 @@ Pydantic v2 compatible data models with ConfigDict support.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 
 from .base_model import BaseModel, DataModelField, UnionMode
 from .root_model import RootModel
+from .root_model_type_alias import RootModelTypeAlias
 from .types import DataTypeManager
 
 if TYPE_CHECKING:
@@ -28,7 +29,9 @@ class ConfigDict(_BaseModel):
 
     extra: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
-    populate_by_name: Optional[bool] = None  # noqa: UP045
+    populate_by_name: Optional[bool] = None  # noqa: UP045  # deprecated in v2.11+
+    validate_by_name: Optional[bool] = None  # noqa: UP045  # v2.11+
+    validate_by_alias: Optional[bool] = None  # noqa: UP045  # v2.11+
     allow_extra_fields: Optional[bool] = None  # noqa: UP045
     extra_fields: Optional[str] = None  # noqa: UP045
     from_attributes: Optional[bool] = None  # noqa: UP045
@@ -40,12 +43,21 @@ class ConfigDict(_BaseModel):
     coerce_numbers_to_str: Optional[bool] = None  # noqa: UP045
     use_attribute_docstrings: Optional[bool] = None  # noqa: UP045
 
+    def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
+        """Version-compatible dict method for templates."""
+        from datamodel_code_generator.util import PYDANTIC_V2  # noqa: PLC0415
+
+        if PYDANTIC_V2:
+            return self.model_dump(**kwargs)
+        return super().dict(**kwargs)
+
 
 __all__ = [
     "BaseModel",
     "DataModelField",
     "DataTypeManager",
     "RootModel",
+    "RootModelTypeAlias",
     "UnionMode",
     "dump_resolve_reference_action",
 ]

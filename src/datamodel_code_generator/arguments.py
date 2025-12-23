@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -273,6 +274,14 @@ model_options.add_argument(
     choices=[v.value for v in PythonVersion],
 )
 model_options.add_argument(
+    "--target-pydantic-version",
+    help="Target Pydantic version for generated code. "
+    "'2': Pydantic 2.0+ compatible (default, uses populate_by_name). "
+    "'2.11': Pydantic 2.11+ (uses validate_by_name).",
+    choices=[v.value for v in TargetPydanticVersion],
+    default=None,
+)
+model_options.add_argument(
     "--treat-dot-as-module",
     help="Treat dotted schema names as module paths, creating nested directory structures (e.g., 'foo.bar.Model' "
     "becomes 'foo/bar.py'). Use --no-treat-dot-as-module to keep dots in names as underscores for single-file output.",
@@ -395,6 +404,14 @@ typing_options.add_argument(
     type=str,
 )
 typing_options.add_argument(
+    "--base-class-map",
+    help="Model-specific base class mapping (JSON). "
+    'Example: \'{"MyModel": "custom.BaseA", "OtherModel": "custom.BaseB"}\'. '
+    "Priority: base-class-map > customBasePath (in schema) > base-class.",
+    type=json.loads,
+    default=None,
+)
+typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "
@@ -502,6 +519,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-tuple-for-fixed-items",
+    help="Generate tuple types for arrays with items array syntax when minItems equals maxItems equals items length",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--allof-merge-mode",
     help="Mode for field merging in allOf schemas. "
     "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "
@@ -513,6 +536,13 @@ typing_options.add_argument(
 typing_options.add_argument(
     "--use-type-alias",
     help="Use TypeAlias instead of root models (experimental)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--use-root-model-type-alias",
+    help="Use type alias format for RootModel (e.g., Foo = RootModel[Bar]) "
+    "instead of class inheritance (Pydantic v2 only)",
     action="store_true",
     default=None,
 )
@@ -530,6 +560,15 @@ typing_options.add_argument(
     "Can be specified multiple times.",
     nargs="+",
     type=str,
+    default=None,
+)
+typing_options.add_argument(
+    "--type-overrides",
+    help="Replace schema model types with custom Python types. "
+    "Format: JSON object mapping model names to Python import paths. "
+    'Model-level: \'{"CustomType": "my_app.types.MyType"}\' replaces all references. '
+    'Scoped: \'{"User.field": "my_app.Type"}\' replaces specific field only.',
+    type=json.loads,
     default=None,
 )
 
