@@ -893,6 +893,20 @@ general_options.add_argument(
     help="Generate CLI command from pyproject.toml configuration and exit",
 )
 general_options.add_argument(
+    "--generate-prompt",
+    type=str,
+    nargs="?",
+    const="",
+    default=None,
+    metavar="QUESTION",
+    help=(
+        "Generate a prompt for consulting LLMs about CLI options. "
+        "Optionally provide your question as an argument. "
+        "Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) "
+        "or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats."
+    ),
+)
+general_options.add_argument(
     "--ignore-pyproject",
     action="store_true",
     default=False,

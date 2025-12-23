@@ -2299,7 +2299,7 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Include specified schema extension keys in Field() without requiring 'x-' prefix.
+    """Include schema extension keys in Field() without requiring 'x-' prefix.
 
     The --field-extra-keys-without-x-prefix option allows you to specify custom
     schema extension keys that should be included in Pydantic Field() extras without
