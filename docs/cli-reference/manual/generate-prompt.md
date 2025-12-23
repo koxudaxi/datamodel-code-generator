@@ -6,7 +6,7 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
-**See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
+**See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
 
 !!! tip "Usage"
 
@@ -22,9 +22,8 @@ to clipboard for web-based LLM chats.
 
     **Pipe to CLI tools:**
     ```bash
-    datamodel-codegen --generate-prompt | claude
-    datamodel-codegen --generate-prompt | codex
-    datamodel-codegen --generate-prompt | llm
+    datamodel-codegen --generate-prompt | claude -p    # Claude Code
+    datamodel-codegen --generate-prompt | codex exec   # OpenAI Codex
     ```
 
     **Copy to clipboard:**

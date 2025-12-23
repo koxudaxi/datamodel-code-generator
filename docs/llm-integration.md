@@ -26,41 +26,36 @@ The generated prompt includes:
 
 Pipe the generated prompt directly to CLI-based LLM tools:
 
-### Claude Code (Anthropic)
+### Claude Code
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) is Anthropic's official CLI tool.
+Use `-p` flag for non-interactive (pipe) mode:
 
 ```bash
-datamodel-codegen --generate-prompt "Best options for API response models?" | claude
+datamodel-codegen --generate-prompt "Best options for API response models?" | claude -p
 ```
 
-### Codex (OpenAI)
+### OpenAI Codex CLI
+
+[Codex CLI](https://github.com/openai/codex) is OpenAI's CLI tool.
+Use `exec` subcommand for non-interactive mode:
 
 ```bash
-datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex
+datamodel-codegen --generate-prompt "How to handle nullable fields?" | codex exec
 ```
 
-### llm (Simon Willison's LLM CLI)
+### Other CLI Tools
 
-```bash
-datamodel-codegen --generate-prompt | llm
-```
+Other popular LLM CLI tools that accept stdin:
 
-### aichat
+| Tool | Command | Repository |
+|------|---------|------------|
+| llm | `\| llm` | [simonw/llm](https://github.com/simonw/llm) |
+| aichat | `\| aichat` | [sigoden/aichat](https://github.com/sigoden/aichat) |
+| sgpt | `\| sgpt` | [TheR1D/shell_gpt](https://github.com/TheR1D/shell_gpt) |
+| mods | `\| mods` | [charmbracelet/mods](https://github.com/charmbracelet/mods) |
 
-```bash
-datamodel-codegen --generate-prompt | aichat
-```
-
-### ShellGPT (sgpt)
-
-```bash
-datamodel-codegen --generate-prompt | sgpt
-```
-
-### Charmbracelet mods
-
-```bash
-datamodel-codegen --generate-prompt | mods
-```
+Check each tool's documentation for specific usage and options.
 
 ## Web LLM Chat Services
 
@@ -142,7 +137,7 @@ datamodel-codegen \
     --input openapi.yaml \
     --output-model-type dataclasses.dataclass \
     --generate-prompt "How can I add JSON serialization support?" \
-    | claude
+    | claude -p
 ```
 
 ## Tips
