@@ -285,6 +285,46 @@ def test_class_decorators_with_empty_entries(output_file: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        ("pydantic.BaseModel", "class_decorators_pydantic_BaseModel.py"),
+        ("pydantic_v2.BaseModel", "class_decorators_pydantic_v2_BaseModel.py"),
+        ("pydantic_v2.dataclass", "class_decorators_pydantic_v2_dataclass.py"),
+        ("dataclasses.dataclass", "class_decorators_dataclasses_dataclass.py"),
+        ("msgspec.Struct", "class_decorators_msgspec_Struct.py"),
+        # Note: TypedDict is excluded because its template doesn't support decorators
+    ],
+    ids=[
+        "pydantic_v1",
+        "pydantic_v2",
+        "pydantic_v2_dataclass",
+        "dataclasses",
+        "msgspec",
+    ],
+)
+def test_class_decorators_all_output_types(
+    output_file: Path, output_model_type: str, expected_file: str
+) -> None:
+    """Test --class-decorators works with all output model types that support decorators."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model_type,
+            "--class-decorators",
+            "@my_decorator",
+            "--additional-imports",
+            "my_module.my_decorator",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_use_attribute_docstrings(tmp_path: Path) -> None:
     """Test --use-attribute-docstrings flag functionality."""
     output_file = tmp_path / "output.py"
