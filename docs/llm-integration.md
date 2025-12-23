@@ -91,15 +91,6 @@ datamodel-codegen --generate-prompt | Set-Clipboard
 datamodel-codegen --generate-prompt | clip.exe
 ```
 
-After copying, paste into:
-
-- **ChatGPT** - chat.openai.com
-- **Claude** - claude.ai
-- **Gemini** - gemini.google.com
-- **Perplexity** - perplexity.ai
-- **Copilot** - copilot.microsoft.com
-- And other LLM chat services
-
 ## Usage Examples
 
 ### Basic Usage
