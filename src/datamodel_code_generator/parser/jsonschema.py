@@ -580,6 +580,7 @@ class JsonSchemaParser(Parser):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
@@ -682,6 +683,7 @@ class JsonSchemaParser(Parser):
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
             use_unique_items_as_set=use_unique_items_as_set,
+            use_tuple_for_fixed_items=use_tuple_for_fixed_items,
             allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
@@ -895,6 +897,14 @@ class JsonSchemaParser(Parser):
             )
         )
 
+    def _is_fixed_length_tuple(self, obj: JsonSchemaObject) -> bool:
+        """Check if an array field represents a fixed-length tuple."""
+        if obj.prefixItems is not None and obj.items in {None, False}:
+            return obj.minItems == obj.maxItems == len(obj.prefixItems)
+        if self.use_tuple_for_fixed_items and isinstance(obj.items, list) and obj.prefixItems is None:
+            return obj.minItems == obj.maxItems == len(obj.items)
+        return False
+
     def _resolve_field_flag(self, obj: JsonSchemaObject, flag: Literal["readOnly", "writeOnly"]) -> bool:
         """Resolve a field flag (readOnly/writeOnly) from direct value, $ref, and compositions."""
         if getattr(obj, flag) is True:
@@ -1046,12 +1056,7 @@ class JsonSchemaParser(Parser):
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
-        if (
-            constraints
-            and field.prefixItems is not None
-            and field.minItems == field.maxItems == len(field.prefixItems)
-            and field.items in {None, False}
-        ):
+        if constraints and self._is_fixed_length_tuple(field):
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
         return self.data_model_field_type(
@@ -2440,12 +2445,10 @@ class JsonSchemaParser(Parser):
             items: list[JsonSchemaObject] = [obj.items]
         elif isinstance(obj.items, list):
             items = obj.items
-        elif (
-            obj.prefixItems is not None
-            and obj.minItems == obj.maxItems == len(obj.prefixItems)
-            and obj.items in {None, False}
-        ):
-            # Suppress minItems/maxItems constraints for fixed-length tuples
+            if self._is_fixed_length_tuple(obj):
+                is_tuple = True
+                suppress_item_constraints = True
+        elif obj.prefixItems is not None and self._is_fixed_length_tuple(obj):
             suppress_item_constraints = True
             items = obj.prefixItems
             is_tuple = True

@@ -733,6 +733,7 @@ class Parser(ABC):
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
         use_unique_items_as_set: bool = False,
+        use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
@@ -842,6 +843,7 @@ class Parser(ABC):
         self.use_title_as_name: bool = use_title_as_name
         self.use_operation_id_as_name: bool = use_operation_id_as_name
         self.use_unique_items_as_set: bool = use_unique_items_as_set
+        self.use_tuple_for_fixed_items: bool = use_tuple_for_fixed_items
         self.allof_merge_mode: AllOfMergeMode = allof_merge_mode
         self.dataclass_arguments = dataclass_arguments
 

@@ -3363,6 +3363,39 @@ def test_main_jsonschema_prefix_items_no_tuple(min_version: str, output_file: Pa
     )
 
 
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+@pytest.mark.cli_doc(
+    options=["--use-tuple-for-fixed-items"],
+    input_schema="jsonschema/items_array_tuple.json",
+    cli_args=["--use-tuple-for-fixed-items"],
+    golden_output="jsonschema/items_array_tuple.py",
+)
+def test_main_jsonschema_items_array_tuple(min_version: str, output_file: Path) -> None:
+    """Generate tuple types for arrays with items array syntax.
+
+    When `--use-tuple-for-fixed-items` is enabled and an array has `items` as an array
+    with `minItems == maxItems == len(items)`, generate a tuple type instead of a list.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_array_tuple.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="items_array_tuple.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            min_version,
+            "--use-tuple-for-fixed-items",
+        ],
+    )
+
+
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 24,
     reason="Installed black doesn't support the new style",

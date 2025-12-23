@@ -168,6 +168,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--use-non-positive-negative-number-constrained-types", category=OptionCategory.TYPING
     ),
     "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
+    "--use-tuple-for-fixed-items": CLIOptionMeta(name="--use-tuple-for-fixed-items", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
