@@ -33,13 +33,20 @@ assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
     input_schema="json/pet.json",
     cli_args=["--input-file-type", "json"],
     golden_output="json/general.py",
+    primary=True,
 )
 def test_main_json(output_file: Path) -> None:
     """Specify the input file type for code generation.
 
-    The `--input-file-type` flag explicitly sets the input format when it cannot
-    be auto-detected from the file extension. Supported types: openapi, jsonschema,
-    json, yaml, csv, graphql.
+    The `--input-file-type` flag explicitly sets the input format.
+
+    **Important distinction:**
+
+    - Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
+    - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
+
+    For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
+    not `--input-file-type yaml`. The `yaml` type treats the file as raw data and infers a schema from it.
     """
     run_main_and_assert(
         input_path=JSON_DATA_PATH / "pet.json",
