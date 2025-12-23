@@ -27,7 +27,7 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 """
 
 
-class Lowercase(Enum):
+class lowercase(Enum):
     foo = 'foo'
 
 
@@ -37,13 +37,13 @@ class Conflict(BaseModel):
     typename__: Literal['Conflict'] | None = Field('Conflict', alias='__typename')
 
 
-class ConflictModel(BaseModel):
+class conflict(BaseModel):
     Foo: Int
     foo: String
     typename__: Literal['conflict'] | None = Field('conflict', alias='__typename')
 
 
-class Lowercasetype(BaseModel):
+class lowercasetype(BaseModel):
     foo: Int
     typename__: Literal['lowercasetype'] | None = Field(
         'lowercasetype', alias='__typename'
@@ -51,8 +51,8 @@ class Lowercasetype(BaseModel):
 
 
 class Ref(BaseModel):
-    bar: Lowercase
-    baz: Lowercasetype
+    bar: lowercase
+    baz: lowercasetype
     eggs: Conflict
-    spam: ConflictModel
+    spam: conflict
     typename__: Literal['Ref'] | None = Field('Ref', alias='__typename')

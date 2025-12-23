@@ -1117,6 +1117,7 @@ class Parser(ABC):
         scoped_model_resolver = ModelResolver(
             exclude_names={i.alias or i.import_ for m in models for i in m.imports},
             duplicate_name_suffix="Model",
+            custom_class_name_generator=lambda name: name,
         )
 
         model_names: dict[str, DataModel] = {}

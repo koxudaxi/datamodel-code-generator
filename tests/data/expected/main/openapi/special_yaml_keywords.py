@@ -7,15 +7,15 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
-class None1(BaseModel):
+class None_1(BaseModel):
     pass
 
 
-class False1(BaseModel):
+class false1(BaseModel):
     pass
 
 
-class True1(BaseModel):
+class True_1(BaseModel):
     pass
 
 
@@ -24,7 +24,7 @@ class On(BaseModel):
 
 
 class NestedKeywords(BaseModel):
-    None_: None1 = Field(..., alias='None')
-    false: False1
-    True_: True1 = Field(..., alias='True')
+    None_: None_1 = Field(..., alias='None')
+    false: false1
+    True_: True_1 = Field(..., alias='True')
     on: On
