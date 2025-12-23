@@ -117,6 +117,16 @@ See [Supported Data Types](supported-data-types.md) for the full list.
 
 ## 🍳 Common Recipes
 
+### 🤖 Get CLI Help from LLMs
+
+Generate a prompt to ask LLMs about CLI options:
+
+```bash
+datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude -p
+```
+
+See [LLM Integration](llm-integration.md) for more examples.
+
 ### 🌐 Generate from URL {#http-extra-option}
 
 ```bash
@@ -131,7 +141,6 @@ datamodel-codegen --url https://example.com/api/openapi.yaml --output model.py
 input = "schema.yaml"
 output = "src/models.py"
 output-model-type = "pydantic_v2.BaseModel"
-snake-case-field = true
 ```
 
 Then simply run:
@@ -142,12 +151,6 @@ datamodel-codegen
 
 See [pyproject.toml Configuration](pyproject_toml.md) for more options.
 
-### 🐍 Snake-case field names
-
-```bash
-datamodel-codegen --snake-case-field --input schema.json --output model.py
-```
-
 ### 🔄 CI/CD Integration
 
 Verify generated code stays in sync with schemas using `--check`:
@@ -157,16 +160,6 @@ datamodel-codegen --input schema.yaml --output models.py --disable-timestamp --c
 ```
 
 See [CI/CD Integration](ci-cd.md) for GitHub Actions and more.
-
-### 🤖 Get CLI Help from LLMs
-
-Generate a prompt to ask LLMs about CLI options:
-
-```bash
-datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude -p
-```
-
-See [LLM Integration](llm-integration.md) for more examples.
 
 ---
 
