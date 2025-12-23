@@ -1,0 +1,22 @@
+{%- macro get_type_hint(_fields, use_base_type) -%}
+{%- if _fields -%}
+{%- if use_base_type -%}
+{{- _fields[0].base_type_hint}}
+{%- else -%}
+{{- _fields[0].type_hint}}
+{%- endif -%}
+{%- endif -%}
+{%- endmacro -%}
+
+{#- Use base_type_hint when regex_engine is set to avoid evaluating pattern before config is processed -#}
+{%- set use_base_type = config and config.regex_engine -%}
+{{ class_name }} = RootModel[{{get_type_hint(fields, use_base_type)}}]{% if comment is defined %}  # {{ comment }}{% endif %}
+{%- if description %}
+"""
+{{ description }}
+"""
+{%- elif fields and fields[0].docstring %}
+"""
+{{ fields[0].docstring }}
+"""
+{%- endif %}

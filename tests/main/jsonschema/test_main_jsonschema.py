@@ -1566,6 +1566,25 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
     assert_file_content(output_file, "root_model_with_additional_properties_custom_class_name.py")
 
 
+def test_main_generate_custom_class_name_generator_keep_underscores(tmp_path: Path) -> None:
+    """Test custom_class_name_generator preserves underscores in class names (Issue #1315)."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "underscore_title.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+
+    def keep_underscores(name: str) -> str:
+        return name
+
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        custom_class_name_generator=keep_underscores,
+    )
+
+    assert_file_content(output_file, "underscore_title.py")
+
+
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
@@ -2383,6 +2402,31 @@ def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="custom_base_path.py",
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--base-class-map"],
+    input_schema="jsonschema/base_class_map.json",
+    cli_args=[
+        "--base-class-map",
+        '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
+    ],
+    golden_output="base_class_map.py",
+    related_options=["--base-class"],
+)
+def test_main_jsonschema_base_class_map(output_file: Path) -> None:
+    """Test --base-class-map option for model-specific base classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map.py",
+        extra_args=[
+            "--base-class-map",
+            '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
+        ],
     )
 
 
@@ -3360,6 +3404,39 @@ def test_main_jsonschema_prefix_items_no_tuple(min_version: str, output_file: Pa
         assert_func=assert_file_content,
         expected_file="prefix_items_no_tuple.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--target-python-version", min_version],
+    )
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 24,
+    reason="Installed black doesn't support the new style",
+)
+@pytest.mark.cli_doc(
+    options=["--use-tuple-for-fixed-items"],
+    input_schema="jsonschema/items_array_tuple.json",
+    cli_args=["--use-tuple-for-fixed-items"],
+    golden_output="jsonschema/items_array_tuple.py",
+)
+def test_main_jsonschema_items_array_tuple(min_version: str, output_file: Path) -> None:
+    """Generate tuple types for arrays with items array syntax.
+
+    When `--use-tuple-for-fixed-items` is enabled and an array has `items` as an array
+    with `minItems == maxItems == len(items)`, generate a tuple type instead of a list.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_array_tuple.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="items_array_tuple.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            min_version,
+            "--use-tuple-for-fixed-items",
+        ],
     )
 
 
@@ -5558,5 +5635,29 @@ def test_main_root_model_config_frozen(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
             "--enable-faux-immutability",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-root-model-type-alias"],
+    input_schema="jsonschema/root_model_type_alias.json",
+    cli_args=["--use-root-model-type-alias", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/root_model_type_alias.py",
+)
+def test_main_use_root_model_type_alias(output_file: Path) -> None:
+    """Generate RootModel as type alias format for better mypy support (issue #1903)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_type_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_model_type_alias.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-root-model-type-alias",
+            "--target-python-version",
+            "3.10",
         ],
     )

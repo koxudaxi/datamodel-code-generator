@@ -1,0 +1,15 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "Tag": {"type": "string"},
+        "Item": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "array",
+                    "items": {"$ref": "#/definitions/Tag"}
+                }
+            }
+        }
+    }
+}

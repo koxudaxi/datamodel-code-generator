@@ -73,6 +73,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--target-python-version": CLIOptionMeta(name="--target-python-version", category=OptionCategory.MODEL),
     "--target-pydantic-version": CLIOptionMeta(name="--target-pydantic-version", category=OptionCategory.MODEL),
     "--base-class": CLIOptionMeta(name="--base-class", category=OptionCategory.MODEL),
+    "--base-class-map": CLIOptionMeta(name="--base-class-map", category=OptionCategory.MODEL),
     "--class-name": CLIOptionMeta(name="--class-name", category=OptionCategory.MODEL),
     "--frozen-dataclasses": CLIOptionMeta(name="--frozen-dataclasses", category=OptionCategory.MODEL),
     "--keyword-only": CLIOptionMeta(name="--keyword-only", category=OptionCategory.MODEL),
@@ -151,6 +152,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-annotated": CLIOptionMeta(name="--use-annotated", category=OptionCategory.TYPING),
     "--use-type-alias": CLIOptionMeta(name="--use-type-alias", category=OptionCategory.TYPING),
+    "--use-root-model-type-alias": CLIOptionMeta(name="--use-root-model-type-alias", category=OptionCategory.TYPING),
     "--strict-types": CLIOptionMeta(name="--strict-types", category=OptionCategory.TYPING),
     "--enum-field-as-literal": CLIOptionMeta(name="--enum-field-as-literal", category=OptionCategory.TYPING),
     "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
@@ -168,7 +170,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--use-non-positive-negative-number-constrained-types", category=OptionCategory.TYPING
     ),
     "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
+    "--use-tuple-for-fixed-items": CLIOptionMeta(name="--use-tuple-for-fixed-items", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
+    "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
     # ==========================================================================

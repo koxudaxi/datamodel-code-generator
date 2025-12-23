@@ -380,6 +380,14 @@ typing_options.add_argument(
     type=str,
 )
 typing_options.add_argument(
+    "--base-class-map",
+    help="Model-specific base class mapping (JSON). "
+    'Example: \'{"MyModel": "custom.BaseA", "OtherModel": "custom.BaseB"}\'. '
+    "Priority: base-class-map > customBasePath (in schema) > base-class.",
+    type=json.loads,
+    default=None,
+)
+typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "
@@ -487,6 +495,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-tuple-for-fixed-items",
+    help="Generate tuple types for arrays with items array syntax when minItems equals maxItems equals items length",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--allof-merge-mode",
     help="Mode for field merging in allOf schemas. "
     "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "
@@ -498,6 +512,13 @@ typing_options.add_argument(
 typing_options.add_argument(
     "--use-type-alias",
     help="Use TypeAlias instead of root models (experimental)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
+    "--use-root-model-type-alias",
+    help="Use type alias format for RootModel (e.g., Foo = RootModel[Bar]) "
+    "instead of class inheritance (Pydantic v2 only)",
     action="store_true",
     default=None,
 )
@@ -515,6 +536,15 @@ typing_options.add_argument(
     "Can be specified multiple times.",
     nargs="+",
     type=str,
+    default=None,
+)
+typing_options.add_argument(
+    "--type-overrides",
+    help="Replace schema model types with custom Python types. "
+    "Format: JSON object mapping model names to Python import paths. "
+    'Model-level: \'{"CustomType": "my_app.types.MyType"}\' replaces all references. '
+    'Scoped: \'{"User.field": "my_app.Type"}\' replaces specific field only.',
+    type=json.loads,
     default=None,
 )
 

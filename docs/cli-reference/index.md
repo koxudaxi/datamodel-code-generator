@@ -9,9 +9,9 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 19 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 22 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 30 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 31 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 17 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
@@ -35,6 +35,7 @@ This documentation is auto-generated from test cases.
 ### B {#b}
 
 - [`--base-class`](model-customization.md#base-class)
+- [`--base-class-map`](model-customization.md#base-class-map)
 
 ### C {#c}
 
@@ -156,6 +157,7 @@ This documentation is auto-generated from test cases.
 - [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
 - [`--target-python-version`](model-customization.md#target-python-version)
 - [`--type-mappings`](typing-customization.md#type-mappings)
+- [`--type-overrides`](typing-customization.md#type-overrides)
 
 ### U {#u}
 
@@ -179,12 +181,14 @@ This documentation is auto-generated from test cases.
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default)
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name)
 - [`--use-pendulum`](typing-customization.md#use-pendulum)
+- [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types)
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
+- [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
 

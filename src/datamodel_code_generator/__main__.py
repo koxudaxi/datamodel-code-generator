@@ -396,6 +396,7 @@ class Config(BaseModel):
     target_python_version: PythonVersion = PythonVersionMin
     target_pydantic_version: Optional[TargetPydanticVersion] = None  # noqa: UP045
     base_class: str = ""
+    base_class_map: Optional[dict[str, str]] = None  # noqa: UP045
     additional_imports: Optional[list[str]] = None  # noqa: UP045
     class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
@@ -449,6 +450,7 @@ class Config(BaseModel):
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
+    use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
@@ -462,6 +464,7 @@ class Config(BaseModel):
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
     use_type_alias: bool = False
+    use_root_model_type_alias: bool = False
     special_field_name_prefix: Optional[str] = None  # noqa: UP045
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
@@ -488,6 +491,7 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
+    type_overrides: Optional[dict[str, str]] = None  # noqa: UP045
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
     use_status_code_in_response_name: bool = False
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
@@ -707,6 +711,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         target_python_version=config.target_python_version,
         target_pydantic_version=config.target_pydantic_version,
         base_class=config.base_class,
+        base_class_map=config.base_class_map,
         additional_imports=config.additional_imports,
         class_decorators=config.class_decorators,
         custom_template_dir=config.custom_template_dir,
@@ -759,6 +764,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_title_as_name=config.use_title_as_name,
         use_operation_id_as_name=config.use_operation_id_as_name,
         use_unique_items_as_set=config.use_unique_items_as_set,
+        use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
         allof_merge_mode=config.allof_merge_mode,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
@@ -772,6 +778,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
         use_type_alias=config.use_type_alias,
+        use_root_model_type_alias=config.use_root_model_type_alias,
         use_union_operator=config.use_union_operator,
         special_field_name_prefix=config.special_field_name_prefix,
         remove_special_field_name_prefix=config.remove_special_field_name_prefix,
@@ -800,6 +807,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         dataclass_arguments=config.dataclass_arguments,
         disable_future_imports=config.disable_future_imports,
         type_mappings=config.type_mappings,
+        type_overrides=config.type_overrides,
         read_only_write_only_model_type=config.read_only_write_only_model_type,
         use_status_code_in_response_name=config.use_status_code_in_response_name,
         all_exports_scope=config.all_exports_scope,

@@ -413,6 +413,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     target_python_version: PythonVersion = PythonVersionMin,
     target_pydantic_version: TargetPydanticVersion | None = None,
     base_class: str = "",
+    base_class_map: dict[str, str] | None = None,
     additional_imports: list[str] | None = None,
     class_decorators: list[str] | None = None,
     custom_template_dir: Path | None = None,
@@ -467,6 +468,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_title_as_name: bool = False,
     use_operation_id_as_name: bool = False,
     use_unique_items_as_set: bool = False,
+    use_tuple_for_fixed_items: bool = False,
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
@@ -481,6 +483,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     collapse_reuse_models: bool = False,
     skip_root_model: bool = False,
     use_type_alias: bool = False,
+    use_root_model_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
@@ -508,6 +511,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     dataclass_arguments: DataclassArguments | None = None,
     disable_future_imports: bool = False,
     type_mappings: list[str] | None = None,
+    type_overrides: dict[str, str] | None = None,
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
     use_status_code_in_response_name: bool = False,
     all_exports_scope: AllExportsScope | None = None,
@@ -652,7 +656,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version, use_type_alias=use_type_alias)
+    data_model_types = get_data_model_types(
+        output_model_type,
+        target_python_version,
+        use_type_alias=use_type_alias,
+        use_root_model_type_alias=use_root_model_type_alias,
+    )
 
     # Add GraphQL-specific model types if needed
     if input_file_type == InputFileType.GraphQL:
@@ -668,6 +677,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         data_model_field_type=data_model_types.field_model,
         data_type_manager_type=data_model_types.data_type_manager,
         base_class=base_class,
+        base_class_map=base_class_map,
         additional_imports=additional_imports,
         class_decorators=class_decorators,
         custom_template_dir=custom_template_dir,
@@ -722,6 +732,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,
         use_unique_items_as_set=use_unique_items_as_set,
+        use_tuple_for_fixed_items=use_tuple_for_fixed_items,
         allof_merge_mode=allof_merge_mode,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
@@ -761,6 +772,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         parent_scoped_naming=parent_scoped_naming,
         dataclass_arguments=dataclass_arguments,
         type_mappings=type_mappings,
+        type_overrides=type_overrides,
         read_only_write_only_model_type=read_only_write_only_model_type,
         field_type_collision_strategy=field_type_collision_strategy,
         target_pydantic_version=target_pydantic_version,
