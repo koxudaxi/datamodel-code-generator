@@ -25,7 +25,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
-from datamodel_code_generator.util import field_validator, model_validate, model_validator
+from datamodel_code_generator.util import PYDANTIC_V2_11, field_validator, model_validate, model_validator
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -177,14 +177,24 @@ class BaseModel(BaseModelBase):
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = True
-    # Always use validate_by_name for Pydantic v2 output (forward-compatible with v2.11+)
-    CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = [
-        ConfigAttribute("allow_population_by_field_name", "validate_by_name", False),  # noqa: FBT003
-        ConfigAttribute("populate_by_name", "validate_by_name", False),  # noqa: FBT003
-        ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
-        ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
-        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
-    ]
+    # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
+    CONFIG_ATTRIBUTES: ClassVar[list[ConfigAttribute]] = (
+        [
+            ConfigAttribute("allow_population_by_field_name", "validate_by_name", False),  # noqa: FBT003
+            ConfigAttribute("populate_by_name", "validate_by_name", False),  # noqa: FBT003
+            ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
+            ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
+            ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
+        ]
+        if PYDANTIC_V2_11
+        else [
+            ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
+            ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
+            ConfigAttribute("allow_mutation", "frozen", True),  # noqa: FBT003
+            ConfigAttribute("frozen", "frozen", False),  # noqa: FBT003
+            ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
+        ]
+    )
 
     def __init__(  # noqa: PLR0913
         self,

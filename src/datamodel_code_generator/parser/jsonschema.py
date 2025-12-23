@@ -78,6 +78,7 @@ from datamodel_code_generator.util import (
     BaseModel,
     field_validator,
     get_fields_set,
+    model_copy,
     model_dump,
     model_validate,
     model_validator,
@@ -1798,10 +1799,7 @@ class JsonSchemaParser(Parser):
                 if current_type and current_type.type == ANY and field_name:
                     inherited_type = self._get_inherited_field_type(field_name, base_classes)
                     if inherited_type is not None:
-                        if PYDANTIC_V2:
-                            new_type = inherited_type.model_copy(deep=True)
-                        else:
-                            new_type = inherited_type.copy(deep=True)
+                        new_type = model_copy(inherited_type, deep=True)
                         new_type.is_optional = new_type.is_optional or current_type.is_optional
                         new_type.is_dict = new_type.is_dict or current_type.is_dict
                         new_type.is_list = new_type.is_list or current_type.is_list
@@ -1815,7 +1813,7 @@ class JsonSchemaParser(Parser):
                     if inherited_type is None or not inherited_type.is_list or not inherited_type.data_types:
                         continue
 
-                    new_type = inherited_type.model_copy(deep=True) if PYDANTIC_V2 else inherited_type.copy(deep=True)
+                    new_type = model_copy(inherited_type, deep=True)
 
                     # Preserve modifiers coming from the overriding schema.
                     if current_type is not None:  # pragma: no branch
@@ -1834,7 +1832,7 @@ class JsonSchemaParser(Parser):
                         and current_type.data_types[0].is_list
                     )
                     if is_wrapped:
-                        wrapper = current_type.model_copy(deep=True) if PYDANTIC_V2 else current_type.copy(deep=True)
+                        wrapper = model_copy(current_type, deep=True)
                         wrapper.data_types[0] = new_type
                         field.data_type = wrapper
                         continue

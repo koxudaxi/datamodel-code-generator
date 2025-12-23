@@ -24,7 +24,7 @@ from datamodel_code_generator.parser.openapi import (
     RequestBodyObject,
     ResponseObject,
 )
-from datamodel_code_generator.util import model_dump, model_validate
+from datamodel_code_generator.util import model_validate
 from tests.conftest import assert_output, assert_parser_modules, assert_parser_results
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
