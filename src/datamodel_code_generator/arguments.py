@@ -380,6 +380,14 @@ typing_options.add_argument(
     type=str,
 )
 typing_options.add_argument(
+    "--base-class-map",
+    help="Model-specific base class mapping (JSON). "
+    'Example: \'{"MyModel": "custom.BaseA", "OtherModel": "custom.BaseB"}\'. '
+    "Priority: base-class-map > customBasePath (in schema) > base-class.",
+    type=json.loads,
+    default=None,
+)
+typing_options.add_argument(
     "--enum-field-as-literal",
     help="Parse enum field as literal. "
     "all: all enum field type are Literal. "

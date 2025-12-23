@@ -685,6 +685,7 @@ class Parser(ABC):
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
         data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
         base_class: str | None = None,
+        base_class_map: dict[str, str] | None = None,
         additional_imports: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
@@ -806,6 +807,7 @@ class Parser(ABC):
         self._append_additional_imports(additional_imports=additional_imports)
 
         self.base_class: str | None = base_class
+        self.base_class_map: dict[str, str] | None = base_class_map
         self.target_python_version: PythonVersion = target_python_version
         self.results: list[DataModel] = []
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = dump_resolve_reference_action
@@ -1023,6 +1025,12 @@ class Parser(ABC):
                 continue
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
+
+    def _resolve_base_class(self, class_name: str, custom_base_path: str | None = None) -> str | None:
+        """Resolve base class with priority: base_class_map > customBasePath > base_class."""
+        if self.base_class_map and class_name in self.base_class_map:
+            return self.base_class_map[class_name]
+        return custom_base_path or self.base_class
 
     def _get_text_from_url(self, url: str) -> str:
         from datamodel_code_generator.http import get_body  # noqa: PLC0415
