@@ -150,6 +150,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "binary": Types.binary,
         "date": Types.date,
         "date-time": Types.date_time,
+        "timestamp with time zone": Types.date_time,  # PostgreSQL format
         "date-time-local": Types.date_time_local,
         "duration": Types.timedelta,
         "time": Types.time,
