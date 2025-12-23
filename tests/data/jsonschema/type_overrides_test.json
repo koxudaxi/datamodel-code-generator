@@ -1,0 +1,13 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "definitions": {
+        "CustomType": {"type": "string"},
+        "User": {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "custom": {"$ref": "#/definitions/CustomType"}
+            }
+        }
+    }
+}

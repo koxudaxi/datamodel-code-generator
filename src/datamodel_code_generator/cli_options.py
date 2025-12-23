@@ -168,6 +168,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
+    "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
     # ==========================================================================

@@ -37,6 +37,7 @@ datamodel-codegen [OPTIONS]
 | [`--output-datetime-class`](typing-customization.md#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](typing-customization.md#strict-types) | Enable strict type validation for specified Python types. |
 | [`--type-mappings`](typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
+| [`--type-overrides`](typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
 | [`--use-annotated`](typing-customization.md#use-annotated) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use typing.Dict/List instead of dict/list for container types. |
@@ -255,6 +256,7 @@ All options sorted alphabetically:
 - [`--strip-default-none`](model-customization.md#strip-default-none) - Remove fields with None as default value from generated mode...
 - [`--target-python-version`](model-customization.md#target-python-version) - Target Python version for generated code syntax and imports.
 - [`--type-mappings`](typing-customization.md#type-mappings) - Override default type mappings for schema formats.
+- [`--type-overrides`](typing-customization.md#type-overrides) - Replace schema model types with custom Python types via JSON...
 - [`--union-mode`](model-customization.md#union-mode) - Union mode for combining anyOf/oneOf schemas (smart or left_...
 - [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Test GraphQL annotated types with standard collections and u...

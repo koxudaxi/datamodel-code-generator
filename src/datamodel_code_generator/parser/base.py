@@ -773,6 +773,7 @@ class Parser(ABC):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        type_overrides: dict[str, str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
@@ -930,6 +931,10 @@ class Parser(ABC):
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
+        self.type_overrides: dict[str, str] = type_overrides or {}
+        self._type_override_imports: dict[str, Import] = {
+            key: Import.from_full_path(value) for key, value in self.type_overrides.items()
+        }
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
         self.use_frozen_field: bool = use_frozen_field
         self.use_default_factory_for_optional_nested_models: bool = use_default_factory_for_optional_nested_models
@@ -1965,6 +1970,57 @@ class Parser(ABC):
             and not dataclass_model.has_field_assignment(field)
         )
 
+    def __remove_overridden_models(self, models: list[DataModel]) -> list[DataModel]:
+        """Remove models that are being overridden by custom types (model-level only).
+
+        Only model-level overrides (keys without dots) cause model removal.
+        Scoped overrides (ClassName.field) only affect specific fields.
+        """
+        if not self.type_overrides:
+            return models
+        # Only model-level overrides (no dot) cause model removal
+        model_level_overrides = {k for k in self.type_overrides if "." not in k}
+        return [m for m in models if m.class_name not in model_level_overrides]
+
+    def __apply_type_overrides(self, models: list[DataModel]) -> None:
+        """Replace field type references with custom import types.
+
+        Supports two key formats:
+        - Model-level: {"CustomType": "my_app.Type"} - applies to all references
+        - Scoped: {"User.field": "my_app.Type"} - applies to specific field only
+
+        Scoped overrides take priority over model-level overrides.
+        """
+        if not self._type_override_imports:
+            return
+        for model in models:
+            for field in model.fields:
+                # Check scoped override first: "ClassName.field_name"
+                scoped_key = f"{model.class_name}.{field.name}"
+                if scoped_key in self._type_override_imports:
+                    self._apply_override_to_field(field, self._type_override_imports[scoped_key])
+                else:
+                    # Apply model-level overrides to nested types
+                    self._apply_override_to_data_type(field.data_type)
+
+    def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:  # noqa: PLR6301
+        """Apply override to entire field's data_type."""
+        field.data_type.import_ = override_import
+        field.data_type.alias = override_import.import_
+        field.data_type.reference = None
+        field.data_type.data_types = []  # Clear nested types
+
+    def _apply_override_to_data_type(self, data_type: DataType) -> None:
+        """Recursively apply model-level overrides to a DataType."""
+        if data_type.reference and data_type.reference.name in self._type_override_imports:
+            override_import = self._type_override_imports[data_type.reference.name]
+            data_type.import_ = override_import
+            data_type.alias = override_import.import_
+            data_type.reference = None
+        # Handle nested types (List[CustomType], Optional[CustomType], etc.)
+        for nested in data_type.data_types:
+            self._apply_override_to_data_type(nested)
+
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases and RootModels to properly handle forward references per PEP 484."""
@@ -2753,6 +2809,8 @@ class Parser(ABC):
         self.__apply_discriminator_type(models, imports)
         self.__set_one_literal_on_default(models)
         self.__fix_dataclass_field_ordering(models)
+        models = self.__remove_overridden_models(models)
+        self.__apply_type_overrides(models)
         self.__update_type_aliases(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)

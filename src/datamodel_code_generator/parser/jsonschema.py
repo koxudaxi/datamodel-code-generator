@@ -613,6 +613,7 @@ class JsonSchemaParser(Parser):
         parent_scoped_naming: bool = False,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
+        type_overrides: dict[str, str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     ) -> None:
@@ -714,6 +715,7 @@ class JsonSchemaParser(Parser):
             parent_scoped_naming=parent_scoped_naming,
             dataclass_arguments=dataclass_arguments,
             type_mappings=type_mappings,
+            type_overrides=type_overrides,
             read_only_write_only_model_type=read_only_write_only_model_type,
             field_type_collision_strategy=field_type_collision_strategy,
         )
