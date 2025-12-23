@@ -265,6 +265,26 @@ def test_class_decorators_without_at_prefix(output_file: Path) -> None:
 
 
 @freeze_time(TIMESTAMP)
+def test_class_decorators_with_empty_entries(output_file: Path) -> None:
+    """Test --class-decorators filters out empty entries from comma-separated list."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_decorators_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@dataclass_json, ,",
+            "--additional-imports",
+            "dataclasses_json.dataclass_json",
+        ],
+    )
+
+
+@freeze_time(TIMESTAMP)
 def test_use_attribute_docstrings(tmp_path: Path) -> None:
     """Test --use-attribute-docstrings flag functionality."""
     output_file = tmp_path / "output.py"
