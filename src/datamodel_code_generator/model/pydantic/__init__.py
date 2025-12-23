@@ -12,7 +12,6 @@ from pydantic import BaseModel as _BaseModel
 
 from .base_model import BaseModel, DataModelField
 from .custom_root_type import CustomRootType
-from .dataclass import DataClass
 from .types import DataTypeManager
 
 if TYPE_CHECKING:
@@ -41,7 +40,6 @@ class Config(_BaseModel):
 __all__ = [
     "BaseModel",
     "CustomRootType",
-    "DataClass",
     "DataModelField",
     "DataTypeManager",
     "dump_resolve_reference_action",

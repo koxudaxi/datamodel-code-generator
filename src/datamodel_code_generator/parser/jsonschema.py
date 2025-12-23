@@ -53,6 +53,7 @@ from datamodel_code_generator.model.enum import (
     Enum,
     StrEnum,
 )
+from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
@@ -1739,7 +1740,7 @@ class JsonSchemaParser(Parser):
     def _create_data_model(self, model_type: type[DataModel] | None = None, **kwargs: Any) -> DataModel:
         """Create data model instance with dataclass_arguments support for DataClass."""
         data_model_class = model_type or self.data_model_type
-        if issubclass(data_model_class, DataClass):
+        if issubclass(data_model_class, (DataClass, PydanticV2DataClass)):
             # Use dataclass_arguments from kwargs, or fall back to self.dataclass_arguments
             # If both are None, construct from legacy frozen_dataclasses/keyword_only flags
             dataclass_arguments = kwargs.pop("dataclass_arguments", None)
