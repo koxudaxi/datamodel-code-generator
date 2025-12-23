@@ -211,10 +211,6 @@ skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md'
 [tool.pytest.ini_options]
 filterwarnings = [
   "error",
-  "ignore:^.*The `parse_obj` method is deprecated; use `model_validate` instead.*",
-  "ignore:^.*The `__fields_set__` attribute is deprecated, use `model_fields_set` instead.*",
-  "ignore:^.*The `dict` method is deprecated; use `model_dump` instead.*",
-  "ignore:^.*The `copy` method is deprecated; use `model_copy` instead.*",
   "ignore:^.*`--validation` option is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",

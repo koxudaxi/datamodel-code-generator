@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 PYDANTIC_VERSION = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
 
 PYDANTIC_V2: bool = version.parse("2.0b3") <= PYDANTIC_VERSION
+PYDANTIC_V2_11: bool = version.parse("2.11") <= PYDANTIC_VERSION
 
 try:
     from yaml import CSafeLoader as SafeLoader
@@ -154,3 +155,31 @@ def camel_to_snake(string: str) -> str:
     """Convert camelCase or PascalCase to snake_case."""
     subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
+
+
+def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:
+    """Version-compatible model serialization (dict/model_dump)."""
+    if PYDANTIC_V2:
+        return obj.model_dump(**kwargs)
+    return obj.dict(**kwargs)  # type: ignore[reportDeprecated]
+
+
+def model_validate(cls: type[Model], obj: Any) -> Model:
+    """Version-compatible model validation (parse_obj/model_validate)."""
+    if PYDANTIC_V2:
+        return cls.model_validate(obj)
+    return cls.parse_obj(obj)  # type: ignore[reportDeprecated]
+
+
+def get_fields_set(obj: _BaseModel) -> set[str]:
+    """Version-compatible access to fields set (__fields_set__/model_fields_set)."""
+    if PYDANTIC_V2:
+        return obj.model_fields_set
+    return obj.__fields_set__  # type: ignore[reportDeprecated]
+
+
+def model_copy(obj: Model, **kwargs: Any) -> Model:
+    """Version-compatible model copy (copy/model_copy)."""
+    if PYDANTIC_V2:
+        return obj.model_copy(**kwargs)
+    return obj.copy(**kwargs)  # type: ignore[reportDeprecated]

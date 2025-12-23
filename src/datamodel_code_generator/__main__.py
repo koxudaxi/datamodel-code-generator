@@ -35,6 +35,7 @@ from datamodel_code_generator import (
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
     enable_debug_message,
     generate,
 )
@@ -378,6 +379,7 @@ class Config(BaseModel):
     debug: bool = False
     disable_warnings: bool = False
     target_python_version: PythonVersion = PythonVersionMin
+    target_pydantic_version: Optional[TargetPydanticVersion] = None  # noqa: UP045
     base_class: str = ""
     additional_imports: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
@@ -687,6 +689,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         output=output,
         output_model_type=config.output_model_type,
         target_python_version=config.target_python_version,
+        target_pydantic_version=config.target_pydantic_version,
         base_class=config.base_class,
         additional_imports=config.additional_imports,
         custom_template_dir=config.custom_template_dir,

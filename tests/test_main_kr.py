@@ -1557,3 +1557,42 @@ def test_target_python_version_outputs(output_file: Path) -> None:
         expected_file=EXPECTED_MAIN_KR_PATH / "target_python_version" / "py310.py",
         extra_args=["--target-python-version", "3.10", "--use-standard-collections"],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--target-pydantic-version"],
+    input_schema="jsonschema/person.json",
+    cli_args=[
+        "--target-pydantic-version",
+        "2.11",
+        "--allow-population-by-field-name",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ],
+    golden_output="main_kr/target_pydantic_version/v2_11.py",
+    primary=True,
+)
+@freeze_time("2019-07-26")
+def test_target_pydantic_version(output_file: Path) -> None:
+    """Target Pydantic version for generated code compatibility.
+
+    The `--target-pydantic-version` flag controls Pydantic version-specific config:
+
+    - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
+    - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
+
+    This prevents breaking changes when generated code is used on older Pydantic versions.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "target_pydantic_version" / "v2_11.py",
+        extra_args=[
+            "--target-pydantic-version",
+            "2.11",
+            "--allow-population-by-field-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )

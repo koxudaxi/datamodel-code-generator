@@ -32,6 +32,7 @@ from datamodel_code_generator import (
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -72,7 +73,7 @@ from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager, StrictTypes
-from datamodel_code_generator.util import camel_to_snake
+from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
@@ -325,7 +326,7 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
     if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):
-        return to_hashable(item.dict())
+        return to_hashable(model_dump(item))
     if item is None:
         return ""
     return item  # type: ignore[return-value]
@@ -637,11 +638,11 @@ def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
         elif data_type_.data_types:  # pragma: no cover
-            copied_data_type = data_type_.copy()
+            copied_data_type = model_copy(data_type_)
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
         else:
-            copied_data_types.append(data_type_.copy())
+            copied_data_types.append(model_copy(data_type_))
     return copied_data_types
 
 
@@ -775,9 +776,11 @@ class Parser(ABC):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
+        self.target_pydantic_version = target_pydantic_version
         self.frozen_dataclasses = frozen_dataclasses
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -885,6 +888,12 @@ class Parser(ABC):
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+
+        if target_pydantic_version:
+            if use_generic_base_class:
+                self.generic_base_class_config["target_pydantic_version"] = target_pydantic_version
+            else:
+                self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = target_pydantic_version
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
@@ -1438,7 +1447,7 @@ class Parser(ABC):
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
         if data_type.is_list:
-            new_data_type = data_type.copy()
+            new_data_type = model_copy(data_type)
             new_data_type.is_list = False
             new_data_type.is_set = True
             for data_type_ in new_data_type.data_types:
@@ -1658,7 +1667,7 @@ class Parser(ABC):
                         continue
 
                     # set copied data_type
-                    copied_data_type = root_type_field.data_type.copy()
+                    copied_data_type = model_copy(root_type_field.data_type)
                     if isinstance(data_type.parent, self.data_model_field_type):
                         # for field
                         # override empty field by root-type field
@@ -1815,18 +1824,18 @@ class Parser(ABC):
                 if not original_field:  # pragma: no cover
                     model.fields.remove(model_field)
                     continue
-                copied_original_field = original_field.copy()
+                copied_original_field = model_copy(original_field)
                 if original_field.data_type.reference:
                     data_type = self.data_type_manager.data_type(
                         reference=original_field.data_type.reference,
                     )
                 elif original_field.data_type.data_types:
-                    data_type = original_field.data_type.copy()
+                    data_type = model_copy(original_field.data_type)
                     data_type.data_types = _copy_data_types(original_field.data_type.data_types)
                     for data_type_ in data_type.data_types:
                         data_type_.parent = data_type
                 else:
-                    data_type = original_field.data_type.copy()
+                    data_type = model_copy(original_field.data_type)
                 data_type.parent = copied_original_field
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model
