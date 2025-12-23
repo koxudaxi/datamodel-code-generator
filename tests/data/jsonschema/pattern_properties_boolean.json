@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "patternProperties": {
+    "^x-": true,
+    "^name": {
+      "type": "string"
+    },
+    "^invalid": false
+  }
+}

@@ -2299,7 +2299,7 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
 def test_main_jsonschema_field_extras_field_include_all_keys(
     output_model: str, expected_output: str, output_file: Path
 ) -> None:
-    """Include specified schema extension keys in Field() without requiring 'x-' prefix.
+    """Include schema extension keys in Field() without requiring 'x-' prefix.
 
     The --field-extra-keys-without-x-prefix option allows you to specify custom
     schema extension keys that should be included in Pydantic Field() extras without
@@ -3046,6 +3046,21 @@ def test_main_jsonschema_copy_deep_pattern_properties(output_file: Path) -> None
             "pydantic_v2.BaseModel",
             "--read-only-write-only-model-type",
             "all",
+        ],
+    )
+
+
+def test_main_jsonschema_pattern_properties_boolean(output_file: Path) -> None:
+    """Test patternProperties with boolean values (true/false) as allowed in JSON Schema 2020-12."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_boolean.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_boolean.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
         ],
     )
 

@@ -103,7 +103,7 @@ print(user.to_json())
 The `--class-decorators` option works with any output model type:
 
 - **Pydantic models**: Add custom validators or behavior
-- **TypedDict**: Add runtime type checking decorators
+- **TypedDict**: Add runtime type-checking decorators
 - **msgspec.Struct**: Add custom serialization hooks
 
 ## See Also

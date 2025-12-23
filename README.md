@@ -159,6 +159,7 @@ class Pet(BaseModel):
 
 - [pydantic v1](https://docs.pydantic.dev/1.10/) BaseModel
 - [pydantic v2](https://docs.pydantic.dev/) BaseModel
+- [pydantic v2](https://docs.pydantic.dev/) dataclass
 - [dataclasses](https://docs.python.org/3/library/dataclasses.html)
 - [TypedDict](https://docs.python.org/3/library/typing.html#typing.TypedDict)
 - [msgspec](https://github.com/jcrist/msgspec) Struct

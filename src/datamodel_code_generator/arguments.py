@@ -129,7 +129,11 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--input-file-type",
-    help="Input file type (default: auto)",
+    help=(
+        "Input file type (default: auto). "
+        "Use 'jsonschema', 'openapi', or 'graphql' for schema definitions. "
+        "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
+    ),
     choices=[i.value for i in InputFileType],
 )
 base_options.add_argument(
@@ -891,6 +895,20 @@ general_options.add_argument(
     action="store_true",
     default=None,
     help="Generate CLI command from pyproject.toml configuration and exit",
+)
+general_options.add_argument(
+    "--generate-prompt",
+    type=str,
+    nargs="?",
+    const="",
+    default=None,
+    metavar="QUESTION",
+    help=(
+        "Generate a prompt for consulting LLMs about CLI options. "
+        "Optionally provide your question as an argument. "
+        "Pipe to CLI tools (e.g., `| claude -p`, `| codex exec`) "
+        "or copy to clipboard (e.g., `| pbcopy`, `| xclip`) for web LLM chats."
+    ),
 )
 general_options.add_argument(
     "--ignore-pyproject",

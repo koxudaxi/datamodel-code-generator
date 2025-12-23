@@ -50,6 +50,7 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--debug",
     "--profile",
     "--no-color",
+    "--generate-prompt",
 })
 
 # Backward compatibility alias
