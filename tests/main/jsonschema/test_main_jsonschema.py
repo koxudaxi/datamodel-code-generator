@@ -5640,6 +5640,216 @@ def test_main_root_model_config_frozen(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--naming-strategy"],
+    input_schema="jsonschema/naming_strategy/input.json",
+    cli_args=["--naming-strategy", "parent-prefixed"],
+    golden_output="main/jsonschema/naming_strategy/parent_prefixed/output.py",
+    related_options=["--duplicate-name-suffix", "--parent-scoped-naming"],
+)
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_parent_prefixed(output_file: Path) -> None:
+    """Use parent-prefixed naming strategy for duplicate model names.
+
+    The `--naming-strategy parent-prefixed` flag prefixes model names with their
+    parent model name when duplicates occur. For example, if both `Order` and
+    `Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "parent-prefixed",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_full_path(output_file: Path) -> None:
+    """Use full-path naming strategy for duplicate model names.
+
+    The `--naming-strategy full-path` flag uses the full schema path
+    to generate unique names by concatenating ancestor names.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/full_path/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "full-path",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--duplicate-name-suffix"],
+    input_schema="jsonschema/naming_strategy/input.json",
+    cli_args=["--duplicate-name-suffix", '{"model": "Schema"}'],
+    golden_output="main/jsonschema/naming_strategy/duplicate_name_suffix/output.py",
+    related_options=["--naming-strategy"],
+)
+@freeze_time("2019-07-26")
+def test_main_duplicate_name_suffix(output_file: Path) -> None:
+    """Customize suffix for duplicate model names.
+
+    The `--duplicate-name-suffix` flag allows specifying custom suffixes for
+    resolving duplicate names by type. The value is a JSON mapping where keys
+    are type names ('model', 'enum', 'default') and values are suffix strings.
+    For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/duplicate_name_suffix/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--duplicate-name-suffix",
+            '{"model": "Schema"}',
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_numbered(output_file: Path) -> None:
+    """Test numbered strategy with complex nested schema and multiple duplicates.
+
+    Tests deeply nested structures (Company > employees > employee > address)
+    and multiple models with same name (4 different Address definitions).
+    Expected: Address, Address1, Address2, Address3.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_numbered/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_parent_prefixed(output_file: Path) -> None:
+    """Test parent-prefixed strategy with complex nested schema.
+
+    Tests deeply nested structures where each Address gets a unique name
+    based on its parent hierarchy.
+    Expected: ModelCompanyAddress, ModelCompanyEmployeeAddress,
+    ModelCustomerAddress, ModelWarehouseAddress.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "parent-prefixed",
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_naming_strategy_complex_duplicate_suffix(output_file: Path) -> None:
+    """Test duplicate-name-suffix with complex schema having multiple duplicates.
+
+    Tests that custom suffix is applied consistently across multiple duplicates.
+    Expected: Address, AddressSchema, AddressSchema1, AddressSchema2.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "complex_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_duplicate_suffix/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--duplicate-name-suffix",
+            '{"model": "Schema"}',
+        ],
+    )
+
+
+@freeze_time("2019-07-26")
+@pytest.mark.cli_doc(
+    options=["--naming-strategy"],
+    input_schema="jsonschema/naming_strategy/primary_first_input.json",
+    cli_args=["--naming-strategy", "primary-first"],
+    golden_output="jsonschema/naming_strategy/complex_primary_first/output.py",
+)
+def test_main_naming_strategy_primary_first(output_file: Path) -> None:
+    """Test primary-first strategy keeps clean names for primary definitions.
+
+    Primary definitions (directly under #/definitions/, #/components/schemas/, #/$defs/)
+    keep their clean names. Inline/nested definitions get numeric suffixes.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "primary_first_input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/complex_primary_first/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--naming-strategy",
+            "primary-first",
+        ],
+    )
+
+
+def test_main_duplicate_name_suffix_invalid_json(output_file: Path) -> None:
+    """Test that invalid JSON in --duplicate-name-suffix raises an error."""
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json"),
+            "--output",
+            str(output_file),
+            "--duplicate-name-suffix",
+            "invalid json",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_parent_scoped_naming_backward_compat(output_file: Path) -> None:
+    """Test --parent-scoped-naming backward compatibility (deprecated flag)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="naming_strategy/parent_prefixed/output.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--parent-scoped-naming",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--use-root-model-type-alias"],
     input_schema="jsonschema/root_model_type_alias.json",
     cli_args=["--use-root-model-type-alias", "--output-model-type", "pydantic_v2.BaseModel"],

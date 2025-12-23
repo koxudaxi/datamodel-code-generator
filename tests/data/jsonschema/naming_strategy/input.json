@@ -1,0 +1,27 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Order": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "type": "object",
+          "properties": {
+            "name": {"type": "string"}
+          }
+        }
+      }
+    },
+    "Cart": {
+      "type": "object",
+      "properties": {
+        "item": {
+          "type": "object",
+          "properties": {
+            "quantity": {"type": "integer"}
+          }
+        }
+      }
+    }
+  }
+}

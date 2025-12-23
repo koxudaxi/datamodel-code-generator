@@ -34,7 +34,7 @@ from packaging import version
 from pydantic import BaseModel, Field
 from typing_extensions import TypeIs
 
-from datamodel_code_generator import Error
+from datamodel_code_generator import Error, NamingStrategy
 from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, camel_to_snake, model_validator
 
 if TYPE_CHECKING:
@@ -496,6 +496,12 @@ class ModelResolver:  # noqa: PLR0904
     name uniqueness, path resolution, and field name transformations.
     """
 
+    # Default suffixes for duplicate name resolution by model type
+    DEFAULT_DUPLICATE_NAME_SUFFIX: ClassVar[dict[str, str]] = {
+        "model": "Model",
+        "enum": "Enum",
+    }
+
     def __init__(  # noqa: PLR0913, PLR0917
         self,
         exclude_names: set[str] | None = None,
@@ -516,6 +522,8 @@ class ModelResolver:  # noqa: PLR0904
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
+        naming_strategy: NamingStrategy | None = None,
+        duplicate_name_suffix_map: dict[str, str] | None = None,
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -550,8 +558,17 @@ class ModelResolver:  # noqa: PLR0904
         self._base_path: Path = base_path or Path.cwd()
         self._current_base_path: Path | None = self._base_path
         self.remove_suffix_number: bool = remove_suffix_number
-        self.parent_scoped_naming = parent_scoped_naming
+
+        # Handle naming strategy with backward compatibility for parent_scoped_naming
+        if naming_strategy is None and parent_scoped_naming:
+            naming_strategy = NamingStrategy.ParentPrefixed
+        self.naming_strategy: NamingStrategy = naming_strategy or NamingStrategy.Numbered
+        self.parent_scoped_naming = parent_scoped_naming or (self.naming_strategy == NamingStrategy.ParentPrefixed)
         self.treat_dot_as_module = treat_dot_as_module
+
+        # Duplicate name suffix map for type-specific suffixes
+        # Only use suffixes when explicitly provided via --duplicate-name-suffix
+        self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
 
     @property
     def current_base_path(self) -> Path | None:
@@ -764,13 +781,53 @@ class ModelResolver:  # noqa: PLR0904
         return reference
 
     def _check_parent_scope_option(self, name: str, path: Sequence[str]) -> str:
-        if self.parent_scoped_naming:
+        # Check for parent-prefixed naming via either the legacy flag or the new naming strategy
+        use_parent_prefix = self.parent_scoped_naming or self.naming_strategy == NamingStrategy.ParentPrefixed
+        if use_parent_prefix:
             parent_path = path[:-1]
             while parent_path:
                 if parent_reference := self.references.get(self.join_path(parent_path)):
                     return f"{parent_reference.name}_{name}"
                 parent_path = parent_path[:-1]
         return name
+
+    def _apply_full_path_naming(self, name: str, path: Sequence[str]) -> str:
+        """Build name from full schema path for FullPath strategy.
+
+        Uses the immediate parent reference to build a unique name.
+        For example: Order > properties > item becomes OrderItem
+        """
+        if self.naming_strategy != NamingStrategy.FullPath:
+            return name
+
+        # Find the immediate parent reference to prefix the name
+        parent_path = path[:-1]
+        while parent_path:
+            if parent_reference := self.references.get(self.join_path(parent_path)):
+                # Use immediate parent's name (CamelCase join without underscore)
+                return f"{parent_reference.name}{snake_to_upper_camel(name)}"
+            parent_path = parent_path[:-1]
+
+        return name
+
+    @staticmethod
+    def _is_primary_definition(path: Sequence[str]) -> bool:
+        """Check if path represents a primary schema definition."""
+        # Primary definitions are directly under /definitions/ or /components/schemas/
+        path_str = "/".join(path)
+        primary_patterns = [
+            "#/definitions/",
+            "#/components/schemas/",
+            "#/$defs/",
+        ]
+        for pattern in primary_patterns:
+            if pattern in path_str:
+                # Check if it's a direct child (not nested)
+                after_pattern = path_str.split(pattern, 1)[-1]
+                # If there's no more "/" after the pattern part, it's a primary definition
+                if "/" not in after_pattern:
+                    return True
+        return False
 
     def add(  # noqa: PLR0913
         self,
@@ -794,14 +851,31 @@ class ModelResolver:  # noqa: PLR0904
         name = original_name
         duplicate_name: str | None = None
         if class_name:
+            # Apply naming strategy before further processing
             name = self._check_parent_scope_option(name, path)
-            name, duplicate_name = self.get_class_name(
-                name=name,
-                unique=unique,
-                reserved_name=reference.name if reference else None,
-                singular_name=singular_name,
-                singular_name_suffix=singular_name_suffix,
-            )
+            name = self._apply_full_path_naming(name, path)
+
+            # For PrimaryFirst strategy, check if this is a primary definition
+            # Primary definitions get priority (don't need suffix), others get suffix when there's conflict
+            is_primary = self._is_primary_definition(path)
+            if self.naming_strategy == NamingStrategy.PrimaryFirst and is_primary:
+                # For primary definitions, try to use the clean name first
+                # Only add suffix if absolutely necessary (duplicate with another primary)
+                name, duplicate_name = self.get_class_name(
+                    name=name,
+                    unique=unique,
+                    reserved_name=reference.name if reference else None,
+                    singular_name=singular_name,
+                    singular_name_suffix=singular_name_suffix,
+                )
+            else:
+                name, duplicate_name = self.get_class_name(
+                    name=name,
+                    unique=unique,
+                    reserved_name=reference.name if reference else None,
+                    singular_name=singular_name,
+                    singular_name_suffix=singular_name_suffix,
+                )
         else:
             # TODO: create a validate for module name
             name = self.get_valid_field_name(name, model_type=ModelType.CLASS)
@@ -882,23 +956,29 @@ class ModelResolver:  # noqa: PLR0904
             class_name = unique_name
         return ClassName(name=f"{prefix}{class_name}", duplicate_name=duplicate_name)
 
-    def _get_unique_name(self, name: str, camel: bool = False) -> str:  # noqa: FBT001, FBT002
+    def _get_unique_name(self, name: str, camel: bool = False, model_type: str = "model") -> str:  # noqa: FBT001, FBT002
         unique_name: str = name
         count: int = 0 if self.remove_suffix_number else 1
         reference_names = {r.name for r in self.references.values()} | self.exclude_names
+
+        # Determine the suffix to use
+        suffix = self._get_suffix_for_model_type(model_type)
+        if not suffix and self.duplicate_name_suffix:
+            suffix = self.duplicate_name_suffix
+
         while unique_name in reference_names:
-            if self.duplicate_name_suffix:
-                name_parts: list[str | int] = [
-                    name,
-                    self.duplicate_name_suffix,
-                    count - 1,
-                ]
+            if suffix:
+                name_parts: list[str | int] = [name, suffix, count - 1]
             else:
                 name_parts = [name, count]
             delimiter = "" if camel else "_"
             unique_name = delimiter.join(str(p) for p in name_parts if p) if count else name
             count += 1
         return unique_name
+
+    def _get_suffix_for_model_type(self, model_type: str) -> str:
+        """Get the suffix for a given model type from the suffix map."""
+        return self.duplicate_name_suffix_map.get(model_type, self.duplicate_name_suffix_map.get("default", ""))
 
     @classmethod
     def validate_name(cls, name: str) -> bool:

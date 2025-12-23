@@ -30,6 +30,7 @@ from datamodel_code_generator import (
     Error,
     FieldTypeCollisionStrategy,
     ModuleSplitMode,
+    NamingStrategy,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -775,6 +776,8 @@ class Parser(ABC):
         use_default_factory_for_optional_nested_models: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
         parent_scoped_naming: bool = False,
+        naming_strategy: NamingStrategy | None = None,
+        duplicate_name_suffix: dict[str, str] | None = None,
         dataclass_arguments: DataclassArguments | None = None,
         type_mappings: list[str] | None = None,
         type_overrides: dict[str, str] | None = None,
@@ -917,6 +920,8 @@ class Parser(ABC):
             no_alias=no_alias,
             parent_scoped_naming=parent_scoped_naming,
             treat_dot_as_module=treat_dot_as_module,
+            naming_strategy=naming_strategy,
+            duplicate_name_suffix_map=duplicate_name_suffix,
         )
         self.class_name: str | None = class_name
         self.wrap_string_literal: bool | None = wrap_string_literal

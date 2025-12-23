@@ -1598,10 +1598,6 @@ def test_target_pydantic_version(output_file: Path) -> None:
     )
 
 
-@pytest.mark.cli_doc(
-    options=["--generate-prompt"],
-    cli_args=["--generate-prompt"],
-)
 def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     """Generate a prompt for consulting LLMs about CLI options.
 

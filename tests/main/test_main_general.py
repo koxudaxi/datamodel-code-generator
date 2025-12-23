@@ -1342,3 +1342,18 @@ def test_init_exports_without_formatting(tmp_path: Path) -> None:
     assert init_key in results
     init_content = results[init_key].body
     assert "__all__" in init_content or "from ." in init_content
+
+
+def test_generate_parent_scoped_naming_backward_compat(tmp_path: Path) -> None:
+    """Test generate() with parent_scoped_naming=True triggers ModelResolver backward compat."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "input.json",
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        parent_scoped_naming=True,
+    )
+    content = output_file.read_text()
+    assert "class ModelOrderItem" in content
+    assert "class ModelCartItem" in content
