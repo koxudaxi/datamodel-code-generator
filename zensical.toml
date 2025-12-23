@@ -72,9 +72,6 @@ features = [
 [project.theme.icon]
 annotation = "material/arrow-right-circle"
 
-[project.theme.analytics]
-gtag = "G-0QSKK66WX4"
-
 [[project.theme.palette]]
 scheme = "slate"
 primary = "light blue"
@@ -118,5 +115,9 @@ emoji_generator = "zensical.extensions.emoji.to_svg"
 
 [project.markdown_extensions.toc]
 permalink = true
+
+[project.extra.analytics]
+provider = "google"
+property = "G-0QSKK66WX4"
 
 [project.plugins.search]
