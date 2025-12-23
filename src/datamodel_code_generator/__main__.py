@@ -447,6 +447,7 @@ class Config(BaseModel):
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
     use_type_alias: bool = False
+    use_root_model_type_alias: bool = False
     special_field_name_prefix: Optional[str] = None  # noqa: UP045
     remove_special_field_name_prefix: bool = False
     capitalise_enum_members: bool = False
@@ -757,6 +758,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
         use_type_alias=config.use_type_alias,
+        use_root_model_type_alias=config.use_root_model_type_alias,
         use_union_operator=config.use_union_operator,
         special_field_name_prefix=config.special_field_name_prefix,
         remove_special_field_name_prefix=config.remove_special_field_name_prefix,

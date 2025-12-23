@@ -508,6 +508,13 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-root-model-type-alias",
+    help="Use type alias format for RootModel (e.g., Foo = RootModel[Bar]) "
+    "instead of class inheritance (Pydantic v2 only)",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--disable-future-imports",
     help="Disable __future__ imports",
     action="store_true",

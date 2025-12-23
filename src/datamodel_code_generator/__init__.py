@@ -481,6 +481,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     collapse_reuse_models: bool = False,
     skip_root_model: bool = False,
     use_type_alias: bool = False,
+    use_root_model_type_alias: bool = False,
     special_field_name_prefix: str | None = None,
     remove_special_field_name_prefix: bool = False,
     capitalise_enum_members: bool = False,
@@ -652,7 +653,12 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
-    data_model_types = get_data_model_types(output_model_type, target_python_version, use_type_alias=use_type_alias)
+    data_model_types = get_data_model_types(
+        output_model_type,
+        target_python_version,
+        use_type_alias=use_type_alias,
+        use_root_model_type_alias=use_root_model_type_alias,
+    )
 
     # Add GraphQL-specific model types if needed
     if input_file_type == InputFileType.GraphQL:

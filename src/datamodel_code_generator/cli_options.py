@@ -151,6 +151,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-annotated": CLIOptionMeta(name="--use-annotated", category=OptionCategory.TYPING),
     "--use-type-alias": CLIOptionMeta(name="--use-type-alias", category=OptionCategory.TYPING),
+    "--use-root-model-type-alias": CLIOptionMeta(name="--use-root-model-type-alias", category=OptionCategory.TYPING),
     "--strict-types": CLIOptionMeta(name="--strict-types", category=OptionCategory.TYPING),
     "--enum-field-as-literal": CLIOptionMeta(name="--enum-field-as-literal", category=OptionCategory.TYPING),
     "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
