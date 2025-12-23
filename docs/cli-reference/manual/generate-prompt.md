@@ -2,14 +2,11 @@
 
 Generate a prompt for consulting LLMs about CLI options.
 
-The `--generate-prompt` flag outputs a formatted prompt containing:
+Outputs a formatted prompt containing your current options, all available
+options by category, and full help text. Pipe to CLI LLM tools or copy
+to clipboard for web-based LLM chats.
 
-- Current CLI options you've specified
-- Options organized by category with descriptions
-- Full help text for reference
-
-This prompt can be piped to CLI-based LLM tools or copied to clipboard
-for use with web-based LLM chat services.
+**See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
 
 !!! tip "Usage"
 
@@ -21,88 +18,18 @@ for use with web-based LLM chat services.
     1. :material-arrow-left: `--generate-prompt` - generate prompt without a question
     2. :material-arrow-left: Include a specific question in the prompt
 
-!!! info "Piping to CLI LLM Tools"
+??? example "Quick Examples"
 
-    Pipe the generated prompt directly to CLI-based LLM tools:
-
+    **Pipe to CLI tools:**
     ```bash
-    # Claude Code (Anthropic)
-    datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude
-
-    # Codex (OpenAI)
+    datamodel-codegen --generate-prompt | claude
     datamodel-codegen --generate-prompt | codex
-
-    # llm (Simon Willison's LLM CLI)
     datamodel-codegen --generate-prompt | llm
-
-    # aichat
-    datamodel-codegen --generate-prompt | aichat
-
-    # ShellGPT
-    datamodel-codegen --generate-prompt | sgpt
-
-    # Charmbracelet mods
-    datamodel-codegen --generate-prompt | mods
     ```
 
-!!! info "Copying to Clipboard"
-
-    Copy the prompt to clipboard for use with web-based LLM chats:
-
-    **macOS:**
+    **Copy to clipboard:**
     ```bash
-    datamodel-codegen --generate-prompt | pbcopy
-    ```
-
-    **Linux (X11):**
-    ```bash
-    datamodel-codegen --generate-prompt | xclip -selection clipboard
-    ```
-
-    **Linux (Wayland):**
-    ```bash
-    datamodel-codegen --generate-prompt | wl-copy
-    ```
-
-    **Windows (PowerShell):**
-    ```powershell
-    datamodel-codegen --generate-prompt | Set-Clipboard
-    ```
-
-    **WSL2:**
-    ```bash
-    datamodel-codegen --generate-prompt | clip.exe
-    ```
-
-    After copying, paste into your preferred web LLM chat service
-    (e.g., ChatGPT, Claude, Gemini, Perplexity, etc.).
-
-??? example "Example Output"
-
-    ```text
-    # datamodel-code-generator CLI Options Consultation
-
-    ## User Question
-
-    How do I generate strict types?
-
-    ## Current CLI Options
-
-    (No options specified)
-
-    ## Options by Category
-
-    ### Base Options
-    - `--input`: Specify the input schema file path.
-    - `--output`: Specify the destination path for generated Python code.
-    ...
-
-    ### Typing Customization
-    - `--strict-types`: Enable strict type validation for specified Python types.
-    ...
-
-    ## Instructions
-
-    Based on the above information, please help with the question or suggest
-    appropriate CLI options for the use case.
+    datamodel-codegen --generate-prompt | pbcopy      # macOS
+    datamodel-codegen --generate-prompt | xclip -selection clipboard  # Linux
+    datamodel-codegen --generate-prompt | clip.exe    # WSL2
     ```
