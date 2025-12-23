@@ -2208,6 +2208,10 @@
 <td>Customize dataclass decorator arguments via JSON dictionary.</td>
 </tr>
 <tr>
+<td><a href="../model-customization/#duplicate-name-suffix"><code>--duplicate-name-suffix</code></a></td>
+<td>Customize suffix for duplicate model names.</td>
+</tr>
+<tr>
 <td><a href="../model-customization/#enable-faux-immutability"><code>--enable-faux-immutability</code></a></td>
 <td>Enable faux immutability in Pydantic v1 models (allow_mutation=False).</td>
 </tr>
@@ -2226,6 +2230,10 @@
 <tr>
 <td><a href="../model-customization/#keyword-only"><code>--keyword-only</code></a></td>
 <td>Generate dataclasses with keyword-only fields (Python 3.10+).</td>
+</tr>
+<tr>
+<td><a href="../model-customization/#naming-strategy"><code>--naming-strategy</code></a></td>
+<td>Use parent-prefixed naming strategy for duplicate model names.</td>
 </tr>
 <tr>
 <td><a href="../model-customization/#output-model-type"><code>--output-model-type</code></a></td>
@@ -2543,6 +2551,7 @@
 <li><a href="../typing-customization/#disable-future-imports"><code>--disable-future-imports</code></a> - Prevent automatic addition of <strong>future</strong> imports in generate...</li>
 <li><a href="../template-customization/#disable-timestamp"><code>--disable-timestamp</code></a> - Disable timestamp in generated file header for reproducible ...</li>
 <li><a href="../general-options/#disable-warnings"><code>--disable-warnings</code></a> - Suppress warning messages during code generation.</li>
+<li><a href="../model-customization/#duplicate-name-suffix"><code>--duplicate-name-suffix</code></a> - Customize suffix for duplicate model names.</li>
 <li><a href="../field-customization/#empty-enum-field-name"><code>--empty-enum-field-name</code></a> - Name for empty string enum field values.</li>
 <li><a href="../template-customization/#enable-command-header"><code>--enable-command-header</code></a> - Include command-line options in file header for reproducibil...</li>
 <li><a href="../model-customization/#enable-faux-immutability"><code>--enable-faux-immutability</code></a> - Enable faux immutability in Pydantic v1 models (allow_mutati...</li>
@@ -2573,6 +2582,7 @@
 <li><a href="../model-customization/#keep-model-order"><code>--keep-model-order</code></a> - Keep model definition order as specified in schema.</li>
 <li><a href="../model-customization/#keyword-only"><code>--keyword-only</code></a> - Generate dataclasses with keyword-only fields (Python 3.10+)...</li>
 <li><a href="../general-options/#module-split-mode"><code>--module-split-mode</code></a> - Split generated models into separate files, one per model cl...</li>
+<li><a href="../model-customization/#naming-strategy"><code>--naming-strategy</code></a> - Use parent-prefixed naming strategy for duplicate model name...</li>
 <li><a href="../field-customization/#no-alias"><code>--no-alias</code></a> - Disable Field alias generation for non-Python-safe property ...</li>
 <li><a href="../utility-options/#no-color"><code>--no-color</code></a> - Disable colorized output</li>
 <li><a href="../template-customization/#no-treat-dot-as-module"><code>--no-treat-dot-as-module</code></a> - Keep dots in schema names as underscores for flat output.</li>
