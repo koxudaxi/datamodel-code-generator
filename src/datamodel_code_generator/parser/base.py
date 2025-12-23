@@ -32,6 +32,7 @@ from datamodel_code_generator import (
     ModuleSplitMode,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -775,9 +776,11 @@ class Parser(ABC):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
         self.keyword_only = keyword_only
+        self.target_pydantic_version = target_pydantic_version
         self.frozen_dataclasses = frozen_dataclasses
         self.data_type_manager: DataTypeManager = data_type_manager_type(
             python_version=target_python_version,
@@ -885,6 +888,12 @@ class Parser(ABC):
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+
+        if target_pydantic_version:
+            if use_generic_base_class:
+                self.generic_base_class_config["target_pydantic_version"] = target_pydantic_version
+            else:
+                self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = target_pydantic_version
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,

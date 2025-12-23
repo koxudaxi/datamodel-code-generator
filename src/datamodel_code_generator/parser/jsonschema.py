@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     InvalidClassNameError,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
     YamlValue,
     load_yaml,
     load_yaml_dict,
@@ -620,6 +621,7 @@ class JsonSchemaParser(Parser):
         type_mappings: list[str] | None = None,
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -721,6 +723,7 @@ class JsonSchemaParser(Parser):
             type_mappings=type_mappings,
             read_only_write_only_model_type=read_only_write_only_model_type,
             field_type_collision_strategy=field_type_collision_strategy,
+            target_pydantic_version=target_pydantic_version,
         )
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()

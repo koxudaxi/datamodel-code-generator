@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     PythonVersionMin,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
     YamlValue,
     load_yaml_dict,
     snooper_to_methods,
@@ -281,6 +282,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_default_factory_for_optional_nested_models: bool = False,
         use_status_code_in_response_name: bool = False,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
@@ -382,6 +384,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_frozen_field=use_frozen_field,
             use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
             field_type_collision_strategy=field_type_collision_strategy,
+            target_pydantic_version=target_pydantic_version,
         )
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters

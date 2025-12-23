@@ -24,6 +24,7 @@ from datamodel_code_generator import (
     PythonVersionMin,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    TargetPydanticVersion,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
@@ -198,6 +199,7 @@ class GraphQLParser(Parser):
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
+        target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         super().__init__(
@@ -298,6 +300,7 @@ class GraphQLParser(Parser):
             use_frozen_field=use_frozen_field,
             use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
             field_type_collision_strategy=field_type_collision_strategy,
+            target_pydantic_version=target_pydantic_version,
         )
 
         self.data_model_scalar_type = data_model_scalar_type

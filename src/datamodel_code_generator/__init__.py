@@ -322,6 +322,17 @@ class ModuleSplitMode(Enum):
     Single = "single"
 
 
+class TargetPydanticVersion(Enum):
+    """Target Pydantic version for generated code.
+
+    V2: Generate code compatible with Pydantic 2.0+ (uses populate_by_name).
+    V2_11: Generate code for Pydantic 2.11+ (uses validate_by_name).
+    """
+
+    V2 = "2"
+    V2_11 = "2.11"
+
+
 class Error(Exception):
     """Base exception for datamodel-code-generator errors."""
 
@@ -400,6 +411,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     output: Path | None = None,
     output_model_type: DataModelType = DataModelType.PydanticBaseModel,
     target_python_version: PythonVersion = PythonVersionMin,
+    target_pydantic_version: TargetPydanticVersion | None = None,
     base_class: str = "",
     additional_imports: list[str] | None = None,
     custom_template_dir: Path | None = None,
@@ -749,6 +761,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         type_mappings=type_mappings,
         read_only_write_only_model_type=read_only_write_only_model_type,
         field_type_collision_strategy=field_type_collision_strategy,
+        target_pydantic_version=target_pydantic_version,
         **kwargs,
     )
 
