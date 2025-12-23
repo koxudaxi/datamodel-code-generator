@@ -155,7 +155,6 @@ datamodel-codegen [OPTIONS]
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
-| [`--generate-prompt`](general-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options. |
 | [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
 | [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
@@ -226,7 +225,6 @@ All options sorted alphabetically:
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
-- [`--generate-prompt`](general-options.md#generate-prompt) - Generate a prompt for consulting LLMs about CLI options.
 - [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) - Generate pyproject.toml configuration from CLI arguments.
 - [`--help`](utility-options.md#help) - Show help message and exit
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
