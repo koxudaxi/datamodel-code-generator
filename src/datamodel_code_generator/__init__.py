@@ -370,6 +370,25 @@ class InvalidClassNameError(Error):
         super().__init__(message=message)
 
 
+class InvalidFileFormatError(Error):
+    """Raised when the input file format is invalid or cannot be parsed."""
+
+    def __init__(
+        self,
+        original_error: Exception,
+        input_file_type: InputFileType | None = None,
+    ) -> None:
+        """Initialize with original error and optional input file type."""
+        self.original_error = original_error
+        self.input_file_type = input_file_type
+        error_detail = f"{type(original_error).__name__}: {original_error}"
+        if input_file_type is not None:
+            message = f"Invalid file format for {input_file_type.value}: {error_detail}"
+        else:
+            message = f"Invalid file format: {error_detail}"
+        super().__init__(message=message)
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     """Find and return the first file in a path (file or directory)."""
     if path.is_file():
@@ -577,8 +596,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             assert isinstance(input_text_, str)
             input_file_type = infer_input_type(input_text_)
         except Exception as exc:
-            msg = "Invalid file format"
-            raise Error(msg) from exc
+            raise InvalidFileFormatError(exc) from exc
         else:
             print(  # noqa: T201
                 inferred_message.format(input_file_type.value),
@@ -649,9 +667,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 else:  # pragma: no cover
                     msg = f"Unsupported input file type: {input_file_type}"
                     raise Error(msg)  # noqa: TRY301
+            except Error:
+                raise
             except Exception as exc:
-                msg = "Invalid file format"
-                raise Error(msg) from exc
+                raise InvalidFileFormatError(exc, input_file_type) from exc
 
             from genson import SchemaBuilder  # noqa: PLC0415
 
@@ -944,6 +963,7 @@ __all__ = [
     "Error",
     "InputFileType",
     "InvalidClassNameError",
+    "InvalidFileFormatError",
     "LiteralType",
     "ModuleSplitMode",
     "NamingStrategy",
