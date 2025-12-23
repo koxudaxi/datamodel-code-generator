@@ -10,7 +10,7 @@
 | [`--extra-fields`](#extra-fields) | Configure how generated models handle extra fields not defin... |
 | [`--field-constraints`](#field-constraints) | Generate Field() with validation constraints from schema. |
 | [`--field-extra-keys`](#field-extra-keys) | Include specific extra keys in Field() definitions. |
-| [`--field-extra-keys-without-x-prefix`](#field-extra-keys-without-x-prefix) | Include specified schema extension keys in Field() without r... |
+| [`--field-extra-keys-without-x-prefix`](#field-extra-keys-without-x-prefix) | Include schema extension keys in Field() without requiring '... |
 | [`--field-include-all-keys`](#field-include-all-keys) | Include all schema keys in Field() json_schema_extra. |
 | [`--field-type-collision-strategy`](#field-type-collision-strategy) | Rename type class instead of field when names collide (Pydan... |
 | [`--no-alias`](#no-alias) | Disable Field alias generation for non-Python-safe property ... |
@@ -1614,7 +1614,7 @@ The `--field-extra-keys` flag configures the code generation behavior.
 
 ## `--field-extra-keys-without-x-prefix` {#field-extra-keys-without-x-prefix}
 
-Include specified schema extension keys in Field() without requiring 'x-' prefix.
+Include schema extension keys in Field() without requiring 'x-' prefix.
 
 The --field-extra-keys-without-x-prefix option allows you to specify custom
 schema extension keys that should be included in Pydantic Field() extras without

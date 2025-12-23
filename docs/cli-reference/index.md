@@ -14,7 +14,7 @@ This documentation is auto-generated from test cases.
 | 🏗️ [Model Customization](model-customization.md) | 31 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 16 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
-| ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 5 | Help, version, debug options |
 
 ## All Options
@@ -84,6 +84,7 @@ This documentation is auto-generated from test cases.
 ### G {#g}
 
 - [`--generate-cli-command`](general-options.md#generate-cli-command)
+- [`--generate-prompt`](general-options.md#generate-prompt)
 - [`--generate-pyproject-config`](general-options.md#generate-pyproject-config)
 
 ### H {#h}
