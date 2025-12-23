@@ -531,6 +531,15 @@ typing_options.add_argument(
     type=str,
     default=None,
 )
+typing_options.add_argument(
+    "--type-overrides",
+    help="Replace schema model types with custom Python types. "
+    "Format: JSON object mapping model names to Python import paths. "
+    'Model-level: \'{"CustomType": "my_app.types.MyType"}\' replaces all references. '
+    'Scoped: \'{"User.field": "my_app.Type"}\' replaces specific field only.',
+    type=json.loads,
+    default=None,
+)
 
 # ======================================================================================
 # Customization options for generated model fields

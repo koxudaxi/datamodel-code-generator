@@ -156,6 +156,7 @@ This documentation is auto-generated from test cases.
 - [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
 - [`--target-python-version`](model-customization.md#target-python-version)
 - [`--type-mappings`](typing-customization.md#type-mappings)
+- [`--type-overrides`](typing-customization.md#type-overrides)
 
 ### U {#u}
 

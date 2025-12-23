@@ -474,6 +474,7 @@ class Config(BaseModel):
     parent_scoped_naming: bool = False
     disable_future_imports: bool = False
     type_mappings: Optional[list[str]] = None  # noqa: UP045
+    type_overrides: Optional[dict[str, str]] = None  # noqa: UP045
     read_only_write_only_model_type: Optional[ReadOnlyWriteOnlyModelType] = None  # noqa: UP045
     use_status_code_in_response_name: bool = False
     all_exports_scope: Optional[AllExportsScope] = None  # noqa: UP045
@@ -787,6 +788,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         dataclass_arguments=config.dataclass_arguments,
         disable_future_imports=config.disable_future_imports,
         type_mappings=config.type_mappings,
+        type_overrides=config.type_overrides,
         read_only_write_only_model_type=config.read_only_write_only_model_type,
         use_status_code_in_response_name=config.use_status_code_in_response_name,
         all_exports_scope=config.all_exports_scope,
