@@ -1566,6 +1566,25 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
     assert_file_content(output_file, "root_model_with_additional_properties_custom_class_name.py")
 
 
+def test_main_generate_custom_class_name_generator_keep_underscores(tmp_path: Path) -> None:
+    """Test custom_class_name_generator preserves underscores in class names (Issue #1315)."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "underscore_title.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+
+    def keep_underscores(name: str) -> str:
+        return name
+
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        custom_class_name_generator=keep_underscores,
+    )
+
+    assert_file_content(output_file, "underscore_title.py")
+
+
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
