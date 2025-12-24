@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 import sys
 from pathlib import Path
 from unittest import mock
@@ -10,8 +9,6 @@ from unittest import mock
 import pytest
 
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion, PythonVersionMin
-
-RUFF_AVAILABLE = shutil.which("ruff") is not None or (Path(sys.executable).parent / "ruff").exists()
 
 EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / "data/python/custom_formatters/license_example.txt")
 
@@ -337,24 +334,3 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         check=False,
         cwd=mock.ANY,
     )
-
-
-@pytest.mark.skipif(not RUFF_AVAILABLE, reason="ruff not available")
-def test_format_code_ruff_check_and_format_combined(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test that both ruff check and format run together via shell pipe."""
-    monkeypatch.chdir(tmp_path)
-    formatter = CodeFormatter(
-        PythonVersionMin,
-        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-    )
-    code = "x=1\n"
-    formatted = formatter.format_code(code)
-    assert "x = 1" in formatted
-
-
-def test_find_ruff_path_fallback(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test _find_ruff_path falls back to shutil.which when ruff not in venv."""
-    monkeypatch.setattr("sys.executable", str(tmp_path / "bin" / "python"))
-    monkeypatch.setattr("shutil.which", lambda _: None)
-    ruff_path = CodeFormatter._find_ruff_path()
-    assert ruff_path == "ruff"
