@@ -6,7 +6,9 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import shutil
 import subprocess  # noqa: S404
+import sys
 from enum import Enum
 from functools import cached_property, lru_cache
 from importlib import import_module
@@ -338,8 +340,9 @@ class CodeFormatter:
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format in a single pipeline for better performance."""
+        ruff_path = self._find_ruff_path()
         result = subprocess.run(  # noqa: S602
-            "ruff check --fix - | ruff format -",  # noqa: S607
+            f"{ruff_path} check --fix - | {ruff_path} format -",
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -347,6 +350,15 @@ class CodeFormatter:
             cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)
+
+    @staticmethod
+    def _find_ruff_path() -> str:
+        """Find ruff executable path, checking virtual environment first."""
+        bin_dir = Path(sys.executable).parent
+        ruff_in_venv = bin_dir / "ruff"
+        if ruff_in_venv.exists():
+            return str(ruff_in_venv)
+        return shutil.which("ruff") or "ruff"
 
     def apply_isort(self, code: str) -> str:
         """Sort imports using isort."""
