@@ -404,6 +404,39 @@ def test_main_use_inline_field_description_with_example(output_file: Path) -> No
     )
 
 
+@freeze_time("2022-11-11")
+def test_main_use_inline_field_description_example_only(output_file: Path) -> None:
+    """Test single-line description with use_inline_field_description and use_field_description_example.
+
+    When both flags are used with a single-line description, only the example
+    appears in the docstring (the single-line description stays in Field()).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "single_line_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description_example_only" / "output.py",
+        extra_args=["--use-inline-field-description", "--use-field-description-example"],
+    )
+
+
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example_multiple(output_file: Path) -> None:
+    """Test multiple examples in docstring.
+
+    When a field has multiple examples, they are formatted as a bulleted list.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_examples.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example_multiple" / "output.py",
+        extra_args=["--use-field-description-example"],
+    )
+
+
 def test_capitalise_enum_members(tmp_path: Path) -> None:
     """Test capitalise-enum-members option (issue #2370)."""
     input_data = """

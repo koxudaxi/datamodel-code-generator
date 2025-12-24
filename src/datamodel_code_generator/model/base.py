@@ -310,7 +310,6 @@ class DataModelFieldBase(_BaseModel):
         """Get the docstring for this field from its description and/or example."""
         parts = []
 
-        # description 処理
         if self.use_field_description:
             description = self.extras.get("description")
             if description is not None:
@@ -320,7 +319,6 @@ class DataModelFieldBase(_BaseModel):
             if description is not None and "\n" in description:
                 parts.append(description)
 
-        # example 処理
         if self.use_field_description_example:
             example = self.extras.get("example")
             examples = self.extras.get("examples")
@@ -336,7 +334,6 @@ class DataModelFieldBase(_BaseModel):
         if parts:
             return "\n\n".join(parts)
 
-        # 既存の use_inline_field_description 処理
         if self.use_inline_field_description:
             description = self.extras.get("description")
             if description is not None and "\n" in description:
