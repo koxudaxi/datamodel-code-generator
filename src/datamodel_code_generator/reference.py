@@ -575,8 +575,9 @@ class ModelResolver:  # noqa: PLR0904
 
     def _get_reference_names(self) -> set[str]:
         """Get cached set of all reference names for uniqueness checking."""
-        if self._reference_names_cache is None:
-            self._reference_names_cache = {r.name for r in self.references.values()}
+        if self._reference_names_cache is not None:
+            return self._reference_names_cache  # pragma: no cover
+        self._reference_names_cache = {r.name for r in self.references.values()}
         return self._reference_names_cache
 
     def _invalidate_reference_names_cache(self) -> None:
