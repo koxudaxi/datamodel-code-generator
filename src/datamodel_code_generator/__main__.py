@@ -731,7 +731,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     settings_path: Path | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
-    generate(
+    result = generate(
         input_=input_,
         input_file_type=config.input_file_type,
         output=output,
@@ -845,6 +845,13 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
     )
+
+    if output is None and result is not None:
+        if isinstance(result, str):
+            sys.stdout.write(result + "\n")
+        else:
+            for content in result.values():
+                sys.stdout.write(content + "\n")
 
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
