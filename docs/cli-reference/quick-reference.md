@@ -86,6 +86,7 @@ datamodel-codegen [OPTIONS]
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
+| [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
 | [`--dataclass-arguments`](model-customization.md#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
 | [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutation=False). |
@@ -197,6 +198,7 @@ All options sorted alphabetically:
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
 - [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) - Collapse duplicate models by replacing references instead of...
 - [`--collapse-root-models`](model-customization.md#collapse-root-models) - Inline root model definitions instead of creating separate w...
+- [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) - Select which name to keep when collapsing root models with o...
 - [`--custom-file-header`](template-customization.md#custom-file-header) - Add custom header text to the generated file.
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - Add custom header content from file to generated code.
 - [`--custom-formatters`](template-customization.md#custom-formatters) - Apply custom Python code formatters to generated output.

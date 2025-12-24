@@ -22,6 +22,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--class-name": "Override the auto-generated class name with a custom name.",
     "--collapse-reuse-models": "Collapse duplicate models by replacing references instead of inheritance.",
     "--collapse-root-models": "Inline root model definitions instead of creating separate wrapper classes.",
+    "--collapse-root-models-name-strategy": "Select which name to keep when collapsing root models with object refe...",
     "--custom-file-header": "Add custom header text to the generated file.",
     "--custom-file-header-path": "Add custom header content from file to generated code.",
     "--custom-formatters": "Apply custom Python code formatters to generated output.",
