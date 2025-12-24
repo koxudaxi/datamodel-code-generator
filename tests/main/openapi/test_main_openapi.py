@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     BLACK_PY313_SKIP,
@@ -604,6 +605,30 @@ def test_main_openapi_custom_template_dir(
                 str(DATA_PATH / "templates"),
                 "--extra-template-data",
                 str(OPEN_API_DATA_PATH / "extra_data.json"),
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+
+
+def test_main_openapi_schema_extensions(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that schema extensions (x-* fields) are passed to custom templates."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_extensions.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "schema_extensions.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_extensions"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
             ],
             expected_stderr=inferred_message.format("openapi") + "\n",
         )

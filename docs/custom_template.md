@@ -75,6 +75,89 @@ You can create more complex custom templates by copying [the default templates](
 
 ---
 
+## 🔧 Schema Extensions
+
+OpenAPI and JSON Schema allow custom extension fields prefixed with `x-`. These schema extensions are automatically passed to templates via the `extensions` variable, enabling dynamic code generation based on your custom schema metadata.
+
+### Example: Database Model Configuration
+
+Suppose you want to add a `__collection__` class attribute based on a custom `x-database-model` extension in your OpenAPI schema:
+
+**api.yaml**
+```yaml
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: My API
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      x-database-model:
+        collection: users
+        indexes:
+          - email
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+      required:
+        - id
+        - email
+```
+
+**custom_templates/pydantic_v2/BaseModel.jinja2**
+```jinja2
+class {{ class_name }}({{ base_class }}):
+{%- if extensions is defined and extensions.get('x-database-model') %}
+    __collection__ = "{{ extensions['x-database-model']['collection'] }}"
+{%- endif %}
+{%- for field in fields %}
+    {{ field.name }}: {{ field.type_hint }}
+{%- endfor %}
+```
+
+**Run the generator**
+```bash
+datamodel-codegen --input api.yaml --output models.py \
+    --custom-template-dir custom_templates \
+    --output-model-type pydantic_v2.BaseModel
+```
+
+**Generated Output**
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel
+
+
+class User(BaseModel):
+    __collection__ = "users"
+    id: str
+    email: str
+```
+
+### Available Extensions
+
+Any field starting with `x-` in your schema will be available in the `extensions` dictionary:
+
+| Schema Field | Template Access |
+|--------------|-----------------|
+| `x-database-model` | `extensions['x-database-model']` |
+| `x-custom-flag` | `extensions['x-custom-flag']` |
+| `x-my-extension` | `extensions['x-my-extension']` |
+
+### Use Cases
+
+- **Database mapping**: Add collection names, indexes, or ORM configurations
+- **Validation rules**: Include custom validation logic based on schema metadata
+- **Documentation**: Generate custom docstrings or comments from schema extensions
+- **Framework integration**: Add framework-specific decorators or attributes
+
+---
+
 ## 📖 See Also
 
 - 🖥️ [CLI Reference: `--custom-template-dir`](cli-reference/template-customization.md#custom-template-dir) - Detailed CLI option documentation
