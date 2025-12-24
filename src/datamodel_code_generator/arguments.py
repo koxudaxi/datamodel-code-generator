@@ -124,6 +124,12 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--http-timeout",
+    type=float,
+    default=None,
+    help="Timeout in seconds for HTTP requests to remote hosts (default: 30)",
+)
+base_options.add_argument(
     "--input",
     help="Input file/directory (default: stdin)",
 )

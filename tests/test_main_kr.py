@@ -1427,6 +1427,41 @@ def test_http_query_parameters(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--http-timeout"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "https://api.example.com/schema.json", "--http-timeout", "60"],
+    golden_output="main_kr/url_with_headers/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_timeout(output_file: Path) -> None:
+    """Set timeout for HTTP requests to remote hosts.
+
+    The `--http-timeout` flag sets the timeout in seconds for HTTP requests
+    when fetching schemas from URLs. Useful for slow servers or large schemas.
+    Default is 30 seconds.
+    """
+    mock_response = Mock()
+    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+
+    with patch("httpx.get", return_value=mock_response) as mock_get:
+        return_code = main([
+            "--url",
+            "https://api.example.com/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--http-timeout",
+            "60",
+        ])
+        assert return_code == 0
+        # Verify that timeout=60 was passed to httpx.get
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args[1]
+        assert call_kwargs.get("timeout") == 60.0
+
+
+@pytest.mark.cli_doc(
     options=["--ignore-pyproject"],
     input_schema="jsonschema/ignore_pyproject_example.json",
     cli_args=["--ignore-pyproject"],

@@ -179,6 +179,7 @@ def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 

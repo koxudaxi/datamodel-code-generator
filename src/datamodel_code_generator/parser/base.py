@@ -741,6 +741,7 @@ class Parser(ABC):
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
+        http_timeout: float | None = None,
         use_annotated: bool = False,
         use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
@@ -930,6 +931,7 @@ class Parser(ABC):
         self.http_headers: Sequence[tuple[str, str]] | None = http_headers
         self.http_query_parameters: Sequence[tuple[str, str]] | None = http_query_parameters
         self.http_ignore_tls: bool = http_ignore_tls
+        self.http_timeout: float | None = http_timeout
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
@@ -1050,12 +1052,13 @@ class Parser(ABC):
         return custom_base_path or self.base_class
 
     def _get_text_from_url(self, url: str) -> str:
-        from datamodel_code_generator.http import get_body  # noqa: PLC0415
+        from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
+        timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
         return self.remote_text_cache.get_or_put(
             url,
             default_factory=lambda _url: get_body(
-                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
+                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters, timeout
             ),
         )
 

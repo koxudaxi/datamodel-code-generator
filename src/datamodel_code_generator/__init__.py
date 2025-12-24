@@ -530,6 +530,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
+    http_timeout: float | None = None,
     use_annotated: bool = False,
     use_serialize_as_any: bool = False,
     use_non_positive_negative_number_constrained_types: bool = False,
@@ -589,11 +590,14 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         case str():
             input_text: str | None = input_
         case ParseResult():
-            from datamodel_code_generator.http import get_body  # noqa: PLC0415
+            from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
+            timeout = http_timeout if http_timeout is not None else DEFAULT_HTTP_TIMEOUT
             input_text = remote_text_cache.get_or_put(
                 input_.geturl(),
-                default_factory=lambda url: get_body(url, http_headers, http_ignore_tls, http_query_parameters),
+                default_factory=lambda url: get_body(
+                    url, http_headers, http_ignore_tls, http_query_parameters, timeout
+                ),
             )
         case _:
             input_text = None
@@ -803,6 +807,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         allof_merge_mode=allof_merge_mode,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
+        http_timeout=http_timeout,
         use_annotated=use_annotated,
         use_serialize_as_any=use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
