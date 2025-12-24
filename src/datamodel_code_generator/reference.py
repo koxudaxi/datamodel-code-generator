@@ -570,19 +570,22 @@ class ModelResolver:  # noqa: PLR0904
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
         self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
 
-        # Cache for reference names to avoid O(n) set creation on every _get_unique_name call
-        self._reference_names_cache: set[str] | None = None
+        # Incrementally maintained set of reference names for O(1) uniqueness checking
+        self._reference_names_cache: set[str] = set()
 
     def _get_reference_names(self) -> set[str]:
-        """Get cached set of all reference names for uniqueness checking."""
-        if self._reference_names_cache is not None:
-            return self._reference_names_cache  # pragma: no cover
-        self._reference_names_cache = {r.name for r in self.references.values()}
+        """Get the set of all reference names for uniqueness checking."""
         return self._reference_names_cache
 
-    def _invalidate_reference_names_cache(self) -> None:
-        """Invalidate the reference names cache when references change."""
-        self._reference_names_cache = None
+    def _update_reference_name(self, old_name: str | None, new_name: str) -> None:
+        """Update the reference names cache when a reference name changes."""
+        if old_name and old_name != new_name:
+            self._reference_names_cache.discard(old_name)
+        self._reference_names_cache.add(new_name)
+
+    def _remove_reference_name(self, name: str) -> None:
+        """Remove a name from the reference names cache."""
+        self._reference_names_cache.discard(name)
 
     @property
     def current_base_path(self) -> Path | None:
@@ -666,7 +669,7 @@ class ModelResolver:  # noqa: PLR0904
 
     def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914
         """Resolve a reference path to its canonical form."""
-        joined_path = path if isinstance(path, str) else self.join_path(path)
+        joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
         if joined_path == "#":
             return f"{'/'.join(self.current_root)}#"
         if self.current_base_path and not self.base_url and joined_path[0] != "#" and not is_url(joined_path):
@@ -766,7 +769,8 @@ class ModelResolver:  # noqa: PLR0904
         return bool(ref) and ref[-1] == "#"
 
     @staticmethod
-    def join_path(path: Sequence[str]) -> str:
+    @lru_cache(maxsize=4096)
+    def join_path(path: tuple[str, ...]) -> str:
         """Join path components with slashes and normalize anchors."""
         joined_path = "/".join(p for p in path if p).replace("/#", "#")
         if "#" not in joined_path:
@@ -775,7 +779,7 @@ class ModelResolver:  # noqa: PLR0904
 
     def _is_external_path(self, resolved_path: str) -> bool:
         """Check if a resolved path belongs to an external file."""
-        current_root_path = self.join_path(self._current_root)
+        current_root_path = self.join_path(tuple(self._current_root))
         current_file = current_root_path.split("#")[0]
         resolved_file = resolved_path.split("#", maxsplit=1)[0]
         return current_file != resolved_file
@@ -802,7 +806,7 @@ class ModelResolver:  # noqa: PLR0904
         )
 
         self.references[path] = reference
-        self._invalidate_reference_names_cache()
+        self._update_reference_name(None, reference.name)
         return reference
 
     def _find_parent_reference(self, path: Sequence[str]) -> Reference | None:
@@ -813,7 +817,7 @@ class ModelResolver:  # noqa: PLR0904
         """
         parent_path = list(path[:-1])
         while parent_path:
-            if parent_reference := self.references.get(self.join_path(parent_path)):
+            if parent_reference := self.references.get(self.join_path(tuple(parent_path))):
                 return parent_reference
             parent_path = parent_path[:-1]
         return None
@@ -875,9 +879,10 @@ class ModelResolver:  # noqa: PLR0904
                 if ref_file != current_file:
                     # Rename this external reference
                     new_name = self._get_unique_name(name, camel=True)
+                    old_name = ref.name
                     ref.duplicate_name = ref.name
                     ref.name = new_name
-                    self._invalidate_reference_names_cache()
+                    self._update_reference_name(old_name, new_name)
                     break
 
     def add(  # noqa: PLR0913
@@ -892,8 +897,9 @@ class ModelResolver:  # noqa: PLR0904
         loaded: bool = False,
     ) -> Reference:
         """Add or update a model reference with the given path and name."""
-        joined_path = self.join_path(path)
+        joined_path = self.join_path(tuple(path))
         reference: Reference | None = self.references.get(joined_path)
+        old_ref_name: str | None = reference.name if reference else None
         if reference:
             if loaded and not reference.loaded:
                 reference.loaded = True
@@ -943,7 +949,7 @@ class ModelResolver:  # noqa: PLR0904
             reference.name = name
             reference.loaded = loaded
             reference.duplicate_name = duplicate_name
-            self._invalidate_reference_names_cache()
+            self._update_reference_name(old_ref_name, name)
         else:
             reference = Reference(
                 path=joined_path,
@@ -953,7 +959,7 @@ class ModelResolver:  # noqa: PLR0904
                 duplicate_name=duplicate_name,
             )
             self.references[joined_path] = reference
-            self._invalidate_reference_names_cache()
+            self._update_reference_name(None, name)
         return reference
 
     def get(self, path: Sequence[str] | str) -> Reference | None:
@@ -964,8 +970,9 @@ class ModelResolver:  # noqa: PLR0904
         """Delete a reference by path if it exists."""
         resolved = self.resolve_ref(path)
         if resolved in self.references:
+            old_name = self.references[resolved].name
             del self.references[resolved]
-            self._invalidate_reference_names_cache()
+            self._remove_reference_name(old_name)
 
     def default_class_name_generator(self, name: str) -> str:
         """Generate a valid class name from a string."""
