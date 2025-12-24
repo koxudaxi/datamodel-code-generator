@@ -1718,7 +1718,7 @@ class Parser(ABC):
                             continue
 
                         inner_reference = root_type_field.data_type.reference
-                        inner_model: DataModel = inner_reference.source  # type: ignore[assignment]
+                        inner_model = cast("DataModel", inner_reference.source)
 
                         if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
                             # "parent" strategy: Rename inner model to wrapper's name
