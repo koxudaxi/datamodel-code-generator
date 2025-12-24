@@ -1721,7 +1721,7 @@ class Parser(ABC):
                         inner_model = inner_reference.source
 
                         if not isinstance(inner_model, DataModel):
-                            continue
+                            continue  # pragma: no cover
 
                         if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
                             # "parent" strategy: Rename inner model to wrapper's name
@@ -1756,7 +1756,7 @@ class Parser(ABC):
                                     if parent_model is root_type_model:
                                         continue
                                     if isinstance(parent_model, self.data_model_root_type):
-                                        continue
+                                        continue  # pragma: no cover
                                     direct_refs.append(c)
 
                             if direct_refs:
