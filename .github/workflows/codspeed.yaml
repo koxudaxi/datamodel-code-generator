@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@v4
       # uv standalone build is not compatible with CodSpeedHQ
       # https://github.com/astral-sh/uv/issues/11006
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
       - name: Install the latest version of uv
