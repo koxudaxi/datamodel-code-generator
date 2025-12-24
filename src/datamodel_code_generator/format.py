@@ -6,6 +6,7 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import shlex
 import shutil
 import subprocess  # noqa: S404
 import sys
@@ -318,8 +319,9 @@ class CodeFormatter:
 
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""
-        result = subprocess.run(
-            ("ruff", "check", "--fix", "-"),
+        ruff_path = self._find_ruff_path()
+        result = subprocess.run(  # noqa: S603
+            (ruff_path, "check", "--fix", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -329,8 +331,9 @@ class CodeFormatter:
 
     def apply_ruff_formatter(self, code: str) -> str:
         """Format code using ruff format."""
-        result = subprocess.run(
-            ("ruff", "format", "-"),
+        ruff_path = self._find_ruff_path()
+        result = subprocess.run(  # noqa: S603
+            (ruff_path, "format", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -340,28 +343,16 @@ class CodeFormatter:
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format in a single pipeline for better performance."""
-        ruff_path = self._find_ruff_path()
-        check_proc = subprocess.Popen(  # noqa: S603
-            [ruff_path, "check", "--fix", "-"],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+        ruff_path = shlex.quote(self._find_ruff_path())
+        result = subprocess.run(  # noqa: S602
+            f"{ruff_path} check --fix - | {ruff_path} format -",
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
             cwd=self.settings_path,
+            shell=True,
         )
-        format_proc = subprocess.Popen(  # noqa: S603
-            [ruff_path, "format", "-"],
-            stdin=check_proc.stdout,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            cwd=self.settings_path,
-        )
-        if check_proc.stdout:  # pragma: no branch
-            check_proc.stdout.close()
-        check_proc.stdin.write(code.encode(self.encoding))  # type: ignore[union-attr]
-        check_proc.stdin.close()  # type: ignore[union-attr]
-        stdout, _ = format_proc.communicate()
-        check_proc.wait()
-        return stdout.decode(self.encoding)
+        return result.stdout.decode(self.encoding)
 
     @staticmethod
     def _find_ruff_path() -> str:
@@ -386,16 +377,17 @@ class CodeFormatter:
 
     def format_directory(self, directory: Path) -> None:
         """Apply ruff formatting to all Python files in a directory."""
+        ruff_path = self._find_ruff_path()
         if Formatter.RUFF_CHECK in self.formatters:
             subprocess.run(  # noqa: S603
-                ("ruff", "check", "--fix", str(directory)),
+                (ruff_path, "check", "--fix", str(directory)),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,
             )
         if Formatter.RUFF_FORMAT in self.formatters:
             subprocess.run(  # noqa: S603
-                ("ruff", "format", str(directory)),
+                (ruff_path, "format", str(directory)),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,
