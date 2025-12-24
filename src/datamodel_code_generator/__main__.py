@@ -445,6 +445,7 @@ class Config(BaseModel):
     use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_field_description_example: bool = False
     use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
     use_default_kwarg: bool = False
@@ -764,6 +765,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_standard_collections=config.use_standard_collections,
         use_schema_description=config.use_schema_description,
         use_field_description=config.use_field_description,
+        use_field_description_example=config.use_field_description_example,
         use_attribute_docstrings=config.use_attribute_docstrings,
         use_inline_field_description=config.use_inline_field_description,
         use_default_kwarg=config.use_default_kwarg,

@@ -331,6 +331,79 @@ def test_main_use_inline_field_description(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-field-description-example"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--use-field-description-example"],
+    golden_output="main_kr/main_use_field_description_example/output.py",
+    related_options=["--use-field-description", "--use-inline-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example(output_file: Path) -> None:
+    """Add field examples to docstrings.
+
+    The `--use-field-description-example` flag adds the `example` or `examples`
+    property from schema fields as docstrings. This provides documentation that
+    is visible in IDE intellisense.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example" / "output.py",
+        extra_args=["--use-field-description-example"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-field-description", "--use-field-description-example"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--use-field-description", "--use-field-description-example"],
+    golden_output="main_kr/main_use_field_description_with_example/output.py",
+    related_options=["--use-inline-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_field_description_with_example(output_file: Path) -> None:
+    """Add field descriptions and examples to docstrings.
+
+    When both `--use-field-description` and `--use-field-description-example` are used,
+    the docstring includes both the description and example(s).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_with_example" / "output.py",
+        extra_args=["--use-field-description", "--use-field-description-example"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-inline-field-description", "--use-field-description-example"],
+    input_schema="jsonschema/multiline_description_with_example.json",
+    cli_args=["--use-inline-field-description", "--use-field-description-example"],
+    golden_output="main_kr/main_use_inline_field_description_with_example/output.py",
+    related_options=["--use-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_inline_field_description_with_example(output_file: Path) -> None:
+    """Add field descriptions and examples to docstrings with inline description.
+
+    When both `--use-inline-field-description` and `--use-field-description-example` are used,
+    multi-line descriptions and examples are included in the docstring.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiline_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description_with_example" / "output.py",
+        extra_args=["--use-inline-field-description", "--use-field-description-example"],
+    )
+
+
 def test_capitalise_enum_members(tmp_path: Path) -> None:
     """Test capitalise-enum-members option (issue #2370)."""
     input_data = """

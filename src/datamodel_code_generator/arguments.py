@@ -674,6 +674,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-field-description-example",
+    help="Use schema example to populate field docstring",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--use-attribute-docstrings",
     help="Set use_attribute_docstrings=True in Pydantic v2 ConfigDict",
     action="store_true",

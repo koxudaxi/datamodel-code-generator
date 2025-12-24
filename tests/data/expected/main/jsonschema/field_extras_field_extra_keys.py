@@ -17,3 +17,4 @@ class Extras(BaseModel):
         repr=True,
     )
     age: int | None = Field(None, example=12, examples=[13, 20])
+    status: str | None = Field(None, examples=['active'])

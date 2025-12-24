@@ -149,6 +149,7 @@ class DataModelFieldBase(_BaseModel):
     use_serialize_as_any: bool = False
     has_default: bool = False
     use_field_description: bool = False
+    use_field_description_example: bool = False
     use_inline_field_description: bool = False
     const: bool = False
     original_name: Optional[str] = None  # noqa: UP045
@@ -306,16 +307,41 @@ class DataModelFieldBase(_BaseModel):
 
     @property
     def docstring(self) -> str | None:
-        """Get the docstring for this field from its description."""
+        """Get the docstring for this field from its description and/or example."""
+        parts = []
+
+        # description 処理
         if self.use_field_description:
-            description = self.extras.get("description", None)
+            description = self.extras.get("description")
             if description is not None:
-                return f"{description}"
-        elif self.use_inline_field_description:
-            # For inline mode, only use multi-line docstring format for multi-line descriptions
-            description = self.extras.get("description", None)
+                parts.append(description)
+        elif self.use_inline_field_description and self.use_field_description_example:
+            description = self.extras.get("description")
             if description is not None and "\n" in description:
-                return f"{description}"
+                parts.append(description)
+
+        # example 処理
+        if self.use_field_description_example:
+            example = self.extras.get("example")
+            examples = self.extras.get("examples")
+
+            if examples and isinstance(examples, list) and len(examples) > 1:
+                examples_str = "\n".join(f"- {e!r}" for e in examples)
+                parts.append(f"Examples:\n{examples_str}")
+            elif example is not None:
+                parts.append(f"Example: {example!r}")
+            elif examples and isinstance(examples, list) and len(examples) == 1:
+                parts.append(f"Example: {examples[0]!r}")
+
+        if parts:
+            return "\n\n".join(parts)
+
+        # 既存の use_inline_field_description 処理
+        if self.use_inline_field_description:
+            description = self.extras.get("description")
+            if description is not None and "\n" in description:
+                return description
+
         return None
 
     @property
