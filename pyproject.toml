@@ -224,6 +224,7 @@ filterwarnings = [
 ]
 norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
+markers = [ "perf: marks tests as performance tests (excluded from CI benchmarks)" ]
 
 [tool.coverage]
 html.skip_covered = false

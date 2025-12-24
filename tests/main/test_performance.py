@@ -8,7 +8,7 @@ These tests are designed to measure code generation performance with:
 - Multiple file inputs
 - Large OpenAPI specifications
 
-Tests are marked with @pytest.mark.benchmark for CodSpeed integration.
+Tests are marked with @pytest.mark.perf and @pytest.mark.benchmark for CodSpeed integration.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from datamodel_code_generator import DataModelType, InputFileType, generate
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_large_models(tmp_path: Path) -> None:
     """Performance test: Generate 500 models from a single schema.
@@ -40,6 +41,7 @@ def test_perf_large_models(tmp_path: Path) -> None:
     assert content.count("class Model") >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_large_models_pydantic_v2(tmp_path: Path) -> None:
     """Performance test: Generate 500 Pydantic v2 models."""
@@ -54,6 +56,7 @@ def test_perf_large_models_pydantic_v2(tmp_path: Path) -> None:
     assert content.count("class Model") >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_large_models_dataclass(tmp_path: Path) -> None:
     """Performance test: Generate 500 dataclass models."""
@@ -68,6 +71,7 @@ def test_perf_large_models_dataclass(tmp_path: Path) -> None:
     assert content.count("class Model") >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_large_models_typed_dict(tmp_path: Path) -> None:
     """Performance test: Generate 500 TypedDict models."""
@@ -82,6 +86,7 @@ def test_perf_large_models_typed_dict(tmp_path: Path) -> None:
     assert content.count("class Model") >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_duplicate_names(tmp_path: Path) -> None:
     """Performance test: Handle 300 models with duplicate/similar names.
@@ -100,6 +105,7 @@ def test_perf_duplicate_names(tmp_path: Path) -> None:
     assert content.count("class Container") >= 100
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_duplicate_names_multiple_files(tmp_path: Path) -> None:
     """Performance test: Handle duplicate names with multiple file output."""
@@ -113,6 +119,7 @@ def test_perf_duplicate_names_multiple_files(tmp_path: Path) -> None:
     assert output_dir.exists()
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_complex_refs(tmp_path: Path) -> None:
     """Performance test: Handle 200 models with complex reference chains.
@@ -134,6 +141,7 @@ def test_perf_complex_refs(tmp_path: Path) -> None:
     assert content.count("class Node") >= 200
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_complex_refs_collapse_root(tmp_path: Path) -> None:
     """Performance test: Complex refs with collapse-root-models enabled."""
@@ -148,6 +156,7 @@ def test_perf_complex_refs_collapse_root(tmp_path: Path) -> None:
     assert "class Node" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_deep_nested(tmp_path: Path) -> None:
     """Performance test: Handle deeply nested structures (50 levels deep).
@@ -169,6 +178,7 @@ def test_perf_deep_nested(tmp_path: Path) -> None:
     assert content.count("class WideModel") >= 100
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_deep_nested_use_annotated(tmp_path: Path) -> None:
     """Performance test: Deep nested with use-annotated and field-constraints enabled."""
@@ -184,6 +194,7 @@ def test_perf_deep_nested_use_annotated(tmp_path: Path) -> None:
     assert "class Level" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_multiple_files_input(tmp_path: Path) -> None:
     """Performance test: Process 50 schema files (500 models total).
@@ -211,6 +222,7 @@ def test_perf_multiple_files_input(tmp_path: Path) -> None:
     assert total_models >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_multiple_files_to_multiple_outputs(tmp_path: Path) -> None:
     """Performance test: Multiple input files to multiple output files."""
@@ -226,6 +238,7 @@ def test_perf_multiple_files_to_multiple_outputs(tmp_path: Path) -> None:
     assert len(py_files) >= 1
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_openapi_large(tmp_path: Path) -> None:
     """Performance test: Large OpenAPI spec with 300 schemas and 900 endpoints.
@@ -246,6 +259,7 @@ def test_perf_openapi_large(tmp_path: Path) -> None:
     assert content.count("class Entity") >= 300
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_openapi_large_strict_types(tmp_path: Path) -> None:
     """Performance test: Large OpenAPI with strict types enabled."""
@@ -265,6 +279,7 @@ def test_perf_openapi_large_strict_types(tmp_path: Path) -> None:
     assert "class Entity" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_openapi_large_field_constraints(tmp_path: Path) -> None:
     """Performance test: Large OpenAPI with field constraints enabled."""
@@ -279,6 +294,7 @@ def test_perf_openapi_large_field_constraints(tmp_path: Path) -> None:
     assert "class Entity" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_combined_large_models_with_formatting(tmp_path: Path) -> None:
     """Performance test: Large models with all formatting options.
@@ -303,6 +319,7 @@ def test_perf_combined_large_models_with_formatting(tmp_path: Path) -> None:
     assert content.count("class Model") >= 500
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_all_options_enabled(tmp_path: Path) -> None:
     """Performance test: Large schema with many options enabled.
@@ -330,6 +347,7 @@ def test_perf_all_options_enabled(tmp_path: Path) -> None:
 # Real-world style schemas based on popular APIs
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_kubernetes_style(tmp_path: Path) -> None:
     """Performance test: Kubernetes-style schema with 300+ definitions.
@@ -352,6 +370,7 @@ def test_perf_kubernetes_style(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_kubernetes_style_pydantic_v2(tmp_path: Path) -> None:
     """Performance test: Kubernetes-style schema with Pydantic v2."""
@@ -366,6 +385,7 @@ def test_perf_kubernetes_style_pydantic_v2(tmp_path: Path) -> None:
     assert "ObjectMeta" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_stripe_style(tmp_path: Path) -> None:
     """Performance test: Stripe-style schema with 100+ definitions.
@@ -387,6 +407,7 @@ def test_perf_stripe_style(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_stripe_style_pydantic_v2(tmp_path: Path) -> None:
     """Performance test: Stripe-style schema with Pydantic v2."""
@@ -401,6 +422,7 @@ def test_perf_stripe_style_pydantic_v2(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_aws_style_openapi(tmp_path: Path) -> None:
     """Performance test: AWS-style OpenAPI with 350+ schemas.
@@ -422,6 +444,7 @@ def test_perf_aws_style_openapi(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_aws_style_openapi_pydantic_v2(tmp_path: Path) -> None:
     """Performance test: AWS-style OpenAPI with Pydantic v2."""
@@ -436,6 +459,7 @@ def test_perf_aws_style_openapi_pydantic_v2(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_graphql_style(tmp_path: Path) -> None:
     """Performance test: GraphQL-style schema with 150+ definitions.
@@ -458,6 +482,7 @@ def test_perf_graphql_style(tmp_path: Path) -> None:
     assert "class" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_graphql_style_pydantic_v2(tmp_path: Path) -> None:
     """Performance test: GraphQL-style schema with Pydantic v2."""
@@ -472,6 +497,7 @@ def test_perf_graphql_style_pydantic_v2(tmp_path: Path) -> None:
     assert "PageInfo" in content
 
 
+@pytest.mark.perf
 @pytest.mark.benchmark
 def test_perf_graphql_style_typed_dict(tmp_path: Path) -> None:
     """Performance test: GraphQL-style schema with TypedDict."""
