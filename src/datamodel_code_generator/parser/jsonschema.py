@@ -454,14 +454,19 @@ class JsonSchemaObject(BaseModel):
         """Check if schema has $ref combined with schema-affecting keywords.
 
         Metadata-only keywords (title, description, etc.) are excluded
-        as they don't affect the schema structure.
+        as they don't affect the schema structure. OpenAPI/JSON Schema
+        extension fields (x-*) are also excluded as they are vendor
+        extensions and don't affect the core schema structure.
         """
         if not self.ref:
             return False
         other_fields = get_fields_set(self) - {"ref"}
         schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         if self.extras:
-            schema_affecting_extras = {k for k in self.extras if k not in self.__metadata_only_fields__}
+            # Filter out metadata-only fields AND extension fields (x-* prefix)
+            schema_affecting_extras = {
+                k for k in self.extras if k not in self.__metadata_only_fields__ and not k.startswith("x-")
+            }
             if schema_affecting_extras:
                 schema_affecting_fields |= {"extras"}
         return bool(schema_affecting_fields)
