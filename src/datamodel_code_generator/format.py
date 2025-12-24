@@ -6,7 +6,9 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import shutil
 import subprocess  # noqa: S404
+import sys
 from enum import Enum
 from functools import cached_property, lru_cache
 from importlib import import_module
@@ -183,6 +185,7 @@ class CodeFormatter:
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
@@ -255,6 +258,7 @@ class CodeFormatter:
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
         self.encoding = encoding
         self.formatters = formatters
+        self.defer_formatting = defer_formatting
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
@@ -289,11 +293,15 @@ class CodeFormatter:
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
 
-        if Formatter.RUFF_CHECK in self.formatters:
-            code = self.apply_ruff_lint(code)
-
-        if Formatter.RUFF_FORMAT in self.formatters:
-            code = self.apply_ruff_formatter(code)
+        if not self.defer_formatting:
+            has_ruff_check = Formatter.RUFF_CHECK in self.formatters
+            has_ruff_format = Formatter.RUFF_FORMAT in self.formatters
+            if has_ruff_check and has_ruff_format:
+                code = self.apply_ruff_check_and_format(code)
+            elif has_ruff_check:
+                code = self.apply_ruff_lint(code)
+            elif has_ruff_format:
+                code = self.apply_ruff_formatter(code)
 
         for formatter in self.custom_formatters:
             code = formatter.apply(code)
@@ -330,6 +338,41 @@ class CodeFormatter:
         )
         return result.stdout.decode(self.encoding)
 
+    def apply_ruff_check_and_format(self, code: str) -> str:
+        """Run ruff check and format in a single pipeline for better performance."""
+        ruff_path = self._find_ruff_path()
+        check_proc = subprocess.Popen(  # noqa: S603
+            [ruff_path, "check", "--fix", "-"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.settings_path,
+        )
+        format_proc = subprocess.Popen(  # noqa: S603
+            [ruff_path, "format", "-"],
+            stdin=check_proc.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.settings_path,
+        )
+        if check_proc.stdout:  # pragma: no branch
+            check_proc.stdout.close()
+        check_proc.stdin.write(code.encode(self.encoding))  # type: ignore[union-attr]
+        check_proc.stdin.close()  # type: ignore[union-attr]
+        stdout, _ = format_proc.communicate()
+        check_proc.wait()
+        return stdout.decode(self.encoding)
+
+    @staticmethod
+    def _find_ruff_path() -> str:
+        """Find ruff executable path, checking virtual environment first."""
+        bin_dir = Path(sys.executable).parent
+        ruff_name = "ruff.exe" if sys.platform == "win32" else "ruff"
+        ruff_in_venv = bin_dir / ruff_name
+        if ruff_in_venv.exists():
+            return str(ruff_in_venv)
+        return shutil.which("ruff") or "ruff"  # pragma: no cover
+
     def apply_isort(self, code: str) -> str:
         """Sort imports using isort."""
         isort = _get_isort()
@@ -340,6 +383,23 @@ class CodeFormatter:
                 **self.isort_config_kwargs,
             ).output
         return isort.code(code, config=self.isort_config)
+
+    def format_directory(self, directory: Path) -> None:
+        """Apply ruff formatting to all Python files in a directory."""
+        if Formatter.RUFF_CHECK in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "check", "--fix", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
+        if Formatter.RUFF_FORMAT in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "format", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
 
 
 class CustomCodeFormatter:

@@ -776,6 +776,7 @@ class Parser(ABC):
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,
         parent_scoped_naming: bool = False,
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix: dict[str, str] | None = None,
@@ -951,6 +952,7 @@ class Parser(ABC):
         self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
+        self.defer_formatting: bool = defer_formatting
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
         self.type_overrides: dict[str, str] = type_overrides or {}
         self._type_override_imports: dict[str, Import] = {
@@ -2721,6 +2723,7 @@ class Parser(ABC):
                 custom_formatters_kwargs=self.custom_formatters_kwargs,
                 encoding=self.encoding,
                 formatters=self.formatters,
+                defer_formatting=self.defer_formatting,
             )
 
         return ParseConfig(

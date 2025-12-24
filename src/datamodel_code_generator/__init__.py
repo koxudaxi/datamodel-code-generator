@@ -33,6 +33,7 @@ from typing_extensions import TypeAliasType, TypedDict
 import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
+    CodeFormatter,
     DateClassType,
     DatetimeClassType,
     Formatter,
@@ -727,6 +728,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     source = input_text or input_
     assert not isinstance(source, Mapping)
+
+    defer_formatting = output is not None and not output.suffix
+
     parser = parser_class(
         source=source,
         data_model_type=data_model_types.data_model,
@@ -825,6 +829,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_frozen_field=use_frozen_field,
         use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
         formatters=formatters,
+        defer_formatting=defer_formatting,
         encoding=encoding,
         parent_scoped_naming=parent_scoped_naming,
         naming_strategy=naming_strategy,
@@ -947,6 +952,24 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
         if file is not None:
             file.close()
+
+    if (
+        defer_formatting
+        and output is not None
+        and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters)
+    ):
+        code_formatter = CodeFormatter(
+            target_python_version,
+            settings_path,
+            wrap_string_literal,
+            skip_string_normalization=not use_double_quotes,
+            known_third_party=data_model_types.known_third_party,
+            custom_formatters=custom_formatters,
+            custom_formatters_kwargs=custom_formatters_kwargs,
+            encoding=encoding,
+            formatters=formatters,
+        )
+        code_formatter.format_directory(output)
 
 
 def infer_input_type(text: str) -> InputFileType:
