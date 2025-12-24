@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     BLACK_PY313_SKIP,
@@ -613,8 +614,6 @@ def test_main_openapi_schema_extensions(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Test that schema extensions (x-* fields) are passed to custom templates."""
-    from datamodel_code_generator.model import base as model_base
-
     model_base._get_environment.cache_clear()
     model_base._get_template_with_custom_dir.cache_clear()
     monkeypatch.chdir(tmp_path)
