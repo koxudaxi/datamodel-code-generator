@@ -29,3 +29,4 @@ class Extras(BaseModel):
     age: int | None = Field(
         None, examples=[13, 20], json_schema_extra={'example': 12, 'writeOnly': True}
     )
+    status: str | None = Field(None, examples=['active'])

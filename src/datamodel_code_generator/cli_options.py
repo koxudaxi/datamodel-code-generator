@@ -134,6 +134,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-title-as-name": CLIOptionMeta(name="--use-title-as-name", category=OptionCategory.FIELD),
     "--use-schema-description": CLIOptionMeta(name="--use-schema-description", category=OptionCategory.FIELD),
     "--use-field-description": CLIOptionMeta(name="--use-field-description", category=OptionCategory.FIELD),
+    "--use-field-description-example": CLIOptionMeta(
+        name="--use-field-description-example", category=OptionCategory.FIELD
+    ),
     "--use-attribute-docstrings": CLIOptionMeta(name="--use-attribute-docstrings", category=OptionCategory.FIELD),
     "--use-inline-field-description": CLIOptionMeta(
         name="--use-inline-field-description", category=OptionCategory.FIELD
