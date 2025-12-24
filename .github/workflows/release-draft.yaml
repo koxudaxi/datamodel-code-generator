@@ -249,9 +249,39 @@ jobs:
           fi
 
           # Build final release body using printf to avoid YAML parsing issues
+          # Merge breaking changes sections with same headings
           FINAL_BC=""
           if [ -n "$BC_CONTENT" ] && [ -n "$EXISTING_BC" ]; then
-            FINAL_BC=$(printf '## Breaking Changes\n\n%s\n\n%s' "$EXISTING_BC" "$BC_CONTENT")
+            # Merge sections with same ### headings to avoid duplicates
+            # Preserves blank lines inside fenced code blocks
+            MERGED_BC=$(printf '%s\n\n%s' "$EXISTING_BC" "$BC_CONTENT" | awk '
+              BEGIN { current_section = ""; in_fence = 0; }
+              /^```/ || /^~~~/ { in_fence = !in_fence; }
+              /^### / && !in_fence {
+                current_section = $0;
+                if (!(current_section in sections)) {
+                  order[++order_count] = current_section;
+                }
+                next;
+              }
+              /^[[:space:]]*$/ && !in_fence { next; }
+              current_section != "" {
+                if (sections[current_section] != "") {
+                  sections[current_section] = sections[current_section] "\n" $0;
+                } else {
+                  sections[current_section] = $0;
+                }
+              }
+              END {
+                for (i = 1; i <= order_count; i++) {
+                  section = order[i];
+                  if (i > 1) print "";
+                  print section;
+                  print sections[section];
+                }
+              }
+            ')
+            FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$MERGED_BC")
           elif [ -n "$BC_CONTENT" ]; then
             FINAL_BC=$(printf '## Breaking Changes\n\n%s' "$BC_CONTENT")
           elif [ -n "$EXISTING_BC" ]; then
