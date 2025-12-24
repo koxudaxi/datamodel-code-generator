@@ -1610,32 +1610,44 @@ class Parser(ABC):
             ),
         )
 
+        module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
+            module: set(models) for module, models in module_models
+        }
+        models_to_remove: dict[tuple[str, ...], set[DataModel]] = defaultdict(set)
+
         for duplicate_module, duplicate_model, _, canonical_model in duplicates:
             shared_ref = canonical_to_shared_ref[canonical_model]
+            models_set = module_models_sets.get(duplicate_module)
+            if not models_set or duplicate_model not in models_set:  # pragma: no cover
+                msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
+                raise RuntimeError(msg)
+
             for module, models in module_models:
-                if module != duplicate_module or duplicate_model not in models:
+                if module != duplicate_module:
                     continue
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
                     duplicate_model.replace_children_in_models(models, shared_ref)
-                    models.remove(duplicate_model)
+                    models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
                     if shared_ref.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, duplicate_model, inherited_model)
                 break
-            else:  # pragma: no cover
-                msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
-                raise RuntimeError(msg)
 
         for canonical in canonical_models_seen:
-            for _module, models in module_models:
-                if canonical in models:
-                    models.remove(canonical)
+            for module, models_set in module_models_sets.items():
+                if canonical in models_set:
+                    models_to_remove[module].add(canonical)
                     break
             else:  # pragma: no cover
                 msg = f"Canonical model {canonical.name} not found in any module"
                 raise RuntimeError(msg)
+
+        for module, models in module_models:
+            to_remove = models_to_remove.get(module)
+            if to_remove:
+                models[:] = [m for m in models if m not in to_remove]
 
         return (shared_module,), shared_models
 

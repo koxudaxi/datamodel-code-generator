@@ -2548,7 +2548,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
-        if reference in [d.reference for d in field.data_type.all_data_types if d.reference]:
+        if any(d.reference == reference for d in field.data_type.all_data_types if d.reference):
             # self-reference
             field = self.data_model_field_type(
                 data_type=self.data_type(

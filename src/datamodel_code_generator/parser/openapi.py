@@ -676,6 +676,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse all operation parameters into a data model."""
         fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
+        seen_parameter_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
@@ -687,9 +688,10 @@ class OpenAPIParser(JsonSchemaParser):
             ):
                 continue
 
-            if any(field.original_name == parameter_name for field in fields):
+            if parameter_name in seen_parameter_names:
                 msg = f"Parameter name '{parameter_name}' is used more than once."
                 raise Exception(msg)  # noqa: TRY002
+            seen_parameter_names.add(parameter_name)
 
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name,
@@ -919,21 +921,22 @@ class OpenAPIParser(JsonSchemaParser):
     def _collect_discriminator_schemas(self) -> None:
         """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
         schemas: dict[str, Any] = self.raw_obj.get("components", {}).get("schemas", {})
+        potential_subtypes: dict[str, list[str]] = {}
 
         for schema_name, schema in schemas.items():
             discriminator = schema.get("discriminator")
-            if not discriminator:
-                continue
+            if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
+                ref = f"#/components/schemas/{schema_name}"
+                self._discriminator_schemas[ref] = discriminator
 
-            if schema.get("oneOf") or schema.get("anyOf"):
-                continue
+            all_of = schema.get("allOf")
+            if all_of:
+                refs = [item.get("$ref") for item in all_of if item.get("$ref")]
+                if refs:
+                    potential_subtypes[schema_name] = refs
 
-            ref = f"#/components/schemas/{schema_name}"
-            self._discriminator_schemas[ref] = discriminator
-
-        for schema_name, schema in schemas.items():
-            for all_of_item in schema.get("allOf", []):
-                ref_in_allof = all_of_item.get("$ref")
-                if ref_in_allof and ref_in_allof in self._discriminator_schemas:
+        for schema_name, refs in potential_subtypes.items():
+            for ref_in_allof in refs:
+                if ref_in_allof in self._discriminator_schemas:
                     subtype_ref = f"#/components/schemas/{schema_name}"
                     self._discriminator_subtypes[ref_in_allof].append(subtype_ref)
