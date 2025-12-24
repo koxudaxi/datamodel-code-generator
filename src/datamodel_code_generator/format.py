@@ -343,9 +343,31 @@ class CodeFormatter:
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format in a single pipeline for better performance."""
-        ruff_path = shlex.quote(self._find_ruff_path())
+        ruff_path = self._find_ruff_path()
+        if sys.platform == "win32":  # pragma: no cover
+            check_proc = subprocess.Popen(  # noqa: S603
+                [ruff_path, "check", "--fix", "-"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.settings_path,
+            )
+            format_proc = subprocess.Popen(  # noqa: S603
+                [ruff_path, "format", "-"],
+                stdin=check_proc.stdout,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.settings_path,
+            )
+            if check_proc.stdout:
+                check_proc.stdout.close()
+            check_proc.stdin.write(code.encode(self.encoding))  # type: ignore[union-attr]
+            check_proc.stdin.close()  # type: ignore[union-attr]
+            stdout, _ = format_proc.communicate()
+            check_proc.wait()
+            return stdout.decode(self.encoding)
         result = subprocess.run(  # noqa: S602
-            f"{ruff_path} check --fix - | {ruff_path} format -",
+            f"{shlex.quote(ruff_path)} check --fix - | {shlex.quote(ruff_path)} format -",
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
