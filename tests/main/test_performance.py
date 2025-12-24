@@ -19,7 +19,6 @@ import pytest
 
 from datamodel_code_generator import DataModelType, InputFileType, generate
 
-
 PERFORMANCE_DATA_PATH: Path = Path(__file__).parent.parent / "data" / "performance"
 
 
