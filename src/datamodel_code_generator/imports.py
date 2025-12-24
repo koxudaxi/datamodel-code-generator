@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True)
 class Import:
     """Represents a single Python import statement."""
 
