@@ -369,6 +369,65 @@ def test_main_graphql_additional_imports(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_graphql_additional_imports_in_extra_template_data(output_file: Path) -> None:
+    """Test additional_imports specified in extra-template-data JSON file (string format)."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports.py",
+        extra_args=[
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "additional-imports-in-extra-template-data.json"),
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_additional_imports_in_extra_template_data_list_format(output_file: Path) -> None:
+    """Test additional_imports specified in extra-template-data JSON file (list format)."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports.py",
+        extra_args=[
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "additional-imports-list-format.json"),
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_additional_imports_merged(output_file: Path) -> None:
+    """Test merging additional_imports from CLI and extra-template-data JSON."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "additional-imports.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="additional_imports.py",
+        extra_args=[
+            "--extra-template-data",
+            str(GRAPHQL_DATA_PATH / "additional-imports-partial.json"),
+            "--additional-imports",
+            "datetime.date,mymodule.myclass.MyCustomPythonClass",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 @pytest.mark.cli_doc(
     options=["--custom-formatters"],
     input_schema="graphql/custom-scalar-types.graphql",
