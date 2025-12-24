@@ -127,7 +127,7 @@ base_options.add_argument(
     "--http-timeout",
     type=float,
     default=None,
-    help="Timeout in seconds for HTTP requests to remote hosts (default: 30)",
+    help="Timeout in seconds for HTTP requests to remote hosts (default: 30 when not specified)",
 )
 base_options.add_argument(
     "--input",
