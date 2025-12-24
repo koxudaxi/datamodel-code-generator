@@ -5020,6 +5020,17 @@ def test_main_jsonschema_collapse_root_models_name_strategy_direct_refs(output_f
         )
 
 
+def test_main_jsonschema_collapse_root_models_name_strategy_with_inheritance(output_file: Path) -> None:
+    """Test collapse-root-models with parent strategy when inner model has derived classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_with_inheritance.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+    )
+
+
 def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
     """Test that file:// URL $ref is resolved correctly."""
     pet_schema = {

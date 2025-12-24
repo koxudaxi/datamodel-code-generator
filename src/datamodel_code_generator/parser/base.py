@@ -1718,10 +1718,7 @@ class Parser(ABC):
                             continue
 
                         inner_reference = root_type_field.data_type.reference
-                        inner_model = inner_reference.source
-
-                        if not isinstance(inner_model, DataModel):
-                            continue  # pragma: no cover
+                        inner_model: DataModel = inner_reference.source  # type: ignore[assignment]
 
                         if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
                             # "parent" strategy: Rename inner model to wrapper's name
@@ -1745,19 +1742,14 @@ class Parser(ABC):
                                 continue
 
                             # Check if inner model has direct (non-wrapper) references
-                            direct_refs = []
-                            for c in inner_reference.children:
-                                if isinstance(c, DataType):
-                                    parent_model = get_most_of_parent(c, DataModel)
-                                    # Skip orphan data types (no parent model)
-                                    if parent_model is None:
-                                        continue
-                                    # Skip if parent is the wrapper we're collapsing or another root model
-                                    if parent_model is root_type_model:
-                                        continue
-                                    if isinstance(parent_model, self.data_model_root_type):
-                                        continue  # pragma: no cover
-                                    direct_refs.append(c)
+                            direct_refs = [
+                                c
+                                for c in inner_reference.children
+                                if isinstance(c, DataType)
+                                and (parent_model := get_most_of_parent(c, DataModel)) is not None
+                                and parent_model is not root_type_model
+                                and not isinstance(parent_model, self.data_model_root_type)
+                            ]
 
                             if direct_refs:
                                 warn(
