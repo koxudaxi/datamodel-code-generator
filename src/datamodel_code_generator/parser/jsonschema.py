@@ -393,7 +393,7 @@ class JsonSchemaObject(BaseModel):
         if "x-propertyNames" in self.extras and self.propertyNames is None:
             x_prop_names = self.extras.pop("x-propertyNames")
             if isinstance(x_prop_names, dict):
-                self.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
+                self.propertyNames = model_validate(JsonSchemaObject, x_prop_names)
 
     @cached_property
     def is_object(self) -> bool:
