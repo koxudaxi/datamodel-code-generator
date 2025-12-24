@@ -28,6 +28,12 @@
         13,
         20
       ]
+    },
+    "status": {
+      "type": "string",
+      "examples": [
+        "active"
+      ]
     }
   }
 }

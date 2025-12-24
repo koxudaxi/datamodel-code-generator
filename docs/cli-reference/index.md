@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 22 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 21 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 33 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 17 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
@@ -177,6 +177,7 @@ This documentation is auto-generated from test cases.
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator)
 - [`--use-exact-imports`](template-customization.md#use-exact-imports)
 - [`--use-field-description`](field-customization.md#use-field-description)
+- [`--use-field-description-example`](field-customization.md#use-field-description-example)
 - [`--use-frozen-field`](model-customization.md#use-frozen-field)
 - [`--use-generic-base-class`](model-customization.md#use-generic-base-class)
 - [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
