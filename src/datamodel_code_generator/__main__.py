@@ -547,6 +547,20 @@ class Config(BaseModel):
             setattr(self, field_name, getattr(parsed_args, field_name))
 
 
+def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, Any]]) -> list[str]:
+    """Extract additional_imports from extra_template_data entries."""
+    additional_imports: list[str] = []
+    for type_data in extra_template_data.values():
+        if "additional_imports" in type_data:
+            imports = type_data.pop("additional_imports")
+            if isinstance(imports, str):
+                if imports.strip():
+                    additional_imports.append(imports.strip())
+            elif isinstance(imports, list):
+                additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
+    return additional_imports
+
+
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
     """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
     current_path = source
@@ -996,6 +1010,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             except json.JSONDecodeError as e:
                 print(f"Unable to load extra template data: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
+
+        # Extract additional_imports from extra_template_data entries and merge with config
+        assert extra_template_data is not None
+        additional_imports_from_template_data = _extract_additional_imports(extra_template_data)
+        if additional_imports_from_template_data:
+            if config.additional_imports is None:
+                config.additional_imports = additional_imports_from_template_data
+            else:
+                config.additional_imports = list(config.additional_imports) + additional_imports_from_template_data
 
     if config.aliases is None:
         aliases = None

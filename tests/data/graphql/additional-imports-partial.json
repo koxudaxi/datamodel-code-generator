@@ -1,0 +1,12 @@
+{
+  "Date": {
+    "py_type": "date"
+  },
+  "DateTime": {
+    "py_type": "datetime",
+    "additional_imports": "datetime.datetime"
+  },
+  "MyCustomClass": {
+    "py_type": "MyCustomPythonClass"
+  }
+}
