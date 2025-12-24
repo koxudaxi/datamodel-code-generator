@@ -4445,3 +4445,15 @@ def test_main_openapi_x_property_names(output_file: Path) -> None:
         expected_file="x_property_names.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_main_openapi_x_property_names_non_dict(output_file: Path) -> None:
+    """Test x-propertyNames with non-dict value is ignored."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names_non_dict.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names_non_dict.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
