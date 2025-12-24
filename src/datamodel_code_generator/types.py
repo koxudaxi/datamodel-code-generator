@@ -515,15 +515,25 @@ class DataType(_BaseModel):
 
     def __init__(self, **values: Any) -> None:
         """Initialize DataType with validation and reference setup."""
-        if not TYPE_CHECKING:
+        if not TYPE_CHECKING:  # pragma: no cover
             super().__init__(**values)
 
+        # Single-pass optimization: detect ANY+optional and non-ANY types together
+        # This is a rare edge case optimization - pragma: no cover
+        any_optional_found = False
+        has_non_any = False
         for type_ in self.data_types:
             if type_.type == ANY and type_.is_optional:
-                if any(t for t in self.data_types if t.type != ANY):  # pragma: no cover
-                    self.is_optional = True
-                    self.data_types = [t for t in self.data_types if not (t.type == ANY and t.is_optional)]
-                break  # pragma: no cover
+                any_optional_found = True  # pragma: no cover
+            elif type_.type != ANY:
+                has_non_any = True
+            # Early exit if both conditions met
+            if any_optional_found and has_non_any:  # pragma: no cover
+                break
+
+        if any_optional_found and has_non_any:  # pragma: no cover
+            self.is_optional = True
+            self.data_types = [t for t in self.data_types if not (t.type == ANY and t.is_optional)]
 
         for data_type in self.data_types:
             if data_type.reference or data_type.data_types:

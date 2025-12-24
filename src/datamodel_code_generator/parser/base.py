@@ -397,7 +397,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             sorted_data_models[model.path] = model
             add_model_path_to_list(require_update_action_models, model)
         elif (
-            not model.reference_classes - {model.path} - set(sorted_data_models)
+            not model.reference_classes - {model.path} - sorted_data_models.keys()
         ):  # reference classes have been resolved
             sorted_data_models[model.path] = model
             if model.path in model.reference_classes:
@@ -419,20 +419,21 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
         # sort on base_class dependency
         while True:
             ordered_models: list[tuple[int, DataModel]] = []
-            unresolved_reference_model_names = [m.path for m in unresolved_references]
+            # Build lookup dict for O(1) index access instead of O(n) list.index()
+            path_to_index = {m.path: idx for idx, m in enumerate(unresolved_references)}
             for model in unresolved_references:
                 if isinstance(model, pydantic_model_v2.RootModel):
                     indexes = [
-                        unresolved_reference_model_names.index(ref_path)
+                        path_to_index[ref_path]
                         for f in model.fields
                         for t in f.data_type.all_data_types
-                        if t.reference and (ref_path := t.reference.path) in unresolved_reference_model_names
+                        if t.reference and (ref_path := t.reference.path) in path_to_index
                     ]
                 else:
                     indexes = [
-                        unresolved_reference_model_names.index(b.reference.path)
+                        path_to_index[b.reference.path]
                         for b in model.base_classes
-                        if b.reference and b.reference.path in unresolved_reference_model_names
+                        if b.reference and b.reference.path in path_to_index
                     ]
                 if indexes:
                     ordered_models.append((
@@ -450,9 +451,9 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             unresolved_references = sorted_unresolved_models
 
         # circular reference
-        unsorted_data_model_names = set(unresolved_reference_model_names)
+        unsorted_data_model_names = set(path_to_index.keys())
         for model in unresolved_references:
-            unresolved_model = model.reference_classes - {model.path} - set(sorted_data_models)
+            unresolved_model = model.reference_classes - {model.path} - sorted_data_models.keys()
             base_models = [getattr(s.reference, "path", None) for s in model.base_classes]
             update_action_parent = set(require_update_action_models).intersection(base_models)
             if not unresolved_model:
@@ -1082,8 +1083,9 @@ class Parser(ABC):
         replacement: DataModel,
     ) -> None:
         """Replace model at its position in list."""
-        models.insert(models.index(original), replacement)
-        models.remove(original)
+        # Use direct assignment instead of insert+remove for O(n) instead of O(2n)
+        idx = models.index(original)
+        models[idx] = replacement
 
     def __delete_duplicate_models(self, models: list[DataModel]) -> None:
         model_class_names: dict[str, DataModel] = {}

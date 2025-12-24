@@ -185,12 +185,13 @@ class Imports(defaultdict[str | None, set[str]]):
             for import_ in imports_
             if not {self.get_effective_name(from_, import_), import_}.intersection(used_names)
         ]
+        # Build reverse lookup dict for O(1) access instead of O(n) linear scan per import
+        reverse_lookup: dict[tuple[str | None, str], str | None] = {
+            (imp.from_, imp.import_): path for path, imp in self.reference_paths.items()
+        }
         for from_, import_ in unused:
             alias = self.alias.get(from_, {}).get(import_)
-            reference_path = next(
-                (p for p, i in self.reference_paths.items() if i.from_ == from_ and i.import_ == import_),
-                None,
-            )
+            reference_path = reverse_lookup.get((from_, import_))
             import_obj = Import(from_=from_, import_=import_, alias=alias, reference_path=reference_path)
             while self.counter.get((from_, import_), 0) > 0:
                 self.remove(import_obj)
