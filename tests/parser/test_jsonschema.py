@@ -87,6 +87,7 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -116,6 +117,7 @@ class Pet(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 
@@ -153,6 +155,7 @@ class User(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 
@@ -187,6 +190,7 @@ class Pet(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 

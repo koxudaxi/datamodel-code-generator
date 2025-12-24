@@ -1660,6 +1660,7 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
         call(
             "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
@@ -1667,6 +1668,7 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -1734,6 +1736,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 

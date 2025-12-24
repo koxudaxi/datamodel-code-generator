@@ -14,7 +14,7 @@ This documentation is auto-generated from test cases.
 | 🏗️ [Model Customization](model-customization.md) | 33 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 17 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
-| ⚙️ [General Options](general-options.md) | 14 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
 
 ## All Options
@@ -95,6 +95,7 @@ This documentation is auto-generated from test cases.
 - [`--http-headers`](general-options.md#http-headers)
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls)
 - [`--http-query-parameters`](general-options.md#http-query-parameters)
+- [`--http-timeout`](general-options.md#http-timeout)
 
 ### I {#i}
 
