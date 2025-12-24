@@ -1712,25 +1712,20 @@ class Parser(ABC):
                         continue  # pragma: no cover
 
                     if root_type_field.data_type.reference:
-                        # Root type field references another model (object reference)
                         if self.collapse_root_models_name_strategy is None:
-                            # No strategy specified - skip collapsing object references (current behavior)
                             continue
 
                         inner_reference = root_type_field.data_type.reference
                         inner_model = cast("DataModel", inner_reference.source)
 
                         if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
-                            # "parent" strategy: Rename inner model to wrapper's name
-                            # Check for conflicts first
-
-                            # Count RootModel wrappers that reference this inner model
-                            root_model_wrappers = []
-                            for child in inner_reference.children:
-                                if isinstance(child, DataType):
-                                    parent_model = get_most_of_parent(child, DataModel)
-                                    if parent_model and isinstance(parent_model, self.data_model_root_type):
-                                        root_model_wrappers.append(parent_model)
+                            root_model_wrappers = [
+                                parent_model
+                                for child in inner_reference.children
+                                if isinstance(child, DataType)
+                                and (parent_model := get_most_of_parent(child, DataModel))
+                                and isinstance(parent_model, self.data_model_root_type)
+                            ]
 
                             if len(root_model_wrappers) > 1:
                                 warn(
@@ -1741,7 +1736,6 @@ class Parser(ABC):
                                 )
                                 continue
 
-                            # Check if inner model has direct (non-wrapper) references
                             direct_refs = [
                                 c
                                 for c in inner_reference.children
@@ -1759,25 +1753,19 @@ class Parser(ABC):
                                 )
                                 continue
 
-                            # No conflicts - rename inner model to wrapper's name
                             inner_model.class_name = root_type_model.class_name
 
-                        # For both "child" and "parent" strategies:
-                        # Replace the reference to wrapper with reference to inner model
                         assert isinstance(root_type_model, DataModel)
 
-                        # Remove this data_type from wrapper's children and update its reference
                         root_type_model.reference.children = [
                             c
                             for c in root_type_model.reference.children
                             if c is not data_type and getattr(c, "parent", None)
                         ]
 
-                        # Update the reference to point to inner model
                         data_type.reference = inner_reference
                         inner_reference.children.append(data_type)
 
-                        # Mark the wrapper for removal if no more references
                         imports.remove_referenced_imports(root_type_model.path)
                         if not root_type_model.reference.children:
                             unused_models.append(root_type_model)
