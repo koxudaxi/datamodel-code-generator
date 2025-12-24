@@ -12,7 +12,6 @@ import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
 from enum import Enum
-from functools import lru_cache
 from pathlib import Path
 from typing import (
     IO,
@@ -93,24 +92,8 @@ except ImportError:  # pragma: no cover
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
-@lru_cache(maxsize=64)
-def _cached_yaml_parse(text: str) -> YamlValue:
-    """Parse YAML with caching for identical text inputs.
-
-    Uses LRU cache to avoid re-parsing the same YAML content,
-    which is especially useful when infer_input_type() and parse_raw()
-    parse the same content.
-    """
-    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
-
-
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
-    if isinstance(stream, str):
-        import copy  # noqa: PLC0415
-
-        # Return a deep copy to prevent modification of cached data
-        return copy.deepcopy(_cached_yaml_parse(stream))
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
