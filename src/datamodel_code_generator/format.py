@@ -292,9 +292,13 @@ class CodeFormatter:
             code = self.apply_black(code)
 
         if not self.defer_formatting:
-            if Formatter.RUFF_CHECK in self.formatters:
+            has_ruff_check = Formatter.RUFF_CHECK in self.formatters
+            has_ruff_format = Formatter.RUFF_FORMAT in self.formatters
+            if has_ruff_check and has_ruff_format:
+                code = self.apply_ruff_check_and_format(code)
+            elif has_ruff_check:
                 code = self.apply_ruff_lint(code)
-            if Formatter.RUFF_FORMAT in self.formatters:
+            elif has_ruff_format:
                 code = self.apply_ruff_formatter(code)
 
         for formatter in self.custom_formatters:
@@ -328,6 +332,18 @@ class CodeFormatter:
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
+            cwd=self.settings_path,
+        )
+        return result.stdout.decode(self.encoding)
+
+    def apply_ruff_check_and_format(self, code: str) -> str:
+        """Run ruff check and format in a single pipeline for better performance."""
+        result = subprocess.run(  # noqa: S602
+            "ruff check --fix - | ruff format -",  # noqa: S607
+            input=code.encode(self.encoding),
+            capture_output=True,
+            check=False,
+            shell=True,
             cwd=self.settings_path,
         )
         return result.stdout.decode(self.encoding)

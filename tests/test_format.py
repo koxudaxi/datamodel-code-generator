@@ -334,3 +334,25 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         check=False,
         cwd=mock.ANY,
     )
+
+
+def test_format_code_ruff_check_and_format_combined(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that both ruff check and format use shell pipe for better performance."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+    )
+    with mock.patch("subprocess.run") as mock_run:
+        mock_run.return_value.stdout = b"output"
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "output"
+    mock_run.assert_called_once_with(
+        "ruff check --fix - | ruff format -",
+        input=b"input",
+        capture_output=True,
+        check=False,
+        shell=True,
+        cwd=str(tmp_path),
+    )
