@@ -1,0 +1,6880 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ComplexRefsSchema",
+  "description": "Schema with complex reference chains",
+  "definitions": {
+    "Node000": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node001"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node199"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node000"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node000"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node050"
+            }
+          }
+        }
+      }
+    },
+    "Node001": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node002"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node000"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node001"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node001"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node051"
+            }
+          }
+        }
+      }
+    },
+    "Node002": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node003"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node001"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node002"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node002"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node052"
+            }
+          }
+        }
+      }
+    },
+    "Node003": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node004"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node002"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node003"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node003"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node053"
+            }
+          }
+        }
+      }
+    },
+    "Node004": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node005"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node003"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node004"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node004"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node054"
+            }
+          }
+        }
+      }
+    },
+    "Node005": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node006"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node004"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node005"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node005"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node055"
+            }
+          }
+        }
+      }
+    },
+    "Node006": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node007"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node005"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node006"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node006"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node056"
+            }
+          }
+        }
+      }
+    },
+    "Node007": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node008"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node006"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node007"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node007"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node057"
+            }
+          }
+        }
+      }
+    },
+    "Node008": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node009"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node007"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node008"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node008"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node058"
+            }
+          }
+        }
+      }
+    },
+    "Node009": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node010"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node008"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node009"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node009"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node059"
+            }
+          }
+        }
+      }
+    },
+    "Node010": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node011"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node009"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node010"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node010"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node060"
+            }
+          }
+        }
+      }
+    },
+    "Node011": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node012"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node010"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node011"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node011"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node061"
+            }
+          }
+        }
+      }
+    },
+    "Node012": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node013"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node011"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node012"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node012"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node062"
+            }
+          }
+        }
+      }
+    },
+    "Node013": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node014"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node012"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node013"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node013"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node063"
+            }
+          }
+        }
+      }
+    },
+    "Node014": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node015"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node013"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node014"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node014"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node064"
+            }
+          }
+        }
+      }
+    },
+    "Node015": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node016"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node014"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node015"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node015"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node065"
+            }
+          }
+        }
+      }
+    },
+    "Node016": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node017"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node015"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node016"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node016"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node066"
+            }
+          }
+        }
+      }
+    },
+    "Node017": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node018"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node016"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node017"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node017"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node067"
+            }
+          }
+        }
+      }
+    },
+    "Node018": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node019"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node017"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node018"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node018"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node068"
+            }
+          }
+        }
+      }
+    },
+    "Node019": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node020"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node018"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node019"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node019"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node069"
+            }
+          }
+        }
+      }
+    },
+    "Node020": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node021"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node019"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node020"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node020"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node070"
+            }
+          }
+        }
+      }
+    },
+    "Node021": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node022"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node020"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node021"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node021"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node071"
+            }
+          }
+        }
+      }
+    },
+    "Node022": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node023"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node021"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node022"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node022"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node072"
+            }
+          }
+        }
+      }
+    },
+    "Node023": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node024"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node022"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node023"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node023"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node073"
+            }
+          }
+        }
+      }
+    },
+    "Node024": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node025"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node023"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node024"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node024"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node074"
+            }
+          }
+        }
+      }
+    },
+    "Node025": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node026"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node024"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node025"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node025"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node075"
+            }
+          }
+        }
+      }
+    },
+    "Node026": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node027"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node025"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node026"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node026"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node076"
+            }
+          }
+        }
+      }
+    },
+    "Node027": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node028"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node026"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node027"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node027"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node077"
+            }
+          }
+        }
+      }
+    },
+    "Node028": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node029"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node027"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node028"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node028"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node078"
+            }
+          }
+        }
+      }
+    },
+    "Node029": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node030"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node028"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node029"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node029"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node079"
+            }
+          }
+        }
+      }
+    },
+    "Node030": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node031"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node029"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node030"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node030"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node080"
+            }
+          }
+        }
+      }
+    },
+    "Node031": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node032"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node030"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node031"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node031"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node081"
+            }
+          }
+        }
+      }
+    },
+    "Node032": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node033"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node031"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node032"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node032"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node082"
+            }
+          }
+        }
+      }
+    },
+    "Node033": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node034"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node032"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node033"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node033"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node083"
+            }
+          }
+        }
+      }
+    },
+    "Node034": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node035"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node033"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node034"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node034"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node084"
+            }
+          }
+        }
+      }
+    },
+    "Node035": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node036"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node034"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node035"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node035"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node085"
+            }
+          }
+        }
+      }
+    },
+    "Node036": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node037"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node035"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node036"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node036"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node086"
+            }
+          }
+        }
+      }
+    },
+    "Node037": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node038"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node036"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node037"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node037"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node087"
+            }
+          }
+        }
+      }
+    },
+    "Node038": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node039"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node037"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node038"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node038"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node088"
+            }
+          }
+        }
+      }
+    },
+    "Node039": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node040"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node038"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node039"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node039"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node089"
+            }
+          }
+        }
+      }
+    },
+    "Node040": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node041"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node039"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node040"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node040"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node090"
+            }
+          }
+        }
+      }
+    },
+    "Node041": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node042"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node040"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node041"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node041"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node091"
+            }
+          }
+        }
+      }
+    },
+    "Node042": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node043"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node041"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node042"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node042"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node092"
+            }
+          }
+        }
+      }
+    },
+    "Node043": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node044"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node042"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node043"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node043"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node093"
+            }
+          }
+        }
+      }
+    },
+    "Node044": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node045"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node043"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node044"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node044"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node094"
+            }
+          }
+        }
+      }
+    },
+    "Node045": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node046"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node044"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node045"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node045"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node095"
+            }
+          }
+        }
+      }
+    },
+    "Node046": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node047"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node045"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node046"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node046"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node096"
+            }
+          }
+        }
+      }
+    },
+    "Node047": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node048"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node046"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node047"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node047"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node097"
+            }
+          }
+        }
+      }
+    },
+    "Node048": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node049"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node047"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node048"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node048"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node098"
+            }
+          }
+        }
+      }
+    },
+    "Node049": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node050"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node048"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node049"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node049"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node099"
+            }
+          }
+        }
+      }
+    },
+    "Node050": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node051"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node049"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node050"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node050"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node100"
+            }
+          }
+        }
+      }
+    },
+    "Node051": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node052"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node050"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node051"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node051"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node101"
+            }
+          }
+        }
+      }
+    },
+    "Node052": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node053"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node051"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node052"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node052"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node102"
+            }
+          }
+        }
+      }
+    },
+    "Node053": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node054"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node052"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node053"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node053"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node103"
+            }
+          }
+        }
+      }
+    },
+    "Node054": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node055"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node053"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node054"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node054"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node104"
+            }
+          }
+        }
+      }
+    },
+    "Node055": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node056"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node054"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node055"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node055"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node105"
+            }
+          }
+        }
+      }
+    },
+    "Node056": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node057"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node055"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node056"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node056"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node106"
+            }
+          }
+        }
+      }
+    },
+    "Node057": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node058"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node056"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node057"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node057"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node107"
+            }
+          }
+        }
+      }
+    },
+    "Node058": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node059"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node057"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node058"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node058"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node108"
+            }
+          }
+        }
+      }
+    },
+    "Node059": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node060"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node058"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node059"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node059"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node109"
+            }
+          }
+        }
+      }
+    },
+    "Node060": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node061"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node059"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node060"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node060"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node110"
+            }
+          }
+        }
+      }
+    },
+    "Node061": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node062"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node060"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node061"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node061"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node111"
+            }
+          }
+        }
+      }
+    },
+    "Node062": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node063"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node061"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node062"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node062"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node112"
+            }
+          }
+        }
+      }
+    },
+    "Node063": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node064"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node062"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node063"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node063"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node113"
+            }
+          }
+        }
+      }
+    },
+    "Node064": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node065"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node063"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node064"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node064"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node114"
+            }
+          }
+        }
+      }
+    },
+    "Node065": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node066"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node064"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node065"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node065"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node115"
+            }
+          }
+        }
+      }
+    },
+    "Node066": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node067"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node065"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node066"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node066"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node116"
+            }
+          }
+        }
+      }
+    },
+    "Node067": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node068"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node066"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node067"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node067"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node117"
+            }
+          }
+        }
+      }
+    },
+    "Node068": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node069"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node067"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node068"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node068"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node118"
+            }
+          }
+        }
+      }
+    },
+    "Node069": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node070"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node068"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node069"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node069"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node119"
+            }
+          }
+        }
+      }
+    },
+    "Node070": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node071"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node069"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node070"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node070"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node120"
+            }
+          }
+        }
+      }
+    },
+    "Node071": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node072"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node070"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node071"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node071"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node121"
+            }
+          }
+        }
+      }
+    },
+    "Node072": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node073"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node071"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node072"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node072"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node122"
+            }
+          }
+        }
+      }
+    },
+    "Node073": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node074"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node072"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node073"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node073"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node123"
+            }
+          }
+        }
+      }
+    },
+    "Node074": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node075"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node073"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node074"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node074"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node124"
+            }
+          }
+        }
+      }
+    },
+    "Node075": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node076"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node074"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node075"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node075"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node125"
+            }
+          }
+        }
+      }
+    },
+    "Node076": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node077"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node075"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node076"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node076"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node126"
+            }
+          }
+        }
+      }
+    },
+    "Node077": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node078"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node076"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node077"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node077"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node127"
+            }
+          }
+        }
+      }
+    },
+    "Node078": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node079"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node077"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node078"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node078"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node128"
+            }
+          }
+        }
+      }
+    },
+    "Node079": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node080"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node078"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node079"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node079"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node129"
+            }
+          }
+        }
+      }
+    },
+    "Node080": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node081"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node079"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node080"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node080"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node130"
+            }
+          }
+        }
+      }
+    },
+    "Node081": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node082"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node080"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node081"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node081"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node131"
+            }
+          }
+        }
+      }
+    },
+    "Node082": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node083"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node081"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node082"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node082"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node132"
+            }
+          }
+        }
+      }
+    },
+    "Node083": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node084"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node082"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node083"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node083"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node133"
+            }
+          }
+        }
+      }
+    },
+    "Node084": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node085"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node083"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node084"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node084"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node134"
+            }
+          }
+        }
+      }
+    },
+    "Node085": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node086"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node084"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node085"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node085"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node135"
+            }
+          }
+        }
+      }
+    },
+    "Node086": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node087"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node085"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node086"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node086"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node136"
+            }
+          }
+        }
+      }
+    },
+    "Node087": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node088"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node086"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node087"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node087"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node137"
+            }
+          }
+        }
+      }
+    },
+    "Node088": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node089"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node087"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node088"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node088"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node138"
+            }
+          }
+        }
+      }
+    },
+    "Node089": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node090"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node088"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node089"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node089"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node139"
+            }
+          }
+        }
+      }
+    },
+    "Node090": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node091"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node089"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node090"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node090"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node140"
+            }
+          }
+        }
+      }
+    },
+    "Node091": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node092"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node090"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node091"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node091"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node141"
+            }
+          }
+        }
+      }
+    },
+    "Node092": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node093"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node091"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node092"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node092"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node142"
+            }
+          }
+        }
+      }
+    },
+    "Node093": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node094"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node092"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node093"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node093"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node143"
+            }
+          }
+        }
+      }
+    },
+    "Node094": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node095"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node093"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node094"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node094"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node144"
+            }
+          }
+        }
+      }
+    },
+    "Node095": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node096"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node094"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node095"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node095"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node145"
+            }
+          }
+        }
+      }
+    },
+    "Node096": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node097"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node095"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node096"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node096"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node146"
+            }
+          }
+        }
+      }
+    },
+    "Node097": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node098"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node096"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node097"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node097"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node147"
+            }
+          }
+        }
+      }
+    },
+    "Node098": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node099"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node097"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node098"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node098"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node148"
+            }
+          }
+        }
+      }
+    },
+    "Node099": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node100"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node098"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node099"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node099"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node149"
+            }
+          }
+        }
+      }
+    },
+    "Node100": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node101"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node099"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node100"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node100"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node150"
+            }
+          }
+        }
+      }
+    },
+    "Node101": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node102"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node100"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node101"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node101"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node151"
+            }
+          }
+        }
+      }
+    },
+    "Node102": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node103"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node101"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node102"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node102"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node152"
+            }
+          }
+        }
+      }
+    },
+    "Node103": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node104"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node102"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node103"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node103"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node153"
+            }
+          }
+        }
+      }
+    },
+    "Node104": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node105"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node103"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node104"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node104"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node154"
+            }
+          }
+        }
+      }
+    },
+    "Node105": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node106"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node104"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node105"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node105"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node155"
+            }
+          }
+        }
+      }
+    },
+    "Node106": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node107"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node105"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node106"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node106"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node156"
+            }
+          }
+        }
+      }
+    },
+    "Node107": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node108"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node106"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node107"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node107"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node157"
+            }
+          }
+        }
+      }
+    },
+    "Node108": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node109"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node107"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node108"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node108"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node158"
+            }
+          }
+        }
+      }
+    },
+    "Node109": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node110"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node108"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node109"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node109"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node159"
+            }
+          }
+        }
+      }
+    },
+    "Node110": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node111"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node109"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node110"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node110"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node160"
+            }
+          }
+        }
+      }
+    },
+    "Node111": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node112"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node110"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node111"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node111"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node161"
+            }
+          }
+        }
+      }
+    },
+    "Node112": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node113"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node111"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node112"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node112"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node162"
+            }
+          }
+        }
+      }
+    },
+    "Node113": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node114"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node112"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node113"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node113"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node163"
+            }
+          }
+        }
+      }
+    },
+    "Node114": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node115"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node113"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node114"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node114"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node164"
+            }
+          }
+        }
+      }
+    },
+    "Node115": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node116"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node114"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node115"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node115"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node165"
+            }
+          }
+        }
+      }
+    },
+    "Node116": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node117"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node115"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node116"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node116"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node166"
+            }
+          }
+        }
+      }
+    },
+    "Node117": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node118"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node116"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node117"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node117"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node167"
+            }
+          }
+        }
+      }
+    },
+    "Node118": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node119"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node117"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node118"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node118"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node168"
+            }
+          }
+        }
+      }
+    },
+    "Node119": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node120"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node118"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node119"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node119"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node169"
+            }
+          }
+        }
+      }
+    },
+    "Node120": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node121"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node119"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node120"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node120"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node170"
+            }
+          }
+        }
+      }
+    },
+    "Node121": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node122"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node120"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node121"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node121"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node171"
+            }
+          }
+        }
+      }
+    },
+    "Node122": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node123"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node121"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node122"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node122"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node172"
+            }
+          }
+        }
+      }
+    },
+    "Node123": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node124"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node122"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node123"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node123"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node173"
+            }
+          }
+        }
+      }
+    },
+    "Node124": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node125"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node123"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node124"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node124"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node174"
+            }
+          }
+        }
+      }
+    },
+    "Node125": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node126"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node124"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node125"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node125"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node175"
+            }
+          }
+        }
+      }
+    },
+    "Node126": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node127"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node125"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node126"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node126"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node176"
+            }
+          }
+        }
+      }
+    },
+    "Node127": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node128"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node126"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node127"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node127"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node177"
+            }
+          }
+        }
+      }
+    },
+    "Node128": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node129"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node127"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node128"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node128"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node178"
+            }
+          }
+        }
+      }
+    },
+    "Node129": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node130"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node128"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node129"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node129"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node179"
+            }
+          }
+        }
+      }
+    },
+    "Node130": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node131"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node129"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node130"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node130"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node180"
+            }
+          }
+        }
+      }
+    },
+    "Node131": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node132"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node130"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node131"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node131"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node181"
+            }
+          }
+        }
+      }
+    },
+    "Node132": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node133"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node131"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node132"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node132"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node182"
+            }
+          }
+        }
+      }
+    },
+    "Node133": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node134"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node132"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node133"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node133"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node183"
+            }
+          }
+        }
+      }
+    },
+    "Node134": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node135"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node133"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node134"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node134"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node184"
+            }
+          }
+        }
+      }
+    },
+    "Node135": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node136"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node134"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node135"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node135"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node185"
+            }
+          }
+        }
+      }
+    },
+    "Node136": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node137"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node135"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node136"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node136"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node186"
+            }
+          }
+        }
+      }
+    },
+    "Node137": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node138"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node136"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node137"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node137"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node187"
+            }
+          }
+        }
+      }
+    },
+    "Node138": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node139"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node137"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node138"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node138"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node188"
+            }
+          }
+        }
+      }
+    },
+    "Node139": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node140"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node138"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node139"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node139"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node189"
+            }
+          }
+        }
+      }
+    },
+    "Node140": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node141"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node139"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node140"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node140"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node190"
+            }
+          }
+        }
+      }
+    },
+    "Node141": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node142"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node140"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node141"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node141"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node191"
+            }
+          }
+        }
+      }
+    },
+    "Node142": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node143"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node141"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node142"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node142"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node192"
+            }
+          }
+        }
+      }
+    },
+    "Node143": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node144"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node142"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node143"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node143"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node193"
+            }
+          }
+        }
+      }
+    },
+    "Node144": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node145"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node143"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node144"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node144"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node194"
+            }
+          }
+        }
+      }
+    },
+    "Node145": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node146"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node144"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node145"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node145"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node195"
+            }
+          }
+        }
+      }
+    },
+    "Node146": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node147"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node145"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node146"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node146"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node196"
+            }
+          }
+        }
+      }
+    },
+    "Node147": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node148"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node146"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node147"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node147"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node197"
+            }
+          }
+        }
+      }
+    },
+    "Node148": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node149"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node147"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node148"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node148"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node198"
+            }
+          }
+        }
+      }
+    },
+    "Node149": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node150"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node148"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node149"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node149"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node199"
+            }
+          }
+        }
+      }
+    },
+    "Node150": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node151"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node149"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node150"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node150"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node000"
+            }
+          }
+        }
+      }
+    },
+    "Node151": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node152"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node150"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node151"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node151"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node001"
+            }
+          }
+        }
+      }
+    },
+    "Node152": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node153"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node151"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node152"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node152"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node002"
+            }
+          }
+        }
+      }
+    },
+    "Node153": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node154"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node152"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node153"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node153"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node003"
+            }
+          }
+        }
+      }
+    },
+    "Node154": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node155"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node153"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node154"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node154"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node004"
+            }
+          }
+        }
+      }
+    },
+    "Node155": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node156"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node154"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node155"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node155"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node005"
+            }
+          }
+        }
+      }
+    },
+    "Node156": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node157"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node155"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node156"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node156"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node006"
+            }
+          }
+        }
+      }
+    },
+    "Node157": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node158"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node156"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node157"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node157"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node007"
+            }
+          }
+        }
+      }
+    },
+    "Node158": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node159"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node157"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node158"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node158"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node008"
+            }
+          }
+        }
+      }
+    },
+    "Node159": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node160"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node158"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node159"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node159"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node009"
+            }
+          }
+        }
+      }
+    },
+    "Node160": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node161"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node159"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node160"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node160"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node010"
+            }
+          }
+        }
+      }
+    },
+    "Node161": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node162"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node160"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node161"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node161"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node011"
+            }
+          }
+        }
+      }
+    },
+    "Node162": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node163"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node161"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node162"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node162"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node012"
+            }
+          }
+        }
+      }
+    },
+    "Node163": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node164"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node162"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node163"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node163"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node013"
+            }
+          }
+        }
+      }
+    },
+    "Node164": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node165"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node163"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node164"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node164"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node014"
+            }
+          }
+        }
+      }
+    },
+    "Node165": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node166"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node164"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node165"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node165"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node015"
+            }
+          }
+        }
+      }
+    },
+    "Node166": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node167"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node165"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node166"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node166"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node016"
+            }
+          }
+        }
+      }
+    },
+    "Node167": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node168"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node166"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node167"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node167"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node017"
+            }
+          }
+        }
+      }
+    },
+    "Node168": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node169"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node167"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node168"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node168"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node018"
+            }
+          }
+        }
+      }
+    },
+    "Node169": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node170"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node168"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node169"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node169"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node019"
+            }
+          }
+        }
+      }
+    },
+    "Node170": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node171"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node169"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node170"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node170"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node020"
+            }
+          }
+        }
+      }
+    },
+    "Node171": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node172"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node170"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node171"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node171"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node021"
+            }
+          }
+        }
+      }
+    },
+    "Node172": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node173"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node171"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node172"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node172"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node022"
+            }
+          }
+        }
+      }
+    },
+    "Node173": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node174"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node172"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node173"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node173"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node023"
+            }
+          }
+        }
+      }
+    },
+    "Node174": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node175"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node173"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node174"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node174"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node024"
+            }
+          }
+        }
+      }
+    },
+    "Node175": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node176"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node174"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node175"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node175"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node025"
+            }
+          }
+        }
+      }
+    },
+    "Node176": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node177"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node175"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node176"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node176"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node026"
+            }
+          }
+        }
+      }
+    },
+    "Node177": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node178"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node176"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node177"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node177"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node027"
+            }
+          }
+        }
+      }
+    },
+    "Node178": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node179"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node177"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node178"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node178"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node028"
+            }
+          }
+        }
+      }
+    },
+    "Node179": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node180"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node178"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node179"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node179"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node029"
+            }
+          }
+        }
+      }
+    },
+    "Node180": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node181"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node179"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node180"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node180"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node030"
+            }
+          }
+        }
+      }
+    },
+    "Node181": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node182"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node180"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node181"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node181"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node031"
+            }
+          }
+        }
+      }
+    },
+    "Node182": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node183"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node181"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node182"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node182"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node032"
+            }
+          }
+        }
+      }
+    },
+    "Node183": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node184"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node182"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node183"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node183"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node033"
+            }
+          }
+        }
+      }
+    },
+    "Node184": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node185"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node183"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node184"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node184"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node034"
+            }
+          }
+        }
+      }
+    },
+    "Node185": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node186"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node184"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node185"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node185"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node035"
+            }
+          }
+        }
+      }
+    },
+    "Node186": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node187"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node185"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node186"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node186"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node036"
+            }
+          }
+        }
+      }
+    },
+    "Node187": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node188"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node186"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node187"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node187"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node037"
+            }
+          }
+        }
+      }
+    },
+    "Node188": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node189"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node187"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node188"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node188"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node038"
+            }
+          }
+        }
+      }
+    },
+    "Node189": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node190"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node188"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node189"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node189"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node039"
+            }
+          }
+        }
+      }
+    },
+    "Node190": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node191"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node189"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node190"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node190"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node040"
+            }
+          }
+        }
+      }
+    },
+    "Node191": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node192"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node190"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node191"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node191"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node041"
+            }
+          }
+        }
+      }
+    },
+    "Node192": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node193"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node191"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node192"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node192"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node042"
+            }
+          }
+        }
+      }
+    },
+    "Node193": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node194"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node192"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node193"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node193"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node043"
+            }
+          }
+        }
+      }
+    },
+    "Node194": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node195"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node193"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node194"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node194"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node044"
+            }
+          }
+        }
+      }
+    },
+    "Node195": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node196"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node194"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node195"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node195"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node045"
+            }
+          }
+        }
+      }
+    },
+    "Node196": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node197"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node195"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node196"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node196"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node046"
+            }
+          }
+        }
+      }
+    },
+    "Node197": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node198"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node196"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node197"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node197"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node047"
+            }
+          }
+        }
+      }
+    },
+    "Node198": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node199"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node197"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node198"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node198"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node048"
+            }
+          }
+        }
+      }
+    },
+    "Node199": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "next": {
+          "$ref": "#/definitions/Node000"
+        },
+        "prev": {
+          "$ref": "#/definitions/Node198"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Node199"
+          }
+        },
+        "parent": {
+          "$ref": "#/definitions/Node199"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "nested_ref": {
+              "$ref": "#/definitions/Node049"
+            }
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "root": {
+      "$ref": "#/definitions/Node000"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "$ref": "#/definitions/Node000"
+          },
+          {
+            "$ref": "#/definitions/Node010"
+          },
+          {
+            "$ref": "#/definitions/Node020"
+          },
+          {
+            "$ref": "#/definitions/Node030"
+          },
+          {
+            "$ref": "#/definitions/Node040"
+          },
+          {
+            "$ref": "#/definitions/Node050"
+          },
+          {
+            "$ref": "#/definitions/Node060"
+          },
+          {
+            "$ref": "#/definitions/Node070"
+          },
+          {
+            "$ref": "#/definitions/Node080"
+          },
+          {
+            "$ref": "#/definitions/Node090"
+          },
+          {
+            "$ref": "#/definitions/Node100"
+          },
+          {
+            "$ref": "#/definitions/Node110"
+          },
+          {
+            "$ref": "#/definitions/Node120"
+          },
+          {
+            "$ref": "#/definitions/Node130"
+          },
+          {
+            "$ref": "#/definitions/Node140"
+          },
+          {
+            "$ref": "#/definitions/Node150"
+          },
+          {
+            "$ref": "#/definitions/Node160"
+          },
+          {
+            "$ref": "#/definitions/Node170"
+          },
+          {
+            "$ref": "#/definitions/Node180"
+          },
+          {
+            "$ref": "#/definitions/Node190"
+          }
+        ]
+      }
+    }
+  }
+}

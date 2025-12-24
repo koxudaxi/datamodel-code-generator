@@ -1,0 +1,3396 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GraphQLStyleSchema",
+  "description": "Schema mimicking GraphQL type patterns converted to JSON Schema",
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "PageInfo": {
+      "type": "object",
+      "properties": {
+        "hasNextPage": {
+          "type": "boolean"
+        },
+        "hasPreviousPage": {
+          "type": "boolean"
+        },
+        "startCursor": {
+          "type": "string"
+        },
+        "endCursor": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hasNextPage",
+        "hasPreviousPage"
+      ]
+    },
+    "DateTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "JSON": {
+      "type": [
+        "object",
+        "array",
+        "string",
+        "number",
+        "boolean",
+        "null"
+      ]
+    },
+    "URL": {
+      "type": "string",
+      "format": "uri"
+    },
+    "Email": {
+      "type": "string",
+      "format": "email"
+    },
+    "User": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "email": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "phone": {
+              "type": "string"
+            },
+            "avatar": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            },
+            "preferences": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "addresses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "orders": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "UserConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "UserEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/User"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "UserInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    },
+    "UserUpdateInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        }
+      }
+    },
+    "UserFilterInput": {
+      "type": "object",
+      "properties": {
+        "email_eq": {
+          "type": "string"
+        },
+        "name_eq": {
+          "type": "string"
+        },
+        "phone_eq": {
+          "type": "string"
+        },
+        "email_contains": {
+          "type": "string"
+        },
+        "name_contains": {
+          "type": "string"
+        },
+        "phone_contains": {
+          "type": "string"
+        },
+        "email_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "phone_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserFilterInput"
+          }
+        }
+      }
+    },
+    "UserOrderByInput": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "phone": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Product": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "price": {
+              "type": "string"
+            },
+            "compareAtPrice": {
+              "type": "string"
+            },
+            "sku": {
+              "type": "string"
+            },
+            "dimensions": {
+              "$ref": "#/definitions/ProductConnection"
+            },
+            "images": {
+              "$ref": "#/definitions/ProductConnection"
+            }
+          }
+        }
+      ]
+    },
+    "ProductConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "ProductEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Product"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "ProductInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "compareAtPrice": {
+          "type": "string"
+        },
+        "sku": {
+          "type": "string"
+        }
+      }
+    },
+    "ProductUpdateInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "price": {
+          "type": "string"
+        },
+        "compareAtPrice": {
+          "type": "string"
+        },
+        "sku": {
+          "type": "string"
+        }
+      }
+    },
+    "ProductFilterInput": {
+      "type": "object",
+      "properties": {
+        "name_eq": {
+          "type": "string"
+        },
+        "description_eq": {
+          "type": "string"
+        },
+        "price_eq": {
+          "type": "string"
+        },
+        "name_contains": {
+          "type": "string"
+        },
+        "description_contains": {
+          "type": "string"
+        },
+        "price_contains": {
+          "type": "string"
+        },
+        "name_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "price_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ProductFilterInput"
+          }
+        }
+      }
+    },
+    "ProductOrderByInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "price": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Category": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "products": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "CategoryConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CategoryEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "CategoryEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Category"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "CategoryInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        }
+      }
+    },
+    "CategoryUpdateInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "parent": {
+          "type": "string"
+        }
+      }
+    },
+    "CategoryFilterInput": {
+      "type": "object",
+      "properties": {
+        "name_eq": {
+          "type": "string"
+        },
+        "description_eq": {
+          "type": "string"
+        },
+        "slug_eq": {
+          "type": "string"
+        },
+        "name_contains": {
+          "type": "string"
+        },
+        "description_contains": {
+          "type": "string"
+        },
+        "slug_contains": {
+          "type": "string"
+        },
+        "name_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "slug_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CategoryFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CategoryFilterInput"
+          }
+        }
+      }
+    },
+    "CategoryOrderByInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "slug": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Order": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "orderNumber": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "lineItems": {
+              "type": "string"
+            },
+            "subtotal": {
+              "type": "string"
+            },
+            "tax": {
+              "type": "string"
+            },
+            "discounts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "shippingAddress": {
+              "$ref": "#/definitions/OrderConnection"
+            }
+          }
+        }
+      ]
+    },
+    "OrderConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OrderEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "OrderEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Order"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "OrderInput": {
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lineItems": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "string"
+        },
+        "tax": {
+          "type": "string"
+        }
+      }
+    },
+    "OrderUpdateInput": {
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "lineItems": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "string"
+        },
+        "tax": {
+          "type": "string"
+        }
+      }
+    },
+    "OrderFilterInput": {
+      "type": "object",
+      "properties": {
+        "orderNumber_eq": {
+          "type": "string"
+        },
+        "status_eq": {
+          "type": "string"
+        },
+        "lineItems_eq": {
+          "type": "string"
+        },
+        "orderNumber_contains": {
+          "type": "string"
+        },
+        "status_contains": {
+          "type": "string"
+        },
+        "lineItems_contains": {
+          "type": "string"
+        },
+        "orderNumber_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lineItems_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OrderFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OrderFilterInput"
+          }
+        }
+      }
+    },
+    "OrderOrderByInput": {
+      "type": "object",
+      "properties": {
+        "orderNumber": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "lineItems": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Cart": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "items": {
+              "type": "string"
+            },
+            "subtotal": {
+              "type": "string"
+            },
+            "tax": {
+              "type": "string"
+            },
+            "total": {
+              "type": "string"
+            },
+            "discounts": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "CartConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "CartEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Cart"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "CartInput": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "string"
+        },
+        "tax": {
+          "type": "string"
+        },
+        "total": {
+          "type": "string"
+        },
+        "discounts": {
+          "type": "string"
+        }
+      }
+    },
+    "CartUpdateInput": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "string"
+        },
+        "subtotal": {
+          "type": "string"
+        },
+        "tax": {
+          "type": "string"
+        },
+        "total": {
+          "type": "string"
+        },
+        "discounts": {
+          "type": "string"
+        }
+      }
+    },
+    "CartFilterInput": {
+      "type": "object",
+      "properties": {
+        "items_eq": {
+          "type": "string"
+        },
+        "subtotal_eq": {
+          "type": "string"
+        },
+        "tax_eq": {
+          "type": "string"
+        },
+        "items_contains": {
+          "type": "string"
+        },
+        "subtotal_contains": {
+          "type": "string"
+        },
+        "tax_contains": {
+          "type": "string"
+        },
+        "items_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subtotal_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tax_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CartFilterInput"
+          }
+        }
+      }
+    },
+    "CartOrderByInput": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "subtotal": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "tax": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Review": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "rating": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "body": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "product": {
+              "type": "string"
+            },
+            "images": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ReviewConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "ReviewEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Review"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "ReviewInput": {
+      "type": "object",
+      "properties": {
+        "rating": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "product": {
+          "type": "string"
+        }
+      }
+    },
+    "ReviewUpdateInput": {
+      "type": "object",
+      "properties": {
+        "rating": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "author": {
+          "type": "string"
+        },
+        "product": {
+          "type": "string"
+        }
+      }
+    },
+    "ReviewFilterInput": {
+      "type": "object",
+      "properties": {
+        "rating_eq": {
+          "type": "string"
+        },
+        "title_eq": {
+          "type": "string"
+        },
+        "body_eq": {
+          "type": "string"
+        },
+        "rating_contains": {
+          "type": "string"
+        },
+        "title_contains": {
+          "type": "string"
+        },
+        "body_contains": {
+          "type": "string"
+        },
+        "rating_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "title_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "body_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewFilterInput"
+          }
+        }
+      }
+    },
+    "ReviewOrderByInput": {
+      "type": "object",
+      "properties": {
+        "rating": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "body": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Collection": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "products": {
+              "type": "string"
+            },
+            "rules": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "CollectionConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CollectionEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "CollectionEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Collection"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "CollectionInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "products": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "string"
+        }
+      }
+    },
+    "CollectionUpdateInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "image": {
+          "type": "string"
+        },
+        "products": {
+          "type": "string"
+        },
+        "rules": {
+          "type": "string"
+        }
+      }
+    },
+    "CollectionFilterInput": {
+      "type": "object",
+      "properties": {
+        "name_eq": {
+          "type": "string"
+        },
+        "description_eq": {
+          "type": "string"
+        },
+        "image_eq": {
+          "type": "string"
+        },
+        "name_contains": {
+          "type": "string"
+        },
+        "description_contains": {
+          "type": "string"
+        },
+        "image_contains": {
+          "type": "string"
+        },
+        "name_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "description_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "image_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CollectionFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CollectionFilterInput"
+          }
+        }
+      }
+    },
+    "CollectionOrderByInput": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "image": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Discount": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "code": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            },
+            "minimumRequirement": {
+              "type": "string"
+            },
+            "usageLimit": {
+              "type": "string"
+            },
+            "applicableProducts": {
+              "$ref": "#/definitions/DiscountConnection"
+            }
+          }
+        }
+      ]
+    },
+    "DiscountConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiscountEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "DiscountEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Discount"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "DiscountInput": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "minimumRequirement": {
+          "type": "string"
+        },
+        "usageLimit": {
+          "type": "string"
+        }
+      }
+    },
+    "DiscountUpdateInput": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        },
+        "minimumRequirement": {
+          "type": "string"
+        },
+        "usageLimit": {
+          "type": "string"
+        }
+      }
+    },
+    "DiscountFilterInput": {
+      "type": "object",
+      "properties": {
+        "code_eq": {
+          "type": "string"
+        },
+        "type_eq": {
+          "type": "string"
+        },
+        "value_eq": {
+          "type": "string"
+        },
+        "code_contains": {
+          "type": "string"
+        },
+        "type_contains": {
+          "type": "string"
+        },
+        "value_contains": {
+          "type": "string"
+        },
+        "code_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "type_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "value_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiscountFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiscountFilterInput"
+          }
+        }
+      }
+    },
+    "DiscountOrderByInput": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Fulfillment": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "trackingNumber": {
+              "type": "string"
+            },
+            "carrier": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "items": {
+              "type": "string"
+            },
+            "estimatedDelivery": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "FulfillmentConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FulfillmentEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "FulfillmentEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Fulfillment"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "FulfillmentInput": {
+      "type": "object",
+      "properties": {
+        "trackingNumber": {
+          "type": "string"
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "items": {
+          "type": "string"
+        },
+        "estimatedDelivery": {
+          "type": "string"
+        }
+      }
+    },
+    "FulfillmentUpdateInput": {
+      "type": "object",
+      "properties": {
+        "trackingNumber": {
+          "type": "string"
+        },
+        "carrier": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "items": {
+          "type": "string"
+        },
+        "estimatedDelivery": {
+          "type": "string"
+        }
+      }
+    },
+    "FulfillmentFilterInput": {
+      "type": "object",
+      "properties": {
+        "trackingNumber_eq": {
+          "type": "string"
+        },
+        "carrier_eq": {
+          "type": "string"
+        },
+        "status_eq": {
+          "type": "string"
+        },
+        "trackingNumber_contains": {
+          "type": "string"
+        },
+        "carrier_contains": {
+          "type": "string"
+        },
+        "status_contains": {
+          "type": "string"
+        },
+        "trackingNumber_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "carrier_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FulfillmentFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FulfillmentFilterInput"
+          }
+        }
+      }
+    },
+    "FulfillmentOrderByInput": {
+      "type": "object",
+      "properties": {
+        "trackingNumber": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "carrier": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Payment": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "amount": {
+              "type": "string"
+            },
+            "currency": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "method": {
+              "type": "string"
+            },
+            "transactionId": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "PaymentConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PaymentEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "PaymentEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Payment"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "PaymentInput": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "transactionId": {
+          "type": "string"
+        }
+      }
+    },
+    "PaymentUpdateInput": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "method": {
+          "type": "string"
+        },
+        "transactionId": {
+          "type": "string"
+        }
+      }
+    },
+    "PaymentFilterInput": {
+      "type": "object",
+      "properties": {
+        "amount_eq": {
+          "type": "string"
+        },
+        "currency_eq": {
+          "type": "string"
+        },
+        "status_eq": {
+          "type": "string"
+        },
+        "amount_contains": {
+          "type": "string"
+        },
+        "currency_contains": {
+          "type": "string"
+        },
+        "status_contains": {
+          "type": "string"
+        },
+        "amount_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "currency_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status_in": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "AND": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PaymentFilterInput"
+          }
+        },
+        "OR": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PaymentFilterInput"
+          }
+        }
+      }
+    },
+    "PaymentOrderByInput": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "createdAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "enum": [
+            "ASC",
+            "DESC"
+          ]
+        }
+      }
+    },
+    "Post": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "title": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "excerpt": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "PostConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PostEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "PostEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Post"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Page": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "title": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "template": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "PageConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PageEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "PageEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Page"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Author": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "bio": {
+              "type": "string"
+            },
+            "avatar": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "social": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "AuthorConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AuthorEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "AuthorEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Author"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Comment": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "body": {
+              "type": "string"
+            },
+            "author": {
+              "type": "string"
+            },
+            "post": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "replies": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "CommentConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CommentEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "CommentEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Comment"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Media": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "url": {
+              "type": "string"
+            },
+            "alt": {
+              "type": "string"
+            },
+            "caption": {
+              "type": "string"
+            },
+            "mimeType": {
+              "type": "string"
+            },
+            "size": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "MediaConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MediaEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "MediaEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Media"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Menu": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "location": {
+              "type": "string"
+            },
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "MenuConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MenuEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "MenuEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Menu"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "MenuItem": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "label": {
+              "type": "string"
+            },
+            "url": {
+              "type": "string"
+            },
+            "target": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "children": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "MenuItemConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MenuItemEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "MenuItemEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/MenuItem"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "Taxonomy": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/Node"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "updatedAt": {
+              "$ref": "#/definitions/DateTime"
+            },
+            "name": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "children": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "TaxonomyConnection": {
+      "type": "object",
+      "properties": {
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/TaxonomyEdge"
+          }
+        },
+        "pageInfo": {
+          "$ref": "#/definitions/PageInfo"
+        },
+        "totalCount": {
+          "type": "integer"
+        }
+      }
+    },
+    "TaxonomyEdge": {
+      "type": "object",
+      "properties": {
+        "node": {
+          "$ref": "#/definitions/Taxonomy"
+        },
+        "cursor": {
+          "type": "string"
+        }
+      }
+    },
+    "CreateUserPayload": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/User"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateUserPayload": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "$ref": "#/definitions/User"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteUserPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateProductPayload": {
+      "type": "object",
+      "properties": {
+        "product": {
+          "$ref": "#/definitions/Product"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateProductPayload": {
+      "type": "object",
+      "properties": {
+        "product": {
+          "$ref": "#/definitions/Product"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteProductPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateCategoryPayload": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateCategoryPayload": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "$ref": "#/definitions/Category"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteCategoryPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateOrderPayload": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/Order"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateOrderPayload": {
+      "type": "object",
+      "properties": {
+        "order": {
+          "$ref": "#/definitions/Order"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteOrderPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateCartPayload": {
+      "type": "object",
+      "properties": {
+        "cart": {
+          "$ref": "#/definitions/Cart"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateCartPayload": {
+      "type": "object",
+      "properties": {
+        "cart": {
+          "$ref": "#/definitions/Cart"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteCartPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateReviewPayload": {
+      "type": "object",
+      "properties": {
+        "review": {
+          "$ref": "#/definitions/Review"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateReviewPayload": {
+      "type": "object",
+      "properties": {
+        "review": {
+          "$ref": "#/definitions/Review"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteReviewPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateCollectionPayload": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "$ref": "#/definitions/Collection"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateCollectionPayload": {
+      "type": "object",
+      "properties": {
+        "collection": {
+          "$ref": "#/definitions/Collection"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteCollectionPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateDiscountPayload": {
+      "type": "object",
+      "properties": {
+        "discount": {
+          "$ref": "#/definitions/Discount"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateDiscountPayload": {
+      "type": "object",
+      "properties": {
+        "discount": {
+          "$ref": "#/definitions/Discount"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteDiscountPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateFulfillmentPayload": {
+      "type": "object",
+      "properties": {
+        "fulfillment": {
+          "$ref": "#/definitions/Fulfillment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateFulfillmentPayload": {
+      "type": "object",
+      "properties": {
+        "fulfillment": {
+          "$ref": "#/definitions/Fulfillment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteFulfillmentPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreatePaymentPayload": {
+      "type": "object",
+      "properties": {
+        "payment": {
+          "$ref": "#/definitions/Payment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdatePaymentPayload": {
+      "type": "object",
+      "properties": {
+        "payment": {
+          "$ref": "#/definitions/Payment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeletePaymentPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreatePostPayload": {
+      "type": "object",
+      "properties": {
+        "post": {
+          "$ref": "#/definitions/Post"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdatePostPayload": {
+      "type": "object",
+      "properties": {
+        "post": {
+          "$ref": "#/definitions/Post"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeletePostPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreatePagePayload": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "$ref": "#/definitions/Page"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdatePagePayload": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "$ref": "#/definitions/Page"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeletePagePayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateAuthorPayload": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "$ref": "#/definitions/Author"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateAuthorPayload": {
+      "type": "object",
+      "properties": {
+        "author": {
+          "$ref": "#/definitions/Author"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteAuthorPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateCommentPayload": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "$ref": "#/definitions/Comment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateCommentPayload": {
+      "type": "object",
+      "properties": {
+        "comment": {
+          "$ref": "#/definitions/Comment"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteCommentPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateMediaPayload": {
+      "type": "object",
+      "properties": {
+        "media": {
+          "$ref": "#/definitions/Media"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateMediaPayload": {
+      "type": "object",
+      "properties": {
+        "media": {
+          "$ref": "#/definitions/Media"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteMediaPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateMenuPayload": {
+      "type": "object",
+      "properties": {
+        "menu": {
+          "$ref": "#/definitions/Menu"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateMenuPayload": {
+      "type": "object",
+      "properties": {
+        "menu": {
+          "$ref": "#/definitions/Menu"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteMenuPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateMenuItemPayload": {
+      "type": "object",
+      "properties": {
+        "menuitem": {
+          "$ref": "#/definitions/MenuItem"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateMenuItemPayload": {
+      "type": "object",
+      "properties": {
+        "menuitem": {
+          "$ref": "#/definitions/MenuItem"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteMenuItemPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "CreateTaxonomyPayload": {
+      "type": "object",
+      "properties": {
+        "taxonomy": {
+          "$ref": "#/definitions/Taxonomy"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UpdateTaxonomyPayload": {
+      "type": "object",
+      "properties": {
+        "taxonomy": {
+          "$ref": "#/definitions/Taxonomy"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "DeleteTaxonomyPayload": {
+      "type": "object",
+      "properties": {
+        "deletedId": {
+          "type": "string"
+        },
+        "userErrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/UserError"
+          }
+        }
+      }
+    },
+    "UserError": {
+      "type": "object",
+      "properties": {
+        "field": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        }
+      }
+    },
+    "SearchResult": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/Product"
+        },
+        {
+          "$ref": "#/definitions/Category"
+        },
+        {
+          "$ref": "#/definitions/Collection"
+        },
+        {
+          "$ref": "#/definitions/Post"
+        },
+        {
+          "$ref": "#/definitions/Page"
+        }
+      ]
+    },
+    "Commentable": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/Product"
+        },
+        {
+          "$ref": "#/definitions/Post"
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "$ref": "#/definitions/UserConnection"
+        },
+        "products": {
+          "$ref": "#/definitions/ProductConnection"
+        },
+        "categorys": {
+          "$ref": "#/definitions/CategoryConnection"
+        },
+        "orders": {
+          "$ref": "#/definitions/OrderConnection"
+        },
+        "carts": {
+          "$ref": "#/definitions/CartConnection"
+        },
+        "reviews": {
+          "$ref": "#/definitions/ReviewConnection"
+        },
+        "collections": {
+          "$ref": "#/definitions/CollectionConnection"
+        },
+        "discounts": {
+          "$ref": "#/definitions/DiscountConnection"
+        },
+        "fulfillments": {
+          "$ref": "#/definitions/FulfillmentConnection"
+        },
+        "payments": {
+          "$ref": "#/definitions/PaymentConnection"
+        },
+        "posts": {
+          "$ref": "#/definitions/PostConnection"
+        },
+        "pages": {
+          "$ref": "#/definitions/PageConnection"
+        },
+        "authors": {
+          "$ref": "#/definitions/AuthorConnection"
+        },
+        "comments": {
+          "$ref": "#/definitions/CommentConnection"
+        },
+        "medias": {
+          "$ref": "#/definitions/MediaConnection"
+        },
+        "menus": {
+          "$ref": "#/definitions/MenuConnection"
+        },
+        "menuitems": {
+          "$ref": "#/definitions/MenuItemConnection"
+        },
+        "taxonomys": {
+          "$ref": "#/definitions/TaxonomyConnection"
+        }
+      }
+    }
+  }
+}
