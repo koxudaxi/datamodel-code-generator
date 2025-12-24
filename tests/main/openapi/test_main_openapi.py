@@ -4433,3 +4433,15 @@ def test_main_openapi_request_bodies_scope_with_ref(output_file: Path) -> None:
         expected_file="request_bodies_scope_with_ref.py",
         extra_args=["--openapi-scopes", "requestbodies", "--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_main_openapi_x_property_names(output_file: Path) -> None:
+    """Test x-propertyNames extension for OpenAPI 3.0 is converted to propertyNames."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
