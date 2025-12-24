@@ -1087,10 +1087,15 @@ class Parser(ABC):
         idx = models.index(original)
         models[idx] = replacement
 
-    def __delete_duplicate_models(self, models: list[DataModel]) -> None:
+    def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
         model_class_names: dict[str, DataModel] = {}
         model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
-        for model in models.copy():
+        # Use set for O(1) membership checks and collect removals for batch processing
+        models_set = set(models)
+        models_to_remove: set[DataModel] = set()
+        for model in models:
+            if model in models_to_remove:  # pragma: no cover
+                continue
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
 
@@ -1100,12 +1105,12 @@ class Parser(ABC):
                     root_data_type.reference
                     and not root_data_type.is_dict
                     and not root_data_type.is_list
-                    and root_data_type.reference.source in models
+                    and root_data_type.reference.source in models_set
                     and root_data_type.reference.name
                     == self.model_resolver.get_class_name(model.reference.original_name, unique=False).name
                 ):
                     model.reference.replace_children_references(root_data_type.reference)
-                    models.remove(model)
+                    models_to_remove.add(model)
                     for data_type in model.all_data_types:
                         if data_type.reference:
                             data_type.remove_reference()
@@ -1134,7 +1139,10 @@ class Parser(ABC):
                     child.base_classes = list(
                         {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
                     )
-                models.remove(duplicate_model)
+                models_to_remove.add(duplicate_model)
+        # Batch removal: O(n) instead of O(n²)
+        if models_to_remove:
+            models[:] = [m for m in models if m not in models_to_remove]
 
     def __replace_duplicate_name_in_module(self, models: list[DataModel]) -> None:
         scoped_model_resolver = ModelResolver(

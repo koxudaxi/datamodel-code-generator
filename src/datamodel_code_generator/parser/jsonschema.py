@@ -2038,7 +2038,7 @@ class JsonSchemaParser(Parser):
             ):
                 ref_data_type = self.get_ref_data_type(single_obj.ref)
 
-                full_path = self.model_resolver.join_path(path)
+                full_path = self.model_resolver.join_path(tuple(path))
                 existing_ref = self.model_resolver.references.get(full_path)
                 if existing_ref is not None and not existing_ref.loaded:
                     reference = self.model_resolver.add(path, name, class_name=True, loaded=True)

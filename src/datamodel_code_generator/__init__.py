@@ -12,6 +12,7 @@ import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
 from enum import Enum
+from functools import lru_cache
 from pathlib import Path
 from typing import (
     IO,
@@ -91,8 +92,24 @@ except ImportError:  # pragma: no cover
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
+@lru_cache(maxsize=64)
+def _cached_yaml_parse(text: str) -> YamlValue:
+    """Parse YAML with caching for identical text inputs.
+
+    Uses LRU cache to avoid re-parsing the same YAML content,
+    which is especially useful when infer_input_type() and parse_raw()
+    parse the same content.
+    """
+    return yaml.load(text, Loader=SafeLoader)  # noqa: S506
+
+
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
+    if isinstance(stream, str):
+        import copy  # noqa: PLC0415
+
+        # Return a deep copy to prevent modification of cached data
+        return copy.deepcopy(_cached_yaml_parse(stream))
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
@@ -602,6 +619,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 inferred_message.format(input_file_type.value),
                 file=sys.stderr,
             )
+            # Reuse already-read text for single Path file to avoid re-reading
+            # Only for OpenAPI/JsonSchema (RAW_DATA_TYPES are transformed by genson)
+            if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
+                input_text = input_text_
 
     kwargs: dict[str, Any] = {}
     if input_file_type == InputFileType.OpenAPI:  # noqa: PLR1702
