@@ -30,6 +30,7 @@ from datamodel_code_generator import (
     NamingStrategy,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    SchemaParseError,
     TargetPydanticVersion,
     YamlValue,
     load_yaml,
@@ -3105,6 +3106,23 @@ class JsonSchemaParser(Parser):
         yield
         self.root_id = previous_root_id
 
+    def _validate_schema_object(
+        self,
+        raw: dict[str, YamlValue] | YamlValue,
+        path: list[str],
+    ) -> JsonSchemaObject:
+        """Validate raw data as JsonSchemaObject with path context in errors."""
+        try:
+            return model_validate(self.SCHEMA_OBJECT_TYPE, raw)
+        except SchemaParseError:
+            raise
+        except Exception as e:
+            raise SchemaParseError(
+                message=f"{type(e).__name__}: {e}",
+                path=path,
+                original_error=e,
+            ) from e
+
     def parse_raw_obj(
         self,
         name: str,
@@ -3112,7 +3130,7 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
-        obj: JsonSchemaObject = model_validate(self.SCHEMA_OBJECT_TYPE, raw)
+        obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
 
     def parse_obj(  # noqa: PLR0912
@@ -3257,7 +3275,7 @@ class JsonSchemaParser(Parser):
                 # Some jsonschema docs include attribute self to have include version details
                 raw.pop("self", None)
                 # parse $id before parsing $ref
-                root_obj = model_validate(self.SCHEMA_OBJECT_TYPE, raw)
+                root_obj = self._validate_schema_object(raw, path_parts or ["#"])
                 self.parse_id(root_obj, path_parts)
                 definitions: dict[str, YamlValue] = {}
                 schema_path = ""
@@ -3270,13 +3288,14 @@ class JsonSchemaParser(Parser):
                         continue
 
                 for key, model in definitions.items():
-                    obj = model_validate(self.SCHEMA_OBJECT_TYPE, model)
-                    self.parse_id(obj, [*path_parts, schema_path, key])
+                    definition_path = [*path_parts, schema_path, key]
+                    obj = self._validate_schema_object(model, definition_path)
+                    self.parse_id(obj, definition_path)
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
                     model_name = object_paths[-1]
-                    self.parse_obj(model_name, model_validate(self.SCHEMA_OBJECT_TYPE, models), path)
+                    self.parse_obj(model_name, self._validate_schema_object(models, path), path)
                 elif not self.skip_root_model:
                     self.parse_obj(obj_name, root_obj, path_parts or ["#"])
                 for key, model in definitions.items():
@@ -3296,7 +3315,7 @@ class JsonSchemaParser(Parser):
                         path = reserved_path.split("/")
                         models = get_model_by_path(raw, object_paths)
                         model_name = object_paths[-1]
-                        self.parse_obj(model_name, model_validate(self.SCHEMA_OBJECT_TYPE, models), path)
+                        self.parse_obj(model_name, self._validate_schema_object(models, path), path)
                     previous_reserved_refs = reserved_refs
                     reserved_refs = set(self.reserved_refs.get(key) or [])
                     if previous_reserved_refs == reserved_refs:

@@ -13,6 +13,7 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     InputFileType,
+    SchemaParseError,
     chdir,
     generate,
     snooper_to_methods,
@@ -471,6 +472,83 @@ def test_generate_with_invalid_file_format(tmp_path: Path) -> None:
             input_=invalid_file,
             output=output_file,
         )
+
+
+def test_schema_parse_error_includes_path(tmp_path: Path) -> None:
+    """Test that schema parse errors include the schema path context."""
+    invalid_schema = tmp_path / "invalid_schema.json"
+    invalid_schema.write_text("""{
+        "type": "object",
+        "properties": {
+            "myField": {
+                "type": "integer",
+                "minimum": "not_a_number"
+            }
+        }
+    }""")
+    output_file = tmp_path / "output.py"
+
+    with pytest.raises(SchemaParseError, match="Error at schema path"):
+        generate(
+            input_=invalid_schema,
+            output=output_file,
+        )
+
+
+def test_schema_parse_error_includes_nested_path(tmp_path: Path) -> None:
+    """Test that schema parse errors include nested schema path context."""
+    invalid_schema = tmp_path / "invalid_nested_schema.json"
+    invalid_schema.write_text("""{
+        "$defs": {
+            "MyModel": {
+                "type": "object",
+                "properties": {
+                    "nestedField": {
+                        "type": "number",
+                        "maximum": "invalid_value"
+                    }
+                }
+            }
+        },
+        "type": "object",
+        "properties": {
+            "ref": {"$ref": "#/$defs/MyModel"}
+        }
+    }""")
+    output_file = tmp_path / "output.py"
+
+    with pytest.raises(SchemaParseError, match=r"\$defs/MyModel"):
+        generate(
+            input_=invalid_schema,
+            output=output_file,
+        )
+
+
+def test_schema_parse_error_original_error(tmp_path: Path) -> None:
+    """Test that SchemaParseError preserves the original error."""
+    invalid_schema = tmp_path / "invalid_schema.json"
+    invalid_schema.write_text("""{
+        "type": "integer",
+        "minimum": "not_a_number"
+    }""")
+    output_file = tmp_path / "output.py"
+
+    with pytest.raises(SchemaParseError) as exc_info:
+        generate(
+            input_=invalid_schema,
+            output=output_file,
+        )
+
+    assert exc_info.value.original_error is not None
+    assert exc_info.value.path is not None
+
+
+def test_schema_parse_error_without_path() -> None:
+    """Test SchemaParseError message formatting without path."""
+    error = SchemaParseError("Test error message")
+    assert error.message == "Test error message"
+    assert error.path == []
+    assert error.original_error is None
 
 
 def test_generate_cli_command_with_no_use_specialized_enum(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
