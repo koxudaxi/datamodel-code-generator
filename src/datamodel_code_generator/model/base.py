@@ -401,6 +401,25 @@ class DataModelFieldBase(_BaseModel):
             new_data_type.parent = self
 
 
+@lru_cache(maxsize=16)
+def _get_environment(template_subdir: Path, custom_template_dir: Path | None) -> Environment:
+    """Get or create a cached Jinja2 Environment for the given directories."""
+    loaders: list[FileSystemLoader] = []
+
+    if custom_template_dir is not None:
+        custom_dir = custom_template_dir / template_subdir
+        if custom_dir.exists():
+            loaders.append(FileSystemLoader(str(custom_dir)))
+
+    loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
+
+    loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
+    return Environment(
+        loader=loader,
+        autoescape=select_autoescape(["html", "xml"]),
+    )
+
+
 @lru_cache
 def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir: Path | None) -> Template:
     """Load and cache a Jinja2 template with optional custom directory support.
@@ -413,21 +432,21 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
     while keeping other templates from the default directory.
     """
     template_subdir = template_file_path.parent
-    loaders: list[FileSystemLoader] = []
+    environment = _get_environment(template_subdir, custom_template_dir)
+    return environment.get_template(template_file_path.name)
 
-    if custom_template_dir is not None:
-        custom_dir = custom_template_dir / template_subdir
-        if custom_dir.exists():
-            loaders.append(FileSystemLoader(str(custom_dir)))
 
-    loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
-
-    loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    environment: Environment = Environment(
-        loader=loader,
+@lru_cache(maxsize=16)
+def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_subdir: Path) -> Environment:
+    """Get or create a cached Jinja2 Environment for absolute path templates."""
+    loaders: list[FileSystemLoader] = [
+        FileSystemLoader(str(absolute_template_dir)),
+        FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
+    ]
+    return Environment(
+        loader=ChoiceLoader(loaders),
         autoescape=select_autoescape(["html", "xml"]),
     )
-    return environment.get_template(template_file_path.name)
 
 
 @lru_cache
@@ -439,15 +458,7 @@ def _get_template_with_absolute_path(absolute_template_path: Path, builtin_subdi
     1. The directory containing the absolute template path
     2. TEMPLATE_DIR/<builtin_subdir>/ (fallback for includes not in custom dir)
     """
-    loaders: list[FileSystemLoader] = [
-        FileSystemLoader(str(absolute_template_path.parent)),
-        FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
-    ]
-    loader = ChoiceLoader(loaders)
-    environment: Environment = Environment(
-        loader=loader,
-        autoescape=select_autoescape(["html", "xml"]),
-    )
+    environment = _get_environment_with_absolute_path(absolute_template_path.parent, builtin_subdir)
     return environment.get_template(absolute_template_path.name)
 
 

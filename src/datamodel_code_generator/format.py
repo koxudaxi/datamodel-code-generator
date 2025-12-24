@@ -183,6 +183,7 @@ class CodeFormatter:
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
@@ -255,6 +256,7 @@ class CodeFormatter:
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
         self.encoding = encoding
         self.formatters = formatters
+        self.defer_formatting = defer_formatting
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
@@ -289,11 +291,11 @@ class CodeFormatter:
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
 
-        if Formatter.RUFF_CHECK in self.formatters:
-            code = self.apply_ruff_lint(code)
-
-        if Formatter.RUFF_FORMAT in self.formatters:
-            code = self.apply_ruff_formatter(code)
+        if not self.defer_formatting:
+            if Formatter.RUFF_CHECK in self.formatters:
+                code = self.apply_ruff_lint(code)
+            if Formatter.RUFF_FORMAT in self.formatters:
+                code = self.apply_ruff_formatter(code)
 
         for formatter in self.custom_formatters:
             code = formatter.apply(code)
@@ -340,6 +342,23 @@ class CodeFormatter:
                 **self.isort_config_kwargs,
             ).output
         return isort.code(code, config=self.isort_config)
+
+    def format_directory(self, directory: Path) -> None:
+        """Apply ruff formatting to all Python files in a directory."""
+        if Formatter.RUFF_CHECK in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "check", "--fix", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
+        if Formatter.RUFF_FORMAT in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "format", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
 
 
 class CustomCodeFormatter:
