@@ -1,0 +1,409 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Module33Schema",
+  "definitions": {
+    "Module33Model00": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model01": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model02": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model03": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model04": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model05": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model06": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model07": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model08": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    },
+    "Module33Model09": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "module_id": {
+          "type": "integer",
+          "const": 33
+        },
+        "name": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "string"
+            },
+            "count": {
+              "type": "integer"
+            }
+          }
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "module_id",
+        "name"
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "model_00": {
+      "$ref": "#/definitions/Module33Model00"
+    },
+    "model_01": {
+      "$ref": "#/definitions/Module33Model01"
+    },
+    "model_02": {
+      "$ref": "#/definitions/Module33Model02"
+    },
+    "model_03": {
+      "$ref": "#/definitions/Module33Model03"
+    },
+    "model_04": {
+      "$ref": "#/definitions/Module33Model04"
+    },
+    "model_05": {
+      "$ref": "#/definitions/Module33Model05"
+    },
+    "model_06": {
+      "$ref": "#/definitions/Module33Model06"
+    },
+    "model_07": {
+      "$ref": "#/definitions/Module33Model07"
+    },
+    "model_08": {
+      "$ref": "#/definitions/Module33Model08"
+    },
+    "model_09": {
+      "$ref": "#/definitions/Module33Model09"
+    }
+  }
+}
