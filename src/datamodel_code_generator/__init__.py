@@ -299,6 +299,17 @@ class NamingStrategy(Enum):
     PrimaryFirst = "primary-first"
 
 
+class CollapseRootModelsNameStrategy(Enum):
+    """Strategy for naming when collapsing root models with object references.
+
+    child: Keep the inner (child) model's name, remove the wrapper.
+    parent: Rename inner model to wrapper's name, remove the wrapper.
+    """
+
+    Child = "child"
+    Parent = "parent"
+
+
 class AllOfMergeMode(Enum):
     """Mode for field merging in allOf schemas.
 
@@ -515,6 +526,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_double_quotes: bool = False,
     use_union_operator: bool = True,
     collapse_root_models: bool = False,
+    collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
     collapse_reuse_models: bool = False,
     skip_root_model: bool = False,
     use_type_alias: bool = False,
@@ -788,6 +800,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_double_quotes=use_double_quotes,
         use_union_operator=use_union_operator,
         collapse_root_models=collapse_root_models,
+        collapse_root_models_name_strategy=collapse_root_models_name_strategy,
         collapse_reuse_models=collapse_reuse_models,
         skip_root_model=skip_root_model,
         use_type_alias=use_type_alias,
