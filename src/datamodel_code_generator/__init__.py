@@ -82,6 +82,13 @@ if not TYPE_CHECKING:
         # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
         YamlValue: TypeAlias = dict[str, Any] | list[Any] | YamlScalar
 
+GeneratedModules: TypeAlias = dict[tuple[str, ...], str]
+"""Type alias for multiple generated modules.
+
+Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
+Returned by generate() when output=None and multiple modules are generated.
+"""
+
 try:
     import pysnooper
 
@@ -472,6 +479,47 @@ def _find_future_import_insertion_point(header: str) -> int:
     return pos
 
 
+def _build_module_content(
+    body: str,
+    header: str,
+    custom_file_header: str | None,
+) -> str:
+    """Build module content by combining header and body.
+
+    Handles future imports extraction and placement when custom_file_header is provided.
+    """
+    lines: list[str] = []
+
+    if custom_file_header and body:
+        # Extract future imports from body for correct placement after custom_file_header
+        body_without_future = body
+        extracted_future = ""
+        body_lines = body.split("\n")
+        future_indices = [i for i, line in enumerate(body_lines) if line.strip().startswith("from __future__")]
+        if future_indices:
+            extracted_future = "\n".join(body_lines[i] for i in future_indices)
+            remaining_lines = [line for i, line in enumerate(body_lines) if i not in future_indices]
+            body_without_future = "\n".join(remaining_lines).lstrip("\n")
+
+        if extracted_future:
+            insertion_point = _find_future_import_insertion_point(custom_file_header)
+            header_before = custom_file_header[:insertion_point].rstrip()
+            header_after = custom_file_header[insertion_point:].strip()
+            if header_after:
+                content = header_before + "\n" + extracted_future + "\n\n" + header_after
+            else:
+                content = header_before + "\n\n" + extracted_future
+            lines.extend((content, "", body_without_future.rstrip()))
+        else:
+            lines.extend((custom_file_header, "", body.rstrip()))
+    else:
+        lines.append(header)
+        if body:
+            lines.extend(("", body.rstrip()))
+
+    return "\n".join(lines)
+
+
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
@@ -590,11 +638,17 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     module_split_mode: ModuleSplitMode | None = None,
-) -> None:
+) -> str | GeneratedModules | None:
     """Generate Python data models from schema definitions or structured data.
 
     This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
     GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
+
+    Returns:
+        - When output is a Path: None (writes to file system)
+        - When output is None and single module: str (generated code)
+        - When output is None and multiple modules: GeneratedModules (dict mapping
+          module path tuples to generated code strings)
     """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:
@@ -884,28 +938,6 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     if not results:
         msg = "Models not found in the input data"
         raise Error(msg)
-    if isinstance(results, str):
-        # Single-file output: body already contains future imports
-        # Only store future_imports separately if we have a non-empty custom_file_header
-        body = results
-        future_imports = ""
-        modules: dict[Path | None, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
-    else:
-        if output is None:
-            msg = "Modular references require an output directory"
-            raise Error(msg)
-        if output.suffix:
-            msg = "Modular references require an output directory, not a file"
-            raise Error(msg)
-        modules = {
-            output.joinpath(*name): (
-                result.body,
-                result.future_imports,
-                str(result.source.as_posix() if result.source else input_filename),
-            )
-            for name, result in sorted(results.items())
-        }
-
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
     if custom_file_header is None and custom_file_header_path:
@@ -922,14 +954,46 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
         header += f"\n#   command:   {safe_command_line}"
 
+    # When output is None, return generated code as string(s) instead of writing to files
+    if output is None:
+        if isinstance(results, str):
+            # Single-file output: return str
+            safe_filename = input_filename.replace("\n", " ").replace("\r", " ") if input_filename else ""
+            effective_header = custom_file_header or header.format(safe_filename)
+            return _build_module_content(results, effective_header, custom_file_header)
+        # Multiple modules: return GeneratedModules dict
+        generated: GeneratedModules = {}
+        for name, result in sorted(results.items()):
+            source_filename = str(result.source.as_posix() if result.source else input_filename)
+            safe_filename = source_filename.replace("\n", " ").replace("\r", " ") if source_filename else ""
+            effective_header = custom_file_header or header.format(safe_filename)
+            generated[name] = _build_module_content(result.body, effective_header, custom_file_header)
+        return generated
+
+    # When output is a Path, write to file system
+    if isinstance(results, str):
+        # Single-file output: body already contains future imports
+        body = results
+        future_imports = ""
+        modules: dict[Path, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
+    else:
+        if output.suffix:
+            msg = "Modular references require an output directory, not a file"
+            raise Error(msg)
+        modules = {
+            output.joinpath(*name): (
+                result.body,
+                result.future_imports,
+                str(result.source.as_posix() if result.source else input_filename),
+            )
+            for name, result in sorted(results.items())
+        }
+
     file: IO[Any] | None
     for path, (body, future_imports, filename) in modules.items():
-        if path is None:
-            file = None
-        else:
-            if not path.parent.exists():
-                path.parent.mkdir(parents=True)
-            file = path.open("wt", encoding=encoding)
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
+        file = path.open("wt", encoding=encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
@@ -969,14 +1033,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                 print(file=file)
                 print(body.rstrip(), file=file)
 
-        if file is not None:
-            file.close()
+        file.close()
 
-    if (
-        defer_formatting
-        and output is not None
-        and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters)
-    ):
+    if defer_formatting and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters):
         code_formatter = CodeFormatter(
             target_python_version,
             settings_path,
@@ -989,6 +1048,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             formatters=formatters,
         )
         code_formatter.format_directory(output)
+
+    return None
 
 
 def infer_input_type(text: str) -> InputFileType:
@@ -1024,6 +1085,7 @@ __all__ = [
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",
+    "GeneratedModules",
     "InputFileType",
     "InvalidClassNameError",
     "InvalidFileFormatError",
