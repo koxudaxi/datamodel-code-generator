@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Parent",
+  "type": "object",
+  "properties": {
+    "child": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z]+$"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

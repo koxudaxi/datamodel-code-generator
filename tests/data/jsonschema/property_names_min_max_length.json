@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LengthKeys",
+  "type": "object",
+  "propertyNames": {
+    "minLength": 2,
+    "maxLength": 10
+  },
+  "additionalProperties": {
+    "type": "integer"
+  }
+}
