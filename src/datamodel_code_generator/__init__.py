@@ -390,6 +390,29 @@ class InvalidFileFormatError(Error):
         super().__init__(message=message)
 
 
+class SchemaParseError(Error):
+    """Raised when an error occurs during schema parsing with path context."""
+
+    def __init__(
+        self,
+        message: str,
+        path: list[str] | None = None,
+        original_error: Exception | None = None,
+    ) -> None:
+        """Initialize with message, schema path, and optional original error."""
+        self.path = path or []
+        self.original_error = original_error
+        full_message = self._format_message(message)
+        super().__init__(message=full_message)
+
+    def _format_message(self, message: str) -> str:
+        """Format message with schema path context."""
+        if self.path:
+            path_str = "/".join(self.path)
+            return f"Error at schema path '{path_str}': {message}"
+        return message
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     """Find and return the first file in a path (file or directory)."""
     if path.is_file():
@@ -996,6 +1019,7 @@ __all__ = [
     "NamingStrategy",
     "PythonVersion",
     "ReadOnlyWriteOnlyModelType",
+    "SchemaParseError",
     "TargetPydanticVersion",
     "generate",
 ]
