@@ -4,9 +4,7 @@ datamodel-code-generator is a CLI tool, but it can also be used as a Python modu
 
 ## 🚀 How to Use
 
-You can generate models with `datamodel_code_generator.generate` using parameters that match the [CLI arguments](./index.md). The generated files can be written to and read from the `Path` object supplied to *output*.
-
-In the below example, we use a file in a `TemporaryDirectory` to store our output.
+You can generate models with `datamodel_code_generator.generate` using parameters that match the [CLI arguments](./index.md).
 
 ### 📦 Installation
 
@@ -14,7 +12,58 @@ In the below example, we use a file in a `TemporaryDirectory` to store our outpu
 pip install 'datamodel-code-generator[http]'
 ```
 
-### 📝 Example
+### 📝 Getting Generated Code as String
+
+When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
+
+```python
+from datamodel_code_generator import InputFileType, generate, DataModelType
+
+json_schema: str = """{
+    "type": "object",
+    "properties": {
+        "number": {"type": "number"},
+        "street_name": {"type": "string"},
+        "street_type": {"type": "string",
+                        "enum": ["Street", "Avenue", "Boulevard"]
+                        }
+    }
+}"""
+
+result = generate(
+    json_schema,
+    input_file_type=InputFileType.JsonSchema,
+    input_filename="example.json",
+    output_model_type=DataModelType.PydanticV2BaseModel,
+)
+print(result)
+```
+
+### 📝 Multiple Module Output
+
+When the schema generates multiple modules, `generate()` returns a `GeneratedModules` dictionary mapping module path tuples to generated code:
+
+```python
+from datamodel_code_generator import InputFileType, generate, GeneratedModules
+
+# Schema that generates multiple modules (e.g., with $ref to other files)
+result: str | GeneratedModules = generate(
+    openapi_spec,
+    input_file_type=InputFileType.OpenAPI,
+)
+
+if isinstance(result, dict):
+    for module_path, content in result.items():
+        print(f"Module: {'/'.join(module_path)}")
+        print(content)
+        print("---")
+else:
+    print(result)
+```
+
+### 📝 Writing to Files
+
+To write generated code to the file system, provide a `Path` to the `output` parameter:
 
 ```python
 from pathlib import Path
@@ -138,13 +187,15 @@ class Model(BaseModel):
 
 ---
 
-## ❓ Why doesn't `generate` return a string?
+## 📋 Return Value Summary
 
-The above example schema only generates a single Python module, but a single schema may generate **multiple modules**. There is no way to represent these modules as a single string, so the `generate` method returns `None`.
+| `output` Parameter | Single Module | Multiple Modules |
+|-------------------|---------------|------------------|
+| `None` (default)  | `str`         | `GeneratedModules` (dict) |
+| `Path` (file)     | `None`        | Error |
+| `Path` (directory)| `None`        | `None` |
 
-📌 **Note:** The *output* parameter can take any `Path` object, which includes both file and directory paths. If a file name is provided and multiple modules are generated, `generate` will raise a `datamodel_code_gen.Error` exception.
-
-If multiple modules are generated, you will need to walk through the supplied *output* directory to find all of them.
+📌 **Note:** When `output` is a file path and multiple modules would be generated, `generate()` raises a `datamodel_code_generator.Error` exception. Use a directory path instead.
 
 ---
 

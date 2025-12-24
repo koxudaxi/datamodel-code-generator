@@ -101,9 +101,12 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
-def test_main_modular_no_file() -> None:
-    """Test main function on modular file with no output name."""
-    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.ERROR)
+def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test main function on modular file with no output name outputs to stdout."""
+    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.OK)
+    captured = capsys.readouterr()
+    assert "class Chocolate" in captured.out
+    assert "class Source" in captured.out
 
 
 def test_main_modular_filename(output_file: Path) -> None:
