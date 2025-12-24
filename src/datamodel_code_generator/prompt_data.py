@@ -103,6 +103,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-enum-values-in-discriminator": "Use enum values in discriminator mappings for union types.",
     "--use-exact-imports": "Import exact types instead of modules.",
     "--use-field-description": "Include schema descriptions as Field docstrings.",
+    "--use-field-description-example": "Add field examples to docstrings.",
     "--use-frozen-field": "Generate frozen (immutable) field definitions for readOnly properties.",
     "--use-generic-base-class": "Generate a shared base class with model configuration to avoid repetition (DRY).",
     "--use-generic-container-types": "Use typing.Dict/List instead of dict/list for container types.",
