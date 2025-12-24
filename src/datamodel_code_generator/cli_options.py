@@ -233,6 +233,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--http-headers": CLIOptionMeta(name="--http-headers", category=OptionCategory.GENERAL),
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
+    "--http-timeout": CLIOptionMeta(name="--http-timeout", category=OptionCategory.GENERAL),
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),

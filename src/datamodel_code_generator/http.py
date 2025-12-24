@@ -23,11 +23,15 @@ def _get_httpx() -> Any:
     return httpx
 
 
+DEFAULT_HTTP_TIMEOUT = 30.0
+
+
 def get_body(
     url: str,
     headers: Sequence[tuple[str, str]] | None = None,
     ignore_tls: bool = False,  # noqa: FBT001, FBT002
     query_parameters: Sequence[tuple[str, str]] | None = None,
+    timeout: float = DEFAULT_HTTP_TIMEOUT,
 ) -> str:
     """Fetch content from a URL with optional headers and query parameters."""
     httpx = _get_httpx()
@@ -37,7 +41,7 @@ def get_body(
         verify=not ignore_tls,
         follow_redirects=True,
         params=query_parameters,  # pyright: ignore[reportArgumentType]
-        # TODO: Improve params type
+        timeout=timeout,
     ).text
 
 

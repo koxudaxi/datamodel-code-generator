@@ -688,6 +688,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -733,6 +734,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -761,6 +763,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -1630,6 +1633,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
@@ -1637,6 +1641,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
@@ -1644,6 +1649,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/friends.json",
@@ -1651,6 +1657,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/food.json",
@@ -1658,6 +1665,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/machine/robot.json",
@@ -1665,6 +1673,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
@@ -1672,6 +1681,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/drink/tea.json",
@@ -1679,6 +1689,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
                 verify=True,
                 follow_redirects=True,
                 params=None,
+                timeout=30.0,
             ),
         ],
         any_order=True,
@@ -1775,6 +1786,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
@@ -1782,6 +1794,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
@@ -1789,6 +1802,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/friends.json",
@@ -1796,6 +1810,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/food.json",
@@ -1803,6 +1818,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/machine/robot.json",
@@ -1810,6 +1826,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
@@ -1817,6 +1834,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
             call(
                 "https://example.com/external_files_in_directory/definitions/drink/tea.json",
@@ -1824,6 +1842,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
                 verify=bool(not http_ignore_tls),
                 follow_redirects=True,
                 params=query_parameters_requests,
+                timeout=30.0,
             ),
         ],
         any_order=True,
@@ -5399,6 +5418,7 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 

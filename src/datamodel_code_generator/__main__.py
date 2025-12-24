@@ -481,6 +481,7 @@ class Config(BaseModel):
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
+    http_timeout: Optional[float] = None  # noqa: UP045
     use_annotated: bool = False
     use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
@@ -798,6 +799,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         allof_merge_mode=config.allof_merge_mode,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
+        http_timeout=config.http_timeout,
         use_annotated=config.use_annotated,
         use_serialize_as_any=config.use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
