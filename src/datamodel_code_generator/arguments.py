@@ -156,6 +156,14 @@ base_options.add_argument(
     "--url",
     help="Input file URL. `--input` is ignored when `--url` is used",
 )
+base_options.add_argument(
+    "--input-model",
+    help="Python import path to a Pydantic v2 model or schema dict "
+    "(e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). "
+    "For dict input, --input-file-type is required. "
+    "Cannot be used with --input or --url.",
+    metavar="MODULE:NAME",
+)
 
 # ======================================================================================
 # Customization options for generated models

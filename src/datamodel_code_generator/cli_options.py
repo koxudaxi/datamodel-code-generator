@@ -63,6 +63,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # Base Options (Input/Output)
     # ==========================================================================
     "--input": CLIOptionMeta(name="--input", category=OptionCategory.BASE),
+    "--input-model": CLIOptionMeta(name="--input-model", category=OptionCategory.BASE),
     "--output": CLIOptionMeta(name="--output", category=OptionCategory.BASE),
     "--url": CLIOptionMeta(name="--url", category=OptionCategory.BASE),
     "--input-file-type": CLIOptionMeta(name="--input-file-type", category=OptionCategory.BASE),

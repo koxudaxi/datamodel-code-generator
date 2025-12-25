@@ -442,6 +442,7 @@ class Config(BaseModel):
             return values
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
+    input_model: Optional[str] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
@@ -588,6 +589,64 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
             elif isinstance(imports, list):
                 additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
     return additional_imports
+
+
+def _load_model_schema(
+    input_model: str,
+    input_file_type: InputFileType,
+) -> dict[str, object]:
+    """Load schema from a Python import path.
+
+    Args:
+        input_model: Import path in 'module.path:ObjectName' format
+        input_file_type: Current input file type setting for validation
+
+    Returns:
+        Schema dict
+
+    Raises:
+        Error: If format invalid, object cannot be loaded, or input_file_type invalid
+    """
+    import importlib  # noqa: PLC0415
+
+    modname, sep, qualname = input_model.partition(":")
+    if not sep or not qualname:
+        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module.path:ObjectName' format."
+        raise Error(msg)
+
+    try:
+        module = importlib.import_module(modname)
+    except ImportError as e:
+        msg = f"Cannot import module {modname!r}: {e}"
+        raise Error(msg) from e
+
+    try:
+        obj = getattr(module, qualname)
+    except AttributeError as e:
+        msg = f"Module {modname!r} has no attribute {qualname!r}"
+        raise Error(msg) from e
+
+    if isinstance(obj, dict):
+        if input_file_type == InputFileType.Auto:
+            msg = "--input-file-type is required when --input-model points to a dict"
+            raise Error(msg)
+        return obj
+
+    if isinstance(obj, type) and issubclass(obj, BaseModel):
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+            msg = (
+                f"--input-file-type must be 'jsonschema' (or omitted) "
+                f"when --input-model points to a Pydantic model, "
+                f"got '{input_file_type.value}'"
+            )
+            raise Error(msg)
+        if not hasattr(obj, "model_json_schema"):
+            msg = f"--input-model requires Pydantic v2 model. {qualname!r} appears to be a Pydantic v1 model."
+            raise Error(msg)
+        return obj.model_json_schema()
+
+    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel"
+    raise Error(msg)
 
 
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
@@ -962,12 +1021,19 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(e.message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    if not config.input and not config.url and sys.stdin.isatty():
+    if not config.input and not config.url and not config.input_model and sys.stdin.isatty():
         print(  # noqa: T201
-            "Not Found Input: require `stdin` or arguments `--input` or `--url`",
+            "Not Found Input: require `stdin` or arguments `--input`, `--url`, or `--input-model`",
             file=sys.stderr,
         )
         arg_parser.print_help()
+        return Exit.ERROR
+
+    if config.input_model and (config.input or config.url):
+        print(  # noqa: T201
+            "Error: --input-model cannot be used with --input or --url",
+            file=sys.stderr,
+        )
         return Exit.ERROR
 
     if config.check and config.output is None:
@@ -980,6 +1046,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.watch and config.check:
         print(  # noqa: T201
             "Error: --watch and --check cannot be used together",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and config.input_model:
+        print(  # noqa: T201
+            "Error: --watch cannot be used with --input-model",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -1107,9 +1180,18 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         is_directory_output = False
 
     try:
+        input_: Path | str | ParseResult
+        if config.input_model:
+            schema = _load_model_schema(config.input_model, config.input_file_type)
+            input_ = json.dumps(schema)
+            if config.input_file_type == InputFileType.Auto:
+                config.input_file_type = InputFileType.JsonSchema
+        else:
+            input_ = config.url or config.input or sys.stdin.read()
+
         run_generate_from_config(
             config=config,
-            input_=config.url or config.input or sys.stdin.read(),
+            input_=input_,
             output=generate_output,
             extra_template_data=extra_template_data,
             aliases=aliases,
