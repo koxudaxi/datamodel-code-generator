@@ -1081,7 +1081,7 @@ class JsonSchemaParser(Parser):
         original_field_name: str | None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
-        constraints = model_dump(field) if self.is_constraints_field(field) else None
+        constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -2614,7 +2614,7 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = model_dump(obj)
+        constraints = model_dump(obj, exclude_none=True)
         if suppress_item_constraints:
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
@@ -2750,7 +2750,7 @@ class JsonSchemaParser(Parser):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        constraints = model_dump(obj) if self.field_constraints else {}
+        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -2817,7 +2817,7 @@ class JsonSchemaParser(Parser):
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
-        constraints = model_dump(obj) if self.field_constraints else {}
+        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
