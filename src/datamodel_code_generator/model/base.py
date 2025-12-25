@@ -205,11 +205,21 @@ class DataModelFieldBase(_BaseModel):
         if not self.default:
             self.default = const
 
+    _self_reference_cache: bool | None = None
+
     def self_reference(self) -> bool:
-        """Check if field references its parent model."""
+        """Check if field references its parent model.
+
+        Result is cached after first call since parent is stable at render time.
+        """
+        if self._self_reference_cache is not None:
+            return self._self_reference_cache
         if self.parent is None or not self.parent.reference:  # pragma: no cover
+            self._self_reference_cache = False
             return False
-        return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+        result = self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+        self._self_reference_cache = result
+        return result
 
     @property
     def _use_union_operator(self) -> bool:
