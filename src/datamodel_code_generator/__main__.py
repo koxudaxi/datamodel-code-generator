@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import sys
+
+if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # noqa: PLR2004
+    from importlib.metadata import version
+
+    print(f"datamodel-codegen {version('datamodel-code-generator')}")
+    sys.exit(0)
+
 import difflib
 import json
+import os
 import shlex
 import signal
-import sys
 import tempfile
 import warnings
 from collections import defaultdict
@@ -17,7 +25,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-import argcomplete
 from pydantic import BaseModel
 
 from datamodel_code_generator import (
@@ -877,7 +884,10 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    argcomplete.autocomplete(arg_parser)
+    if "_ARGCOMPLETE" in os.environ:
+        import argcomplete  # noqa: PLC0415
+
+        argcomplete.autocomplete(arg_parser)
 
     if args is None:  # pragma: no cover
         args = sys.argv[1:]

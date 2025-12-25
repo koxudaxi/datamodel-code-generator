@@ -37,7 +37,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import SafeLoader, is_pydantic_v2
+from datamodel_code_generator.util import is_pydantic_v2
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -92,6 +92,8 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
     import yaml  # noqa: PLC0415
+
+    from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
 
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
