@@ -178,7 +178,17 @@ class UnionIntFloat:
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
-    """Chain multiple iterables and return as a tuple."""
+    """Chain multiple iterables and return as a tuple.
+
+    Optimized for common cases with 0-2 iterables to avoid chain() overhead.
+    """
+    n = len(iterables)
+    if n == 0:
+        return ()
+    if n == 1:
+        return tuple(iterables[0])
+    if n == 2:  # noqa: PLR2004
+        return (*iterables[0], *iterables[1])
     return tuple(chain(*iterables))
 
 
