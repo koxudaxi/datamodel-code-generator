@@ -14,7 +14,7 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import (
+from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
@@ -29,12 +29,12 @@ from datamodel_code_generator import (
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    StrictTypes,
     TargetPydanticVersion,
+    UnionMode,
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
-from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
     from argparse import Action

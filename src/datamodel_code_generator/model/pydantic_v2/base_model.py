@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field
@@ -31,13 +30,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
-
-
-class UnionMode(Enum):
-    """Union discriminator mode for Pydantic v2."""
-
-    smart = "smart"
-    left_to_right = "left_to_right"
 
 
 class Constraints(_Constraints):

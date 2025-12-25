@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 
-from .base_model import BaseModel, DataModelField, UnionMode
+from datamodel_code_generator.enums import UnionMode
+
+from .base_model import BaseModel, DataModelField
 from .root_model import RootModel
 from .root_model_type_alias import RootModelTypeAlias
 from .types import DataTypeManager

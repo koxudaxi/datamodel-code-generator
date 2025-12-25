@@ -86,27 +86,29 @@ STR = "str"
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
+
+def __getattr__(name: str) -> Any:
+    """Provide lazy access to StrictTypes for backwards compatibility."""
+    if name == "StrictTypes":
+        from datamodel_code_generator.enums import StrictTypes  # noqa: PLC0415
+
+        return StrictTypes
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
 if TYPE_CHECKING:
     import builtins
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from pydantic_core import core_schema
 
+    from datamodel_code_generator.enums import StrictTypes
     from datamodel_code_generator.model.base import DataModelFieldBase
 
 if is_pydantic_v2():
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
-
-
-class StrictTypes(Enum):
-    """Strict type options for generated models."""
-
-    str = "str"
-    bytes = "bytes"
-    int = "int"
-    float = "float"
-    bool = "bool"
 
 
 class UnionIntFloat:

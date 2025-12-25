@@ -7,7 +7,13 @@ import sys
 if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # noqa: PLR2004
     from importlib.metadata import version
 
-    print(f"datamodel-codegen {version('datamodel-code-generator')}")
+    print(f"datamodel-codegen {version('datamodel-code-generator')}")  # noqa: T201
+    sys.exit(0)
+
+if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # noqa: PLR2004
+    from datamodel_code_generator.arguments import arg_parser
+
+    arg_parser.print_help()
     sys.exit(0)
 
 import difflib
