@@ -1,0 +1,35 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Query Parameters Config Test
+paths:
+  /accounts:
+    get:
+      summary: Get accounts
+      operationId: getAccounts
+      parameters:
+        - name: page[size]
+          in: query
+          schema:
+            type: integer
+        - name: filter[type]
+          in: query
+          schema:
+            type: string
+            enum: [TypeA, TypeB]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+components:
+  schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: string
+        account_type:
+          type: string
