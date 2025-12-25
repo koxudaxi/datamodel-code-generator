@@ -1162,10 +1162,17 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[path]["title"] = obj.title
 
+    def set_schema_id(self, path: str, obj: JsonSchemaObject) -> None:
+        """Set $id in extra template data."""
+        if obj.id:
+            self.extra_template_data[path]["schema_id"] = obj.id
+
     def _set_schema_metadata(self, path: str, obj: JsonSchemaObject) -> None:
-        """Set title and additionalProperties in extra template data."""
+        """Set title, $id, and additionalProperties in extra template data."""
         if obj.title:
             self.extra_template_data[path]["title"] = obj.title
+        if obj.id:
+            self.extra_template_data[path]["schema_id"] = obj.id
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
 
@@ -1917,6 +1924,7 @@ class JsonSchemaParser(Parser):
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
+        self.set_schema_id(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, base_classes)
@@ -2259,6 +2267,7 @@ class JsonSchemaParser(Parser):
         )
         class_name = reference.name
         self.set_title(reference.path, obj)
+        self.set_schema_id(reference.path, obj)
         if self.read_only_write_only_model_type is not None and obj.properties:
             for prop in obj.properties.values():
                 if isinstance(prop, JsonSchemaObject) and prop.ref:
@@ -2295,6 +2304,7 @@ class JsonSchemaParser(Parser):
             data_model_type_class = self.data_model_root_type
 
         self.set_additional_properties(reference.path, obj)
+        self.set_schema_id(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, None)
