@@ -20,6 +20,7 @@ from pydantic import Field
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     DataclassArguments,
     Error,
     FieldTypeCollisionStrategy,
@@ -212,6 +213,7 @@ class OpenAPIParser(JsonSchemaParser):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_field_description_example: bool = False,
         use_attribute_docstrings: bool = False,
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
@@ -247,6 +249,7 @@ class OpenAPIParser(JsonSchemaParser):
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
+        http_timeout: float | None = None,
         use_annotated: bool = False,
         use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
@@ -256,6 +259,7 @@ class OpenAPIParser(JsonSchemaParser):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
         collapse_reuse_models: bool = False,
         skip_root_model: bool = False,
         use_type_alias: bool = False,
@@ -278,6 +282,7 @@ class OpenAPIParser(JsonSchemaParser):
         frozen_dataclasses: bool = False,
         no_alias: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,
         parent_scoped_naming: bool = False,
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix: dict[str, str] | None = None,
@@ -323,6 +328,7 @@ class OpenAPIParser(JsonSchemaParser):
             base_path=base_path,
             use_schema_description=use_schema_description,
             use_field_description=use_field_description,
+            use_field_description_example=use_field_description_example,
             use_attribute_docstrings=use_attribute_docstrings,
             use_inline_field_description=use_inline_field_description,
             use_default_kwarg=use_default_kwarg,
@@ -356,6 +362,7 @@ class OpenAPIParser(JsonSchemaParser):
             allof_merge_mode=allof_merge_mode,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
+            http_timeout=http_timeout,
             use_annotated=use_annotated,
             use_serialize_as_any=use_serialize_as_any,
             use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
@@ -365,6 +372,7 @@ class OpenAPIParser(JsonSchemaParser):
             use_union_operator=use_union_operator,
             allow_responses_without_content=allow_responses_without_content,
             collapse_root_models=collapse_root_models,
+            collapse_root_models_name_strategy=collapse_root_models_name_strategy,
             collapse_reuse_models=collapse_reuse_models,
             skip_root_model=skip_root_model,
             use_type_alias=use_type_alias,
@@ -387,6 +395,7 @@ class OpenAPIParser(JsonSchemaParser):
             frozen_dataclasses=frozen_dataclasses,
             no_alias=no_alias,
             formatters=formatters,
+            defer_formatting=defer_formatting,
             parent_scoped_naming=parent_scoped_naming,
             naming_strategy=naming_strategy,
             duplicate_name_suffix=duplicate_name_suffix,
@@ -676,6 +685,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Parse all operation parameters into a data model."""
         fields: list[DataModelFieldBase] = []
         exclude_field_names: set[str] = set()
+        seen_parameter_names: set[str] = set()
         reference = self.model_resolver.add(path, name, class_name=True, unique=True)
         for parameter_ in parameters:
             parameter = self.resolve_object(parameter_, ParameterObject)
@@ -687,9 +697,10 @@ class OpenAPIParser(JsonSchemaParser):
             ):
                 continue
 
-            if any(field.original_name == parameter_name for field in fields):
+            if parameter_name in seen_parameter_names:
                 msg = f"Parameter name '{parameter_name}' is used more than once."
                 raise Exception(msg)  # noqa: TRY002
+            seen_parameter_names.add(parameter_name)
 
             field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
                 field_name=parameter_name,
@@ -741,7 +752,7 @@ class OpenAPIParser(JsonSchemaParser):
                         data_type=data_type,
                         required=parameter.required,
                         alias=alias,
-                        constraints=model_dump(object_schema)
+                        constraints=model_dump(object_schema, exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable
@@ -758,6 +769,7 @@ class OpenAPIParser(JsonSchemaParser):
                         use_annotated=self.use_annotated,
                         use_serialize_as_any=self.use_serialize_as_any,
                         use_field_description=self.use_field_description,
+                        use_field_description_example=self.use_field_description_example,
                         use_inline_field_description=self.use_inline_field_description,
                         use_default_kwarg=self.use_default_kwarg,
                         original_name=parameter_name,
@@ -775,6 +787,7 @@ class OpenAPIParser(JsonSchemaParser):
                     reference=reference,
                     custom_base_class=self._resolve_base_class(name),
                     custom_template_dir=self.custom_template_dir,
+                    extra_template_data=self.extra_template_data,
                     keyword_only=self.keyword_only,
                     treat_dot_as_module=self.treat_dot_as_module,
                     dataclass_arguments=self.dataclass_arguments,
@@ -919,21 +932,22 @@ class OpenAPIParser(JsonSchemaParser):
     def _collect_discriminator_schemas(self) -> None:
         """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""
         schemas: dict[str, Any] = self.raw_obj.get("components", {}).get("schemas", {})
+        potential_subtypes: dict[str, list[str]] = {}
 
         for schema_name, schema in schemas.items():
             discriminator = schema.get("discriminator")
-            if not discriminator:
-                continue
+            if discriminator and not schema.get("oneOf") and not schema.get("anyOf"):
+                ref = f"#/components/schemas/{schema_name}"
+                self._discriminator_schemas[ref] = discriminator
 
-            if schema.get("oneOf") or schema.get("anyOf"):
-                continue
+            all_of = schema.get("allOf")
+            if all_of:
+                refs = [item.get("$ref") for item in all_of if item.get("$ref")]
+                if refs:
+                    potential_subtypes[schema_name] = refs
 
-            ref = f"#/components/schemas/{schema_name}"
-            self._discriminator_schemas[ref] = discriminator
-
-        for schema_name, schema in schemas.items():
-            for all_of_item in schema.get("allOf", []):
-                ref_in_allof = all_of_item.get("$ref")
-                if ref_in_allof and ref_in_allof in self._discriminator_schemas:
+        for schema_name, refs in potential_subtypes.items():
+            for ref_in_allof in refs:
+                if ref_in_allof in self._discriminator_schemas:
                     subtype_ref = f"#/components/schemas/{schema_name}"
                     self._discriminator_subtypes[ref_in_allof].append(subtype_ref)

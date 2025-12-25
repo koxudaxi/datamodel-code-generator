@@ -7,23 +7,23 @@ Python import statements for generated data models.
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from functools import lru_cache
 from itertools import starmap
-from typing import TYPE_CHECKING, Optional
-
-from datamodel_code_generator.util import BaseModel
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
-class Import(BaseModel):
+@dataclass(frozen=True)
+class Import:
     """Represents a single Python import statement."""
 
-    from_: Optional[str] = None  # noqa: UP045
     import_: str
-    alias: Optional[str] = None  # noqa: UP045
-    reference_path: Optional[str] = None  # noqa: UP045
+    from_: str | None = None
+    alias: str | None = None
+    reference_path: str | None = None
 
     @property
     def is_future(self) -> bool:
@@ -35,7 +35,7 @@ class Import(BaseModel):
     def from_full_path(cls, class_path: str) -> Import:
         """Create an Import from a fully qualified path (e.g., 'typing.Optional')."""
         split_class_path: list[str] = class_path.split(".")
-        return Import(from_=".".join(split_class_path[:-1]) or None, import_=split_class_path[-1])
+        return cls(import_=split_class_path[-1], from_=".".join(split_class_path[:-1]) or None)
 
 
 class Imports(defaultdict[str | None, set[str]]):

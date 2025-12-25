@@ -71,6 +71,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) | Generate field descriptions as attribute docstrings instead of Field description... |
 | [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator) | Use enum values in discriminator mappings for union types. |
 | [`--use-field-description`](field-customization.md#use-field-description) | Include schema descriptions as Field docstrings. |
+| [`--use-field-description-example`](field-customization.md#use-field-description-example) | Add field examples to docstrings. |
 | [`--use-inline-field-description`](field-customization.md#use-inline-field-description) | Add field descriptions as inline comments. |
 | [`--use-schema-description`](field-customization.md#use-schema-description) | Use schema description as class docstring. |
 | [`--use-title-as-name`](field-customization.md#use-title-as-name) | Use schema title as the generated class name. |
@@ -86,6 +87,7 @@ datamodel-codegen [OPTIONS]
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
+| [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
 | [`--dataclass-arguments`](model-customization.md#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
 | [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutation=False). |
@@ -159,6 +161,7 @@ datamodel-codegen [OPTIONS]
 | [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
+| [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
@@ -197,6 +200,7 @@ All options sorted alphabetically:
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
 - [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) - Collapse duplicate models by replacing references instead of...
 - [`--collapse-root-models`](model-customization.md#collapse-root-models) - Inline root model definitions instead of creating separate w...
+- [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) - Select which name to keep when collapsing root models with o...
 - [`--custom-file-header`](template-customization.md#custom-file-header) - Add custom header text to the generated file.
 - [`--custom-file-header-path`](template-customization.md#custom-file-header-path) - Add custom header content from file to generated code.
 - [`--custom-formatters`](template-customization.md#custom-formatters) - Apply custom Python code formatters to generated output.
@@ -232,6 +236,7 @@ All options sorted alphabetically:
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
+- [`--http-timeout`](general-options.md#http-timeout) - Set timeout for HTTP requests to remote hosts.
 - [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) - Ignore enum constraints and use base string type instead of ...
 - [`--ignore-pyproject`](general-options.md#ignore-pyproject) - Ignore pyproject.toml configuration file.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
@@ -283,6 +288,7 @@ All options sorted alphabetically:
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator) - Use enum values in discriminator mappings for union types.
 - [`--use-exact-imports`](template-customization.md#use-exact-imports) - Import exact types instead of modules.
 - [`--use-field-description`](field-customization.md#use-field-description) - Include schema descriptions as Field docstrings.
+- [`--use-field-description-example`](field-customization.md#use-field-description-example) - Add field examples to docstrings.
 - [`--use-frozen-field`](model-customization.md#use-frozen-field) - Generate frozen (immutable) field definitions for readOnly p...
 - [`--use-generic-base-class`](model-customization.md#use-generic-base-class) - Generate a shared base class with model configuration to avo...
 - [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) - Use typing.Dict/List instead of dict/list for container type...

@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "IntegerEnumKeys",
+  "type": "object",
+  "propertyNames": {
+    "enum": [1, 2, 3]
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

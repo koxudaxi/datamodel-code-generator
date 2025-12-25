@@ -2,11 +2,40 @@
 
 from __future__ import annotations
 
+import sys
+
+# Fast path for --version (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # pragma: no cover  # noqa: PLR2004
+    from importlib.metadata import version
+
+    print(f"datamodel-codegen {version('datamodel-code-generator')}")  # noqa: T201
+    sys.exit(0)
+
+# Fast path for --help (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  # noqa: PLR2004
+    from datamodel_code_generator.arguments import arg_parser
+
+    arg_parser.print_help()
+    sys.exit(0)
+
+# Fast path for --generate-prompt
+if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):  # pragma: no cover
+    from datamodel_code_generator.arguments import arg_parser
+
+    namespace = arg_parser.parse_args()
+    if namespace.generate_prompt is not None:
+        from datamodel_code_generator.prompt import generate_prompt
+
+        help_text = arg_parser.format_help()
+        prompt_output = generate_prompt(namespace, help_text)
+        print(prompt_output)  # noqa: T201
+        sys.exit(0)
+
 import difflib
 import json
+import os
 import shlex
 import signal
-import sys
 import tempfile
 import warnings
 from collections import defaultdict
@@ -17,7 +46,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-import argcomplete
 from pydantic import BaseModel
 
 from datamodel_code_generator import (
@@ -25,6 +53,7 @@ from datamodel_code_generator import (
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
     Error,
@@ -56,9 +85,9 @@ from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed 
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import (
-    PYDANTIC_V2,
     ConfigDict,
     field_validator,
+    is_pydantic_v2,
     load_toml,
     model_validator,
 )
@@ -111,7 +140,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 class Config(BaseModel):
     """Configuration model for code generation."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
         def get(self, item: str) -> Any:  # pragma: no cover
@@ -299,7 +328,7 @@ class Config(BaseModel):
         "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
     )
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
@@ -445,6 +474,7 @@ class Config(BaseModel):
     use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
+    use_field_description_example: bool = False
     use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
     use_default_kwarg: bool = False
@@ -480,6 +510,7 @@ class Config(BaseModel):
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
+    http_timeout: Optional[float] = None  # noqa: UP045
     use_annotated: bool = False
     use_serialize_as_any: bool = False
     use_non_positive_negative_number_constrained_types: bool = False
@@ -487,6 +518,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    collapse_root_models_name_strategy: Optional[CollapseRootModelsNameStrategy] = None  # noqa: UP045
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
     use_type_alias: bool = False
@@ -542,6 +574,20 @@ class Config(BaseModel):
         parsed_args = Config.parse_obj(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
+
+
+def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, Any]]) -> list[str]:
+    """Extract additional_imports from extra_template_data entries."""
+    additional_imports: list[str] = []
+    for type_data in extra_template_data.values():
+        if "additional_imports" in type_data:
+            imports = type_data.pop("additional_imports")
+            if isinstance(imports, str):
+                if imports.strip():
+                    additional_imports.append(imports.strip())
+            elif isinstance(imports, list):
+                additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
+    return additional_imports
 
 
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
@@ -731,7 +777,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     settings_path: Path | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
-    generate(
+    result = generate(
         input_=input_,
         input_file_type=config.input_file_type,
         output=output,
@@ -763,6 +809,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_standard_collections=config.use_standard_collections,
         use_schema_description=config.use_schema_description,
         use_field_description=config.use_field_description,
+        use_field_description_example=config.use_field_description_example,
         use_attribute_docstrings=config.use_attribute_docstrings,
         use_inline_field_description=config.use_inline_field_description,
         use_default_kwarg=config.use_default_kwarg,
@@ -796,6 +843,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         allof_merge_mode=config.allof_merge_mode,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
+        http_timeout=config.http_timeout,
         use_annotated=config.use_annotated,
         use_serialize_as_any=config.use_serialize_as_any,
         use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
@@ -803,6 +851,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         original_field_name_delimiter=config.original_field_name_delimiter,
         use_double_quotes=config.use_double_quotes,
         collapse_root_models=config.collapse_root_models,
+        collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
         collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
         use_type_alias=config.use_type_alias,
@@ -846,10 +895,20 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         module_split_mode=config.module_split_mode,
     )
 
+    if output is None and result is not None:  # pragma: no cover
+        if isinstance(result, str):
+            sys.stdout.write(result + "\n")
+        else:
+            for content in result.values():
+                sys.stdout.write(content + "\n")
+
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    argcomplete.autocomplete(arg_parser)
+    if "_ARGCOMPLETE" in os.environ:  # pragma: no cover
+        import argcomplete  # noqa: PLC0415
+
+        argcomplete.autocomplete(arg_parser)
 
     if args is None:  # pragma: no cover
         args = sys.argv[1:]
@@ -953,6 +1012,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             file=sys.stderr,
         )
 
+    if config.collapse_root_models_name_strategy and not config.collapse_root_models:
+        print(  # noqa: T201
+            "Error: --collapse-root-models-name-strategy requires --collapse-root-models",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
     if (
         config.use_specialized_enum
         and namespace.use_specialized_enum is not False  # CLI didn't disable it
@@ -977,6 +1043,15 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             except json.JSONDecodeError as e:
                 print(f"Unable to load extra template data: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
+
+        # Extract additional_imports from extra_template_data entries and merge with config
+        assert extra_template_data is not None
+        additional_imports_from_template_data = _extract_additional_imports(extra_template_data)
+        if additional_imports_from_template_data:
+            if config.additional_imports is None:
+                config.additional_imports = additional_imports_from_template_data
+            else:
+                config.additional_imports = list(config.additional_imports) + additional_imports_from_template_data
 
     if config.aliases is None:
         aliases = None

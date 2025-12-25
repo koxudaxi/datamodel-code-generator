@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "wrapper": {
+      "$ref": "#/$defs/Wrapper"
+    },
+    "container": {
+      "$ref": "#/$defs/Container"
+    }
+  },
+  "$defs": {
+    "Wrapper": {
+      "$ref": "#/$defs/Inner"
+    },
+    "Inner": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": ["value"]
+    },
+    "Container": {
+      "type": "object",
+      "properties": {
+        "inner": {
+          "$ref": "#/$defs/Inner"
+        }
+      }
+    }
+  }
+}

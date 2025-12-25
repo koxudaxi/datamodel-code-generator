@@ -1,0 +1,34 @@
+openapi: "3.0.0"
+info:
+  title: Test schema with special characters in descriptions
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    ExampleWithBackslash:
+      description: 'Observe the backslash \ in this line'
+      type: object
+      properties:
+        name:
+          type: string
+          description: 'Path like C:\Users\name'
+    ExampleWithTripleQuotes:
+      description: 'Contains """triple quotes"""'
+      type: object
+      properties:
+        value:
+          type: string
+          description: 'Field with """quotes"""'
+    ExampleWithBoth:
+      description: 'Has both \ backslash and """quotes"""'
+      type: object
+      properties:
+        data:
+          type: string
+          description: 'Data: C:\path\to\"""file"""'
+    ExampleWithNewlineEscape:
+      description: 'Text with \n which looks like newline escape'
+      type: object
+      properties:
+        text:
+          type: string

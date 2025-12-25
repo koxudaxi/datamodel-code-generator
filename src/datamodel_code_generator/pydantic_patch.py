@@ -9,8 +9,6 @@ from __future__ import annotations
 import sys
 from typing import Any
 
-import pydantic.typing
-
 
 def patched_evaluate_forwardref(
     forward_ref: Any, globalns: dict[str, Any], localns: dict[str, Any] | None = None
@@ -23,6 +21,9 @@ def patched_evaluate_forwardref(
         return forward_ref._evaluate(globalns, localns or None, set(), recursive_guard=set())  # noqa: SLF001
 
 
-# Patch only Python3.12
-if sys.version_info >= (3, 12):
-    pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref  # pyright: ignore[reportAttributeAccessIssue]
+def apply_patch() -> None:
+    """Apply the pydantic patch for Python 3.12+ if needed."""
+    if sys.version_info >= (3, 12):
+        import pydantic.typing  # noqa: PLC0415
+
+        pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref  # pyright: ignore[reportAttributeAccessIssue]

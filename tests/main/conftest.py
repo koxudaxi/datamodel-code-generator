@@ -19,7 +19,7 @@ from packaging import version
 from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.util import PYDANTIC_V2
+from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import (
     AssertFileContent,
     _validation_stats,
@@ -447,8 +447,9 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool
     """
     output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
     is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
-    if (is_pydantic_v1 and PYDANTIC_V2) or (
-        output_model_type == DataModelType.PydanticV2BaseModel.value and not PYDANTIC_V2
+    if (is_pydantic_v1 and is_pydantic_v2()) or (
+        output_model_type in {DataModelType.PydanticV2BaseModel.value, DataModelType.PydanticV2Dataclass.value}
+        and not is_pydantic_v2()
     ):
         return True
     if (target_version := _parse_target_version(extra_arguments)) is None:

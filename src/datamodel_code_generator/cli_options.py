@@ -81,6 +81,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--reuse-model": CLIOptionMeta(name="--reuse-model", category=OptionCategory.MODEL),
     "--reuse-scope": CLIOptionMeta(name="--reuse-scope", category=OptionCategory.MODEL),
     "--collapse-root-models": CLIOptionMeta(name="--collapse-root-models", category=OptionCategory.MODEL),
+    "--collapse-root-models-name-strategy": CLIOptionMeta(
+        name="--collapse-root-models-name-strategy", category=OptionCategory.MODEL
+    ),
     "--collapse-reuse-models": CLIOptionMeta(name="--collapse-reuse-models", category=OptionCategory.MODEL),
     "--keep-model-order": CLIOptionMeta(name="--keep-model-order", category=OptionCategory.MODEL),
     "--allow-extra-fields": CLIOptionMeta(name="--allow-extra-fields", category=OptionCategory.MODEL),
@@ -131,6 +134,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-title-as-name": CLIOptionMeta(name="--use-title-as-name", category=OptionCategory.FIELD),
     "--use-schema-description": CLIOptionMeta(name="--use-schema-description", category=OptionCategory.FIELD),
     "--use-field-description": CLIOptionMeta(name="--use-field-description", category=OptionCategory.FIELD),
+    "--use-field-description-example": CLIOptionMeta(
+        name="--use-field-description-example", category=OptionCategory.FIELD
+    ),
     "--use-attribute-docstrings": CLIOptionMeta(name="--use-attribute-docstrings", category=OptionCategory.FIELD),
     "--use-inline-field-description": CLIOptionMeta(
         name="--use-inline-field-description", category=OptionCategory.FIELD
@@ -230,6 +236,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--http-headers": CLIOptionMeta(name="--http-headers", category=OptionCategory.GENERAL),
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
+    "--http-timeout": CLIOptionMeta(name="--http-timeout", category=OptionCategory.GENERAL),
     "--ignore-pyproject": CLIOptionMeta(name="--ignore-pyproject", category=OptionCategory.GENERAL),
     "--generate-cli-command": CLIOptionMeta(name="--generate-cli-command", category=OptionCategory.GENERAL),
     "--generate-pyproject-config": CLIOptionMeta(name="--generate-pyproject-config", category=OptionCategory.GENERAL),

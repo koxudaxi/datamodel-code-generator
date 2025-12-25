@@ -10,3 +10,4 @@ from pydantic import BaseModel, Field
 class Extras(BaseModel):
     name: str | None = Field(None, description='normal key', example='example')
     age: int | None = Field(None, example=12, examples=[13, 20])
+    status: str | None = Field(None, examples=['active'])

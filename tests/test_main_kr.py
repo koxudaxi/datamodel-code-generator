@@ -101,9 +101,12 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
-def test_main_modular_no_file() -> None:
-    """Test main function on modular file with no output name."""
-    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.ERROR)
+def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test main function on modular file with no output name outputs to stdout."""
+    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.OK)
+    captured = capsys.readouterr()
+    assert "class Chocolate" in captured.out
+    assert "class Source" in captured.out
 
 
 def test_main_modular_filename(output_file: Path) -> None:
@@ -278,6 +281,24 @@ def test_main_use_schema_description(output_file: Path) -> None:
     )
 
 
+@freeze_time("2019-07-26")
+def test_main_docstring_special_chars(output_file: Path) -> None:
+    """Escape special characters in docstrings.
+
+    Backslashes and triple quotes in schema descriptions must be escaped
+    to prevent Python syntax errors and type checker warnings. See GitHub
+    issue #1808.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "docstring_special_chars.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_docstring_special_chars" / "output.py",
+        extra_args=["--use-schema-description", "--use-field-description"],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--use-field-description"],
     input_schema="openapi/api_multiline_docstrings.yaml",
@@ -325,6 +346,112 @@ def test_main_use_inline_field_description(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file=EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description" / "output.py",
         extra_args=["--use-inline-field-description"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-field-description-example"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--use-field-description-example"],
+    golden_output="main_kr/main_use_field_description_example/output.py",
+    related_options=["--use-field-description", "--use-inline-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example(output_file: Path) -> None:
+    """Add field examples to docstrings.
+
+    The `--use-field-description-example` flag adds the `example` or `examples`
+    property from schema fields as docstrings. This provides documentation that
+    is visible in IDE intellisense.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example" / "output.py",
+        extra_args=["--use-field-description-example"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-field-description", "--use-field-description-example"],
+    input_schema="jsonschema/extras.json",
+    cli_args=["--use-field-description", "--use-field-description-example"],
+    golden_output="main_kr/main_use_field_description_with_example/output.py",
+    related_options=["--use-inline-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_field_description_with_example(output_file: Path) -> None:
+    """Add field descriptions and examples to docstrings.
+
+    When both `--use-field-description` and `--use-field-description-example` are used,
+    the docstring includes both the description and example(s).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_with_example" / "output.py",
+        extra_args=["--use-field-description", "--use-field-description-example"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--use-inline-field-description", "--use-field-description-example"],
+    input_schema="jsonschema/multiline_description_with_example.json",
+    cli_args=["--use-inline-field-description", "--use-field-description-example"],
+    golden_output="main_kr/main_use_inline_field_description_with_example/output.py",
+    related_options=["--use-field-description"],
+)
+@freeze_time("2022-11-11")
+def test_main_use_inline_field_description_with_example(output_file: Path) -> None:
+    """Add field descriptions and examples to docstrings with inline description.
+
+    When both `--use-inline-field-description` and `--use-field-description-example` are used,
+    multi-line descriptions and examples are included in the docstring.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiline_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description_with_example" / "output.py",
+        extra_args=["--use-inline-field-description", "--use-field-description-example"],
+    )
+
+
+@freeze_time("2022-11-11")
+def test_main_use_inline_field_description_example_only(output_file: Path) -> None:
+    """Test single-line description with use_inline_field_description and use_field_description_example.
+
+    When both flags are used with a single-line description, only the example
+    appears in the docstring (the single-line description stays in Field()).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "single_line_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_inline_field_description_example_only" / "output.py",
+        extra_args=["--use-inline-field-description", "--use-field-description-example"],
+    )
+
+
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example_multiple(output_file: Path) -> None:
+    """Test multiple examples in docstring.
+
+    When a field has multiple examples, they are formatted as a bulleted list.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_examples.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example_multiple" / "output.py",
+        extra_args=["--use-field-description-example"],
     )
 
 
@@ -1424,6 +1551,41 @@ def test_http_query_parameters(output_file: Path) -> None:
         params = call_kwargs["params"]
         assert ("version", "v2") in params
         assert ("format", "json") in params
+
+
+@pytest.mark.cli_doc(
+    options=["--http-timeout"],
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--url", "https://api.example.com/schema.json", "--http-timeout", "60"],
+    golden_output="main_kr/url_with_headers/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_timeout(output_file: Path) -> None:
+    """Set timeout for HTTP requests to remote hosts.
+
+    The `--http-timeout` flag sets the timeout in seconds for HTTP requests
+    when fetching schemas from URLs. Useful for slow servers or large schemas.
+    Default is 30 seconds.
+    """
+    mock_response = Mock()
+    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+
+    with patch("httpx.get", return_value=mock_response) as mock_get:
+        return_code = main([
+            "--url",
+            "https://api.example.com/schema.json",
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--http-timeout",
+            "60",
+        ])
+        assert return_code == 0
+        # Verify that timeout=60 was passed to httpx.get
+        mock_get.assert_called_once()
+        call_kwargs = mock_get.call_args[1]
+        assert call_kwargs.get("timeout") == 60.0
 
 
 @pytest.mark.cli_doc(

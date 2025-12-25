@@ -1,0 +1,12 @@
+openapi: "3.0.3"
+info:
+  title: x-propertyNames Non-Dict Test
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    NonDictPropertyNames:
+      type: object
+      x-propertyNames: true
+      additionalProperties:
+        type: string

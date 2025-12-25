@@ -1,0 +1,33 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Schema Extensions Test
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      x-database-model:
+        collection: users
+      x-custom-flag: true
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+      required:
+        - id
+        - name
+    Pet:
+      type: object
+      x-database-model:
+        collection: pets
+        indexes:
+          - name
+      properties:
+        name:
+          type: string
+        species:
+          type: string
+      required:
+        - name

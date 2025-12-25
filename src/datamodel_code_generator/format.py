@@ -6,7 +6,9 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import shutil
 import subprocess  # noqa: S404
+import sys
 from enum import Enum
 from functools import cached_property, lru_cache
 from importlib import import_module
@@ -172,7 +174,7 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 class CodeFormatter:
     """Formats generated code using black, isort, ruff, and custom formatters."""
 
-    def __init__(  # noqa: PLR0912, PLR0913, PLR0917
+    def __init__(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
         self,
         python_version: PythonVersion,
         settings_path: Path | None = None,
@@ -183,6 +185,7 @@ class CodeFormatter:
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if not settings_path:
@@ -197,64 +200,75 @@ class CodeFormatter:
             else:
                 settings_path = Path.cwd()  # pragma: no cover
 
-        root = black_find_project_root((settings_path,))
-        path = root / "pyproject.toml"
-        if path.is_file():
-            pyproject_toml = load_toml(path)
-            config = pyproject_toml.get("tool", {}).get("black", {})
-        else:
-            config = {}
-
-        black = _get_black()
-        black_mode = _get_black_mode()
-        isort = _get_isort()
-
-        black_kwargs: dict[str, Any] = {}
-        if wrap_string_literal is not None:
-            experimental_string_processing = wrap_string_literal
-        elif black.__version__ < "24.1.0":
-            experimental_string_processing = config.get("experimental-string-processing")
-        else:
-            experimental_string_processing = config.get("preview", False) and (  # pragma: no cover
-                config.get("unstable", False) or "string_processing" in config.get("enable-unstable-feature", [])
-            )
-
-        if experimental_string_processing is not None:  # pragma: no cover
-            if black.__version__.startswith("19."):
-                warn(
-                    f"black doesn't support `experimental-string-processing` option"
-                    f" for wrapping string literal in {black.__version__}",
-                    stacklevel=2,
-                )
-            elif black.__version__ < "24.1.0":
-                black_kwargs["experimental_string_processing"] = experimental_string_processing
-            elif experimental_string_processing:
-                black_kwargs["preview"] = True
-                black_kwargs["unstable"] = config.get("unstable", False)
-                black_kwargs["enabled_features"] = {black_mode.Preview.string_processing}
-
-        self.black_mode = black.FileMode(
-            target_versions={_get_black_python_version_map()[python_version]},
-            line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
-            string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
-            **black_kwargs,
-        )
-
         self.settings_path: str = str(settings_path)
+        self.formatters = formatters
+        self.defer_formatting = defer_formatting
+        self.encoding = encoding
 
-        self.isort_config_kwargs: dict[str, Any] = {}
-        if known_third_party:
-            self.isort_config_kwargs["known_third_party"] = known_third_party
+        use_black = Formatter.BLACK in formatters
+        use_isort = Formatter.ISORT in formatters
 
-        if isort.__version__.startswith("4."):  # pragma: no cover
-            self.isort_config = None
+        if use_black:
+            root = black_find_project_root((settings_path,))
+            path = root / "pyproject.toml"
+            if path.is_file():
+                pyproject_toml = load_toml(path)
+                config = pyproject_toml.get("tool", {}).get("black", {})
+            else:
+                config = {}
+
+            black = _get_black()
+            black_mode = _get_black_mode()
+
+            black_kwargs: dict[str, Any] = {}
+            if wrap_string_literal is not None:
+                experimental_string_processing = wrap_string_literal
+            elif black.__version__ < "24.1.0":
+                experimental_string_processing = config.get("experimental-string-processing")
+            else:
+                experimental_string_processing = config.get("preview", False) and (  # pragma: no cover
+                    config.get("unstable", False) or "string_processing" in config.get("enable-unstable-feature", [])
+                )
+
+            if experimental_string_processing is not None:  # pragma: no cover
+                if black.__version__.startswith("19."):
+                    warn(
+                        f"black doesn't support `experimental-string-processing` option"
+                        f" for wrapping string literal in {black.__version__}",
+                        stacklevel=2,
+                    )
+                elif black.__version__ < "24.1.0":
+                    black_kwargs["experimental_string_processing"] = experimental_string_processing
+                elif experimental_string_processing:
+                    black_kwargs["preview"] = True
+                    black_kwargs["unstable"] = config.get("unstable", False)
+                    black_kwargs["enabled_features"] = {black_mode.Preview.string_processing}
+
+            self.black_mode = black.FileMode(
+                target_versions={_get_black_python_version_map()[python_version]},
+                line_length=config.get("line-length", black.DEFAULT_LINE_LENGTH),
+                string_normalization=not skip_string_normalization or not config.get("skip-string-normalization", True),
+                **black_kwargs,
+            )
         else:
-            self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
+            self.black_mode = None  # type: ignore[assignment]
+
+        if use_isort:
+            isort = _get_isort()
+            self.isort_config_kwargs: dict[str, Any] = {}
+            if known_third_party:
+                self.isort_config_kwargs["known_third_party"] = known_third_party
+
+            if isort.__version__.startswith("4."):  # pragma: no cover
+                self.isort_config = None
+            else:
+                self.isort_config = isort.Config(settings_path=self.settings_path, **self.isort_config_kwargs)
+        else:
+            self.isort_config_kwargs = {}
+            self.isort_config = None
 
         self.custom_formatters_kwargs = custom_formatters_kwargs or {}
         self.custom_formatters = self._check_custom_formatters(custom_formatters)
-        self.encoding = encoding
-        self.formatters = formatters
 
     def _load_custom_formatter(self, custom_formatter_import: str) -> CustomCodeFormatter:
         """Load and instantiate a custom formatter from a module path."""
@@ -289,11 +303,15 @@ class CodeFormatter:
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
 
-        if Formatter.RUFF_CHECK in self.formatters:
-            code = self.apply_ruff_lint(code)
-
-        if Formatter.RUFF_FORMAT in self.formatters:
-            code = self.apply_ruff_formatter(code)
+        if not self.defer_formatting:
+            has_ruff_check = Formatter.RUFF_CHECK in self.formatters
+            has_ruff_format = Formatter.RUFF_FORMAT in self.formatters
+            if has_ruff_check and has_ruff_format:
+                code = self.apply_ruff_check_and_format(code)
+            elif has_ruff_check:
+                code = self.apply_ruff_lint(code)
+            elif has_ruff_format:
+                code = self.apply_ruff_formatter(code)
 
         for formatter in self.custom_formatters:
             code = formatter.apply(code)
@@ -330,6 +348,41 @@ class CodeFormatter:
         )
         return result.stdout.decode(self.encoding)
 
+    def apply_ruff_check_and_format(self, code: str) -> str:
+        """Run ruff check and format in a single pipeline for better performance."""
+        ruff_path = self._find_ruff_path()
+        check_proc = subprocess.Popen(  # noqa: S603
+            [ruff_path, "check", "--fix", "-"],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.settings_path,
+        )
+        format_proc = subprocess.Popen(  # noqa: S603
+            [ruff_path, "format", "-"],
+            stdin=check_proc.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=self.settings_path,
+        )
+        if check_proc.stdout:  # pragma: no branch
+            check_proc.stdout.close()
+        check_proc.stdin.write(code.encode(self.encoding))  # type: ignore[union-attr]
+        check_proc.stdin.close()  # type: ignore[union-attr]
+        stdout, _ = format_proc.communicate()
+        check_proc.wait()
+        return stdout.decode(self.encoding)
+
+    @staticmethod
+    def _find_ruff_path() -> str:
+        """Find ruff executable path, checking virtual environment first."""
+        bin_dir = Path(sys.executable).parent
+        ruff_name = "ruff.exe" if sys.platform == "win32" else "ruff"
+        ruff_in_venv = bin_dir / ruff_name
+        if ruff_in_venv.exists():
+            return str(ruff_in_venv)
+        return shutil.which("ruff") or "ruff"  # pragma: no cover
+
     def apply_isort(self, code: str) -> str:
         """Sort imports using isort."""
         isort = _get_isort()
@@ -340,6 +393,23 @@ class CodeFormatter:
                 **self.isort_config_kwargs,
             ).output
         return isort.code(code, config=self.isort_config)
+
+    def format_directory(self, directory: Path) -> None:
+        """Apply ruff formatting to all Python files in a directory."""
+        if Formatter.RUFF_CHECK in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "check", "--fix", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
+        if Formatter.RUFF_FORMAT in self.formatters:
+            subprocess.run(  # noqa: S603
+                ("ruff", "format", str(directory)),
+                capture_output=True,
+                check=False,
+                cwd=self.settings_path,
+            )
 
 
 class CustomCodeFormatter:

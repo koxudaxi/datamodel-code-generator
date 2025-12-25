@@ -87,6 +87,7 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -116,6 +117,7 @@ class Pet(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 
@@ -153,6 +155,7 @@ class User(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 
@@ -187,6 +190,7 @@ class Pet(BaseModel):
         verify=True,
         follow_redirects=True,
         params=None,
+        timeout=30.0,
     )
 
 
@@ -918,12 +922,15 @@ def test_has_ref_with_schema_keywords_extras_with_extension_keys() -> None:
     self-referencing schemas.
     """
     # x-* extensions are vendor extensions, should not trigger merge
-    obj = JsonSchemaObject.parse_obj({
-        "$ref": "#/$defs/Base",
-        "deprecated": False,  # metadata-only field
-        "x-internalAPI": False,  # extension field
-        "x-custom-field": "value",  # another extension field
-    })
+    obj = model_validate(
+        JsonSchemaObject,
+        {
+            "$ref": "#/$defs/Base",
+            "deprecated": False,  # metadata-only field
+            "x-internalAPI": False,  # extension field
+            "x-custom-field": "value",  # another extension field
+        },
+    )
     # Verify extras contains extension keys
     assert obj.extras
     assert "x-internalAPI" in obj.extras

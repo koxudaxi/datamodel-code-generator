@@ -1,6 +1,6 @@
 {%- if description %}
 """
-{{ description | indent(4) }}
+{{ description | escape_docstring | indent(4) }}
 """
 {%- endif %}
 {{ class_name }} = TypedDict('{{ class_name }}', {
@@ -8,7 +8,7 @@
     '{{ field.key }}': {{ field.type_hint }},
     {%- if field.docstring %}
     """
-    {{ field.docstring | indent(4) }}
+    {{ field.docstring | escape_docstring | indent(4) }}
     """
 {%- if field.use_inline_field_description and not loop.last %}
 

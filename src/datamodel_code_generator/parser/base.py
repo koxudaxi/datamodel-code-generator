@@ -27,6 +27,7 @@ from datamodel_code_generator import (
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     Error,
     FieldTypeCollisionStrategy,
     ModuleSplitMode,
@@ -710,6 +711,7 @@ class Parser(ABC):
         base_path: Path | None = None,
         use_schema_description: bool = False,
         use_field_description: bool = False,
+        use_field_description_example: bool = False,
         use_attribute_docstrings: bool = False,
         use_inline_field_description: bool = False,
         use_default_kwarg: bool = False,
@@ -741,6 +743,7 @@ class Parser(ABC):
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
+        http_timeout: float | None = None,
         use_annotated: bool = False,
         use_serialize_as_any: bool = False,
         use_non_positive_negative_number_constrained_types: bool = False,
@@ -750,6 +753,7 @@ class Parser(ABC):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
         collapse_reuse_models: bool = False,
         skip_root_model: bool = False,
         use_type_alias: bool = False,
@@ -776,6 +780,7 @@ class Parser(ABC):
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
         formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        defer_formatting: bool = False,
         parent_scoped_naming: bool = False,
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix: dict[str, str] | None = None,
@@ -827,6 +832,7 @@ class Parser(ABC):
         self.force_optional_for_required_fields: bool = force_optional_for_required_fields
         self.use_schema_description: bool = use_schema_description
         self.use_field_description: bool = use_field_description
+        self.use_field_description_example: bool = use_field_description_example
         self.use_inline_field_description: bool = use_inline_field_description
         self.use_default_kwarg: bool = use_default_kwarg
         self.reuse_model: bool = reuse_model
@@ -929,6 +935,7 @@ class Parser(ABC):
         self.http_headers: Sequence[tuple[str, str]] | None = http_headers
         self.http_query_parameters: Sequence[tuple[str, str]] | None = http_query_parameters
         self.http_ignore_tls: bool = http_ignore_tls
+        self.http_timeout: float | None = http_timeout
         self.use_annotated: bool = use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
@@ -938,6 +945,7 @@ class Parser(ABC):
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
+        self.collapse_root_models_name_strategy = collapse_root_models_name_strategy
         self.collapse_reuse_models = collapse_reuse_models
         self.skip_root_model = skip_root_model
         self.use_type_alias = use_type_alias
@@ -951,6 +959,7 @@ class Parser(ABC):
         self.treat_dot_as_module = treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = default_field_extras
         self.formatters: list[Formatter] = formatters
+        self.defer_formatting: bool = defer_formatting
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
         self.type_overrides: dict[str, str] = type_overrides or {}
         self._type_override_imports: dict[str, Import] = {
@@ -1048,12 +1057,13 @@ class Parser(ABC):
         return custom_base_path or self.base_class
 
     def _get_text_from_url(self, url: str) -> str:
-        from datamodel_code_generator.http import get_body  # noqa: PLC0415
+        from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
+        timeout = self.http_timeout if self.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
         return self.remote_text_cache.get_or_put(
             url,
             default_factory=lambda _url: get_body(
-                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters
+                url, self.http_headers, self.http_ignore_tls, self.http_query_parameters, timeout
             ),
         )
 
@@ -1087,10 +1097,15 @@ class Parser(ABC):
         idx = models.index(original)
         models[idx] = replacement
 
-    def __delete_duplicate_models(self, models: list[DataModel]) -> None:
+    def __delete_duplicate_models(self, models: list[DataModel]) -> None:  # noqa: PLR0912
         model_class_names: dict[str, DataModel] = {}
         model_to_duplicate_models: defaultdict[DataModel, list[DataModel]] = defaultdict(list)
-        for model in models.copy():
+        # Use set for O(1) membership checks and collect removals for batch processing
+        models_set = set(models)
+        models_to_remove: set[DataModel] = set()
+        for model in models:
+            if model in models_to_remove:  # pragma: no cover
+                continue
             if isinstance(model, self.data_model_root_type):
                 root_data_type = model.fields[0].data_type
 
@@ -1100,12 +1115,12 @@ class Parser(ABC):
                     root_data_type.reference
                     and not root_data_type.is_dict
                     and not root_data_type.is_list
-                    and root_data_type.reference.source in models
+                    and root_data_type.reference.source in models_set
                     and root_data_type.reference.name
                     == self.model_resolver.get_class_name(model.reference.original_name, unique=False).name
                 ):
                     model.reference.replace_children_references(root_data_type.reference)
-                    models.remove(model)
+                    models_to_remove.add(model)
                     for data_type in model.all_data_types:
                         if data_type.reference:
                             data_type.remove_reference()
@@ -1134,7 +1149,10 @@ class Parser(ABC):
                     child.base_classes = list(
                         {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
                     )
-                models.remove(duplicate_model)
+                models_to_remove.add(duplicate_model)
+        # Batch removal: O(n) instead of O(n²)
+        if models_to_remove:
+            models[:] = [m for m in models if m not in models_to_remove]
 
     def __replace_duplicate_name_in_module(self, models: list[DataModel]) -> None:
         scoped_model_resolver = ModelResolver(
@@ -1610,32 +1628,44 @@ class Parser(ABC):
             ),
         )
 
+        module_models_sets: dict[tuple[str, ...], set[DataModel]] = {
+            module: set(models) for module, models in module_models
+        }
+        models_to_remove: dict[tuple[str, ...], set[DataModel]] = defaultdict(set)
+
         for duplicate_module, duplicate_model, _, canonical_model in duplicates:
             shared_ref = canonical_to_shared_ref[canonical_model]
+            models_set = module_models_sets.get(duplicate_module)
+            if not models_set or duplicate_model not in models_set:  # pragma: no cover
+                msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
+                raise RuntimeError(msg)
+
             for module, models in module_models:
-                if module != duplicate_module or duplicate_model not in models:
+                if module != duplicate_module:
                     continue
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
                     duplicate_model.replace_children_in_models(models, shared_ref)
-                    models.remove(duplicate_model)
+                    models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
                     if shared_ref.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, duplicate_model, inherited_model)
                 break
-            else:  # pragma: no cover
-                msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
-                raise RuntimeError(msg)
 
         for canonical in canonical_models_seen:
-            for _module, models in module_models:
-                if canonical in models:
-                    models.remove(canonical)
+            for module, models_set in module_models_sets.items():
+                if canonical in models_set:
+                    models_to_remove[module].add(canonical)
                     break
             else:  # pragma: no cover
                 msg = f"Canonical model {canonical.name} not found in any module"
                 raise RuntimeError(msg)
+
+        for module, models in module_models:
+            to_remove = models_to_remove.get(module)
+            if to_remove:
+                models[:] = [m for m in models if m not in to_remove]
 
         return (shared_module,), shared_models
 
@@ -1655,7 +1685,7 @@ class Parser(ABC):
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
 
-    def __collapse_root_models(  # noqa: PLR0912
+    def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
         unused_models: list[DataModel],
@@ -1687,7 +1717,66 @@ class Parser(ABC):
                         continue  # pragma: no cover
 
                     if root_type_field.data_type.reference:
-                        # If the root type field is a reference, we aren't able to collapse it yet.
+                        if self.collapse_root_models_name_strategy is None:
+                            continue
+
+                        inner_reference = root_type_field.data_type.reference
+                        inner_model = cast("DataModel", inner_reference.source)
+
+                        if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
+                            root_model_wrappers = [
+                                parent_model
+                                for child in inner_reference.children
+                                if isinstance(child, DataType)
+                                and (parent_model := get_most_of_parent(child, DataModel))
+                                and isinstance(parent_model, self.data_model_root_type)
+                            ]
+
+                            if len(root_model_wrappers) > 1:
+                                warn(
+                                    f"Cannot apply 'parent' strategy for '{inner_model.class_name}' - "
+                                    f"it is referenced by multiple root models: "
+                                    f"{[m.class_name for m in root_model_wrappers]}. Skipping collapse.",
+                                    stacklevel=2,
+                                )
+                                continue
+
+                            direct_refs = [
+                                c
+                                for c in inner_reference.children
+                                if isinstance(c, DataType)
+                                and (parent_model := get_most_of_parent(c, DataModel)) is not None
+                                and parent_model is not root_type_model
+                                and not isinstance(parent_model, self.data_model_root_type)
+                            ]
+
+                            if direct_refs:
+                                warn(
+                                    f"Cannot apply 'parent' strategy for '{inner_model.class_name}' - "
+                                    f"it is directly referenced by non-wrapper models. Skipping collapse.",
+                                    stacklevel=2,
+                                )
+                                continue
+
+                            inner_model.class_name = root_type_model.class_name
+                            inner_model.reference.name = root_type_model.class_name
+                            inner_model.set_reference_path(root_type_model.reference.path)
+
+                        assert isinstance(root_type_model, DataModel)
+
+                        root_type_model.reference.children = [
+                            c
+                            for c in root_type_model.reference.children
+                            if c is not data_type and getattr(c, "parent", None)
+                        ]
+
+                        data_type.reference = inner_reference
+                        inner_reference.children.append(data_type)
+
+                        imports.remove_referenced_imports(root_type_model.path)
+                        if not root_type_model.reference.children:
+                            unused_models.append(root_type_model)
+
                         continue
 
                     # set copied data_type
@@ -2701,6 +2790,7 @@ class Parser(ABC):
                 custom_formatters_kwargs=self.custom_formatters_kwargs,
                 encoding=self.encoding,
                 formatters=self.formatters,
+                defer_formatting=self.defer_formatting,
             )
 
         return ParseConfig(

@@ -1,0 +1,4210 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DuplicateNamesSchema",
+  "description": "Schema with duplicate names in nested definitions",
+  "definitions": {
+    "Container00": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container00Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container00Config"
+        }
+      }
+    },
+    "Container00Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container0_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container00Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container01": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container01Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container01Config"
+        }
+      }
+    },
+    "Container01Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container1_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container01Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container02": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container02Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container02Config"
+        }
+      }
+    },
+    "Container02Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container2_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container02Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container03": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container03Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container03Config"
+        }
+      }
+    },
+    "Container03Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container3_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container03Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container04": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container04Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container04Config"
+        }
+      }
+    },
+    "Container04Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container4_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container04Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container05": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container05Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container05Config"
+        }
+      }
+    },
+    "Container05Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container5_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container05Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container06": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container06Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container06Config"
+        }
+      }
+    },
+    "Container06Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container6_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container06Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container07": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container07Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container07Config"
+        }
+      }
+    },
+    "Container07Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container7_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container07Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container08": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container08Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container08Config"
+        }
+      }
+    },
+    "Container08Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container8_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container08Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container09": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container09Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container09Config"
+        }
+      }
+    },
+    "Container09Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container9_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container09Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container10": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container10Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container10Config"
+        }
+      }
+    },
+    "Container10Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container10_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container10Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container11": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container11Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container11Config"
+        }
+      }
+    },
+    "Container11Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container11_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container11Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container12": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container12Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container12Config"
+        }
+      }
+    },
+    "Container12Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container12_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container12Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container13": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container13Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container13Config"
+        }
+      }
+    },
+    "Container13Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container13_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container13Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container14": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container14Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container14Config"
+        }
+      }
+    },
+    "Container14Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container14_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container14Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container15": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container15Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container15Config"
+        }
+      }
+    },
+    "Container15Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container15_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container15Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container16": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container16Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container16Config"
+        }
+      }
+    },
+    "Container16Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container16_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container16Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container17": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container17Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container17Config"
+        }
+      }
+    },
+    "Container17Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container17_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container17Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container18": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container18Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container18Config"
+        }
+      }
+    },
+    "Container18Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container18_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container18Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container19": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container19Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container19Config"
+        }
+      }
+    },
+    "Container19Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container19_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container19Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container20": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container20Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container20Config"
+        }
+      }
+    },
+    "Container20Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container20_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container20Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container21": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container21Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container21Config"
+        }
+      }
+    },
+    "Container21Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container21_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container21Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container22": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container22Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container22Config"
+        }
+      }
+    },
+    "Container22Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container22_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container22Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container23": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container23Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container23Config"
+        }
+      }
+    },
+    "Container23Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container23_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container23Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container24": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container24Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container24Config"
+        }
+      }
+    },
+    "Container24Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container24_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container24Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container25": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container25Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container25Config"
+        }
+      }
+    },
+    "Container25Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container25_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container25Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container26": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container26Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container26Config"
+        }
+      }
+    },
+    "Container26Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container26_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container26Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container27": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container27Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container27Config"
+        }
+      }
+    },
+    "Container27Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container27_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container27Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container28": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container28Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container28Config"
+        }
+      }
+    },
+    "Container28Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container28_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container28Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container29": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container29Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container29Config"
+        }
+      }
+    },
+    "Container29Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container29_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container29Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container30": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container30Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container30Config"
+        }
+      }
+    },
+    "Container30Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container30_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container30Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container31": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container31Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container31Config"
+        }
+      }
+    },
+    "Container31Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container31_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container31Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container32": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container32Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container32Config"
+        }
+      }
+    },
+    "Container32Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container32_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container32Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container33": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container33Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container33Config"
+        }
+      }
+    },
+    "Container33Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container33_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container33Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container34": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container34Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container34Config"
+        }
+      }
+    },
+    "Container34Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container34_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container34Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container35": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container35Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container35Config"
+        }
+      }
+    },
+    "Container35Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container35_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container35Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container36": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container36Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container36Config"
+        }
+      }
+    },
+    "Container36Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container36_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container36Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container37": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container37Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container37Config"
+        }
+      }
+    },
+    "Container37Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container37_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container37Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container38": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container38Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container38Config"
+        }
+      }
+    },
+    "Container38Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container38_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container38Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container39": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container39Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container39Config"
+        }
+      }
+    },
+    "Container39Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container39_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container39Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container40": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container40Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container40Config"
+        }
+      }
+    },
+    "Container40Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container40_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container40Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container41": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container41Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container41Config"
+        }
+      }
+    },
+    "Container41Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container41_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container41Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container42": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container42Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container42Config"
+        }
+      }
+    },
+    "Container42Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container42_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container42Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container43": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container43Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container43Config"
+        }
+      }
+    },
+    "Container43Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container43_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container43Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container44": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container44Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container44Config"
+        }
+      }
+    },
+    "Container44Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container44_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container44Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container45": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container45Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container45Config"
+        }
+      }
+    },
+    "Container45Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container45_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container45Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container46": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container46Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container46Config"
+        }
+      }
+    },
+    "Container46Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container46_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container46Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container47": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container47Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container47Config"
+        }
+      }
+    },
+    "Container47Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container47_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container47Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container48": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container48Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container48Config"
+        }
+      }
+    },
+    "Container48Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container48_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container48Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container49": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container49Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container49Config"
+        }
+      }
+    },
+    "Container49Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container49_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container49Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container50": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container50Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container50Config"
+        }
+      }
+    },
+    "Container50Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container50_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container50Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container51": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container51Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container51Config"
+        }
+      }
+    },
+    "Container51Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container51_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container51Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container52": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container52Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container52Config"
+        }
+      }
+    },
+    "Container52Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container52_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container52Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container53": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container53Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container53Config"
+        }
+      }
+    },
+    "Container53Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container53_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container53Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container54": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container54Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container54Config"
+        }
+      }
+    },
+    "Container54Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container54_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container54Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container55": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container55Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container55Config"
+        }
+      }
+    },
+    "Container55Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container55_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container55Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container56": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container56Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container56Config"
+        }
+      }
+    },
+    "Container56Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container56_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container56Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container57": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container57Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container57Config"
+        }
+      }
+    },
+    "Container57Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container57_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container57Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container58": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container58Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container58Config"
+        }
+      }
+    },
+    "Container58Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container58_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container58Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container59": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container59Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container59Config"
+        }
+      }
+    },
+    "Container59Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container59_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container59Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container60": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container60Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container60Config"
+        }
+      }
+    },
+    "Container60Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container60_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container60Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container61": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container61Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container61Config"
+        }
+      }
+    },
+    "Container61Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container61_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container61Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container62": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container62Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container62Config"
+        }
+      }
+    },
+    "Container62Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container62_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container62Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container63": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container63Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container63Config"
+        }
+      }
+    },
+    "Container63Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container63_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container63Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container64": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container64Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container64Config"
+        }
+      }
+    },
+    "Container64Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container64_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container64Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container65": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container65Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container65Config"
+        }
+      }
+    },
+    "Container65Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container65_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container65Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container66": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container66Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container66Config"
+        }
+      }
+    },
+    "Container66Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container66_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container66Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container67": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container67Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container67Config"
+        }
+      }
+    },
+    "Container67Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container67_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container67Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container68": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container68Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container68Config"
+        }
+      }
+    },
+    "Container68Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container68_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container68Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container69": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container69Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container69Config"
+        }
+      }
+    },
+    "Container69Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container69_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container69Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container70": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container70Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container70Config"
+        }
+      }
+    },
+    "Container70Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container70_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container70Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container71": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container71Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container71Config"
+        }
+      }
+    },
+    "Container71Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container71_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container71Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container72": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container72Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container72Config"
+        }
+      }
+    },
+    "Container72Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container72_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container72Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container73": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container73Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container73Config"
+        }
+      }
+    },
+    "Container73Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container73_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container73Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container74": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container74Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container74Config"
+        }
+      }
+    },
+    "Container74Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container74_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container74Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container75": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container75Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container75Config"
+        }
+      }
+    },
+    "Container75Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container75_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container75Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container76": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container76Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container76Config"
+        }
+      }
+    },
+    "Container76Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container76_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container76Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container77": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container77Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container77Config"
+        }
+      }
+    },
+    "Container77Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container77_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container77Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container78": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container78Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container78Config"
+        }
+      }
+    },
+    "Container78Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container78_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container78Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container79": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container79Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container79Config"
+        }
+      }
+    },
+    "Container79Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container79_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container79Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container80": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container80Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container80Config"
+        }
+      }
+    },
+    "Container80Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container80_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container80Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container81": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container81Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container81Config"
+        }
+      }
+    },
+    "Container81Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container81_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container81Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container82": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container82Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container82Config"
+        }
+      }
+    },
+    "Container82Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container82_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container82Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container83": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container83Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container83Config"
+        }
+      }
+    },
+    "Container83Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container83_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container83Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container84": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container84Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container84Config"
+        }
+      }
+    },
+    "Container84Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container84_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container84Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container85": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container85Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container85Config"
+        }
+      }
+    },
+    "Container85Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container85_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container85Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container86": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container86Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container86Config"
+        }
+      }
+    },
+    "Container86Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container86_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container86Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container87": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container87Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container87Config"
+        }
+      }
+    },
+    "Container87Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container87_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container87Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container88": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container88Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container88Config"
+        }
+      }
+    },
+    "Container88Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container88_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container88Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container89": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container89Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container89Config"
+        }
+      }
+    },
+    "Container89Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container89_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container89Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container90": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container90Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container90Config"
+        }
+      }
+    },
+    "Container90Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container90_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container90Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container91": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container91Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container91Config"
+        }
+      }
+    },
+    "Container91Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container91_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container91Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container92": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container92Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container92Config"
+        }
+      }
+    },
+    "Container92Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container92_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container92Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container93": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container93Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container93Config"
+        }
+      }
+    },
+    "Container93Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container93_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container93Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container94": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container94Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container94Config"
+        }
+      }
+    },
+    "Container94Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container94_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container94Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container95": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container95Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container95Config"
+        }
+      }
+    },
+    "Container95Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container95_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container95Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container96": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container96Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container96Config"
+        }
+      }
+    },
+    "Container96Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container96_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container96Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container97": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container97Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container97Config"
+        }
+      }
+    },
+    "Container97Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container97_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container97Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container98": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container98Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container98Config"
+        }
+      }
+    },
+    "Container98Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container98_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container98Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    },
+    "Container99": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Container99Item"
+          }
+        },
+        "config": {
+          "$ref": "#/definitions/Container99Config"
+        }
+      }
+    },
+    "Container99Item": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "data": {
+          "type": "string"
+        },
+        "container99_specific": {
+          "type": "string"
+        }
+      }
+    },
+    "Container99Config": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "settings": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "container_00": {
+      "$ref": "#/definitions/Container00"
+    },
+    "container_01": {
+      "$ref": "#/definitions/Container01"
+    },
+    "container_02": {
+      "$ref": "#/definitions/Container02"
+    },
+    "container_03": {
+      "$ref": "#/definitions/Container03"
+    },
+    "container_04": {
+      "$ref": "#/definitions/Container04"
+    },
+    "container_05": {
+      "$ref": "#/definitions/Container05"
+    },
+    "container_06": {
+      "$ref": "#/definitions/Container06"
+    },
+    "container_07": {
+      "$ref": "#/definitions/Container07"
+    },
+    "container_08": {
+      "$ref": "#/definitions/Container08"
+    },
+    "container_09": {
+      "$ref": "#/definitions/Container09"
+    },
+    "container_10": {
+      "$ref": "#/definitions/Container10"
+    },
+    "container_11": {
+      "$ref": "#/definitions/Container11"
+    },
+    "container_12": {
+      "$ref": "#/definitions/Container12"
+    },
+    "container_13": {
+      "$ref": "#/definitions/Container13"
+    },
+    "container_14": {
+      "$ref": "#/definitions/Container14"
+    },
+    "container_15": {
+      "$ref": "#/definitions/Container15"
+    },
+    "container_16": {
+      "$ref": "#/definitions/Container16"
+    },
+    "container_17": {
+      "$ref": "#/definitions/Container17"
+    },
+    "container_18": {
+      "$ref": "#/definitions/Container18"
+    },
+    "container_19": {
+      "$ref": "#/definitions/Container19"
+    },
+    "container_20": {
+      "$ref": "#/definitions/Container20"
+    },
+    "container_21": {
+      "$ref": "#/definitions/Container21"
+    },
+    "container_22": {
+      "$ref": "#/definitions/Container22"
+    },
+    "container_23": {
+      "$ref": "#/definitions/Container23"
+    },
+    "container_24": {
+      "$ref": "#/definitions/Container24"
+    },
+    "container_25": {
+      "$ref": "#/definitions/Container25"
+    },
+    "container_26": {
+      "$ref": "#/definitions/Container26"
+    },
+    "container_27": {
+      "$ref": "#/definitions/Container27"
+    },
+    "container_28": {
+      "$ref": "#/definitions/Container28"
+    },
+    "container_29": {
+      "$ref": "#/definitions/Container29"
+    },
+    "container_30": {
+      "$ref": "#/definitions/Container30"
+    },
+    "container_31": {
+      "$ref": "#/definitions/Container31"
+    },
+    "container_32": {
+      "$ref": "#/definitions/Container32"
+    },
+    "container_33": {
+      "$ref": "#/definitions/Container33"
+    },
+    "container_34": {
+      "$ref": "#/definitions/Container34"
+    },
+    "container_35": {
+      "$ref": "#/definitions/Container35"
+    },
+    "container_36": {
+      "$ref": "#/definitions/Container36"
+    },
+    "container_37": {
+      "$ref": "#/definitions/Container37"
+    },
+    "container_38": {
+      "$ref": "#/definitions/Container38"
+    },
+    "container_39": {
+      "$ref": "#/definitions/Container39"
+    },
+    "container_40": {
+      "$ref": "#/definitions/Container40"
+    },
+    "container_41": {
+      "$ref": "#/definitions/Container41"
+    },
+    "container_42": {
+      "$ref": "#/definitions/Container42"
+    },
+    "container_43": {
+      "$ref": "#/definitions/Container43"
+    },
+    "container_44": {
+      "$ref": "#/definitions/Container44"
+    },
+    "container_45": {
+      "$ref": "#/definitions/Container45"
+    },
+    "container_46": {
+      "$ref": "#/definitions/Container46"
+    },
+    "container_47": {
+      "$ref": "#/definitions/Container47"
+    },
+    "container_48": {
+      "$ref": "#/definitions/Container48"
+    },
+    "container_49": {
+      "$ref": "#/definitions/Container49"
+    },
+    "container_50": {
+      "$ref": "#/definitions/Container50"
+    },
+    "container_51": {
+      "$ref": "#/definitions/Container51"
+    },
+    "container_52": {
+      "$ref": "#/definitions/Container52"
+    },
+    "container_53": {
+      "$ref": "#/definitions/Container53"
+    },
+    "container_54": {
+      "$ref": "#/definitions/Container54"
+    },
+    "container_55": {
+      "$ref": "#/definitions/Container55"
+    },
+    "container_56": {
+      "$ref": "#/definitions/Container56"
+    },
+    "container_57": {
+      "$ref": "#/definitions/Container57"
+    },
+    "container_58": {
+      "$ref": "#/definitions/Container58"
+    },
+    "container_59": {
+      "$ref": "#/definitions/Container59"
+    },
+    "container_60": {
+      "$ref": "#/definitions/Container60"
+    },
+    "container_61": {
+      "$ref": "#/definitions/Container61"
+    },
+    "container_62": {
+      "$ref": "#/definitions/Container62"
+    },
+    "container_63": {
+      "$ref": "#/definitions/Container63"
+    },
+    "container_64": {
+      "$ref": "#/definitions/Container64"
+    },
+    "container_65": {
+      "$ref": "#/definitions/Container65"
+    },
+    "container_66": {
+      "$ref": "#/definitions/Container66"
+    },
+    "container_67": {
+      "$ref": "#/definitions/Container67"
+    },
+    "container_68": {
+      "$ref": "#/definitions/Container68"
+    },
+    "container_69": {
+      "$ref": "#/definitions/Container69"
+    },
+    "container_70": {
+      "$ref": "#/definitions/Container70"
+    },
+    "container_71": {
+      "$ref": "#/definitions/Container71"
+    },
+    "container_72": {
+      "$ref": "#/definitions/Container72"
+    },
+    "container_73": {
+      "$ref": "#/definitions/Container73"
+    },
+    "container_74": {
+      "$ref": "#/definitions/Container74"
+    },
+    "container_75": {
+      "$ref": "#/definitions/Container75"
+    },
+    "container_76": {
+      "$ref": "#/definitions/Container76"
+    },
+    "container_77": {
+      "$ref": "#/definitions/Container77"
+    },
+    "container_78": {
+      "$ref": "#/definitions/Container78"
+    },
+    "container_79": {
+      "$ref": "#/definitions/Container79"
+    },
+    "container_80": {
+      "$ref": "#/definitions/Container80"
+    },
+    "container_81": {
+      "$ref": "#/definitions/Container81"
+    },
+    "container_82": {
+      "$ref": "#/definitions/Container82"
+    },
+    "container_83": {
+      "$ref": "#/definitions/Container83"
+    },
+    "container_84": {
+      "$ref": "#/definitions/Container84"
+    },
+    "container_85": {
+      "$ref": "#/definitions/Container85"
+    },
+    "container_86": {
+      "$ref": "#/definitions/Container86"
+    },
+    "container_87": {
+      "$ref": "#/definitions/Container87"
+    },
+    "container_88": {
+      "$ref": "#/definitions/Container88"
+    },
+    "container_89": {
+      "$ref": "#/definitions/Container89"
+    },
+    "container_90": {
+      "$ref": "#/definitions/Container90"
+    },
+    "container_91": {
+      "$ref": "#/definitions/Container91"
+    },
+    "container_92": {
+      "$ref": "#/definitions/Container92"
+    },
+    "container_93": {
+      "$ref": "#/definitions/Container93"
+    },
+    "container_94": {
+      "$ref": "#/definitions/Container94"
+    },
+    "container_95": {
+      "$ref": "#/definitions/Container95"
+    },
+    "container_96": {
+      "$ref": "#/definitions/Container96"
+    },
+    "container_97": {
+      "$ref": "#/definitions/Container97"
+    },
+    "container_98": {
+      "$ref": "#/definitions/Container98"
+    },
+    "container_99": {
+      "$ref": "#/definitions/Container99"
+    }
+  }
+}

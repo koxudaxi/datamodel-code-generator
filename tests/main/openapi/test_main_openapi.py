@@ -29,6 +29,7 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     BLACK_PY313_SKIP,
@@ -604,6 +605,30 @@ def test_main_openapi_custom_template_dir(
                 str(DATA_PATH / "templates"),
                 "--extra-template-data",
                 str(OPEN_API_DATA_PATH / "extra_data.json"),
+            ],
+            expected_stderr=inferred_message.format("openapi") + "\n",
+        )
+
+
+def test_main_openapi_schema_extensions(
+    capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test that schema extensions (x-* fields) are passed to custom templates."""
+    model_base._get_environment.cache_clear()
+    model_base._get_template_with_custom_dir.cache_clear()
+    monkeypatch.chdir(tmp_path)
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_extensions.yaml",
+            output_path=None,
+            expected_stdout_path=EXPECTED_OPENAPI_PATH / "schema_extensions.py",
+            capsys=capsys,
+            input_file_type=None,
+            extra_args=[
+                "--custom-template-dir",
+                str(DATA_PATH / "templates_extensions"),
+                "--output-model-type",
+                "pydantic_v2.BaseModel",
             ],
             expected_stderr=inferred_message.format("openapi") + "\n",
         )
@@ -1660,6 +1685,7 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
         call(
             "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
@@ -1667,6 +1693,7 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -1734,6 +1761,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
             verify=True,
             follow_redirects=True,
             params=None,
+            timeout=30.0,
         ),
     ])
 
@@ -4432,4 +4460,54 @@ def test_main_openapi_request_bodies_scope_with_ref(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="request_bodies_scope_with_ref.py",
         extra_args=["--openapi-scopes", "requestbodies", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_x_property_names(output_file: Path) -> None:
+    """Test x-propertyNames extension for OpenAPI 3.0 is converted to propertyNames."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_x_property_names_non_dict(output_file: Path) -> None:
+    """Test x-propertyNames with non-dict value is ignored."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names_non_dict.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names_non_dict.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_query_parameters_with_model_config(output_file: Path) -> None:
+    """Test that query parameter classes include model_config when config options are used.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/2491
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "query_parameters_with_config.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="query_parameters_with_config.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "--use-annotated",
+            "--extra-fields",
+            "forbid",
+            "--allow-population-by-field-name",
+        ],
     )

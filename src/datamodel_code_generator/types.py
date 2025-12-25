@@ -52,7 +52,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
+from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 
 T = TypeVar("T")
 SourceT = TypeVar("SourceT")
@@ -86,27 +86,29 @@ STR = "str"
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
+
+def __getattr__(name: str) -> Any:
+    """Provide lazy access to StrictTypes for backwards compatibility."""
+    if name == "StrictTypes":
+        from datamodel_code_generator.enums import StrictTypes  # noqa: PLC0415
+
+        return StrictTypes
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
 if TYPE_CHECKING:
     import builtins
     from collections.abc import Callable, Iterable, Iterator, Sequence
 
     from pydantic_core import core_schema
 
+    from datamodel_code_generator.enums import StrictTypes
     from datamodel_code_generator.model.base import DataModelFieldBase
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
-
-
-class StrictTypes(Enum):
-    """Strict type options for generated models."""
-
-    str = "str"
-    bytes = "bytes"
-    int = "int"
-    float = "float"
-    bool = "bool"
 
 
 class UnionIntFloat:
@@ -176,7 +178,12 @@ class UnionIntFloat:
 
 
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
-    """Chain multiple iterables and return as a tuple."""
+    """Chain multiple iterables and return as a tuple.
+
+    Optimized for the common case of 2 iterables to avoid chain() overhead.
+    """
+    if len(iterables) == 2:  # noqa: PLR2004
+        return (*iterables[0], *iterables[1])
     return tuple(chain(*iterables))
 
 
@@ -286,7 +293,7 @@ class Nullable(Protocol):
 class DataType(_BaseModel):
     """Represents a type in generated code with imports and references."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
@@ -294,7 +301,7 @@ class DataType(_BaseModel):
             revalidate_instances="never",
         )
     else:
-        if not TYPE_CHECKING:
+        if not TYPE_CHECKING:  # pragma: no branch
 
             @classmethod
             def model_rebuild(

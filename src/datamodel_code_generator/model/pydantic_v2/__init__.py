@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import BaseModel as _BaseModel
 
-from .base_model import BaseModel, DataModelField, UnionMode
+from datamodel_code_generator.enums import UnionMode
+
+from .base_model import BaseModel, DataModelField
 from .root_model import RootModel
 from .root_model_type_alias import RootModelTypeAlias
 from .types import DataTypeManager
@@ -45,9 +47,9 @@ class ConfigDict(_BaseModel):
 
     def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
         """Version-compatible dict method for templates."""
-        from datamodel_code_generator.util import PYDANTIC_V2  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
-        if PYDANTIC_V2:
+        if is_pydantic_v2():
             return self.model_dump(**kwargs)
         return super().dict(**kwargs)
 

@@ -104,7 +104,7 @@ type = [
   { include-group = "test" },
 ]
 docs = [
-  "zensical>=0.0.13; python_version>='3.10'",
+  "zensical>=0.0.15; python_version>='3.10'",
 ]
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
@@ -224,6 +224,7 @@ filterwarnings = [
 ]
 norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
+markers = [ "perf: marks tests as performance tests (excluded from CI benchmarks)" ]
 
 [tool.coverage]
 html.skip_covered = false

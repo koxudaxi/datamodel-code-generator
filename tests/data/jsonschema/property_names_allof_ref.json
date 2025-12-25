@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "DictWithPropertyNames": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z]+$"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "title": "Model",
+  "allOf": [
+    {
+      "$ref": "#/definitions/DictWithPropertyNames"
+    },
+    {
+      "minProperties": 1
+    }
+  ]
+}

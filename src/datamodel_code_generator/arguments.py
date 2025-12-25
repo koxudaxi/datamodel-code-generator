@@ -14,11 +14,12 @@ from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from datamodel_code_generator import (
+from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
@@ -28,12 +29,12 @@ from datamodel_code_generator import (
     OpenAPIScope,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
+    StrictTypes,
     TargetPydanticVersion,
+    UnionMode,
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser import LiteralType
-from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
     from argparse import Action
@@ -124,6 +125,12 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--http-timeout",
+    type=float,
+    default=None,
+    help="Timeout in seconds for HTTP requests to remote hosts (default: 30)",
+)
+base_options.add_argument(
     "--input",
     help="Input file/directory (default: stdin)",
 )
@@ -175,6 +182,14 @@ model_options.add_argument(
     action="store_true",
     default=None,
     help="Models generated with a root-type field will be merged into the models using that root-type model",
+)
+model_options.add_argument(
+    "--collapse-root-models-name-strategy",
+    help="Strategy for naming when collapsing root models that reference other models. "
+    "'child': Keep inner model's name (default). 'parent': Use wrapper's name for inner model. "
+    "Requires --collapse-root-models to be set.",
+    choices=[s.value for s in CollapseRootModelsNameStrategy],
+    default=None,
 )
 model_options.add_argument(
     "--collapse-reuse-models",
@@ -664,6 +679,12 @@ field_options.add_argument(
 field_options.add_argument(
     "--use-field-description",
     help="Use schema description to populate field docstring",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
+    "--use-field-description-example",
+    help="Use schema example to populate field docstring",
     action="store_true",
     default=None,
 )
