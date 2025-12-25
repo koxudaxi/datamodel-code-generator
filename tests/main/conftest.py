@@ -448,7 +448,8 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool
     output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
     is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
     if (is_pydantic_v1 and is_pydantic_v2()) or (
-        output_model_type == DataModelType.PydanticV2BaseModel.value and not is_pydantic_v2()
+        output_model_type in {DataModelType.PydanticV2BaseModel.value, DataModelType.PydanticV2Dataclass.value}
+        and not is_pydantic_v2()
     ):
         return True
     if (target_version := _parse_target_version(extra_arguments)) is None:

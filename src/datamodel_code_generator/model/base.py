@@ -205,20 +205,19 @@ class DataModelFieldBase(_BaseModel):
         if not self.default:
             self.default = const
 
-    _self_reference_cache: bool | None = None
-
     def self_reference(self) -> bool:
         """Check if field references its parent model.
 
         Result is cached after first call since parent is stable at render time.
+        Uses __dict__ for caching to avoid Pydantic v1 field assignment restrictions.
         """
-        if self._self_reference_cache is not None:
-            return self._self_reference_cache
+        if "_self_reference_cache" in self.__dict__:
+            return self.__dict__["_self_reference_cache"]
         if self.parent is None or not self.parent.reference:  # pragma: no cover
-            self._self_reference_cache = False
+            self.__dict__["_self_reference_cache"] = False
             return False
         result = self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
-        self._self_reference_cache = result
+        self.__dict__["_self_reference_cache"] = result
         return result
 
     @property
@@ -304,7 +303,7 @@ class DataModelFieldBase(_BaseModel):
 
         # Fast path: no special typing imports needed
         if not has_union and not has_optional and not needs_annotated:
-            return self.data_type.all_imports
+            return tuple(self.data_type.all_imports)
 
         imports: list[tuple[Import] | Iterator[Import]] = [
             iter(
