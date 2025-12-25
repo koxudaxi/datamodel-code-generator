@@ -665,6 +665,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.default: Any = default
         self._nullable: bool = nullable
         self._treat_dot_as_module: bool | None = treat_dot_as_module
+        self._dedup_key_cache: dict[tuple[str | None, bool], tuple[Any, ...]] = {}
 
     def _validate_fields(self, fields: list[DataModelFieldBase]) -> list[DataModelFieldBase]:
         names: set[str] = set()
@@ -691,11 +692,22 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         yield from self.fields
 
     def get_dedup_key(self, class_name: str | None = None, *, use_default: bool = True) -> tuple[Any, ...]:
-        """Generate hashable key for model deduplication."""
+        """Generate hashable key for model deduplication.
+
+        Results are cached per (class_name, use_default) combination since
+        the key computation involves expensive render() and imports calls.
+        """
+        cache_key = (class_name, use_default)
+        cached = self._dedup_key_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
 
         render_class_name = class_name if class_name is not None or not use_default else "M"
-        return tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+        result = tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+        self._dedup_key_cache[cache_key] = result
+        return result
 
     def create_reuse_model(self, base_ref: Reference) -> Self:
         """Create inherited model with empty fields pointing to base reference."""
