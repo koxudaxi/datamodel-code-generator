@@ -57,9 +57,9 @@ from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed 
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import (
-    PYDANTIC_V2,
     ConfigDict,
     field_validator,
+    is_pydantic_v2,
     load_toml,
     model_validator,
 )
@@ -112,7 +112,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 class Config(BaseModel):
     """Configuration model for code generation."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
         def get(self, item: str) -> Any:  # pragma: no cover
@@ -300,7 +300,7 @@ class Config(BaseModel):
         "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
     )
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]

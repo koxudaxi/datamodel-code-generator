@@ -78,17 +78,17 @@ from datamodel_code_generator.types import (
     UnionIntFloat,
 )
 from datamodel_code_generator.util import (
-    PYDANTIC_V2,
     BaseModel,
     field_validator,
     get_fields_set,
+    is_pydantic_v2,
     model_copy,
     model_dump,
     model_validate,
     model_validator,
 )
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     from pydantic import ConfigDict
 
 if TYPE_CHECKING:
@@ -205,7 +205,7 @@ class JsonSchemaObject(BaseModel):
     """Represent a JSON Schema object with validation and parsing capabilities."""
 
     if not TYPE_CHECKING:
-        if PYDANTIC_V2:
+        if is_pydantic_v2():
 
             @classmethod
             def get_fields(cls) -> dict[str, Any]:
@@ -366,7 +366,7 @@ class JsonSchemaObject(BaseModel):
     custom_base_path: Optional[str] = Field(default=None, alias="customBasePath")  # noqa: UP045
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),

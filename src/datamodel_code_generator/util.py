@@ -6,29 +6,16 @@ and version-compatible decorators (model_validator, field_validator).
 
 from __future__ import annotations
 
-import copy
 import re
 import warnings
 from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
 
-import pydantic
-from packaging import version
-from pydantic import BaseModel as _BaseModel
-
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-PYDANTIC_VERSION = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
-
-PYDANTIC_V2: bool = version.parse("2.0b3") <= PYDANTIC_VERSION
-PYDANTIC_V2_11: bool = version.parse("2.11") <= PYDANTIC_VERSION
-
-try:
-    from yaml import CSafeLoader as SafeLoader
-except ImportError:  # pragma: no cover
-    from yaml import SafeLoader
+    from pydantic import BaseModel as _BaseModel
 
 try:
     from tomllib import load as load_tomllib  # type: ignore[ignoreMissingImports]
@@ -42,13 +29,32 @@ def load_toml(path: Path) -> dict[str, Any]:
         return load_tomllib(f)
 
 
-SafeLoaderTemp = copy.deepcopy(SafeLoader)
-SafeLoaderTemp.yaml_constructors = copy.deepcopy(SafeLoader.yaml_constructors)
-SafeLoaderTemp.yaml_implicit_resolvers = copy.deepcopy(SafeLoader.yaml_implicit_resolvers)
-SafeLoaderTemp.add_constructor(
-    "tag:yaml.org,2002:timestamp",
-    SafeLoaderTemp.yaml_constructors["tag:yaml.org,2002:str"],
-)
+@lru_cache(maxsize=1)
+def get_pydantic_version() -> tuple[Any, bool, bool]:
+    """Get pydantic version info lazily. Returns (version, is_v2, is_v2_11)."""
+    # Apply pydantic patch before importing pydantic
+    from datamodel_code_generator.pydantic_patch import apply_patch  # noqa: PLC0415
+
+    apply_patch()
+
+    import pydantic  # noqa: PLC0415
+    from packaging import version  # noqa: PLC0415
+
+    pydantic_version = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
+    is_v2 = version.parse("2.0b3") <= pydantic_version
+    is_v2_11 = version.parse("2.11") <= pydantic_version
+    return pydantic_version, is_v2, is_v2_11
+
+
+def is_pydantic_v2() -> bool:
+    """Check if pydantic v2 is installed."""
+    return get_pydantic_version()[1]
+
+
+def is_pydantic_v2_11() -> bool:
+    """Check if pydantic v2.11+ is installed."""
+    return get_pydantic_version()[2]
+
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
 _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
@@ -66,24 +72,43 @@ def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     return value in {"true", "True", "TRUE"}
 
 
-for key in list(SafeLoaderTemp.yaml_implicit_resolvers.keys()):
-    SafeLoaderTemp.yaml_implicit_resolvers[key] = [
-        (tag, pattern)
-        for tag, pattern in SafeLoaderTemp.yaml_implicit_resolvers[key]
-        if tag != "tag:yaml.org,2002:bool"
-    ]
-    if not SafeLoaderTemp.yaml_implicit_resolvers[key]:
-        del SafeLoaderTemp.yaml_implicit_resolvers[key]
-for key in ["t", "f", "T", "F"]:
-    SafeLoaderTemp.yaml_implicit_resolvers.setdefault(key, []).append((
-        "tag:yaml.org,2002:bool",
-        _YAML_1_2_BOOL_PATTERN,
-    ))
-SafeLoaderTemp.add_constructor("tag:yaml.org,2002:bool", _construct_yaml_bool_with_warning)
+@lru_cache(maxsize=1)
+def get_safe_loader() -> type:
+    """Get customized SafeLoader lazily."""
+    import copy  # noqa: PLC0415
 
-SafeLoader = SafeLoaderTemp
+    try:
+        from yaml import CSafeLoader as _SafeLoader  # noqa: PLC0415
+    except ImportError:  # pragma: no cover
+        from yaml import SafeLoader as _SafeLoader  # noqa: PLC0415
 
-Model = TypeVar("Model", bound=_BaseModel)
+    safe_loader_cls = copy.deepcopy(_SafeLoader)
+    safe_loader_cls.yaml_constructors = copy.deepcopy(_SafeLoader.yaml_constructors)
+    safe_loader_cls.yaml_implicit_resolvers = copy.deepcopy(_SafeLoader.yaml_implicit_resolvers)
+    safe_loader_cls.add_constructor(
+        "tag:yaml.org,2002:timestamp",
+        safe_loader_cls.yaml_constructors["tag:yaml.org,2002:str"],
+    )
+
+    for key in list(safe_loader_cls.yaml_implicit_resolvers.keys()):
+        safe_loader_cls.yaml_implicit_resolvers[key] = [
+            (tag, pattern)
+            for tag, pattern in safe_loader_cls.yaml_implicit_resolvers[key]
+            if tag != "tag:yaml.org,2002:bool"
+        ]
+        if not safe_loader_cls.yaml_implicit_resolvers[key]:
+            del safe_loader_cls.yaml_implicit_resolvers[key]
+    for key in ["t", "f", "T", "F"]:
+        safe_loader_cls.yaml_implicit_resolvers.setdefault(key, []).append((
+            "tag:yaml.org,2002:bool",
+            _YAML_1_2_BOOL_PATTERN,
+        ))
+    safe_loader_cls.add_constructor("tag:yaml.org,2002:bool", _construct_yaml_bool_with_warning)
+
+    return safe_loader_cls
+
+
+Model = TypeVar("Model", bound="_BaseModel")  # pyright: ignore[reportInvalidTypeForm]
 T = TypeVar("T")
 
 
@@ -135,7 +160,7 @@ def model_validator(  # pyright: ignore[reportInconsistentOverload]
     def inner(
         method: Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model],
     ) -> Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model]:
-        if PYDANTIC_V2:
+        if is_pydantic_v2():
             from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
 
             if mode == "before":
@@ -152,11 +177,11 @@ def field_validator(
     field_name: str,
     *fields: str,
     mode: Literal["before", "after"] = "after",
-) -> Callable[[Any], Callable[[BaseModel, Any], Any]]:
+) -> Callable[[Any], Callable[[Any, Any], Any]]:
     """Decorate field validators for both Pydantic v1 and v2."""
 
     def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
-        if PYDANTIC_V2:
+        if is_pydantic_v2():
             from pydantic import field_validator as field_validator_v2  # noqa: PLC0415
 
             return field_validator_v2(field_name, *fields, mode=mode)(method)
@@ -167,17 +192,58 @@ def field_validator(
     return inner
 
 
-if PYDANTIC_V2:
-    from pydantic import ConfigDict
-else:
-    ConfigDict = dict
+@lru_cache(maxsize=1)
+def _get_config_dict() -> type:
+    """Get ConfigDict type lazily."""
+    if is_pydantic_v2():
+        from pydantic import ConfigDict  # noqa: PLC0415
+
+        return ConfigDict
+    return dict  # type: ignore[return-value]
 
 
-class BaseModel(_BaseModel):
-    """Base Pydantic model with version-compatible configuration."""
+class _ConfigDictProxy:
+    """Proxy for lazy ConfigDict access."""
 
-    if PYDANTIC_V2:
-        model_config = ConfigDict(strict=False)  # pyright: ignore[reportAssignmentType]
+    def __call__(self, **kwargs: Any) -> Any:
+        return _get_config_dict()(**kwargs)
+
+    def __class_getitem__(cls, item: Any) -> Any:
+        return _get_config_dict()[item]  # pyright: ignore[reportIndexIssue]
+
+
+ConfigDict: type = _ConfigDictProxy()  # type: ignore[assignment]
+
+
+@lru_cache(maxsize=1)
+def _get_base_model_class() -> type:
+    """Get version-compatible BaseModel class lazily."""
+    from pydantic import BaseModel as _PydanticBaseModel  # noqa: PLC0415
+
+    if is_pydantic_v2():
+        from pydantic import ConfigDict as _ConfigDict  # noqa: PLC0415
+
+        class _BaseModelV2(_PydanticBaseModel):
+            model_config = _ConfigDict(strict=False)
+
+        return _BaseModelV2
+    return _PydanticBaseModel
+
+
+_BaseModel: type | None = None
+
+
+def __getattr__(name: str) -> Any:
+    """Provide lazy access to BaseModel and SafeLoader."""
+    global _BaseModel  # noqa: PLW0603
+    if name == "BaseModel":
+        if _BaseModel is None:
+            _BaseModel = _get_base_model_class()
+        return _BaseModel
+    if name == "SafeLoader":
+        return get_safe_loader()
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
 
 
 _UNDER_SCORE_1: re.Pattern[str] = re.compile(r"([^_])([A-Z][a-z]+)")
@@ -191,29 +257,29 @@ def camel_to_snake(string: str) -> str:
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
-def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:
+def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # pyright: ignore[reportInvalidTypeForm]
     """Version-compatible model serialization (dict/model_dump)."""
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         return obj.model_dump(**kwargs)
     return obj.dict(**kwargs)  # type: ignore[reportDeprecated]
 
 
 def model_validate(cls: type[Model], obj: Any) -> Model:
     """Version-compatible model validation (parse_obj/model_validate)."""
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         return cls.model_validate(obj)
     return cls.parse_obj(obj)  # type: ignore[reportDeprecated]
 
 
-def get_fields_set(obj: _BaseModel) -> set[str]:
+def get_fields_set(obj: _BaseModel) -> set[str]:  # pyright: ignore[reportInvalidTypeForm]
     """Version-compatible access to fields set (__fields_set__/model_fields_set)."""
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         return obj.model_fields_set
     return obj.__fields_set__  # type: ignore[reportDeprecated]
 
 
 def model_copy(obj: Model, **kwargs: Any) -> Model:
     """Version-compatible model copy (copy/model_copy)."""
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         return obj.model_copy(**kwargs)
     return obj.copy(**kwargs)  # type: ignore[reportDeprecated]

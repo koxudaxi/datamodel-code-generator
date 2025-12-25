@@ -36,7 +36,7 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_copy, model_dump, model_validate
+from datamodel_code_generator.util import ConfigDict, is_pydantic_v2, model_copy, model_dump, model_validate
 
 __all__ = ["WrappedDefault"]
 
@@ -76,7 +76,7 @@ class ConstraintsBase(_BaseModel):
 
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
         )
@@ -124,7 +124,7 @@ class ConstraintsBase(_BaseModel):
 class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True,
             defer_build=True,
@@ -166,7 +166,7 @@ class DataModelFieldBase(_BaseModel):
     use_default_factory_for_optional_nested_models: bool = False
 
     if not TYPE_CHECKING:
-        if not PYDANTIC_V2:
+        if not is_pydantic_v2():
 
             @classmethod
             def model_rebuild(
@@ -871,7 +871,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         )
 
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
     DataType.model_rebuild(_types_namespace=_rebuild_namespace)
     BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)

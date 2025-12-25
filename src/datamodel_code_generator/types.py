@@ -52,7 +52,7 @@ from datamodel_code_generator.imports import (
     Import,
 )
 from datamodel_code_generator.reference import Reference, _BaseModel
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict
+from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 
 T = TypeVar("T")
 SourceT = TypeVar("SourceT")
@@ -94,7 +94,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.model.base import DataModelFieldBase
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     from pydantic import GetCoreSchemaHandler
     from pydantic_core import core_schema
 
@@ -286,7 +286,7 @@ class Nullable(Protocol):
 class DataType(_BaseModel):
     """Represents a type in generated code with imports and references."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]

@@ -27,7 +27,6 @@ from urllib.parse import ParseResult
 
 from typing_extensions import TypeAliasType, TypedDict
 
-import datamodel_code_generator.pydantic_patch  # noqa: F401
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
     CodeFormatter,
@@ -38,7 +37,7 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import PYDANTIC_V2, SafeLoader
+from datamodel_code_generator.util import SafeLoader, is_pydantic_v2
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -74,7 +73,7 @@ class DataclassArguments(TypedDict, total=False):
 
 if not TYPE_CHECKING:
     YamlScalar: TypeAlias = str | int | float | bool | None
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")
     else:
         # Pydantic v1 cannot handle TypeAliasType, use Any for recursive parts
