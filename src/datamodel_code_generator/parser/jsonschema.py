@@ -590,6 +590,8 @@ class JsonSchemaParser(Parser):
         field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
         field_extra_keys_without_x_prefix: set[str] | None = None,
+        model_extra_keys: set[str] | None = None,
+        model_extra_keys_without_x_prefix: set[str] | None = None,
         wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
@@ -702,6 +704,8 @@ class JsonSchemaParser(Parser):
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
             field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
+            model_extra_keys=model_extra_keys,
+            model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
@@ -1185,6 +1189,18 @@ class JsonSchemaParser(Parser):
         extensions = {k: v for k, v in obj.extras.items() if k.startswith("x-")}
         if extensions:
             self.extra_template_data[path]["extensions"] = extensions
+
+        # Process model_extra_keys for json_schema_extra in ConfigDict
+        if self.model_extra_keys or self.model_extra_keys_without_x_prefix:
+            model_extras: dict[str, Any] = {}
+            for k, v in obj.extras.items():
+                if self.model_extra_keys and k in self.model_extra_keys:
+                    model_extras[k] = v
+                elif self.model_extra_keys_without_x_prefix and k in self.model_extra_keys_without_x_prefix:
+                    # Strip the x- prefix
+                    model_extras[k.lstrip("x-")] = v
+            if model_extras:
+                self.extra_template_data[path]["model_extras"] = model_extras
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""
