@@ -290,6 +290,12 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.type_hint
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
+        needs_annotated = self.use_annotated and self.needs_annotated_import
+
+        # Fast path: no special typing imports needed
+        if not has_union and not has_optional and not needs_annotated:
+            return self.data_type.all_imports
+
         imports: list[tuple[Import] | Iterator[Import]] = [
             iter(
                 i
@@ -302,7 +308,7 @@ class DataModelFieldBase(_BaseModel):
             imports.append((IMPORT_UNION,))
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated and self.needs_annotated_import:
+        if needs_annotated:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
