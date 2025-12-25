@@ -122,10 +122,12 @@ def get_version() -> str:
 
 def enable_debug_message() -> None:  # pragma: no cover
     """Enable debug tracing with pysnooper."""
+    global _pysnooper_initialized  # noqa: PLW0603
     try:
         import pysnooper  # noqa: PLC0415
 
         pysnooper.tracer.DISABLED = False
+        _pysnooper_initialized = True
     except ImportError as err:
         msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
         raise Exception(msg) from err  # noqa: TRY002
