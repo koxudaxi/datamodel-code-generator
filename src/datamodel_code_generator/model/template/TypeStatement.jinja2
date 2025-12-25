@@ -11,10 +11,10 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 type {{ class_name }} = {{ get_type_annotation(fields[0]) }}{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
 """
-{{ description | indent(0) }}
+{{ description | escape_docstring | indent(0) }}
 """
 {%- elif fields and fields[0].docstring %}
 """
-{{ fields[0].docstring | indent(0) }}
+{{ fields[0].docstring | escape_docstring | indent(0) }}
 """
 {%- endif %}

@@ -48,6 +48,26 @@ if TYPE_CHECKING:
 
 TEMPLATE_DIR: Path = Path(__file__).parents[0] / "template"
 
+
+def escape_docstring(value: str | None) -> str | None:
+    r"""Escape special characters in a docstring to prevent syntax errors.
+
+    Handles:
+    - Backslashes: `\\` -> `\\\\` (must be escaped first)
+    - Triple quotes: `\"\"\"` -> `\\\"\\\"\\\"` (would terminate docstring)
+
+    Args:
+        value: The string to escape, or None.
+
+    Returns:
+        The escaped string, or None if input was None.
+    """
+    if value is None:
+        return None
+    # Escape backslashes first, then triple quotes
+    return value.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
+
+
 ALL_MODEL: str = "#all#"
 GENERIC_BASE_CLASS_PATH: str = "#/__datamodel_code_generator__/generic_base_class__"
 GENERIC_BASE_CLASS_NAME: str = "__generic_base_class__"
@@ -347,7 +367,8 @@ class DataModelFieldBase(_BaseModel):
         if self.use_inline_field_description:
             description = self.extras.get("description", None)
             if description is not None and "\n" not in description:
-                return f'"""{description}"""'
+                escaped = escape_docstring(description)
+                return f'"""{escaped}"""'
         return None
 
     @property
@@ -437,10 +458,12 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
 
     loader: ChoiceLoader | FileSystemLoader = ChoiceLoader(loaders) if len(loaders) > 1 else loaders[0]
-    return Environment(
+    env = Environment(
         loader=loader,
         autoescape=select_autoescape(["html", "xml"]),
     )
+    env.filters["escape_docstring"] = escape_docstring
+    return env
 
 
 @lru_cache
@@ -466,10 +489,12 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
         FileSystemLoader(str(absolute_template_dir)),
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
     ]
-    return Environment(
+    env = Environment(
         loader=ChoiceLoader(loaders),
         autoescape=select_autoescape(["html", "xml"]),
     )
+    env.filters["escape_docstring"] = escape_docstring
+    return env
 
 
 @lru_cache

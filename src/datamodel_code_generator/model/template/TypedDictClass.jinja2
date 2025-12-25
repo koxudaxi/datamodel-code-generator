@@ -1,7 +1,7 @@
 class {{ class_name }}({{ base_class }}):
 {%- if description %}
     """
-    {{ description | indent(4) }}
+    {{ description | escape_docstring | indent(4) }}
     """
 {%- endif %}
 {%- if not fields and not description %}
@@ -11,7 +11,7 @@ class {{ class_name }}({{ base_class }}):
     {{ field.name }}: {{ field.type_hint }}
     {%- if field.docstring %}
     """
-    {{ field.docstring | indent(4) }}
+    {{ field.docstring | escape_docstring | indent(4) }}
     """
 {%- if field.use_inline_field_description and not loop.last %}
 
