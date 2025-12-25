@@ -1372,6 +1372,66 @@ def test_main_generate_pydantic_v2_dataclass_additional_props_true(tmp_path: Pat
     assert_file_content(output_file, "pydantic_v2_dataclass_additional_props_true.py")
 
 
+def test_main_generate_pydantic_v2_dataclass_unevaluated_props_true(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with unevaluatedProperties: true."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "unevaluated_properties_true_dataclass.py")
+
+
+def test_main_generate_pydantic_v2_base_model_unevaluated_props(tmp_path: Path) -> None:
+    """Test pydantic_v2.BaseModel with unevaluatedProperties: false."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    assert_file_content(output_file, "unevaluated_properties_pydantic_v2.py")
+
+
+def test_main_generate_pydantic_v2_base_model_unevaluated_props_true(tmp_path: Path) -> None:
+    """Test pydantic_v2.BaseModel with unevaluatedProperties: true."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    assert_file_content(output_file, "unevaluated_properties_true_pydantic_v2.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_unevaluated_props_false(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with unevaluatedProperties: false."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+    )
+
+    assert_file_content(output_file, "unevaluated_properties_dataclass.py")
+
+
 def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(tmp_path: Path) -> None:
     """Test pydantic_v2.dataclass with use_attribute_docstrings."""
     output_file: Path = tmp_path / "output.py"
@@ -2759,6 +2819,50 @@ def test_main_jsonschema_object_with_only_additional_properties(output_file: Pat
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="string_dict.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties(output_file: Path) -> None:
+    """Test unevaluatedProperties: false generates extra='forbid'."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
+    """Test unevaluatedProperties: true generates extra='allow'."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_true.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> None:
+    """Test unevaluatedProperties as JsonSchemaObject triggers traversal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_schema.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_multiple_types(output_file: Path) -> None:
+    """Test unevaluatedProperties with multiple types triggers _set_schema_metadata."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_multiple_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_multiple_types.py",
     )
 
 
