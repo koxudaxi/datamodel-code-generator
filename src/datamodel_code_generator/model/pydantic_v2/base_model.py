@@ -260,6 +260,7 @@ class BaseModel(BaseModelBase):
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")
+        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
         extra_fields = self.extra_template_data.get("extra_fields")
 
@@ -273,6 +274,10 @@ class BaseModel(BaseModelBase):
         elif additional_properties is True:
             config_extra = "'allow'"
         elif additional_properties is False:
+            config_extra = "'forbid'"
+        elif unevaluated_properties is True:
+            config_extra = "'allow'"
+        elif unevaluated_properties is False:
             config_extra = "'forbid'"
         return config_extra
 
