@@ -25,8 +25,6 @@ from typing import (
 )
 from urllib.parse import ParseResult
 
-import yaml
-import yaml.parser
 from typing_extensions import TypeAliasType, TypedDict
 
 import datamodel_code_generator.pydantic_patch  # noqa: F401
@@ -89,18 +87,13 @@ Maps module path tuples (e.g., ("models", "user.py")) to generated code strings.
 Returned by generate() when output=None and multiple modules are generated.
 """
 
-try:
-    import pysnooper
-
-    pysnooper.tracer.DISABLED = True
-except ImportError:  # pragma: no cover
-    pysnooper = None
-
 DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content from a string or file-like object."""
+    import yaml  # noqa: PLC0415
+
     return yaml.load(stream, Loader=SafeLoader)  # noqa: S506
 
 
@@ -130,22 +123,36 @@ def get_version() -> str:
 
 def enable_debug_message() -> None:  # pragma: no cover
     """Enable debug tracing with pysnooper."""
-    if not pysnooper:
-        msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
-        raise Exception(msg)  # noqa: TRY002
+    try:
+        import pysnooper  # noqa: PLC0415
 
-    pysnooper.tracer.DISABLED = False
+        pysnooper.tracer.DISABLED = False
+    except ImportError as err:
+        msg = "Please run `$pip install 'datamodel-code-generator[debug]'` to use debug option"
+        raise Exception(msg) from err  # noqa: TRY002
 
 
 DEFAULT_MAX_VARIABLE_LENGTH: int = 100
+
+
+_pysnooper_initialized: bool = False
 
 
 def snooper_to_methods() -> Callable[..., Any]:
     """Class decorator to add pysnooper tracing to all methods."""
 
     def inner(cls: type[T]) -> type[T]:
-        if not pysnooper:
+        global _pysnooper_initialized  # noqa: PLW0603
+        try:
+            import pysnooper  # noqa: PLC0415
+        except ImportError:
             return cls
+
+        # Ensure tracing is disabled by default (only enabled via --debug flag)
+        if not _pysnooper_initialized:
+            pysnooper.tracer.DISABLED = True
+            _pysnooper_initialized = True
+
         import inspect  # noqa: PLC0415
 
         methods = inspect.getmembers(cls, predicate=inspect.isfunction)
@@ -1061,6 +1068,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
 def infer_input_type(text: str) -> InputFileType:
     """Automatically detect the input file type from text content."""
+    import yaml.parser  # noqa: PLC0415
+
     try:
         data = load_yaml(text)
     except yaml.parser.ParserError:

@@ -49,14 +49,16 @@ def test_debug(mocker: MockerFixture) -> None:
     with pytest.raises(expected_exception=SystemExit):
         run_main_with_args(["--debug", "--help"])
 
-    mocker.patch("datamodel_code_generator.pysnooper", None)
+    # Simulate pysnooper not being installed by making import fail
+    mocker.patch.dict("sys.modules", {"pysnooper": None})
     with pytest.raises(expected_exception=SystemExit):
         run_main_with_args(["--debug", "--help"])
 
 
 def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
     """Test snooper_to_methods function without pysnooper installed."""
-    mocker.patch("datamodel_code_generator.pysnooper", None)
+    # Simulate pysnooper not being installed by making import fail
+    mocker.patch.dict("sys.modules", {"pysnooper": None})
     mock = mocker.Mock()
     assert snooper_to_methods()(mock) == mock
 

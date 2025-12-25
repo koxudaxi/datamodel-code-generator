@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template, select_autoescape
 from pydantic import Field
 from typing_extensions import Self
 
@@ -43,6 +42,8 @@ __all__ = ["WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from jinja2 import Environment, Template
 
     from datamodel_code_generator import DataclassArguments
 
@@ -427,6 +428,8 @@ class DataModelFieldBase(_BaseModel):
 @lru_cache(maxsize=16)
 def _get_environment(template_subdir: Path, custom_template_dir: Path | None) -> Environment:
     """Get or create a cached Jinja2 Environment for the given directories."""
+    from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
+
     loaders: list[FileSystemLoader] = []
 
     if custom_template_dir is not None:
@@ -462,6 +465,8 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
 @lru_cache(maxsize=16)
 def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_subdir: Path) -> Environment:
     """Get or create a cached Jinja2 Environment for absolute path templates."""
+    from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
+
     loaders: list[FileSystemLoader] = [
         FileSystemLoader(str(absolute_template_dir)),
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
