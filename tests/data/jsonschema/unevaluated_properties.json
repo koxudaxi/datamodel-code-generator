@@ -1,0 +1,21 @@
+{
+    "title": "Resource",
+    "type": "object",
+    "allOf": [
+        { "$ref": "#/$defs/PartialResource" }
+    ],
+    "$defs": {
+        "PartialResource": {
+            "title": "PartialResource",
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" }
+            },
+            "required": ["name"]
+        }
+    },
+    "properties": {
+        "id": { "type": "integer" }
+    },
+    "unevaluatedProperties": false
+}

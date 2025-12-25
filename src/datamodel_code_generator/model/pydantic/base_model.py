@@ -367,10 +367,16 @@ class BaseModel(BaseModelBase):
         config_parameters: dict[str, Any] = {}
 
         additional_properties = self.extra_template_data.get("additionalProperties")
+        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
         extra_fields = self.extra_template_data.get("extra_fields")
 
-        if allow_extra_fields or extra_fields or additional_properties is not None:
+        if (
+            allow_extra_fields
+            or extra_fields
+            or additional_properties is not None
+            or unevaluated_properties is not None
+        ):
             self._additional_imports.append(IMPORT_EXTRA)
 
         if allow_extra_fields:
@@ -380,6 +386,10 @@ class BaseModel(BaseModelBase):
         elif additional_properties is True:
             config_parameters["extra"] = "Extra.allow"
         elif additional_properties is False:
+            config_parameters["extra"] = "Extra.forbid"
+        elif unevaluated_properties is True:
+            config_parameters["extra"] = "Extra.allow"
+        elif unevaluated_properties is False:
             config_parameters["extra"] = "Extra.forbid"
 
         for config_attribute in "allow_population_by_field_name", "allow_mutation":

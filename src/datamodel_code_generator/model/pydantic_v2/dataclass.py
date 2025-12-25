@@ -105,20 +105,26 @@ class DataClass(DataModel):
     def _get_config_extra(self) -> str | None:
         """Get extra field configuration for ConfigDict."""
         additional_properties = self.extra_template_data.get("additionalProperties")
+        unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
         allow_extra_fields = self.extra_template_data.get("allow_extra_fields")
         extra_fields = self.extra_template_data.get("extra_fields")
 
+        config_extra = None
         if allow_extra_fields or extra_fields == "allow":
-            return "'allow'"
-        if extra_fields == "forbid":
-            return "'forbid'"
-        if extra_fields == "ignore":
-            return "'ignore'"
-        if additional_properties is True:
-            return "'allow'"
-        if additional_properties is False:
-            return "'forbid'"
-        return None
+            config_extra = "'allow'"
+        elif extra_fields == "forbid":
+            config_extra = "'forbid'"
+        elif extra_fields == "ignore":
+            config_extra = "'ignore'"
+        elif additional_properties is True:
+            config_extra = "'allow'"
+        elif additional_properties is False:
+            config_extra = "'forbid'"
+        elif unevaluated_properties is True:
+            config_extra = "'allow'"
+        elif unevaluated_properties is False:
+            config_extra = "'forbid'"
+        return config_extra
 
     def create_reuse_model(self, base_ref: Reference) -> DataClass:
         """Create inherited model with empty fields pointing to base reference."""

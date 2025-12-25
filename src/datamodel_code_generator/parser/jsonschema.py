@@ -342,6 +342,7 @@ class JsonSchemaObject(BaseModel):
     exclusiveMaximum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
     exclusiveMinimum: Optional[Union[float, bool]] = None  # noqa: N815, UP007, UP045
     additionalProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
+    unevaluatedProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     patternProperties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: N815, UP007, UP045
     propertyNames: Optional[JsonSchemaObject] = None  # noqa: N815, UP045
     oneOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
@@ -1157,6 +1158,11 @@ class JsonSchemaParser(Parser):
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
 
+    def set_unevaluated_properties(self, path: str, obj: JsonSchemaObject) -> None:
+        """Set unevaluated properties flag in extra template data."""
+        if isinstance(obj.unevaluatedProperties, bool):
+            self.extra_template_data[path]["unevaluatedProperties"] = obj.unevaluatedProperties
+
     def set_title(self, path: str, obj: JsonSchemaObject) -> None:
         """Set title in extra template data."""
         if obj.title:
@@ -1168,10 +1174,11 @@ class JsonSchemaParser(Parser):
             self.extra_template_data[path]["schema_id"] = obj.id
 
     def _set_schema_metadata(self, path: str, obj: JsonSchemaObject) -> None:
-        """Set title, $id, and additionalProperties in extra template data."""
+        """Set title, $id, additionalProperties and unevaluatedProperties in extra template data."""
         self.set_title(path, obj)
         self.set_schema_id(path, obj)
         self.set_additional_properties(path, obj)
+        self.set_unevaluated_properties(path, obj)
 
     def set_schema_extensions(self, path: str, obj: JsonSchemaObject) -> None:
         """Set schema extensions (x-* fields) in extra template data."""
@@ -1921,6 +1928,7 @@ class JsonSchemaParser(Parser):
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
+        self.set_unevaluated_properties(reference.path, obj)
         self.set_schema_id(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
@@ -2301,6 +2309,7 @@ class JsonSchemaParser(Parser):
             data_model_type_class = self.data_model_root_type
 
         self.set_additional_properties(reference.path, obj)
+        self.set_unevaluated_properties(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, None)
@@ -3156,6 +3165,8 @@ class JsonSchemaParser(Parser):
                 self._traverse_schema_objects(item, path, callback, include_one_of=include_one_of)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self._traverse_schema_objects(obj.additionalProperties, path, callback, include_one_of=include_one_of)
+        if isinstance(obj.unevaluatedProperties, JsonSchemaObject):
+            self._traverse_schema_objects(obj.unevaluatedProperties, path, callback, include_one_of=include_one_of)
         if obj.patternProperties:
             for value in obj.patternProperties.values():
                 if isinstance(value, JsonSchemaObject):
@@ -3194,6 +3205,8 @@ class JsonSchemaParser(Parser):
                 self.parse_id(item, path)
         if isinstance(obj.additionalProperties, JsonSchemaObject):
             self.parse_id(obj.additionalProperties, path)
+        if isinstance(obj.unevaluatedProperties, JsonSchemaObject):
+            self.parse_id(obj.unevaluatedProperties, path)
         if obj.patternProperties:
             for value in obj.patternProperties.values():
                 if isinstance(value, JsonSchemaObject):
