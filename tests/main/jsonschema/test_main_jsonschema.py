@@ -5031,18 +5031,37 @@ def test_main_jsonschema_collapse_root_models_name_strategy_with_inheritance(out
     )
 
 
-def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_child(output_file: Path) -> None:
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_child(
+    output_model: str, output_file: Path
+) -> None:
     """Test nested wrappers with child strategy - all wrappers collapsed."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_nested_wrappers.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "child"],
+        expected_file="jsonschema_collapse_root_models_name_strategy_nested_wrappers_child.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "child",
+            "--output-model-type",
+            output_model,
+        ],
     )
 
 
-def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent.py"),
+        ("pydantic_v2.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent_v2.py"),
+    ],
+)
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
     """Test nested wrappers with parent strategy - partial collapse due to multiple refs."""
     with pytest.warns(UserWarning, match="Cannot apply 'parent' strategy.*multiple root models"):
         run_main_and_assert(
@@ -5050,29 +5069,56 @@ def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_pare
             output_path=output_file,
             input_file_type="jsonschema",
             assert_func=assert_file_content,
-            extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+            expected_file=expected_file,
+            extra_args=[
+                "--collapse-root-models",
+                "--collapse-root-models-name-strategy",
+                "parent",
+                "--output-model-type",
+                output_model,
+            ],
         )
 
 
-def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output_file: Path) -> None:
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(
+    output_model: str, output_file: Path
+) -> None:
     """Test complex schema with multiple wrappers and inheritance using child strategy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "child"],
+        expected_file="jsonschema_collapse_root_models_name_strategy_complex_child.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "child",
+            "--output-model-type",
+            output_model,
+        ],
     )
 
 
-def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(output_file: Path) -> None:
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(
+    output_model: str, output_file: Path
+) -> None:
     """Test complex schema with multiple wrappers and inheritance using parent strategy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+        expected_file="jsonschema_collapse_root_models_name_strategy_complex_parent.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "parent",
+            "--output-model-type",
+            output_model,
+        ],
     )
 
 
