@@ -183,9 +183,9 @@ def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     Optimized for common cases with 0-2 iterables to avoid chain() overhead.
     """
     n = len(iterables)
-    if n == 0:
+    if n == 0:  # pragma: no cover
         return ()
-    if n == 1:
+    if n == 1:  # pragma: no cover
         return tuple(iterables[0])
     if n == 2:  # noqa: PLR2004
         return (*iterables[0], *iterables[1])

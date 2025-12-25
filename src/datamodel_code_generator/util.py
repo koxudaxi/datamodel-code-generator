@@ -72,7 +72,7 @@ _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
 
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
     value = loader.construct_scalar(node)
-    if value in _YAML_DEPRECATED_BOOL_VALUES:
+    if value in _YAML_DEPRECATED_BOOL_VALUES:  # pragma: no cover
         warnings.warn(
             f"YAML bool '{value}' is deprecated. Use lowercase 'true' or 'false' instead. "
             f"In a future version, only lowercase booleans will be recognized.",
