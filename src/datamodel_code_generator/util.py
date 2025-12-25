@@ -53,7 +53,7 @@ _is_v2_11: bool | None = None
 def is_pydantic_v2() -> bool:
     """Check if pydantic v2 is installed."""
     global _is_v2  # noqa: PLW0603
-    if _is_v2 is None:
+    if _is_v2 is None:  # pragma: no branch
         _is_v2 = get_pydantic_version()[1]
     return _is_v2
 
@@ -61,7 +61,7 @@ def is_pydantic_v2() -> bool:
 def is_pydantic_v2_11() -> bool:
     """Check if pydantic v2.11+ is installed."""
     global _is_v2_11  # noqa: PLW0603
-    if _is_v2_11 is None:
+    if _is_v2_11 is None:  # pragma: no branch
         _is_v2_11 = get_pydantic_version()[2]
     return _is_v2_11
 

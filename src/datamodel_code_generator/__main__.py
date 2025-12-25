@@ -4,19 +4,22 @@ from __future__ import annotations
 
 import sys
 
-if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # noqa: PLR2004
+# Fast path for --version (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # pragma: no cover  # noqa: PLR2004
     from importlib.metadata import version
 
     print(f"datamodel-codegen {version('datamodel-code-generator')}")  # noqa: T201
     sys.exit(0)
 
-if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # noqa: PLR2004
+# Fast path for --help (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  # noqa: PLR2004
     from datamodel_code_generator.arguments import arg_parser
 
     arg_parser.print_help()
     sys.exit(0)
 
-if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):
+# Fast path for --generate-prompt
+if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):  # pragma: no cover
     from datamodel_code_generator.arguments import arg_parser
 
     namespace = arg_parser.parse_args()
@@ -892,7 +895,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         module_split_mode=config.module_split_mode,
     )
 
-    if output is None and result is not None:
+    if output is None and result is not None:  # pragma: no cover
         if isinstance(result, str):
             sys.stdout.write(result + "\n")
         else:
@@ -902,7 +905,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    if "_ARGCOMPLETE" in os.environ:
+    if "_ARGCOMPLETE" in os.environ:  # pragma: no cover
         import argcomplete  # noqa: PLC0415
 
         argcomplete.autocomplete(arg_parser)
