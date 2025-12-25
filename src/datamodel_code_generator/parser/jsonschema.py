@@ -1168,14 +1168,17 @@ class JsonSchemaParser(Parser):
         if obj.title:
             self.extra_template_data[path]["title"] = obj.title
 
+    def set_schema_id(self, path: str, obj: JsonSchemaObject) -> None:
+        """Set $id in extra template data."""
+        if obj.id:
+            self.extra_template_data[path]["schema_id"] = obj.id
+
     def _set_schema_metadata(self, path: str, obj: JsonSchemaObject) -> None:
-        """Set title, additionalProperties and unevaluatedProperties in extra template data."""
-        if obj.title:
-            self.extra_template_data[path]["title"] = obj.title
-        if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
-        if isinstance(obj.unevaluatedProperties, bool):
-            self.extra_template_data[path]["unevaluatedProperties"] = obj.unevaluatedProperties
+        """Set title, $id, additionalProperties and unevaluatedProperties in extra template data."""
+        self.set_title(path, obj)
+        self.set_schema_id(path, obj)
+        self.set_additional_properties(path, obj)
+        self.set_unevaluated_properties(path, obj)
 
     def set_schema_extensions(self, path: str, obj: JsonSchemaObject) -> None:
         """Set schema extensions (x-* fields) in extra template data."""
@@ -1926,6 +1929,7 @@ class JsonSchemaParser(Parser):
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
         self.set_additional_properties(reference.path, obj)
         self.set_unevaluated_properties(reference.path, obj)
+        self.set_schema_id(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, base_classes)
@@ -2268,6 +2272,7 @@ class JsonSchemaParser(Parser):
         )
         class_name = reference.name
         self.set_title(reference.path, obj)
+        self.set_schema_id(reference.path, obj)
         if self.read_only_write_only_model_type is not None and obj.properties:
             for prop in obj.properties.values():
                 if isinstance(prop, JsonSchemaObject) and prop.ref:

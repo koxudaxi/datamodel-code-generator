@@ -887,6 +887,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             methods=self.methods,
             description=self.description,
             dataclass_arguments=self.dataclass_arguments,
+            path=self.path,
             **self.extra_template_data,
         )
 
