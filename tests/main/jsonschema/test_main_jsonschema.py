@@ -5205,9 +5205,7 @@ def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_pare
 
 
 @pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
-def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(
-    output_model: str, output_file: Path
-) -> None:
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output_model: str, output_file: Path) -> None:
     """Test complex schema with multiple wrappers and inheritance using child strategy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
