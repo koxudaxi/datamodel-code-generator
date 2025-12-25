@@ -25,6 +25,7 @@ from datamodel_code_generator import (
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
     Error,
@@ -489,6 +490,7 @@ class Config(BaseModel):
     original_field_name_delimiter: Optional[str] = None  # noqa: UP045
     use_double_quotes: bool = False
     collapse_root_models: bool = False
+    collapse_root_models_name_strategy: Optional[CollapseRootModelsNameStrategy] = None  # noqa: UP045
     collapse_reuse_models: bool = False
     skip_root_model: bool = False
     use_type_alias: bool = False
@@ -821,6 +823,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         original_field_name_delimiter=config.original_field_name_delimiter,
         use_double_quotes=config.use_double_quotes,
         collapse_root_models=config.collapse_root_models,
+        collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
         collapse_reuse_models=config.collapse_reuse_models,
         skip_root_model=config.skip_root_model,
         use_type_alias=config.use_type_alias,
@@ -977,6 +980,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             "Warning: --reuse-scope=tree has no effect without --reuse-model",
             file=sys.stderr,
         )
+
+    if config.collapse_root_models_name_strategy and not config.collapse_root_models:
+        print(  # noqa: T201
+            "Error: --collapse-root-models-name-strategy requires --collapse-root-models",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
 
     if (
         config.use_specialized_enum

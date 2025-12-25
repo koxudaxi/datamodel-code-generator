@@ -27,6 +27,7 @@ from datamodel_code_generator import (
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     Error,
     FieldTypeCollisionStrategy,
     ModuleSplitMode,
@@ -752,6 +753,7 @@ class Parser(ABC):
         use_union_operator: bool = False,
         allow_responses_without_content: bool = False,
         collapse_root_models: bool = False,
+        collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
         collapse_reuse_models: bool = False,
         skip_root_model: bool = False,
         use_type_alias: bool = False,
@@ -943,6 +945,7 @@ class Parser(ABC):
         self.use_double_quotes = use_double_quotes
         self.allow_responses_without_content = allow_responses_without_content
         self.collapse_root_models = collapse_root_models
+        self.collapse_root_models_name_strategy = collapse_root_models_name_strategy
         self.collapse_reuse_models = collapse_reuse_models
         self.skip_root_model = skip_root_model
         self.use_type_alias = use_type_alias
@@ -1682,7 +1685,7 @@ class Parser(ABC):
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
 
-    def __collapse_root_models(  # noqa: PLR0912
+    def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
         unused_models: list[DataModel],
@@ -1714,7 +1717,66 @@ class Parser(ABC):
                         continue  # pragma: no cover
 
                     if root_type_field.data_type.reference:
-                        # If the root type field is a reference, we aren't able to collapse it yet.
+                        if self.collapse_root_models_name_strategy is None:
+                            continue
+
+                        inner_reference = root_type_field.data_type.reference
+                        inner_model = cast("DataModel", inner_reference.source)
+
+                        if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
+                            root_model_wrappers = [
+                                parent_model
+                                for child in inner_reference.children
+                                if isinstance(child, DataType)
+                                and (parent_model := get_most_of_parent(child, DataModel))
+                                and isinstance(parent_model, self.data_model_root_type)
+                            ]
+
+                            if len(root_model_wrappers) > 1:
+                                warn(
+                                    f"Cannot apply 'parent' strategy for '{inner_model.class_name}' - "
+                                    f"it is referenced by multiple root models: "
+                                    f"{[m.class_name for m in root_model_wrappers]}. Skipping collapse.",
+                                    stacklevel=2,
+                                )
+                                continue
+
+                            direct_refs = [
+                                c
+                                for c in inner_reference.children
+                                if isinstance(c, DataType)
+                                and (parent_model := get_most_of_parent(c, DataModel)) is not None
+                                and parent_model is not root_type_model
+                                and not isinstance(parent_model, self.data_model_root_type)
+                            ]
+
+                            if direct_refs:
+                                warn(
+                                    f"Cannot apply 'parent' strategy for '{inner_model.class_name}' - "
+                                    f"it is directly referenced by non-wrapper models. Skipping collapse.",
+                                    stacklevel=2,
+                                )
+                                continue
+
+                            inner_model.class_name = root_type_model.class_name
+                            inner_model.reference.name = root_type_model.class_name
+                            inner_model.set_reference_path(root_type_model.reference.path)
+
+                        assert isinstance(root_type_model, DataModel)
+
+                        root_type_model.reference.children = [
+                            c
+                            for c in root_type_model.reference.children
+                            if c is not data_type and getattr(c, "parent", None)
+                        ]
+
+                        data_type.reference = inner_reference
+                        inner_reference.children.append(data_type)
+
+                        imports.remove_referenced_imports(root_type_model.path)
+                        if not root_type_model.reference.children:
+                            unused_models.append(root_type_model)
+
                         continue
 
                     # set copied data_type

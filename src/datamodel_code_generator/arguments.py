@@ -19,6 +19,7 @@ from datamodel_code_generator import (
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
@@ -181,6 +182,14 @@ model_options.add_argument(
     action="store_true",
     default=None,
     help="Models generated with a root-type field will be merged into the models using that root-type model",
+)
+model_options.add_argument(
+    "--collapse-root-models-name-strategy",
+    help="Strategy for naming when collapsing root models that reference other models. "
+    "'child': Keep inner model's name (default). 'parent': Use wrapper's name for inner model. "
+    "Requires --collapse-root-models to be set.",
+    choices=[s.value for s in CollapseRootModelsNameStrategy],
+    default=None,
 )
 model_options.add_argument(
     "--collapse-reuse-models",

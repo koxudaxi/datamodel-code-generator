@@ -5072,6 +5072,178 @@ def test_main_jsonschema_collapse_root_models_nested_reference(output_file: Path
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--collapse-root-models-name-strategy"],
+    input_schema="jsonschema/collapse_root_models_name_strategy_child.json",
+    cli_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "child"],
+    golden_output="main/jsonschema/jsonschema_collapse_root_models_name_strategy_child.py",
+    related_options=["--collapse-root-models"],
+)
+def test_main_jsonschema_collapse_root_models_name_strategy_child(output_file: Path) -> None:
+    """Select which name to keep when collapsing root models with object references.
+
+    The --collapse-root-models-name-strategy option controls naming when collapsing
+    root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_child.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "child"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_name_strategy_parent(output_file: Path) -> None:
+    """Test collapse-root-models with parent name strategy uses wrapper's name for inner model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_parent.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+    )
+
+
+def test_main_jsonschema_collapse_root_models_name_strategy_requires_collapse_root_models(
+    output_file: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test that --collapse-root-models-name-strategy requires --collapse-root-models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_parent.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--collapse-root-models-name-strategy", "parent"],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--collapse-root-models-name-strategy requires --collapse-root-models",
+    )
+
+
+def test_main_jsonschema_collapse_root_models_name_strategy_multiple_wrappers(output_file: Path) -> None:
+    """Test that parent strategy warns and skips when inner model has multiple wrappers."""
+    with pytest.warns(UserWarning, match="Cannot apply 'parent' strategy.*multiple root models"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_multiple_wrappers.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+        )
+
+
+def test_main_jsonschema_collapse_root_models_name_strategy_direct_refs(output_file: Path) -> None:
+    """Test that parent strategy warns and skips when inner model has direct references."""
+    with pytest.warns(UserWarning, match="Cannot apply 'parent' strategy.*directly referenced"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_direct_refs.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+        )
+
+
+def test_main_jsonschema_collapse_root_models_name_strategy_with_inheritance(output_file: Path) -> None:
+    """Test collapse-root-models with parent strategy when inner model has derived classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_with_inheritance.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--collapse-root-models", "--collapse-root-models-name-strategy", "parent"],
+    )
+
+
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_child(
+    output_model: str, output_file: Path
+) -> None:
+    """Test nested wrappers with child strategy - all wrappers collapsed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_nested_wrappers.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_collapse_root_models_name_strategy_nested_wrappers_child.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "child",
+            "--output-model-type",
+            output_model,
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent.py"),
+        ("pydantic_v2.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent_v2.py"),
+    ],
+)
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent(
+    output_model: str, expected_file: str, output_file: Path
+) -> None:
+    """Test nested wrappers with parent strategy - partial collapse due to multiple refs."""
+    with pytest.warns(UserWarning, match="Cannot apply 'parent' strategy.*multiple root models"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_nested_wrappers.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=[
+                "--collapse-root-models",
+                "--collapse-root-models-name-strategy",
+                "parent",
+                "--output-model-type",
+                output_model,
+            ],
+        )
+
+
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output_model: str, output_file: Path) -> None:
+    """Test complex schema with multiple wrappers and inheritance using child strategy."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_collapse_root_models_name_strategy_complex_child.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "child",
+            "--output-model-type",
+            output_model,
+        ],
+    )
+
+
+@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(
+    output_model: str, output_file: Path
+) -> None:
+    """Test complex schema with multiple wrappers and inheritance using parent strategy."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_collapse_root_models_name_strategy_complex_parent.py",
+        extra_args=[
+            "--collapse-root-models",
+            "--collapse-root-models-name-strategy",
+            "parent",
+            "--output-model-type",
+            output_model,
+        ],
+    )
+
+
 def test_main_jsonschema_file_url_ref(tmp_path: Path) -> None:
     """Test that file:// URL $ref is resolved correctly."""
     pet_schema = {
