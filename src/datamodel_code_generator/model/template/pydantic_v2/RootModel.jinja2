@@ -19,7 +19,7 @@
 class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields, use_base_type)}}]{%- endif -%}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
     """
-    {{ description | indent(4) }}
+    {{ description | escape_docstring | indent(4) }}
     """
 {%- endif %}
 {%- if config %}
@@ -45,7 +45,7 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
     {%- endif %}
     {%- if field.docstring %}
     """
-    {{ field.docstring | indent(4) }}
+    {{ field.docstring | escape_docstring | indent(4) }}
     """
     {%- elif field.inline_field_docstring %}
     {{ field.inline_field_docstring }}

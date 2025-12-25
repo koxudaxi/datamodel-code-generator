@@ -12,6 +12,7 @@ from datamodel_code_generator.model.base import (
     DataModel,
     DataModelFieldBase,
     TemplateBase,
+    escape_docstring,
     get_module_path,
     sanitize_module_name,
 )
@@ -374,3 +375,54 @@ def test_copy_deep_with_extras() -> None:
     assert copied.extras == {"key": "value", "nested": {"inner": 1}}
     copied.extras["key"] = "modified"
     assert field.extras["key"] == "value"
+
+
+@pytest.mark.parametrize(
+    ("input_value", "expected"),
+    [
+        (None, None),
+        ("", ""),
+        ("no special chars", "no special chars"),
+        # Backslash escaping
+        (r"backslash \ here", r"backslash \\ here"),
+        (r"path C:\Users\name", r"path C:\\Users\\name"),
+        (r"escape \n sequence", r"escape \\n sequence"),
+        # Triple quote escaping
+        ('"""', r"\"\"\""),
+        ('contains """quotes"""', r"contains \"\"\"quotes\"\"\""),
+        # Both backslash and triple quotes
+        (r'both \ and """', r"both \\ and \"\"\""),
+        (r'path C:\"""file"""', r"path C:\\\"\"\"file\"\"\""),
+    ],
+)
+def test_escape_docstring(input_value: str | None, expected: str | None) -> None:
+    """Test escape_docstring properly escapes special characters.
+
+    This tests issue #1808 where backslashes and triple quotes in docstrings
+    were not escaped, causing Python syntax errors and type checker warnings.
+    """
+    assert escape_docstring(input_value) == expected
+
+
+def test_inline_field_docstring_escapes_special_chars() -> None:
+    """Test inline_field_docstring property escapes special characters."""
+    field = DataModelFieldBase(
+        name="test_field",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"description": r"Path like C:\Users\name"},
+        use_inline_field_description=True,
+    )
+    assert field.inline_field_docstring == r'"""Path like C:\\Users\\name"""'
+
+
+def test_inline_field_docstring_escapes_triple_quotes() -> None:
+    """Test inline_field_docstring property escapes triple quotes."""
+    field = DataModelFieldBase(
+        name="test_field",
+        data_type=DataType(type="str"),
+        required=True,
+        extras={"description": 'Contains """quotes"""'},
+        use_inline_field_description=True,
+    )
+    assert field.inline_field_docstring == r'"""Contains \"\"\"quotes\"\"\""""'
