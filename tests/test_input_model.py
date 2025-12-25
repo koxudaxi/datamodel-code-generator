@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import sys
 from argparse import Namespace
-from pathlib import Path
 from textwrap import dedent
+from typing import TYPE_CHECKING
 
 import pytest
 
-from datamodel_code_generator import arguments
 from datamodel_code_generator import __main__ as main_module
+from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit, main
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
@@ -26,14 +29,16 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
 def pydantic_model_module(tmp_path: Path) -> Path:
     """Create a temporary module with a Pydantic model."""
     module_file = tmp_path / "test_pydantic_models.py"
-    module_file.write_text(dedent('''
+    module_file.write_text(
+        dedent("""
         from pydantic import BaseModel
 
 
         class UserModel(BaseModel):
             name: str
             age: int
-    '''))
+    """)
+    )
     return tmp_path
 
 
@@ -41,9 +46,7 @@ class TestInputModelPydantic:
     """Tests for --input-model with Pydantic models."""
 
     @pytest.mark.cli_doc(options=["--input-model"])
-    def test_basic_usage(
-        self, pydantic_model_module: Path, tmp_path: Path
-    ) -> None:
+    def test_basic_usage(self, pydantic_model_module: Path, tmp_path: Path) -> None:
         """Test basic --input-model usage with Pydantic BaseModel."""
         output_file = tmp_path / "output.py"
 
@@ -58,8 +61,7 @@ class TestInputModelPydantic:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.OK
         assert output_file.exists()
@@ -67,9 +69,7 @@ class TestInputModelPydantic:
         assert "name" in content
         assert "age" in content
 
-    def test_output_to_typeddict(
-        self, pydantic_model_module: Path, tmp_path: Path
-    ) -> None:
+    def test_output_to_typeddict(self, pydantic_model_module: Path, tmp_path: Path) -> None:
         """Test generating TypedDict from Pydantic model."""
         output_file = tmp_path / "output.py"
 
@@ -86,16 +86,13 @@ class TestInputModelPydantic:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.OK
         content = output_file.read_text()
         assert "TypedDict" in content
 
-    def test_with_jsonschema_input_file_type(
-        self, pydantic_model_module: Path, tmp_path: Path
-    ) -> None:
+    def test_with_jsonschema_input_file_type(self, pydantic_model_module: Path, tmp_path: Path) -> None:
         """Test --input-model with explicit jsonschema input-file-type."""
         output_file = tmp_path / "output.py"
 
@@ -112,8 +109,7 @@ class TestInputModelPydantic:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.OK
         assert output_file.exists()
@@ -140,8 +136,7 @@ class TestInputModelPydantic:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
@@ -158,7 +153,8 @@ class TestInputModelDict:
 
         module_name = f"test_schemas_{uuid.uuid4().hex[:8]}"
         test_module = tmp_path / f"{module_name}.py"
-        test_module.write_text(dedent('''
+        test_module.write_text(
+            dedent("""
             USER_SCHEMA = {
                 "type": "object",
                 "properties": {
@@ -166,7 +162,8 @@ class TestInputModelDict:
                     "age": {"type": "integer"}
                 }
             }
-        '''))
+        """)
+        )
 
         output_file = tmp_path / "output.py"
 
@@ -190,9 +187,7 @@ class TestInputModelDict:
         assert exit_code == Exit.OK
         assert output_file.exists()
 
-    def test_dict_without_input_file_type_error(
-        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_dict_without_input_file_type_error(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """Test that dict without --input-file-type raises error."""
         import importlib
         import uuid
@@ -229,7 +224,8 @@ class TestInputModelDict:
 
         module_name = f"test_specs_{uuid.uuid4().hex[:8]}"
         test_module = tmp_path / f"{module_name}.py"
-        test_module.write_text(dedent('''
+        test_module.write_text(
+            dedent("""
             OPENAPI_SPEC = {
                 "openapi": "3.0.0",
                 "info": {"title": "Test", "version": "1.0"},
@@ -243,7 +239,8 @@ class TestInputModelDict:
                     }
                 }
             }
-        '''))
+        """)
+        )
 
         output_file = tmp_path / "output.py"
 
@@ -308,9 +305,7 @@ class TestInputModelErrors:
         captured = capsys.readouterr()
         assert "has no attribute" in captured.err
 
-    def test_not_pydantic_model_or_dict(
-        self, capsys: pytest.CaptureFixture[str]
-    ) -> None:
+    def test_not_pydantic_model_or_dict(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test error when object is not a Pydantic model or dict."""
         exit_code = main([
             "--ignore-pyproject",
@@ -325,7 +320,6 @@ class TestInputModelErrors:
     def test_pydantic_v1_model_error(
         self,
         pydantic_model_module: Path,
-        tmp_path: Path,
         capsys: pytest.CaptureFixture[str],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -337,6 +331,7 @@ class TestInputModelErrors:
             import test_pydantic_models
 
             original_hasattr = builtins.hasattr
+
             def mock_hasattr(obj: object, name: str) -> bool:
                 if name == "model_json_schema" and obj is test_pydantic_models.UserModel:
                     return False
@@ -351,8 +346,7 @@ class TestInputModelErrors:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
@@ -380,8 +374,7 @@ class TestInputModelMutualExclusion:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
@@ -404,8 +397,7 @@ class TestInputModelMutualExclusion:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
@@ -430,8 +422,7 @@ class TestInputModelMutualExclusion:
             ])
         finally:
             sys.path.remove(str(pydantic_model_module))
-            if "test_pydantic_models" in sys.modules:
-                del sys.modules["test_pydantic_models"]
+            sys.modules.pop("test_pydantic_models", None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
