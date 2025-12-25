@@ -16,6 +16,18 @@ if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # noqa: PLR2004
     arg_parser.print_help()
     sys.exit(0)
 
+if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):
+    from datamodel_code_generator.arguments import arg_parser
+
+    namespace = arg_parser.parse_args()
+    if namespace.generate_prompt is not None:
+        from datamodel_code_generator.prompt import generate_prompt
+
+        help_text = arg_parser.format_help()
+        prompt_output = generate_prompt(namespace, help_text)
+        print(prompt_output)  # noqa: T201
+        sys.exit(0)
+
 import difflib
 import json
 import os
