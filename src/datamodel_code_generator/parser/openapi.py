@@ -787,6 +787,7 @@ class OpenAPIParser(JsonSchemaParser):
                     reference=reference,
                     custom_base_class=self._resolve_base_class(name),
                     custom_template_dir=self.custom_template_dir,
+                    extra_template_data=self.extra_template_data,
                     keyword_only=self.keyword_only,
                     treat_dot_as_module=self.treat_dot_as_module,
                     dataclass_arguments=self.dataclass_arguments,

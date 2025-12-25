@@ -4485,3 +4485,29 @@ def test_main_openapi_x_property_names_non_dict(output_file: Path) -> None:
         expected_file="x_property_names_non_dict.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def test_query_parameters_with_model_config(output_file: Path) -> None:
+    """Test that query parameter classes include model_config when config options are used.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/2491
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "query_parameters_with_config.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="query_parameters_with_config.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "paths",
+            "parameters",
+            "--use-annotated",
+            "--extra-fields",
+            "forbid",
+            "--allow-population-by-field-name",
+        ],
+    )
