@@ -35,7 +35,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, camel_to_snake, model_validator
+from datamodel_code_generator.util import ConfigDict, camel_to_snake, is_pydantic_v2, model_validator
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
@@ -84,7 +84,7 @@ class _BaseModel(BaseModel):
     _exclude_fields: ClassVar[set[str]] = set()
     _pass_fields: ClassVar[set[str]] = set()
 
-    if not TYPE_CHECKING:
+    if not TYPE_CHECKING:  # pragma: no branch
 
         def __init__(self, **values: Any) -> None:
             super().__init__(**values)
@@ -92,8 +92,8 @@ class _BaseModel(BaseModel):
                 if pass_field_name in values:
                     setattr(self, pass_field_name, values[pass_field_name])
 
-    if not TYPE_CHECKING:
-        if PYDANTIC_V2:
+    if not TYPE_CHECKING:  # pragma: no branch
+        if is_pydantic_v2():
 
             def dict(  # noqa: PLR0913
                 self,
@@ -165,7 +165,7 @@ class Reference(_BaseModel):
         values["original_name"] = values.get("name", original_name)
         return values
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]

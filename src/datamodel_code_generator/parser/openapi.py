@@ -752,7 +752,7 @@ class OpenAPIParser(JsonSchemaParser):
                         data_type=data_type,
                         required=parameter.required,
                         alias=alias,
-                        constraints=model_dump(object_schema)
+                        constraints=model_dump(object_schema, exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable

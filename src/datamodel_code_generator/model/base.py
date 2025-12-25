@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
-from jinja2 import ChoiceLoader, Environment, FileSystemLoader, Template, select_autoescape
 from pydantic import Field
 from typing_extensions import Self
 
@@ -37,12 +36,14 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-from datamodel_code_generator.util import PYDANTIC_V2, ConfigDict, model_copy, model_dump, model_validate
+from datamodel_code_generator.util import ConfigDict, is_pydantic_v2, model_copy, model_dump, model_validate
 
 __all__ = ["WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from jinja2 import Environment, Template
 
     from datamodel_code_generator import DataclassArguments
 
@@ -95,7 +96,7 @@ class ConstraintsBase(_BaseModel):
 
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
         )
@@ -143,7 +144,7 @@ class ConstraintsBase(_BaseModel):
 class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
             arbitrary_types_allowed=True,
             defer_build=True,
@@ -184,8 +185,8 @@ class DataModelFieldBase(_BaseModel):
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
 
-    if not TYPE_CHECKING:
-        if not PYDANTIC_V2:
+    if not TYPE_CHECKING:  # pragma: no branch
+        if not is_pydantic_v2():
 
             @classmethod
             def model_rebuild(
@@ -225,10 +226,19 @@ class DataModelFieldBase(_BaseModel):
             self.default = const
 
     def self_reference(self) -> bool:
-        """Check if field references its parent model."""
+        """Check if field references its parent model.
+
+        Result is cached after first call since parent is stable at render time.
+        Uses __dict__ for caching to avoid Pydantic v1 field assignment restrictions.
+        """
+        if "_self_reference_cache" in self.__dict__:
+            return self.__dict__["_self_reference_cache"]
         if self.parent is None or not self.parent.reference:  # pragma: no cover
+            self.__dict__["_self_reference_cache"] = False
             return False
-        return self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+        result = self.parent.reference.path in {d.reference.path for d in self.data_type.all_data_types if d.reference}
+        self.__dict__["_self_reference_cache"] = result
+        return result
 
     @property
     def _use_union_operator(self) -> bool:
@@ -309,6 +319,12 @@ class DataModelFieldBase(_BaseModel):
         type_hint = self.type_hint
         has_union = not self._use_union_operator and UNION_PREFIX in type_hint
         has_optional = OPTIONAL_PREFIX in type_hint
+        needs_annotated = self.use_annotated and self.needs_annotated_import
+
+        # Fast path: no special typing imports needed
+        if not has_union and not has_optional and not needs_annotated:
+            return tuple(self.data_type.all_imports)
+
         imports: list[tuple[Import] | Iterator[Import]] = [
             iter(
                 i
@@ -321,7 +337,7 @@ class DataModelFieldBase(_BaseModel):
             imports.append((IMPORT_UNION,))
         if has_optional:
             imports.append((IMPORT_OPTIONAL,))
-        if self.use_annotated and self.needs_annotated_import:
+        if needs_annotated:
             imports.append((IMPORT_ANNOTATED,))
         return chain_as_tuple(*imports)
 
@@ -448,6 +464,8 @@ class DataModelFieldBase(_BaseModel):
 @lru_cache(maxsize=16)
 def _get_environment(template_subdir: Path, custom_template_dir: Path | None) -> Environment:
     """Get or create a cached Jinja2 Environment for the given directories."""
+    from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
+
     loaders: list[FileSystemLoader] = []
 
     if custom_template_dir is not None:
@@ -485,6 +503,8 @@ def _get_template_with_custom_dir(template_file_path: Path, custom_template_dir:
 @lru_cache(maxsize=16)
 def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_subdir: Path) -> Environment:
     """Get or create a cached Jinja2 Environment for absolute path templates."""
+    from jinja2 import ChoiceLoader, Environment, FileSystemLoader, select_autoescape  # noqa: PLC0415
+
     loaders: list[FileSystemLoader] = [
         FileSystemLoader(str(absolute_template_dir)),
         FileSystemLoader(str(TEMPLATE_DIR / builtin_subdir)),
@@ -685,6 +705,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         self.default: Any = default
         self._nullable: bool = nullable
         self._treat_dot_as_module: bool | None = treat_dot_as_module
+        self._dedup_key_cache: dict[tuple[str | None, bool], tuple[Any, ...]] = {}
 
     def _validate_fields(self, fields: list[DataModelFieldBase]) -> list[DataModelFieldBase]:
         names: set[str] = set()
@@ -711,11 +732,22 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         yield from self.fields
 
     def get_dedup_key(self, class_name: str | None = None, *, use_default: bool = True) -> tuple[Any, ...]:
-        """Generate hashable key for model deduplication."""
+        """Generate hashable key for model deduplication.
+
+        Results are cached per (class_name, use_default) combination since
+        the key computation involves expensive render() and imports calls.
+        """
+        cache_key = (class_name, use_default)
+        cached = self._dedup_key_cache.get(cache_key)
+        if cached is not None:
+            return cached
+
         from datamodel_code_generator.parser.base import to_hashable  # noqa: PLC0415
 
         render_class_name = class_name if class_name is not None or not use_default else "M"
-        return tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+        result = tuple(to_hashable(v) for v in (self.render(class_name=render_class_name), self.imports))
+        self._dedup_key_cache[cache_key] = result
+        return result
 
     def create_reuse_model(self, base_ref: Reference) -> Self:
         """Create inherited model with empty fields pointing to base reference."""
@@ -892,7 +924,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         )
 
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}
     DataType.model_rebuild(_types_namespace=_rebuild_namespace)
     BaseClassDataType.model_rebuild(_types_namespace=_rebuild_namespace)

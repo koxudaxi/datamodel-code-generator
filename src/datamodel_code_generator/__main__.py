@@ -2,11 +2,40 @@
 
 from __future__ import annotations
 
+import sys
+
+# Fast path for --version (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--version", "-V"}:  # pragma: no cover  # noqa: PLR2004
+    from importlib.metadata import version
+
+    print(f"datamodel-codegen {version('datamodel-code-generator')}")  # noqa: T201
+    sys.exit(0)
+
+# Fast path for --help (avoid importing heavy modules)
+if len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}:  # pragma: no cover  # noqa: PLR2004
+    from datamodel_code_generator.arguments import arg_parser
+
+    arg_parser.print_help()
+    sys.exit(0)
+
+# Fast path for --generate-prompt
+if any(arg.startswith("--generate-prompt") for arg in sys.argv[1:]):  # pragma: no cover
+    from datamodel_code_generator.arguments import arg_parser
+
+    namespace = arg_parser.parse_args()
+    if namespace.generate_prompt is not None:
+        from datamodel_code_generator.prompt import generate_prompt
+
+        help_text = arg_parser.format_help()
+        prompt_output = generate_prompt(namespace, help_text)
+        print(prompt_output)  # noqa: T201
+        sys.exit(0)
+
 import difflib
 import json
+import os
 import shlex
 import signal
-import sys
 import tempfile
 import warnings
 from collections import defaultdict
@@ -17,7 +46,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-import argcomplete
 from pydantic import BaseModel
 
 from datamodel_code_generator import (
@@ -57,9 +85,9 @@ from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed 
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.util import (
-    PYDANTIC_V2,
     ConfigDict,
     field_validator,
+    is_pydantic_v2,
     load_toml,
     model_validator,
 )
@@ -112,7 +140,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 class Config(BaseModel):
     """Configuration model for code generation."""
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
 
         def get(self, item: str) -> Any:  # pragma: no cover
@@ -300,7 +328,7 @@ class Config(BaseModel):
         "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
     )
 
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
 
         @model_validator()  # pyright: ignore[reportArgumentType]
         def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
@@ -867,7 +895,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         module_split_mode=config.module_split_mode,
     )
 
-    if output is None and result is not None:
+    if output is None and result is not None:  # pragma: no cover
         if isinstance(result, str):
             sys.stdout.write(result + "\n")
         else:
@@ -877,7 +905,10 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
-    argcomplete.autocomplete(arg_parser)
+    if "_ARGCOMPLETE" in os.environ:  # pragma: no cover
+        import argcomplete  # noqa: PLC0415
+
+        argcomplete.autocomplete(arg_parser)
 
     if args is None:  # pragma: no cover
         args = sys.argv[1:]

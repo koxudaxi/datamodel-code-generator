@@ -78,17 +78,17 @@ from datamodel_code_generator.types import (
     UnionIntFloat,
 )
 from datamodel_code_generator.util import (
-    PYDANTIC_V2,
     BaseModel,
     field_validator,
     get_fields_set,
+    is_pydantic_v2,
     model_copy,
     model_dump,
     model_validate,
     model_validator,
 )
 
-if PYDANTIC_V2:
+if is_pydantic_v2():
     from pydantic import ConfigDict
 
 if TYPE_CHECKING:
@@ -204,8 +204,8 @@ class Discriminator(BaseModel):
 class JsonSchemaObject(BaseModel):
     """Represent a JSON Schema object with validation and parsing capabilities."""
 
-    if not TYPE_CHECKING:
-        if PYDANTIC_V2:
+    if not TYPE_CHECKING:  # pragma: no branch
+        if is_pydantic_v2():
 
             @classmethod
             def get_fields(cls) -> dict[str, Any]:
@@ -367,7 +367,7 @@ class JsonSchemaObject(BaseModel):
     custom_base_path: Optional[str] = Field(default=None, alias="customBasePath")  # noqa: UP045
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
-    if PYDANTIC_V2:
+    if is_pydantic_v2():
         model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
@@ -1082,7 +1082,7 @@ class JsonSchemaParser(Parser):
         original_field_name: str | None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
-        constraints = model_dump(field) if self.is_constraints_field(field) else None
+        constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -2629,7 +2629,7 @@ class JsonSchemaParser(Parser):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = model_dump(obj)
+        constraints = model_dump(obj, exclude_none=True)
         if suppress_item_constraints:
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
@@ -2765,7 +2765,7 @@ class JsonSchemaParser(Parser):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        constraints = model_dump(obj) if self.field_constraints else {}
+        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -2832,7 +2832,7 @@ class JsonSchemaParser(Parser):
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
-        constraints = model_dump(obj) if self.field_constraints else {}
+        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(

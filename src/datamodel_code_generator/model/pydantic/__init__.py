@@ -40,9 +40,9 @@ class Config(_BaseModel):
         self, **kwargs: Any
     ) -> dict[str, Any]:
         """Version-compatible dict method for templates."""
-        from datamodel_code_generator.util import PYDANTIC_V2  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
-        if PYDANTIC_V2:
+        if is_pydantic_v2():
             return self.model_dump(**kwargs)
         return super().dict(**kwargs)
 

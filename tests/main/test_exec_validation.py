@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
-from datamodel_code_generator.util import PYDANTIC_V2
+from datamodel_code_generator.util import is_pydantic_v2
 
 from .conftest import (
     CURRENT_PYTHON_VERSION,
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _CURRENT_PY_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
-_SKIP_PYDANTIC = pytest.mark.skipif(not PYDANTIC_V2, reason="Pydantic v2 required")
+_SKIP_PYDANTIC = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 _SKIP_BLACK = pytest.mark.skipif(
     not is_supported_in_black(_CURRENT_PY_VERSION),
     reason=f"Installed black doesn't support Python {CURRENT_PYTHON_VERSION}",
