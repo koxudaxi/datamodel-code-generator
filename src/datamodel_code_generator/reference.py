@@ -84,7 +84,7 @@ class _BaseModel(BaseModel):
     _exclude_fields: ClassVar[set[str]] = set()
     _pass_fields: ClassVar[set[str]] = set()
 
-    if not TYPE_CHECKING:
+    if not TYPE_CHECKING:  # pragma: no branch
 
         def __init__(self, **values: Any) -> None:
             super().__init__(**values)
@@ -92,7 +92,7 @@ class _BaseModel(BaseModel):
                 if pass_field_name in values:
                     setattr(self, pass_field_name, values[pass_field_name])
 
-    if not TYPE_CHECKING:
+    if not TYPE_CHECKING:  # pragma: no branch
         if is_pydantic_v2():
 
             def dict(  # noqa: PLR0913

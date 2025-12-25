@@ -180,14 +180,9 @@ class UnionIntFloat:
 def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     """Chain multiple iterables and return as a tuple.
 
-    Optimized for common cases with 0-2 iterables to avoid chain() overhead.
+    Optimized for the common case of 2 iterables to avoid chain() overhead.
     """
-    n = len(iterables)
-    if n == 0:  # pragma: no cover
-        return ()
-    if n == 1:  # pragma: no cover
-        return tuple(iterables[0])
-    if n == 2:  # noqa: PLR2004
+    if len(iterables) == 2:  # noqa: PLR2004
         return (*iterables[0], *iterables[1])
     return tuple(chain(*iterables))
 
@@ -306,7 +301,7 @@ class DataType(_BaseModel):
             revalidate_instances="never",
         )
     else:
-        if not TYPE_CHECKING:
+        if not TYPE_CHECKING:  # pragma: no branch
 
             @classmethod
             def model_rebuild(

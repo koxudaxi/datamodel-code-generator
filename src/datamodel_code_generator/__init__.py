@@ -71,7 +71,7 @@ T = TypeVar("T")
 # Import is_pydantic_v2 here for module-level YamlValue type definition
 from datamodel_code_generator.util import is_pydantic_v2  # noqa: E402
 
-if not TYPE_CHECKING:
+if not TYPE_CHECKING:  # pragma: no branch
     YamlScalar: TypeAlias = str | int | float | bool | None
     if is_pydantic_v2():
         YamlValue = TypeAliasType("YamlValue", "dict[str, YamlValue] | list[YamlValue] | YamlScalar")

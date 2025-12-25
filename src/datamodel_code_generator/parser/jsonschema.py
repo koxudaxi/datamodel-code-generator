@@ -204,7 +204,7 @@ class Discriminator(BaseModel):
 class JsonSchemaObject(BaseModel):
     """Represent a JSON Schema object with validation and parsing capabilities."""
 
-    if not TYPE_CHECKING:
+    if not TYPE_CHECKING:  # pragma: no branch
         if is_pydantic_v2():
 
             @classmethod

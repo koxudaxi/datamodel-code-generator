@@ -47,7 +47,6 @@ def get_pydantic_version() -> tuple[Any, bool, bool]:
 
 
 _is_v2: bool | None = None
-_is_v2_11: bool | None = None
 
 
 def is_pydantic_v2() -> bool:
@@ -56,14 +55,6 @@ def is_pydantic_v2() -> bool:
     if _is_v2 is None:  # pragma: no branch
         _is_v2 = get_pydantic_version()[1]
     return _is_v2
-
-
-def is_pydantic_v2_11() -> bool:
-    """Check if pydantic v2.11+ is installed."""
-    global _is_v2_11  # noqa: PLW0603
-    if _is_v2_11 is None:  # pragma: no branch
-        _is_v2_11 = get_pydantic_version()[2]
-    return _is_v2_11
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
@@ -85,37 +76,35 @@ def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
 @lru_cache(maxsize=1)
 def get_safe_loader() -> type:
     """Get customized SafeLoader lazily."""
-    import copy  # noqa: PLC0415
-
     try:
         from yaml import CSafeLoader as _SafeLoader  # noqa: PLC0415
     except ImportError:  # pragma: no cover
         from yaml import SafeLoader as _SafeLoader  # noqa: PLC0415
 
-    safe_loader_cls = copy.deepcopy(_SafeLoader)
-    safe_loader_cls.yaml_constructors = copy.deepcopy(_SafeLoader.yaml_constructors)
-    safe_loader_cls.yaml_implicit_resolvers = copy.deepcopy(_SafeLoader.yaml_implicit_resolvers)
-    safe_loader_cls.add_constructor(
-        "tag:yaml.org,2002:timestamp",
-        safe_loader_cls.yaml_constructors["tag:yaml.org,2002:str"],
-    )
+    class CustomSafeLoader(_SafeLoader):  # type: ignore[valid-type,misc]
+        """SafeLoader with YAML 1.2 bool handling and timestamp-as-string."""
 
-    for key in list(safe_loader_cls.yaml_implicit_resolvers.keys()):
-        safe_loader_cls.yaml_implicit_resolvers[key] = [
-            (tag, pattern)
-            for tag, pattern in safe_loader_cls.yaml_implicit_resolvers[key]
-            if tag != "tag:yaml.org,2002:bool"
-        ]
-        if not safe_loader_cls.yaml_implicit_resolvers[key]:
-            del safe_loader_cls.yaml_implicit_resolvers[key]
+        yaml_constructors = _SafeLoader.yaml_constructors.copy()
+        yaml_implicit_resolvers = {  # noqa: RUF012
+            k: v
+            for k, v in (
+                (k, [(tag, pat) for tag, pat in v if tag != "tag:yaml.org,2002:bool"])
+                for k, v in _SafeLoader.yaml_implicit_resolvers.items()
+            )
+            if v
+        }
+
+    CustomSafeLoader.yaml_constructors["tag:yaml.org,2002:timestamp"] = CustomSafeLoader.yaml_constructors[
+        "tag:yaml.org,2002:str"
+    ]
     for key in ["t", "f", "T", "F"]:
-        safe_loader_cls.yaml_implicit_resolvers.setdefault(key, []).append((
+        CustomSafeLoader.yaml_implicit_resolvers.setdefault(key, []).append((
             "tag:yaml.org,2002:bool",
             _YAML_1_2_BOOL_PATTERN,
         ))
-    safe_loader_cls.add_constructor("tag:yaml.org,2002:bool", _construct_yaml_bool_with_warning)
+    CustomSafeLoader.yaml_constructors["tag:yaml.org,2002:bool"] = _construct_yaml_bool_with_warning
 
-    return safe_loader_cls
+    return CustomSafeLoader
 
 
 Model = TypeVar("Model", bound="_BaseModel")  # pyright: ignore[reportInvalidTypeForm]
@@ -204,12 +193,10 @@ def field_validator(
 
 @lru_cache(maxsize=1)
 def _get_config_dict() -> type:
-    """Get ConfigDict type lazily."""
-    if is_pydantic_v2():
-        from pydantic import ConfigDict  # noqa: PLC0415
+    """Get ConfigDict type lazily. Only used with pydantic v2."""
+    from pydantic import ConfigDict  # noqa: PLC0415
 
-        return ConfigDict
-    return dict  # type: ignore[return-value]
+    return ConfigDict
 
 
 class _ConfigDictProxy:
@@ -217,9 +204,6 @@ class _ConfigDictProxy:
 
     def __call__(self, **kwargs: Any) -> Any:
         return _get_config_dict()(**kwargs)
-
-    def __class_getitem__(cls, item: Any) -> Any:
-        return _get_config_dict()[item]  # pyright: ignore[reportIndexIssue]
 
 
 ConfigDict: type = _ConfigDictProxy()  # type: ignore[assignment]
