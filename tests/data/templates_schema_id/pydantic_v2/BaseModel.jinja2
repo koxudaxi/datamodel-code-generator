@@ -16,10 +16,10 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     """
 {%- endif %}
 {%- if schema_id is defined and schema_id %}
-    __schema_id__: ClassVar[str] = "{{ schema_id }}"
+    __schema_id__ = "{{ schema_id }}"
 {%- endif %}
 {%- if path is defined and path %}
-    __path__: ClassVar[str] = "{{ path }}"
+    __path__ = "{{ path }}"
 {%- endif %}
 {%- if not fields and not description and not config and not (schema_id is defined and schema_id) %}
     pass

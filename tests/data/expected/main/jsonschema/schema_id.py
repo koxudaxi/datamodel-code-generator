@@ -8,14 +8,14 @@ from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    __schema_id__: ClassVar[str] = "https://example.com/schemas/user"
-    __path__: ClassVar[str] = "#"
+    __schema_id__ = "https://example.com/schemas/user"
+    __path__ = "#"
     id: str
     name: str
 
 
 class Address(BaseModel):
-    __schema_id__: ClassVar[str] = "#address"
-    __path__: ClassVar[str] = "#/definitions/Address"
+    __schema_id__ = "#address"
+    __path__ = "#/definitions/Address"
     street: str
     city: str | None = None
