@@ -1754,6 +1754,8 @@ class Parser(ABC):
                                 continue
 
                             inner_model.class_name = root_type_model.class_name
+                            inner_model.reference.name = root_type_model.class_name
+                            inner_model.set_reference_path(root_type_model.reference.path)
 
                         assert isinstance(root_type_model, DataModel)
 
