@@ -6366,3 +6366,82 @@ def test_main_jsonschema_schema_id(
                 "pydantic_v2.BaseModel",
             ],
         )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_v2.py",
+        ),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--model-extra-keys"],
+    input_schema="jsonschema/model_extras.json",
+    cli_args=["--model-extra-keys", "x-custom-metadata"],
+    model_outputs={
+        "pydantic_v2": "main/jsonschema/model_extras_v2.py",
+    },
+)
+def test_main_jsonschema_model_extras(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Add model-level schema extensions to ConfigDict json_schema_extra.
+
+    The `--model-extra-keys` flag adds specified x-* extensions from the schema
+    to the model's ConfigDict json_schema_extra.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys",
+            "x-custom-metadata",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_without_x_prefix_v2.py",
+        ),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--model-extra-keys-without-x-prefix"],
+    input_schema="jsonschema/model_extras.json",
+    cli_args=["--model-extra-keys-without-x-prefix", "x-custom-metadata", "x-version"],
+    model_outputs={
+        "pydantic_v2": "main/jsonschema/model_extras_without_x_prefix_v2.py",
+    },
+)
+def test_main_jsonschema_model_extras_without_x_prefix(
+    output_model: str, expected_output: str, output_file: Path
+) -> None:
+    """Strip x- prefix from model-level schema extensions and add to ConfigDict json_schema_extra.
+
+    The `--model-extra-keys-without-x-prefix` flag adds specified x-* extensions
+    from the schema to the model's ConfigDict json_schema_extra with the x- prefix stripped.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys-without-x-prefix",
+            "x-custom-metadata",
+            "x-version",
+        ],
+    )

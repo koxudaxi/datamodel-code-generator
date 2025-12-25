@@ -6,7 +6,7 @@ Pydantic v2 compatible data models with ConfigDict support.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional  # noqa: UP035
 
 from pydantic import BaseModel as _BaseModel
 
@@ -44,6 +44,7 @@ class ConfigDict(_BaseModel):
     use_enum_values: Optional[bool] = None  # noqa: UP045
     coerce_numbers_to_str: Optional[bool] = None  # noqa: UP045
     use_attribute_docstrings: Optional[bool] = None  # noqa: UP045
+    json_schema_extra: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
 
     def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
         """Version-compatible dict method for templates."""

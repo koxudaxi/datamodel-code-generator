@@ -735,6 +735,8 @@ class Parser(ABC):
         field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
         field_extra_keys_without_x_prefix: set[str] | None = None,
+        model_extra_keys: set[str] | None = None,
+        model_extra_keys_without_x_prefix: set[str] | None = None,
         wrap_string_literal: bool | None = None,
         use_title_as_name: bool = False,
         use_operation_id_as_name: bool = False,
@@ -851,6 +853,8 @@ class Parser(ABC):
         self.custom_class_name_generator: Callable[[str], str] | None = custom_class_name_generator
         self.field_extra_keys: set[str] = field_extra_keys or set()
         self.field_extra_keys_without_x_prefix: set[str] = field_extra_keys_without_x_prefix or set()
+        self.model_extra_keys: set[str] = model_extra_keys or set()
+        self.model_extra_keys_without_x_prefix: set[str] = model_extra_keys_without_x_prefix or set()
         self.field_include_all_keys: bool = field_include_all_keys
 
         self.remote_text_cache: DefaultPutDict[str, str] = remote_text_cache or DefaultPutDict()

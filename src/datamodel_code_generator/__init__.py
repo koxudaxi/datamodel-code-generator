@@ -433,6 +433,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     field_extra_keys: set[str] | None = None,
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: set[str] | None = None,
+    model_extra_keys: set[str] | None = None,
+    model_extra_keys_without_x_prefix: set[str] | None = None,
     openapi_scopes: list[OpenAPIScope] | None = None,
     include_path_parameters: bool = False,
     graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
@@ -721,6 +723,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         field_extra_keys=field_extra_keys,
         field_include_all_keys=field_include_all_keys,
         field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
+        model_extra_keys=model_extra_keys,
+        model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,

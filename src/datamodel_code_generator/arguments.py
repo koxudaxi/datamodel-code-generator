@@ -625,6 +625,19 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--model-extra-keys",
+    help="Add extra keys from schema extensions (x-* fields) to model_config json_schema_extra",
+    type=str,
+    nargs="+",
+)
+field_options.add_argument(
+    "--model-extra-keys-without-x-prefix",
+    help="Add extra keys with `x-` prefix to model_config json_schema_extra. "
+    "The extra keys are stripped of the `x-` prefix.",
+    type=str,
+    nargs="+",
+)
+field_options.add_argument(
     "--force-optional",
     help="Force optional for required fields",
     action="store_true",
