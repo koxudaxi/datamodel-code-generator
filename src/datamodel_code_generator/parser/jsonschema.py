@@ -1194,9 +1194,9 @@ class JsonSchemaParser(Parser):
         if self.model_extra_keys or self.model_extra_keys_without_x_prefix:
             model_extras: dict[str, Any] = {}
             for k, v in obj.extras.items():
-                if k in self.model_extra_keys:
+                if self.model_extra_keys and k in self.model_extra_keys:
                     model_extras[k] = v
-                elif k in self.model_extra_keys_without_x_prefix:
+                elif self.model_extra_keys_without_x_prefix and k in self.model_extra_keys_without_x_prefix:
                     # Strip the x- prefix
                     model_extras[k.lstrip("x-")] = v
             if model_extras:

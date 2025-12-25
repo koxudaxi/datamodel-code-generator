@@ -6445,3 +6445,33 @@ def test_main_jsonschema_model_extras_without_x_prefix(
             "x-version",
         ],
     )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_no_match_v2.py",
+        ),
+    ],
+)
+def test_main_jsonschema_model_extras_no_match(output_model: str, expected_output: str, output_file: Path) -> None:
+    """No json_schema_extra when specified model-extra-keys don't match schema extensions.
+
+    When the specified key doesn't exist in the schema's x-* extensions,
+    no json_schema_extra is added to ConfigDict.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys",
+            "x-nonexistent",
+        ],
+    )
