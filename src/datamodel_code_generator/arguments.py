@@ -8,7 +8,6 @@ template customization, OpenAPI-specific options, and general options.
 from __future__ import annotations
 
 import json
-import locale
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
     from argparse import Action
     from collections.abc import Iterable
 
-DEFAULT_ENCODING = locale.getpreferredencoding()
+DEFAULT_ENCODING = "utf-8"
 
 namespace = Namespace(no_color=False)
 
