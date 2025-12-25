@@ -1169,12 +1169,9 @@ class JsonSchemaParser(Parser):
 
     def _set_schema_metadata(self, path: str, obj: JsonSchemaObject) -> None:
         """Set title, $id, and additionalProperties in extra template data."""
-        if obj.title:
-            self.extra_template_data[path]["title"] = obj.title
-        if obj.id:
-            self.extra_template_data[path]["schema_id"] = obj.id
-        if isinstance(obj.additionalProperties, bool):
-            self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
+        self.set_title(path, obj)
+        self.set_schema_id(path, obj)
+        self.set_additional_properties(path, obj)
 
     def set_schema_extensions(self, path: str, obj: JsonSchemaObject) -> None:
         """Set schema extensions (x-* fields) in extra template data."""
