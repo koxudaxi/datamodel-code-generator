@@ -45,7 +45,12 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             "external_child.json",
             "external_child.yaml",
             "extra_data_msgspec.json",
+            "list_only.json",
+            "list_only.yaml",
+            "whitespace_only.yaml",
         )):
+            continue
+        if "ref_to_json_list" in file.parts and file.name == "list.json":
             continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / "openapi").rglob("*"):

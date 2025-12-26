@@ -33,7 +33,7 @@ from datamodel_code_generator import (
     ReuseScope,
     TargetPydanticVersion,
     YamlValue,
-    load_yaml_dict,
+    load_data,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
@@ -883,7 +883,7 @@ class OpenAPIParser(JsonSchemaParser):
                         )
 
             specification: dict[str, Any] = (
-                dict(source.raw_data) if source.raw_data is not None else load_yaml_dict(source.text)
+                dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
             )
             self.raw_obj = specification
             self._collect_discriminator_schemas()

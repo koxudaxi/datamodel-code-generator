@@ -11,6 +11,7 @@ import os
 import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
+from functools import lru_cache as _lru_cache
 from pathlib import Path
 from typing import (
     IO,
@@ -109,9 +110,81 @@ def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
 
 
 def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
-    """Load YAML and return as dict from a file path."""
+    """Load YAML and return as dict from a file path.
+
+    Uses LRU cache with (path, mtime) as key for performance optimization.
+    This avoids re-reading the same file multiple times during $ref resolution.
+    """
+    return _load_yaml_dict_from_path_cached(path, path.stat().st_mtime, encoding)
+
+
+@_lru_cache(maxsize=128)
+def _load_yaml_dict_from_path_cached(
+    path: Path,
+    mtime: float,  # noqa: ARG001  # Used as cache key for invalidation
+    encoding: str,
+) -> dict[str, YamlValue]:
+    """Load YAML dict from path with caching (internal implementation)."""
     with path.open(encoding=encoding) as f:
         return load_yaml_dict(f)
+
+
+def _is_json_text(text: str) -> bool:
+    """Check if text likely contains JSON by examining the first non-whitespace character.
+
+    Skips BOM, spaces, tabs, carriage returns, and newlines.
+    Returns True if the first significant character is '{' or '['.
+    """
+    for ch in text:
+        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
+            continue
+        return ch in {"{", "["}
+    return False
+
+
+def load_data(text: str) -> dict[str, YamlValue]:
+    """Load text as JSON or YAML based on content.
+
+    For stdin/string input: tries JSON first if content looks like JSON,
+    falls back to YAML on failure.
+    """
+    import json  # noqa: PLC0415
+
+    if _is_json_text(text):
+        with contextlib.suppress(json.JSONDecodeError):
+            result = json.loads(text)
+            if isinstance(result, dict):
+                return result
+    return load_yaml_dict(text)
+
+
+def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
+    """Load file as JSON or YAML based on file extension.
+
+    For file input: tries json.load() for .json files (more efficient than
+    read_text + json.loads), falls back to YAML if JSON parsing fails
+    (e.g., trailing commas) or if content is not a dict. Uses YAML for all other extensions.
+    """
+    import json  # noqa: PLC0415
+
+    if path.suffix.lower() == ".json":
+        with contextlib.suppress(json.JSONDecodeError), path.open(encoding=encoding) as f:
+            result = json.load(f)
+            if isinstance(result, dict):
+                return result
+    return load_yaml_dict_from_path(path, encoding)
+
+
+@_lru_cache(maxsize=256)
+def cached_path_exists(path: Path) -> bool:
+    """Check if a path exists with LRU caching.
+
+    Caches the result of Path.exists() to reduce filesystem I/O
+    when checking the same path multiple times (e.g., custom template directories).
+
+    Note: This cache is safe for CLI usage where files don't change during execution.
+    """
+    return path.exists()
 
 
 def get_version() -> str:
