@@ -223,19 +223,27 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
 
 ## `--input-model` {#input-model}
 
-Import a Python type (Pydantic, dataclass, TypedDict) or dict schema from a module.
+Import a Python type or dict schema from a module (module:Object or path/to/file.py:Object).
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input-model mymodule:MyModel # (1)!
+    datamodel-codegen --input-model mymodule:MyModel --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--input-model` - the option documented here
 
 ??? example "Examples"
 
-    **Output:**
+    **Module format:**
+    ```bash
+    datamodel-codegen --input-model mypackage.models:User --output model.py
+    ```
+
+    **Path format:**
+    ```bash
+    datamodel-codegen --input-model src/models/user.py:User --output model.py
+    ```
 
 ---
 

@@ -108,7 +108,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     expected_stdout="",
 )
 def test_input_model_pydantic_basemodel(tmp_path: Path) -> None:
-    """Import a Python type (Pydantic, dataclass, TypedDict) or dict schema from a module."""
+    """Import a Python type or dict schema from a module (module:Object or path/to/file.py:Object)."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:User",
         output_path=tmp_path / "output.py",
@@ -241,7 +241,7 @@ def test_input_model_invalid_module(capsys: pytest.CaptureFixture[str]) -> None:
     run_input_model_error_and_assert(
         input_model="nonexistent_module_12345:Model",
         capsys=capsys,
-        expected_stderr_contains="Cannot import module",
+        expected_stderr_contains="Cannot find module",
     )
 
 
@@ -376,3 +376,86 @@ def test_input_model_adds_cwd_to_sys_path(
         assert cwd in sys.path
     finally:
         sys.path[:] = original_sys_path
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_path_format(tmp_path: Path) -> None:
+    """Test --input-model with path format (path/to/file.py:Object)."""
+    run_input_model_and_assert(
+        input_model="tests/data/python/input_model/pydantic_models.py:User",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["name", "age"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_path_format_filename_only(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test --input-model with filename.py format (no slash)."""
+    from pathlib import Path as PathLib
+
+    monkeypatch.chdir(PathLib("tests/data/python/input_model"))
+    run_input_model_and_assert(
+        input_model="pydantic_models.py:User",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["name", "age"],
+    )
+
+
+def test_input_model_path_file_not_found(capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error when file path doesn't exist."""
+    run_input_model_error_and_assert(
+        input_model="./nonexistent_file_12345.py:Model",
+        capsys=capsys,
+        expected_stderr_contains="File not found",
+    )
+
+
+def test_input_model_path_cannot_load(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test error when spec_from_file_location returns None."""
+    import importlib.util
+
+    test_file = tmp_path / "test_model.py"
+    test_file.write_text("class Model: pass")
+
+    monkeypatch.setattr(importlib.util, "spec_from_file_location", lambda *_a, **_kw: None)
+
+    run_input_model_error_and_assert(
+        input_model=f"{test_file}:Model",
+        capsys=capsys,
+        expected_stderr_contains="Cannot load module",
+    )
+
+
+def test_input_model_module_import_error(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test error when module import fails."""
+    import importlib
+    import importlib.util
+
+    class FakeSpec:
+        name = "fake_module"
+
+    def fake_find_spec(_name: str) -> FakeSpec:
+        return FakeSpec()
+
+    def fake_import_module(_name: str) -> None:
+        msg = "fake import error"
+        raise ImportError(msg)
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+    monkeypatch.setattr(importlib, "import_module", fake_import_module)
+
+    run_input_model_error_and_assert(
+        input_model="some_module:Model",
+        capsys=capsys,
+        expected_stderr_contains="Cannot import module",
+    )

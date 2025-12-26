@@ -593,7 +593,7 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
     return additional_imports
 
 
-def _load_model_schema(
+def _load_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
 ) -> dict[str, object]:
@@ -609,23 +609,45 @@ def _load_model_schema(
     Raises:
         Error: If format invalid, object cannot be loaded, or input_file_type invalid
     """
-    import importlib  # noqa: PLC0415
+    import importlib.util  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
     modname, sep, qualname = input_model.partition(":")
     if not sep or not qualname:
-        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module.path:ObjectName' format."
+        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
         raise Error(msg)
+
+    is_path = "/" in modname or "\\" in modname
+    if not is_path and modname.endswith(".py"):
+        is_path = Path(modname).exists()
 
     cwd = str(Path.cwd())
     if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
-    try:
-        module = importlib.import_module(modname)
-    except ImportError as e:
-        msg = f"Cannot import module {modname!r}: {e}"
-        raise Error(msg) from e
+    if is_path:
+        file_path = Path(modname).resolve()
+        if not file_path.exists():
+            msg = f"File not found: {modname!r}"
+            raise Error(msg)
+        module_name = file_path.stem
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None or spec.loader is None:
+            msg = f"Cannot load module from {modname!r}"
+            raise Error(msg)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+    else:
+        try:
+            module = importlib.util.find_spec(modname)
+            if module is None:
+                msg = f"Cannot find module {modname!r}"
+                raise Error(msg)
+            module = importlib.import_module(modname)
+        except ImportError as e:
+            msg = f"Cannot import module {modname!r}: {e}"
+            raise Error(msg) from e
 
     try:
         obj = getattr(module, qualname)

@@ -148,12 +148,29 @@ datamodel-codegen --input-model mymodule:OPENAPI_SPEC --input-file-type openapi 
 
 ## Format
 
-The `--input-model` option uses the format `module.path:ObjectName`:
+The `--input-model` option supports two formats:
 
-- **module.path**: Python module path (e.g., `mypackage.models`)
-- **ObjectName**: Name of the class or variable in the module
+### Module format
+`module.path:ObjectName`
 
-The module must be importable from the current Python environment.
+```bash
+datamodel-codegen --input-model mypackage.models:User --output model.py
+```
+
+### Path format
+`path/to/file.py:ObjectName`
+
+```bash
+datamodel-codegen --input-model src/models/user.py:User --output model.py
+```
+
+The current directory is automatically added to `sys.path`, so relative paths work without additional configuration.
+
+!!! tip "File and package name conflict"
+    If both `mymodule.py` (file) and `mymodule/` (directory) exist, use the path format to explicitly load the file:
+    ```bash
+    datamodel-codegen --input-model ./mymodule.py:Model --output model.py
+    ```
 
 ## Mutual Exclusion
 
