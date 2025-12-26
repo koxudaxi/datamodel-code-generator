@@ -9,7 +9,7 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, Required, TypedDict, cast
 
 import pytest
 import time_machine
@@ -23,6 +23,22 @@ if TYPE_CHECKING:
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
 _VERSION_PATTERN = re.compile(r"^\d+\.\d+$")
+
+
+class CliDocKwargs(TypedDict, total=False):
+    """Type definition for @pytest.mark.cli_doc marker keyword arguments."""
+
+    options: Required[list[str]]
+    cli_args: Required[list[str]]
+    input_schema: str | None
+    config_content: str | None
+    input_model: str | None
+    golden_output: str | None
+    version_outputs: dict[str, str] | None
+    model_outputs: dict[str, str] | None
+    expected_stdout: str | None
+    related_options: list[str] | None
+    aliases: list[str] | None
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -48,7 +64,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config._cli_doc_items: list[dict[str, Any]] = []
 
 
-def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
+def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
     """Validate marker required fields and types."""
     errors: list[str] = []
 
@@ -98,8 +114,10 @@ def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:
         input_model = kwargs["input_model"]
         if not isinstance(input_model, str):
             errors.append(f"'input_model' must be a string, got {type(input_model).__name__}")
-        elif ":" not in input_model:
-            errors.append(f"'input_model' must be in 'module:name' format, got {input_model!r}")
+        else:
+            parts = input_model.split(":", 1)
+            if len(parts) != 2 or not parts[0].strip() or not parts[1].strip():
+                errors.append(f"'input_model' must be in 'module:name' format, got {input_model!r}")
 
     if has_golden:
         golden = kwargs["golden_output"]
@@ -170,7 +188,7 @@ def pytest_collection_modifyitems(
             continue
 
         if collect_cli_docs:
-            errors = _validate_cli_doc_marker(item.nodeid, marker.kwargs)
+            errors = _validate_cli_doc_marker(item.nodeid, cast("CliDocKwargs", marker.kwargs))
             if errors:
                 validation_errors.append((item.nodeid, errors))
                 continue
