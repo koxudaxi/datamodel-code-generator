@@ -1900,9 +1900,7 @@
 <p>The <code>--encoding</code> flag sets the character encoding used when reading
 the schema file and writing the generated Python code. This is useful
 for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
-Default is the system's preferred encoding (via <code>locale.getpreferredencoding()</code>),
-which is typically UTF-8 on Linux/macOS but may differ on Windows (e.g., cp1252).
-For consistent cross-platform behavior, explicitly specify <code>--encoding utf-8</code>.</p>
+Default is UTF-8, which is the standard encoding for JSON and most modern text files.</p>
 <div class="admonition tip">
 <p class="admonition-title">Usage</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>datamodel-codegen<span class="w"> </span>--input<span class="w"> </span>schema.json<span class="w"> </span>--encoding<span class="w"> </span>utf-8<span class="w"> </span><span class="c1"># (1)!</span>
