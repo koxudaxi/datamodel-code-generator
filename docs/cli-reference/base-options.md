@@ -7,6 +7,7 @@
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
+| [`--input-model`](#input-model) | Import a Python type or dict schema from a module (module:Ob... |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -217,6 +218,24 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         class Model(BaseModel):
             Pet: Pet
         ```
+
+---
+
+## `--input-model` {#input-model}
+
+Import a Python type or dict schema from a module (module:Object or path/to/file.py:Object).
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --input-model mymodule:MyModel # (1)!
+    ```
+
+    1. :material-arrow-left: `--input-model` - the option documented here
+
+??? example "Examples"
+
+    **Output:**
 
 ---
 
