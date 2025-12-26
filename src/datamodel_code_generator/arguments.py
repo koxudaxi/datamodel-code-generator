@@ -8,7 +8,6 @@ template customization, OpenAPI-specific options, and general options.
 from __future__ import annotations
 
 import json
-import locale
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
     from argparse import Action
     from collections.abc import Iterable
 
-DEFAULT_ENCODING = locale.getpreferredencoding()
+DEFAULT_ENCODING = "utf-8"
 
 namespace = Namespace(no_color=False)
 
@@ -631,6 +630,19 @@ field_options.add_argument(
     help="Add all keys to field parameters",
     action="store_true",
     default=None,
+)
+field_options.add_argument(
+    "--model-extra-keys",
+    help="Add extra keys from schema extensions (x-* fields) to model_config json_schema_extra",
+    type=str,
+    nargs="+",
+)
+field_options.add_argument(
+    "--model-extra-keys-without-x-prefix",
+    help="Add extra keys with `x-` prefix to model_config json_schema_extra. "
+    "The extra keys are stripped of the `x-` prefix.",
+    type=str,
+    nargs="+",
 )
 field_options.add_argument(
     "--force-optional",

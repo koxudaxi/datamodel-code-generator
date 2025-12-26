@@ -433,6 +433,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     field_extra_keys: set[str] | None = None,
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: set[str] | None = None,
+    model_extra_keys: set[str] | None = None,
+    model_extra_keys_without_x_prefix: set[str] | None = None,
     openapi_scopes: list[OpenAPIScope] | None = None,
     include_path_parameters: bool = False,
     graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
@@ -532,6 +534,29 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
+    if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
+        msg = (
+            "input_file_type=Auto is not supported for dict input. "
+            "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
+        )
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.GraphQL:
+        msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type in {
+        InputFileType.Json,
+        InputFileType.Yaml,
+        InputFileType.CSV,
+    }:
+        msg = (
+            f"Dict input is not supported for {input_file_type.value}. "
+            f"Use InputFileType.Dict to generate schema from dict data, "
+            f"or provide text/file input for {input_file_type.value} format."
+        )
+        raise Error(msg)
+
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
@@ -657,8 +682,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         kwargs["data_model_scalar_type"] = data_model_types.scalar_model
         kwargs["data_model_union_type"] = data_model_types.union_model
 
-    source = input_text or input_
-    assert not isinstance(source, Mapping)
+    if isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
+        source = dict(input_)
+    else:
+        source = input_text or input_
+        assert not isinstance(source, Mapping)
 
     defer_formatting = output is not None and not output.suffix
 
@@ -721,6 +749,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         field_extra_keys=field_extra_keys,
         field_include_all_keys=field_include_all_keys,
         field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
+        model_extra_keys=model_extra_keys,
+        model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,

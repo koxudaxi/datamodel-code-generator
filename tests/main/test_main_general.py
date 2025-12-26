@@ -24,7 +24,7 @@ from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import create_assert_file_content, freeze_time
+from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     EXPECTED_MAIN_PATH,
@@ -1792,3 +1792,79 @@ from pydantic import BaseModel
 class Model(BaseModel):
     id: int | None = None\
 """)
+
+
+def test_generate_with_dict_jsonschema() -> None:
+    """Test generate() with dict input as JsonSchema."""
+    from tests.data.dict_input import jsonschema_dict
+
+    result = generate(
+        jsonschema_dict,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+
+    assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "jsonschema.py")
+
+
+def test_generate_with_dict_openapi() -> None:
+    """Test generate() with dict input as OpenAPI."""
+    from tests.data.dict_input import openapi_dict
+
+    result = generate(
+        openapi_dict,
+        input_file_type=InputFileType.OpenAPI,
+        disable_timestamp=True,
+    )
+
+    assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
+
+
+def test_generate_with_dict_auto_raises_error() -> None:
+    """Test generate() with dict input + Auto raises error."""
+    from tests.data.dict_input import auto_error_dict
+
+    with pytest.raises(Error, match="input_file_type=Auto is not supported for dict input"):
+        generate(auto_error_dict, input_file_type=InputFileType.Auto)
+
+
+def test_generate_with_dict_graphql_raises_error() -> None:
+    """Test generate() with dict input + GraphQL raises error."""
+    from tests.data.dict_input import graphql_error_dict
+
+    with pytest.raises(Error, match="Dict input is not supported for GraphQL"):
+        generate(graphql_error_dict, input_file_type=InputFileType.GraphQL)
+
+
+def test_generate_with_dict_openapi_validation_warns() -> None:
+    """Test generate() with dict input + validation skips validation with warning."""
+    import warnings
+
+    from tests.data.dict_input import openapi_dict
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = generate(
+            openapi_dict,
+            input_file_type=InputFileType.OpenAPI,
+            validation=True,
+            disable_timestamp=True,
+        )
+        assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
+        # Check that both deprecated warning and dict input warning were raised
+        warning_messages = [str(warning.message) for warning in w]
+        assert any("deprecated" in msg.lower() for msg in warning_messages)
+        assert any("dict input" in msg.lower() for msg in warning_messages)
+
+
+@pytest.mark.parametrize(
+    "input_file_type",
+    [InputFileType.Json, InputFileType.Yaml, InputFileType.CSV],
+    ids=["json", "yaml", "csv"],
+)
+def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFileType) -> None:
+    """Test generate() with dict input + Json/Yaml/CSV raises error."""
+    from tests.data.dict_input import auto_error_dict
+
+    with pytest.raises(Error, match=f"Dict input is not supported for {input_file_type.value}"):
+        generate(auto_error_dict, input_file_type=input_file_type)

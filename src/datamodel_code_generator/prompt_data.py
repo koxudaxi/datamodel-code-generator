@@ -63,6 +63,8 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--input-file-type": "Specify the input file type for code generation.",
     "--keep-model-order": "Keep model definition order as specified in schema.",
     "--keyword-only": "Generate dataclasses with keyword-only fields (Python 3.10+).",
+    "--model-extra-keys": "Add model-level schema extensions to ConfigDict json_schema_extra.",
+    "--model-extra-keys-without-x-prefix": "Strip x- prefix from model-level schema extensions and add to ConfigDic...",
     "--module-split-mode": "Split generated models into separate files, one per model class.",
     "--naming-strategy": "Use parent-prefixed naming strategy for duplicate model names.",
     "--no-alias": "Disable Field alias generation for non-Python-safe property names.",

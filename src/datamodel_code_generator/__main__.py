@@ -501,6 +501,8 @@ class Config(BaseModel):
     field_extra_keys: Optional[set[str]] = None  # noqa: UP045
     field_include_all_keys: bool = False
     field_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
+    model_extra_keys: Optional[set[str]] = None  # noqa: UP045
+    model_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
     include_path_parameters: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
@@ -892,6 +894,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         field_extra_keys=config.field_extra_keys,
         field_include_all_keys=config.field_include_all_keys,
         field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
+        model_extra_keys=config.model_extra_keys,
+        model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
         openapi_scopes=config.openapi_scopes,
         include_path_parameters=config.include_path_parameters,
         wrap_string_literal=config.wrap_string_literal,
