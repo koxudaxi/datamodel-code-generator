@@ -163,13 +163,15 @@ def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
 
     For file input: tries json.load() for .json files (more efficient than
     read_text + json.loads), falls back to YAML if JSON parsing fails
-    (e.g., trailing commas). Uses YAML for all other extensions.
+    (e.g., trailing commas) or if content is not a dict. Uses YAML for all other extensions.
     """
     import json  # noqa: PLC0415
 
     if path.suffix.lower() == ".json":
         with contextlib.suppress(json.JSONDecodeError), path.open(encoding=encoding) as f:
-            return json.load(f)
+            result = json.load(f)
+            if isinstance(result, dict):
+                return result
     return load_yaml_dict_from_path(path, encoding)
 
 
