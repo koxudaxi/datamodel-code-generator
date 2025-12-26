@@ -612,8 +612,8 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
     import importlib.util  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
-    modname, sep, qualname = input_model.partition(":")
-    if not sep or not qualname:
+    modname, sep, qualname = input_model.rpartition(":")
+    if not sep or not modname:
         msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
         raise Error(msg)
 
