@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar
 
 from pydantic import Field
 
-from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_DATE,
     IMPORT_DATETIME,
