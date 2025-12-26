@@ -447,6 +447,15 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--enum-field-as-literal-map",
+    help="Per-field override for enum/literal generation. "
+    "Format: JSON object mapping field names to 'literal' or 'enum'. "
+    'Example: \'{"status": "literal", "priority": "enum"}\'. '
+    "Overrides --enum-field-as-literal for matched fields.",
+    type=json.loads,
+    default=None,
+)
+typing_options.add_argument(
     "--ignore-enum-constraints",
     help="Ignore enum constraints and use the base type (e.g., str, int) instead of generating Enum classes",
     action="store_true",

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnumFieldAsLiteralMap",
+  "type": "object",
+  "properties": {
+    "status": {
+      "title": "Status",
+      "type": "string",
+      "enum": ["active", "inactive", "pending"]
+    },
+    "priority": {
+      "title": "Priority",
+      "type": "string",
+      "enum": ["high", "medium", "low"]
+    },
+    "category": {
+      "title": "Category",
+      "type": "string",
+      "enum": ["a", "b", "c"]
+    }
+  }
+}

@@ -7,6 +7,7 @@
 | [`--allof-merge-mode`](#allof-merge-mode) | Merge constraints from root model references in allOf schema... |
 | [`--disable-future-imports`](#disable-future-imports) | Prevent automatic addition of __future__ imports in generate... |
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
+| [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Per-field override for enum/literal generation. |
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
 | [`--no-use-standard-collections`](#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
@@ -1195,6 +1196,130 @@ of Enum classes for all enumerations.
             class EnumWithOneField(Enum):
                 FIELD = 'FIELD'
             ```
+
+---
+
+## `--enum-field-as-literal-map` {#enum-field-as-literal-map}
+
+Per-field override for enum/literal generation.
+
+The `--enum-field-as-literal-map` option allows you to specify which individual
+fields should use Literal types instead of Enum classes (or vice versa).
+This is useful when you need different behavior for specific fields while
+keeping a default for others.
+
+The option accepts a JSON object mapping field names to either `"literal"` or `"enum"`.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --enum-field-as-literal-map '{"status": "literal", "priority": "enum"}' # (1)!
+    ```
+
+    1. :material-arrow-left: `--enum-field-as-literal-map` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EnumFieldAsLiteralMap",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive", "pending"]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["high", "medium", "low"]
+        },
+        "category": {
+          "type": "string",
+          "enum": ["a", "b", "c"]
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    === "With Map (status as literal)"
+
+        ```bash
+        datamodel-codegen --input schema.json --enum-field-as-literal-map '{"status": "literal"}'
+        ```
+
+        ```python
+        from __future__ import annotations
+
+        from enum import Enum
+        from typing import Literal
+
+        from pydantic import BaseModel
+
+
+        class Priority(Enum):
+            high = 'high'
+            medium = 'medium'
+            low = 'low'
+
+
+        class Category(Enum):
+            a = 'a'
+            b = 'b'
+            c = 'c'
+
+
+        class EnumFieldAsLiteralMap(BaseModel):
+            status: Literal['active', 'inactive', 'pending'] | None = None
+            priority: Priority | None = None
+            category: Category | None = None
+        ```
+
+    === "Override Global (all literal, but priority as enum)"
+
+        ```bash
+        datamodel-codegen --input schema.json --enum-field-as-literal all --enum-field-as-literal-map '{"priority": "enum"}'
+        ```
+
+        ```python
+        from __future__ import annotations
+
+        from enum import Enum
+        from typing import Literal
+
+        from pydantic import BaseModel
+
+
+        class Priority(Enum):
+            high = 'high'
+            medium = 'medium'
+            low = 'low'
+
+
+        class EnumFieldAsLiteralMap(BaseModel):
+            status: Literal['active', 'inactive', 'pending'] | None = None
+            priority: Priority | None = None
+            category: Literal['a', 'b', 'c'] | None = None
+        ```
+
+!!! tip "Schema Extension Alternative"
+    You can also use the `x-enum-field-as-literal` schema extension for per-field control:
+
+    ```json
+    {
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["active", "inactive"],
+          "x-enum-field-as-literal": true
+        }
+      }
+    }
+    ```
 
 ---
 

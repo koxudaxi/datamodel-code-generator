@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "XEnumFieldAsLiteral",
+  "type": "object",
+  "properties": {
+    "status": {
+      "title": "Status",
+      "type": "string",
+      "enum": ["active", "inactive", "pending"],
+      "x-enum-field-as-literal": true
+    },
+    "priority": {
+      "title": "Priority",
+      "type": "string",
+      "enum": ["high", "medium", "low"],
+      "x-enum-field-as-literal": false
+    },
+    "category": {
+      "title": "Category",
+      "type": "string",
+      "enum": ["a", "b", "c"]
+    }
+  }
+}

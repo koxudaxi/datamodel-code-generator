@@ -3591,6 +3591,55 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal-map"],
+    input_schema="jsonschema/enum_field_as_literal_map.json",
+    cli_args=["--enum-field-as-literal-map", '{"status": "literal"}'],
+    golden_output="jsonschema/enum_field_as_literal_map.py",
+)
+def test_main_enum_field_as_literal_map(output_file: Path) -> None:
+    """Test --enum-field-as-literal-map for per-field enum/literal control."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": "literal"}',
+        ],
+    )
+
+
+def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> None:
+    """Test --enum-field-as-literal-map overrides global --enum-field-as-literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map_override.py",
+        extra_args=[
+            "--enum-field-as-literal",
+            "all",
+            "--enum-field-as-literal-map",
+            '{"priority": "enum"}',
+        ],
+    )
+
+
+def test_main_x_enum_field_as_literal(output_file: Path) -> None:
+    """Test x-enum-field-as-literal schema extension for per-field control."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_enum_field_as_literal.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="x_enum_field_as_literal.py",
+    )
+
+
 def test_main_dataclass_const(output_file: Path) -> None:
     """Test main function writing to dataclass with const fields."""
     run_main_and_assert(

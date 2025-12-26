@@ -490,6 +490,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
+    enum_field_as_literal_map: dict[str, str] | None = None,
     ignore_enum_constraints: bool = False,
     use_one_literal_as_default: bool = False,
     use_enum_values_in_discriminator: bool = False,
@@ -803,6 +804,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         enum_field_as_literal=enum_field_as_literal
         if enum_field_as_literal is not None
         else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
+        enum_field_as_literal_map=enum_field_as_literal_map,
         ignore_enum_constraints=ignore_enum_constraints,
         use_one_literal_as_default=use_one_literal_as_default,
         use_enum_values_in_discriminator=use_enum_values_in_discriminator,
