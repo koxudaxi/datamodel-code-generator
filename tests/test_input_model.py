@@ -66,9 +66,11 @@ def run_input_model_and_assert(
 
     return_code = main(args)
     _assert_exit_code(return_code, expected_exit, f"--input-model {input_model}")
-    _assert_file_exists(output_path)
 
-    if expected_output_contains:
+    if expected_exit == Exit.OK:
+        _assert_file_exists(output_path)
+
+    if expected_output_contains and output_path.exists():
         content = output_path.read_text(encoding="utf-8")
         for expected in expected_output_contains:
             _assert_output_contains(content, expected)
