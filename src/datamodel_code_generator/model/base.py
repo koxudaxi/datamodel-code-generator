@@ -18,6 +18,7 @@ from warnings import warn
 from pydantic import Field
 from typing_extensions import Self
 
+from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_OPTIONAL,
@@ -476,7 +477,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
 
     if custom_template_dir is not None:
         custom_dir = custom_template_dir / template_subdir
-        if custom_dir.exists():
+        if cached_path_exists(custom_dir):
             loaders.append(FileSystemLoader(str(custom_dir)))
 
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
@@ -793,7 +794,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         template_file_path = Path(self.TEMPLATE_FILE_PATH)
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / template_file_path
-            if custom_template_file_path.exists():
+            if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path
         return template_file_path
 
