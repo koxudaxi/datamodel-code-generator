@@ -50,6 +50,8 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             "whitespace_only.yaml",
         )):
             continue
+        if "ref_to_json_list" in file.parts and file.name == "list.json":
+            continue
         assert_infer_input_type(file, InputFileType.JsonSchema)
     for file in (DATA_PATH / "openapi").rglob("*"):
         if "all_of_with_relative_ref" in file.parts:
