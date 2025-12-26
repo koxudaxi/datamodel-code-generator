@@ -627,7 +627,7 @@ def extreme_duplicate_names_schema(tmp_path: Path) -> Path:
 
 @pytest.mark.perf
 def test_perf_extreme_large_schema(tmp_path: Path, extreme_large_schema: Path) -> None:
-    """Performance test: Extremely large schema with 5000 models.
+    """Performance test: Extremely large schema with 2000 models.
 
     Tests the generator's ability to handle very large schemas that would be
     impractical to store in the repository.
