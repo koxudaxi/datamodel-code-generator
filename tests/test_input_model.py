@@ -351,7 +351,7 @@ def test_input_model_pydantic_v1_error(
     run_input_model_error_and_assert(
         input_model=pydantic_model_module,
         capsys=capsys,
-        expected_stderr_contains="requires Pydantic v2 model",
+        expected_stderr_contains="requires Pydantic v2 runtime",
     )
 
 

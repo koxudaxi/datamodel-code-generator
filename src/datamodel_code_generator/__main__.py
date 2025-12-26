@@ -643,7 +643,7 @@ def _load_model_schema(
             )
             raise Error(msg)
         if not hasattr(obj, "model_json_schema"):
-            msg = f"--input-model requires Pydantic v2 model. {qualname!r} appears to be a Pydantic v1 model."
+            msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
         return obj.model_json_schema()
 
