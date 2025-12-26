@@ -426,3 +426,22 @@ def test_inline_field_docstring_escapes_triple_quotes() -> None:
         use_inline_field_description=True,
     )
     assert field.inline_field_docstring == r'"""Contains \"\"\"quotes\"\"\""""'
+
+
+def test_data_type_manager_unknown_type_fallback() -> None:
+    """Test DataTypeManager falls back to str with warning for unknown types."""
+    import warnings
+
+    from datamodel_code_generator.model.types import DataTypeManager
+
+    manager = DataTypeManager()
+    del manager.type_map[Types.path]
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = manager.get_data_type(Types.path)
+
+        assert len(w) == 1
+        assert "Type mapping for 'path' not found" in str(w[0].message)
+        assert "--type-mappings" in str(w[0].message)
+        assert result.type == "str"
