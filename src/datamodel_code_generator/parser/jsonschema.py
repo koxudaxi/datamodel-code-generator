@@ -177,6 +177,7 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
         "decimal": Types.decimal,
         "integer": Types.integer,
         "unixtime": Types.int64,
+        "ulid": Types.ulid,
     },
     "boolean": {"default": Types.boolean},
     "object": {"default": Types.object},
