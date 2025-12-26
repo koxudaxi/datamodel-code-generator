@@ -243,7 +243,7 @@ paths.other = [
   "*\\datamodel-code-generator",
 ]
 run.dynamic_context = "none"
-run.omit = [ "tests/data/*" ]
+run.omit = [ "tests/data/*", "tests/main/test_performance.py" ]
 report.fail_under = 88
 run.parallel = true
 run.plugins = [
