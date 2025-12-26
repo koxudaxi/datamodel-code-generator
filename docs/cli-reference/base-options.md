@@ -230,7 +230,7 @@ Import a Pydantic v2 model or dict schema from a Python module.
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input-model module:ObjectName # (1)!
+    datamodel-codegen --input schema.json --input-model mymodule:MyModel # (1)!
     ```
 
     1. :material-arrow-left: `--input-model` - the option documented here
