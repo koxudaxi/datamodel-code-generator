@@ -21,6 +21,7 @@ from datamodel_code_generator.imports import (
     IMPORT_PENDULUM_TIME,
     IMPORT_TIME,
     IMPORT_TIMEDELTA,
+    IMPORT_ULID,
     IMPORT_UUID,
 )
 from datamodel_code_generator.model.pydantic.imports import (
@@ -98,6 +99,7 @@ def type_map_factory(
         Types.uuid3: data_type.from_import(IMPORT_UUID3),
         Types.uuid4: data_type.from_import(IMPORT_UUID4),
         Types.uuid5: data_type.from_import(IMPORT_UUID5),
+        Types.ulid: data_type.from_import(IMPORT_ULID),
         Types.uri: data_type.from_import(IMPORT_ANYURL),
         Types.hostname: data_type.from_import(
             IMPORT_CONSTR,
