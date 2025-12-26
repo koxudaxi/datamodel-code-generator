@@ -53,13 +53,6 @@ jobs:
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
     - name: Install tox
       run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-    - name: Cache tox environments
-      uses: actions/cache@v4
-      with:
-        path: .tox
-        key: tox-${{ runner.os }}-${{ matrix.py || matrix.tox_env }}-${{ hashFiles('pyproject.toml', 'tox.ini', 'uv.lock') }}
-        restore-keys: |
-          tox-${{ runner.os }}-${{ matrix.py || matrix.tox_env }}-
     - name: Setup Python test environment
       run: |
         if [ -n "${{ matrix.py }}" ]; then
@@ -162,13 +155,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Cache tox environments
-        uses: actions/cache@v4
-        with:
-          path: .tox
-          key: tox-${{ runner.os }}-${{ matrix.tox_env }}-${{ hashFiles('pyproject.toml', 'tox.ini', 'uv.lock') }}
-          restore-keys: |
-            tox-${{ runner.os }}-${{ matrix.tox_env }}-
       - name: Setup check suite
         run: tox r -vv --notest --skip-missing-interpreters false -e ${{ matrix.tox_env }}
         env:
