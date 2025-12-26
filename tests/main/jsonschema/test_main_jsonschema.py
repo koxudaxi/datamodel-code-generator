@@ -27,6 +27,7 @@ from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
+    BLACK_PY313_SKIP,
     DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -5685,7 +5686,7 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
 @pytest.mark.parametrize(
     ("target_python_version", "expected_file"),
     [
-        ("3.13", "use_frozen_field_typed_dict.py"),
+        pytest.param("3.13", "use_frozen_field_typed_dict.py", marks=BLACK_PY313_SKIP),
         ("3.11", "use_frozen_field_typed_dict_py311.py"),
         ("3.10", "use_frozen_field_typed_dict_py310.py"),
     ],
@@ -5695,9 +5696,7 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
     input_schema="jsonschema/use_frozen_field.json",
     cli_args=["--output-model-type", "typing.TypedDict", "--use-frozen-field"],
     model_outputs={
-        "typeddict_py313": "main/jsonschema/use_frozen_field_typed_dict.py",
-        "typeddict_py311": "main/jsonschema/use_frozen_field_typed_dict_py311.py",
-        "typeddict_py310": "main/jsonschema/use_frozen_field_typed_dict_py310.py",
+        "typeddict": "main/jsonschema/use_frozen_field_typed_dict.py",
     },
 )
 @pytest.mark.benchmark
