@@ -815,6 +815,7 @@ class Types(Enum):
     uuid3 = auto()
     uuid4 = auto()
     uuid5 = auto()
+    ulid = auto()
     uri = auto()
     hostname = auto()
     ipv4 = auto()
