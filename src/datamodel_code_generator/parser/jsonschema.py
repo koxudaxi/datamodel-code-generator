@@ -2434,15 +2434,28 @@ class JsonSchemaParser(Parser):
             value_type = self.data_type_manager.get_data_type(Types.any)
 
         # Determine key type from propertyNames constraints
-        # Case 1: enum constraint -> Literal type
-        if property_names.enum:
+        # Case 1: $ref or composite types -> delegate to parse_item
+        if (
+            property_names.ref
+            or property_names.anyOf
+            or property_names.oneOf
+            or property_names.allOf
+            or property_names.has_ref_with_schema_keywords
+        ):
+            key_type = self.parse_item(
+                name,
+                property_names,
+                get_special_path("propertyNames/key", path),
+            )
+        # Case 2: enum constraint -> Literal type
+        elif property_names.enum:
             # Filter to only string values (property names must be strings)
             string_enums = [e for e in property_names.enum if isinstance(e, str)]
             if string_enums:
                 key_type = self.data_type(literals=string_enums)
             else:
                 key_type = self.data_type_manager.get_data_type(Types.string)
-        # Case 2: pattern/minLength/maxLength constraints -> constr type
+        # Case 3: pattern/minLength/maxLength constraints -> constr type
         elif (
             property_names.pattern is not None
             or property_names.minLength is not None
@@ -2460,7 +2473,7 @@ class JsonSchemaParser(Parser):
                 Types.string,
                 **kwargs,
             )
-        # Case 3: No specific constraints -> plain str
+        # Case 4: No specific constraints -> plain str
         else:
             key_type = self.data_type_manager.get_data_type(Types.string)
 
