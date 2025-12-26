@@ -124,10 +124,6 @@ def get_data_model_types(  # noqa: PLR0912
             union_model=union_class,
         )
     if data_model_type == DataModelType.TypingTypedDict:
-        # Select field model based on Python version:
-        # - 3.13+: typing.NotRequired, typing.ReadOnly
-        # - 3.11-3.12: typing.NotRequired, typing_extensions.ReadOnly
-        # - 3.10: typing_extensions.NotRequired, typing_extensions.ReadOnly
         if target_python_version.has_typed_dict_read_only:
             typed_dict_field_model: type[DataModelFieldBase] = typed_dict.DataModelField
         elif target_python_version.has_typed_dict_non_required:
