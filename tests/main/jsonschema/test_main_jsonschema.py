@@ -6475,3 +6475,13 @@ def test_main_jsonschema_model_extras_no_match(output_model: str, expected_outpu
             "x-nonexistent",
         ],
     )
+
+
+def test_main_jsonschema_non_dict_files_in_directory(output_dir: Path) -> None:
+    """Test that non-dict files (lists, empty files) are skipped with warnings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_dict_files",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "non_dict_files",
+        input_file_type="jsonschema",
+    )

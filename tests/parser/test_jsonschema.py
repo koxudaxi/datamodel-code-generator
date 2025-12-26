@@ -841,7 +841,7 @@ def test_get_ref_body_from_url_file_unc_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles UNC file:// URLs correctly."""
     parser = JsonSchemaParser("")
     mock_load = mocker.patch(
-        "datamodel_code_generator.parser.jsonschema.load_yaml_dict_from_path",
+        "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "object"},
     )
 
@@ -862,7 +862,7 @@ def test_get_ref_body_from_url_file_local_path(mocker: MockerFixture) -> None:
     """Test _get_ref_body_from_url handles local file:// URLs (no netloc)."""
     parser = JsonSchemaParser("")
     mock_load = mocker.patch(
-        "datamodel_code_generator.parser.jsonschema.load_yaml_dict_from_path",
+        "datamodel_code_generator.parser.jsonschema.load_data_from_path",
         return_value={"type": "string"},
     )
 
