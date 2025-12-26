@@ -16,6 +16,7 @@
 ## ✨ What it does
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v1/v2**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
@@ -94,6 +95,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
 | 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
+| 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
 
 ---
 

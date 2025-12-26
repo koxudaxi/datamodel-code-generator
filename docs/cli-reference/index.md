@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 6 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 22 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
@@ -105,6 +105,7 @@ This documentation is auto-generated from test cases.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters)
 - [`--input`](base-options.md#input)
 - [`--input-file-type`](base-options.md#input-file-type)
+- [`--input-model`](base-options.md#input-model)
 
 ### K {#k}
 

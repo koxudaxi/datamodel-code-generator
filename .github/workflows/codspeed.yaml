@@ -31,5 +31,5 @@ jobs:
         uses: CodSpeedHQ/action@v4
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
-          run: .venv/bin/pytest tests/ --codspeed -n auto -m "benchmark and not perf"
-          mode: "instrumentation"
+          run: .venv/bin/pytest tests/main/test_performance.py --codspeed
+          mode: "walltime"

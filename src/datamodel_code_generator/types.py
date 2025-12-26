@@ -86,6 +86,9 @@ STR = "str"
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
+READ_ONLY = "ReadOnly"
+READ_ONLY_PREFIX = f"{READ_ONLY}["
+
 
 def __getattr__(name: str) -> Any:
     """Provide lazy access to StrictTypes for backwards compatibility."""
@@ -612,7 +615,8 @@ class DataType(_BaseModel):
                 type_ = ""
         if self.reference:
             source = self.reference.source
-            if isinstance(source, Nullable) and source.nullable:
+            is_alias = getattr(source, "is_alias", False)
+            if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
         if self.is_list:
             if self.use_generic_container:
@@ -737,7 +741,8 @@ class DataType(_BaseModel):
                 type_ = ""
         if self.reference:  # pragma: no cover
             source = self.reference.source
-            if isinstance(source, Nullable) and source.nullable:
+            is_alias = getattr(source, "is_alias", False)
+            if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
         if self.is_list:
             if self.use_generic_container:

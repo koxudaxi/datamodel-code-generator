@@ -145,7 +145,6 @@ jobs:
       matrix:
         tox_env:
           - type
-          - dev
           - docs
           - pkg_meta
     steps:
