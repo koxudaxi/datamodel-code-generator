@@ -612,7 +612,8 @@ class DataType(_BaseModel):
                 type_ = ""
         if self.reference:
             source = self.reference.source
-            if isinstance(source, Nullable) and source.nullable:
+            is_alias = getattr(source, "is_alias", False)
+            if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
         if self.is_list:
             if self.use_generic_container:
@@ -737,7 +738,8 @@ class DataType(_BaseModel):
                 type_ = ""
         if self.reference:  # pragma: no cover
             source = self.reference.source
-            if isinstance(source, Nullable) and source.nullable:
+            is_alias = getattr(source, "is_alias", False)
+            if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
         if self.is_list:
             if self.use_generic_container:
