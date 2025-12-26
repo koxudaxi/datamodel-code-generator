@@ -30,7 +30,7 @@ datamodel-codegen [OPTIONS]
 | [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) | Merge constraints from root model references in allOf schemas. |
 | [`--disable-future-imports`](typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
-| [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) | Per-field override for enum/literal generation. |
+| [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) | Test --enum-field-as-literal-map for per-field enum/literal control. |
 | [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of Enum classes. |
 | [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code generation. |
 | [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
@@ -223,7 +223,7 @@ All options sorted alphabetically:
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...
-- [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) - Per-field override for enum/literal generation.
+- [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) - Test --enum-field-as-literal-map for per-field enum/literal ...
 - [`--extra-fields`](field-customization.md#extra-fields) - Configure how generated models handle extra fields not defin...
 - [`--extra-template-data`](template-customization.md#extra-template-data) - Pass custom template variables from JSON file for code gener...
 - [`--field-constraints`](field-customization.md#field-constraints) - Generate Field() with validation constraints from schema.

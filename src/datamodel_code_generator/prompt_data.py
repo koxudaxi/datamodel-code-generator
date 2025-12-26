@@ -40,6 +40,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--enable-version-header": "Include tool version information in file header.",
     "--encoding": "Specify character encoding for input and output files.",
     "--enum-field-as-literal": "Convert all enum fields to Literal types instead of Enum classes.",
+    "--enum-field-as-literal-map": "Test --enum-field-as-literal-map for per-field enum/literal control.",
     "--extra-fields": "Configure how generated models handle extra fields not defined in schema.",
     "--extra-template-data": "Pass custom template variables from JSON file for code generation.",
     "--field-constraints": "Generate Field() with validation constraints from schema.",
