@@ -510,3 +510,208 @@ def test_perf_graphql_style_typed_dict(tmp_path: Path) -> None:
     )
     content = output_file.read_text()
     assert "PageInfo" in content
+
+
+# =============================================================================
+# Dynamically generated extreme-scale tests
+# These tests generate schemas at runtime to avoid bloating the repository
+# =============================================================================
+
+
+@pytest.fixture
+def extreme_large_schema(tmp_path: Path) -> Path:
+    """Generate an extremely large schema with 2000 models."""
+    import json
+
+    schema: dict = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "ExtremeLargeSchema",
+        "definitions": {},
+    }
+    for i in range(2000):
+        schema["definitions"][f"Model{i:04d}"] = {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "name": {"type": "string"},
+                "value": {"type": "number"},
+                "active": {"type": "boolean"},
+                "tags": {"type": "array", "items": {"type": "string"}},
+                "metadata": {"type": "object", "additionalProperties": {"type": "string"}},
+                "ref_prev": {"$ref": f"#/definitions/Model{max(0, i - 1):04d}"},
+            },
+            "required": ["id", "name"],
+        }
+    schema["$ref"] = "#/definitions/Model1999"
+
+    schema_file = tmp_path / "extreme_large.json"
+    schema_file.write_text(json.dumps(schema))
+    return schema_file
+
+
+@pytest.fixture
+def massive_files_input(tmp_path: Path) -> Path:
+    """Generate 200 separate schema files with cross-references."""
+    import json
+
+    input_dir = tmp_path / "massive_input"
+    input_dir.mkdir()
+
+    for i in range(200):
+        schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": f"Schema{i:03d}",
+            "definitions": {},
+        }
+        for j in range(20):
+            model_name = f"Module{i:03d}Model{j:02d}"
+            schema["definitions"][model_name] = {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "data": {"type": "object", "additionalProperties": True},
+                },
+                "required": ["id"],
+            }
+        schema["$ref"] = f"#/definitions/Module{i:03d}Model00"
+        schema_file = input_dir / f"schema_{i:03d}.json"
+        schema_file.write_text(json.dumps(schema))
+
+    return input_dir
+
+
+@pytest.fixture
+def extreme_duplicate_names_schema(tmp_path: Path) -> Path:
+    """Generate schema with 1000 models having highly similar/duplicate names."""
+    import json
+
+    schema: dict = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "ExtremeDuplicateNames",
+        "definitions": {},
+    }
+
+    prefixes = ["User", "Account", "Order", "Product", "Item", "Entity", "Record", "Data", "Info", "Detail"]
+    suffixes = ["Request", "Response", "Input", "Output", "Model", "Schema", "Type", "DTO", "Payload", "Result"]
+
+    idx = 0
+    for prefix in prefixes:
+        for suffix in suffixes:
+            for variant in range(10):
+                name = f"{prefix}{suffix}"
+                if variant > 0:
+                    name = f"{name}{variant}"
+                schema["definitions"][f"def_{idx}_{name}"] = {
+                    "title": name,
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "value": {"type": "string"},
+                        "nested": {
+                            "type": "object",
+                            "properties": {
+                                "inner_id": {"type": "integer"},
+                            },
+                        },
+                    },
+                }
+                idx += 1
+
+    schema["$ref"] = "#/definitions/def_0_UserRequest"
+
+    schema_file = tmp_path / "extreme_duplicates.json"
+    schema_file.write_text(json.dumps(schema))
+    return schema_file
+
+
+@pytest.mark.perf
+def test_perf_extreme_large_schema(tmp_path: Path, extreme_large_schema: Path) -> None:
+    """Performance test: Extremely large schema with 2000 models.
+
+    Tests the generator's ability to handle very large schemas that would be
+    impractical to store in the repository.
+    """
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=extreme_large_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 2000
+
+
+@pytest.mark.perf
+def test_perf_extreme_large_schema_pydantic_v2(tmp_path: Path, extreme_large_schema: Path) -> None:
+    """Performance test: Extremely large schema with Pydantic v2."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=extreme_large_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    content = output_file.read_text()
+    assert content.count("class Model") >= 2000
+
+
+@pytest.mark.perf
+def test_perf_massive_files_input(tmp_path: Path, massive_files_input: Path) -> None:
+    """Performance test: Process 200 separate schema files (4000 models total).
+
+    Tests directory input handling with a very large number of files.
+    """
+    output_dir = tmp_path / "output"
+    generate(
+        input_=massive_files_input,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_dir,
+    )
+    assert output_dir.exists()
+    py_files = list(output_dir.glob("**/*.py"))
+    assert len(py_files) >= 1
+
+
+@pytest.mark.perf
+def test_perf_massive_files_single_output(tmp_path: Path, massive_files_input: Path) -> None:
+    """Performance test: Merge 200 schema files into output directory."""
+    output_dir = tmp_path / "merged"
+    generate(
+        input_=massive_files_input,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_dir,
+    )
+    assert output_dir.exists()
+    py_files = list(output_dir.glob("**/*.py"))
+    assert len(py_files) >= 1
+
+
+@pytest.mark.perf
+def test_perf_extreme_duplicate_names(tmp_path: Path, extreme_duplicate_names_schema: Path) -> None:
+    """Performance test: Handle 1000 models with highly similar names.
+
+    Tests the name disambiguation logic under extreme conditions.
+    """
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=extreme_duplicate_names_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+    )
+    content = output_file.read_text()
+    assert content.count("class ") >= 1000
+
+
+@pytest.mark.perf
+def test_perf_extreme_duplicate_names_pydantic_v2(tmp_path: Path, extreme_duplicate_names_schema: Path) -> None:
+    """Performance test: Extreme duplicate names with Pydantic v2."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=extreme_duplicate_names_schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    content = output_file.read_text()
+    assert content.count("class ") >= 1000
