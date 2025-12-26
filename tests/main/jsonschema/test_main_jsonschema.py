@@ -5683,6 +5683,50 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
 
 
 @pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        ("3.13", "use_frozen_field_typed_dict.py"),
+        ("3.11", "use_frozen_field_typed_dict_py311.py"),
+        ("3.10", "use_frozen_field_typed_dict_py310.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-frozen-field"],
+    input_schema="jsonschema/use_frozen_field.json",
+    cli_args=["--output-model-type", "typing.TypedDict", "--use-frozen-field"],
+    model_outputs={
+        "typeddict_py313": "main/jsonschema/use_frozen_field_typed_dict.py",
+        "typeddict_py311": "main/jsonschema/use_frozen_field_typed_dict_py311.py",
+        "typeddict_py310": "main/jsonschema/use_frozen_field_typed_dict_py310.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_typed_dict(target_python_version: str, expected_file: str, output_file: Path) -> None:
+    """Generate ReadOnly type hints for readOnly properties in TypedDict.
+
+    The `--use-frozen-field` flag generates ReadOnly type hints for TypedDict:
+    - Python 3.13+: uses `typing.ReadOnly`
+    - Python 3.11-3.12: uses `typing_extensions.ReadOnly`
+    - Python 3.10: uses `typing_extensions.ReadOnly` and `typing_extensions.NotRequired`
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-frozen-field",
+            "--target-python-version",
+            target_python_version,
+        ],
+    )
+
+
+@pytest.mark.parametrize(
     ("output_model", "expected_file"),
     [
         ("dataclasses.dataclass", "default_factory_nested_model_dataclass.py"),

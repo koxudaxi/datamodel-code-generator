@@ -87,6 +87,10 @@ class PythonVersion(Enum):
         return self.value not in {self.PY_310.value, self.PY_311.value}
 
     @cached_property
+    def _is_py_313_or_later(self) -> bool:
+        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}
+
+    @cached_property
     def _is_py_314_or_later(self) -> bool:
         return self.value not in {
             self.PY_310.value,
@@ -104,6 +108,11 @@ class PythonVersion(Enum):
     def has_typed_dict_non_required(self) -> bool:
         """Check if Python version supports TypedDict NotRequired."""
         return self._is_py_311_or_later
+
+    @property
+    def has_typed_dict_read_only(self) -> bool:
+        """Check if Python version supports TypedDict ReadOnly (PEP 705)."""
+        return self._is_py_313_or_later
 
     @property
     def has_kw_only_dataclass(self) -> bool:
