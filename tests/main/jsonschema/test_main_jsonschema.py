@@ -3340,6 +3340,21 @@ def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_property_names_anyof_ref(output_file: Path) -> None:
+    """Test propertyNames with anyOf containing $refs uses union of enum types as dict key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_anyof_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_anyof_ref.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_dataclass_field(output_file: Path) -> None:
     """Test dataclass field generation."""
     run_main_and_assert(
