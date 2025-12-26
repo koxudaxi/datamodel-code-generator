@@ -626,7 +626,6 @@ def extreme_duplicate_names_schema(tmp_path: Path) -> Path:
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_extreme_large_schema(tmp_path: Path, extreme_large_schema: Path) -> None:
     """Performance test: Extremely large schema with 5000 models.
 
@@ -644,7 +643,6 @@ def test_perf_extreme_large_schema(tmp_path: Path, extreme_large_schema: Path) -
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_extreme_large_schema_pydantic_v2(tmp_path: Path, extreme_large_schema: Path) -> None:
     """Performance test: Extremely large schema with Pydantic v2."""
     output_file = tmp_path / "output.py"
@@ -659,7 +657,6 @@ def test_perf_extreme_large_schema_pydantic_v2(tmp_path: Path, extreme_large_sch
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_massive_files_input(tmp_path: Path, massive_files_input: Path) -> None:
     """Performance test: Process 200 separate schema files (4000 models total).
 
@@ -677,7 +674,6 @@ def test_perf_massive_files_input(tmp_path: Path, massive_files_input: Path) -> 
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_massive_files_single_output(tmp_path: Path, massive_files_input: Path) -> None:
     """Performance test: Merge 200 schema files into output directory."""
     output_dir = tmp_path / "merged"
@@ -692,7 +688,6 @@ def test_perf_massive_files_single_output(tmp_path: Path, massive_files_input: P
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_extreme_duplicate_names(tmp_path: Path, extreme_duplicate_names_schema: Path) -> None:
     """Performance test: Handle 1000 models with highly similar names.
 
@@ -709,7 +704,6 @@ def test_perf_extreme_duplicate_names(tmp_path: Path, extreme_duplicate_names_sc
 
 
 @pytest.mark.perf
-@pytest.mark.benchmark
 def test_perf_extreme_duplicate_names_pydantic_v2(tmp_path: Path, extreme_duplicate_names_schema: Path) -> None:
     """Performance test: Extreme duplicate names with Pydantic v2."""
     output_file = tmp_path / "output.py"
