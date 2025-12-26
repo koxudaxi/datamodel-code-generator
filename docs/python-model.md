@@ -5,8 +5,58 @@ Generate code from existing Python types: Pydantic models, dataclasses, TypedDic
 ## 🚀 Quick Start {#quick-start}
 
 ```bash
-datamodel-codegen --input-model mymodule:MyModel --output model.py
+datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
+
+## Format {#format}
+
+```
+--input-model <path/to/file.py>:<ObjectName>
+```
+
+Simply specify the **file path** and **object name** separated by `:`.
+
+### Example {#format-example}
+
+```
+myproject/
+├── src/
+│   └── models/
+│       └── user.py      # class User(BaseModel): ...
+└── schemas.py           # USER_SCHEMA = {...}
+```
+
+```bash
+# From file path (recommended - easy to copy-paste)
+datamodel-codegen --input-model src/models/user.py:User --output model.py
+datamodel-codegen --input-model ./schemas.py:USER_SCHEMA --input-file-type jsonschema
+
+# Windows paths also work
+datamodel-codegen --input-model src\models\user.py:User
+```
+
+!!! tip "Copy-paste friendly"
+    Just copy the file path from your editor or file explorer, add `:ClassName`, and you're done!
+
+### Module format (alternative) {#module-format}
+
+You can also use Python module notation with dots:
+
+```bash
+datamodel-codegen --input-model src.models.user:User
+datamodel-codegen --input-model schemas:USER_SCHEMA --input-file-type jsonschema
+```
+
+!!! note "Current directory is auto-added to `sys.path`"
+    No `PYTHONPATH` configuration needed.
+
+!!! tip "File and package name conflict"
+    If both `mymodule.py` and `mymodule/` directory exist, use `./` prefix:
+    ```bash
+    datamodel-codegen --input-model ./mymodule.py:Model
+    ```
+
+---
 
 ## Supported Input Types {#supported-input-types}
 
@@ -20,6 +70,8 @@ datamodel-codegen --input-model mymodule:MyModel --output model.py
 
 !!! note "Pydantic v2 Required"
     All Python type inputs (except raw dict) require Pydantic v2 runtime to convert to JSON Schema.
+
+---
 
 ## 📝 Examples {#examples}
 
@@ -35,7 +87,7 @@ class User(BaseModel):
 ```
 
 ```bash
-datamodel-codegen --input-model mymodule:User --output model.py
+datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
 
 **✨ Generated model.py**
@@ -53,7 +105,7 @@ class User(BaseModel):
 ### Convert Pydantic to TypedDict {#convert-pydantic-to-typeddict}
 
 ```bash
-datamodel-codegen --input-model mymodule:User --output-model-type typing.TypedDict --output model.py
+datamodel-codegen --input-model ./mymodule.py:User --output-model-type typing.TypedDict --output model.py
 ```
 
 **✨ Generated model.py**
@@ -81,7 +133,7 @@ class User:
 ```
 
 ```bash
-datamodel-codegen --input-model mymodule:User --output model.py
+datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
 
 ### TypedDict {#typeddict}
@@ -96,7 +148,7 @@ class User(TypedDict):
 ```
 
 ```bash
-datamodel-codegen --input-model mymodule:User --output model.py
+datamodel-codegen --input-model ./mymodule.py:User --output model.py
 ```
 
 ### Dict Schema (JSON Schema) {#dict-jsonschema}
@@ -114,7 +166,7 @@ USER_SCHEMA = {
 ```
 
 ```bash
-datamodel-codegen --input-model mymodule:USER_SCHEMA --input-file-type jsonschema --output model.py
+datamodel-codegen --input-model ./mymodule.py:USER_SCHEMA --input-file-type jsonschema --output model.py
 ```
 
 !!! warning "Dict requires --input-file-type"
@@ -143,34 +195,10 @@ OPENAPI_SPEC = {
 ```
 
 ```bash
-datamodel-codegen --input-model mymodule:OPENAPI_SPEC --input-file-type openapi --output model.py
+datamodel-codegen --input-model ./mymodule.py:OPENAPI_SPEC --input-file-type openapi --output model.py
 ```
 
-## Format {#format}
-
-The `--input-model` option supports two formats:
-
-### Module format {#module-format}
-`module.path:ObjectName`
-
-```bash
-datamodel-codegen --input-model mypackage.models:User --output model.py
-```
-
-### Path format {#path-format}
-`path/to/file.py:ObjectName`
-
-```bash
-datamodel-codegen --input-model src/models/user.py:User --output model.py
-```
-
-The current directory is automatically added to `sys.path`, so relative paths work without additional configuration.
-
-!!! tip "File and package name conflict"
-    If both `mymodule.py` (file) and `mymodule/` (directory) exist, use the path format to explicitly load the file:
-    ```bash
-    datamodel-codegen --input-model ./mymodule.py:Model --output model.py
-    ```
+---
 
 ## Mutual Exclusion {#mutual-exclusion}
 
