@@ -1,14 +1,14 @@
-# 🐍 Generate from Python Models
+# 🐍 Generate from Python Models {#python-model}
 
 Generate code from existing Python types: Pydantic models, dataclasses, TypedDict, or dict schemas. This is useful for converting between model types or generating from programmatically-defined schemas.
 
-## 🚀 Quick Start
+## 🚀 Quick Start {#quick-start}
 
 ```bash
 datamodel-codegen --input-model mymodule:MyModel --output model.py
 ```
 
-## Supported Input Types
+## Supported Input Types {#supported-input-types}
 
 | Type | Description | Requires |
 |------|-------------|----------|
@@ -21,9 +21,9 @@ datamodel-codegen --input-model mymodule:MyModel --output model.py
 !!! note "Pydantic v2 Required"
     All Python type inputs (except raw dict) require Pydantic v2 runtime to convert to JSON Schema.
 
-## 📝 Examples
+## 📝 Examples {#examples}
 
-### Pydantic BaseModel
+### Pydantic BaseModel {#pydantic-basemodel}
 
 **mymodule.py**
 ```python
@@ -50,7 +50,7 @@ class User(BaseModel):
     age: int
 ```
 
-### Convert Pydantic to TypedDict
+### Convert Pydantic to TypedDict {#convert-pydantic-to-typeddict}
 
 ```bash
 datamodel-codegen --input-model mymodule:User --output-model-type typing.TypedDict --output model.py
@@ -68,7 +68,7 @@ class User(TypedDict):
     age: int
 ```
 
-### Standard dataclass
+### Standard dataclass {#dataclass}
 
 **mymodule.py**
 ```python
@@ -84,7 +84,7 @@ class User:
 datamodel-codegen --input-model mymodule:User --output model.py
 ```
 
-### TypedDict
+### TypedDict {#typeddict}
 
 **mymodule.py**
 ```python
@@ -99,7 +99,7 @@ class User(TypedDict):
 datamodel-codegen --input-model mymodule:User --output model.py
 ```
 
-### Dict Schema (JSON Schema)
+### Dict Schema (JSON Schema) {#dict-jsonschema}
 
 **mymodule.py**
 ```python
@@ -120,7 +120,7 @@ datamodel-codegen --input-model mymodule:USER_SCHEMA --input-file-type jsonschem
 !!! warning "Dict requires --input-file-type"
     When using a dict schema, you must specify `--input-file-type` (e.g., `jsonschema`, `openapi`).
 
-### Dict Schema (OpenAPI)
+### Dict Schema (OpenAPI) {#dict-openapi}
 
 **mymodule.py**
 ```python
@@ -146,18 +146,18 @@ OPENAPI_SPEC = {
 datamodel-codegen --input-model mymodule:OPENAPI_SPEC --input-file-type openapi --output model.py
 ```
 
-## Format
+## Format {#format}
 
 The `--input-model` option supports two formats:
 
-### Module format
+### Module format {#module-format}
 `module.path:ObjectName`
 
 ```bash
 datamodel-codegen --input-model mypackage.models:User --output model.py
 ```
 
-### Path format
+### Path format {#path-format}
 `path/to/file.py:ObjectName`
 
 ```bash
@@ -172,7 +172,7 @@ The current directory is automatically added to `sys.path`, so relative paths wo
     datamodel-codegen --input-model ./mymodule.py:Model --output model.py
     ```
 
-## Mutual Exclusion
+## Mutual Exclusion {#mutual-exclusion}
 
 `--input-model` cannot be used with:
 
