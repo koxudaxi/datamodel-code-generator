@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 from pydantic.json_schema import SkipJsonSchema
@@ -41,9 +41,6 @@ from datamodel_code_generator.format import (
 )
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
-
-if TYPE_CHECKING:
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
 
 # Use Literal type to avoid circular import
 UnionModeType = Literal["smart", "left_to_right"] | None

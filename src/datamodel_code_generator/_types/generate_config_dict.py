@@ -7,27 +7,25 @@ from typing import Any, Literal, TypeAlias, TypedDict
 
 from typing_extensions import NotRequired
 
-AllExportsCollisionStrategy: TypeAlias = Literal[
-    'error', 'minimal-prefix', 'full-prefix'
-]
+AllExportsCollisionStrategy: TypeAlias = Literal["error", "minimal-prefix", "full-prefix"]
 
 
-AllExportsScope: TypeAlias = Literal['children', 'recursive']
+AllExportsScope: TypeAlias = Literal["children", "recursive"]
 
 
-AllOfMergeMode: TypeAlias = Literal['constraints', 'all', 'none']
+AllOfMergeMode: TypeAlias = Literal["constraints", "all", "none"]
 
 
-CollapseRootModelsNameStrategy: TypeAlias = Literal['child', 'parent']
+CollapseRootModelsNameStrategy: TypeAlias = Literal["child", "parent"]
 
 
 DataModelType: TypeAlias = Literal[
-    'pydantic.BaseModel',
-    'pydantic_v2.BaseModel',
-    'pydantic_v2.dataclass',
-    'dataclasses.dataclass',
-    'typing.TypedDict',
-    'msgspec.Struct',
+    "pydantic.BaseModel",
+    "pydantic_v2.BaseModel",
+    "pydantic_v2.dataclass",
+    "dataclasses.dataclass",
+    "typing.TypedDict",
+    "msgspec.Struct",
 ]
 
 
@@ -44,57 +42,49 @@ class DataclassArguments(TypedDict):
     weakref_slot: NotRequired[bool]
 
 
-DateClassType: TypeAlias = Literal['date', 'PastDate', 'FutureDate']
+DateClassType: TypeAlias = Literal["date", "PastDate", "FutureDate"]
 
 
-DatetimeClassType: TypeAlias = Literal[
-    'datetime', 'AwareDatetime', 'NaiveDatetime', 'PastDatetime', 'FutureDatetime'
-]
+DatetimeClassType: TypeAlias = Literal["datetime", "AwareDatetime", "NaiveDatetime", "PastDatetime", "FutureDatetime"]
 
 
-FieldTypeCollisionStrategy: TypeAlias = Literal['rename-field', 'rename-type']
+FieldTypeCollisionStrategy: TypeAlias = Literal["rename-field", "rename-type"]
 
 
-Formatter: TypeAlias = Literal['black', 'isort', 'ruff-check', 'ruff-format']
+Formatter: TypeAlias = Literal["black", "isort", "ruff-check", "ruff-format"]
 
 
-GraphQLScope: TypeAlias = Literal['schema']
+GraphQLScope: TypeAlias = Literal["schema"]
 
 
-InputFileType: TypeAlias = Literal[
-    'auto', 'openapi', 'jsonschema', 'json', 'yaml', 'dict', 'csv', 'graphql'
-]
+InputFileType: TypeAlias = Literal["auto", "openapi", "jsonschema", "json", "yaml", "dict", "csv", "graphql"]
 
 
-LiteralType: TypeAlias = Literal['all', 'one', 'none']
+LiteralType: TypeAlias = Literal["all", "one", "none"]
 
 
-ModuleSplitMode: TypeAlias = Literal['single']
+ModuleSplitMode: TypeAlias = Literal["single"]
 
 
-NamingStrategy: TypeAlias = Literal[
-    'numbered', 'parent-prefixed', 'full-path', 'primary-first'
-]
+NamingStrategy: TypeAlias = Literal["numbered", "parent-prefixed", "full-path", "primary-first"]
 
 
-OpenAPIScope: TypeAlias = Literal[
-    'schemas', 'paths', 'tags', 'parameters', 'webhooks', 'requestbodies'
-]
+OpenAPIScope: TypeAlias = Literal["schemas", "paths", "tags", "parameters", "webhooks", "requestbodies"]
 
 
-PythonVersion: TypeAlias = Literal['3.10', '3.11', '3.12', '3.13', '3.14']
+PythonVersion: TypeAlias = Literal["3.10", "3.11", "3.12", "3.13", "3.14"]
 
 
-ReadOnlyWriteOnlyModelType: TypeAlias = Literal['request-response', 'all']
+ReadOnlyWriteOnlyModelType: TypeAlias = Literal["request-response", "all"]
 
 
-ReuseScope: TypeAlias = Literal['module', 'tree']
+ReuseScope: TypeAlias = Literal["module", "tree"]
 
 
-StrictTypes: TypeAlias = Literal['str', 'bytes', 'int', 'float', 'bool']
+StrictTypes: TypeAlias = Literal["str", "bytes", "int", "float", "bool"]
 
 
-TargetPydanticVersion: TypeAlias = Literal['2', '2.11']
+TargetPydanticVersion: TypeAlias = Literal["2", "2.11"]
 
 
 class GenerateConfig(TypedDict):
@@ -169,9 +159,7 @@ class GenerateConfig(TypedDict):
     use_non_positive_negative_number_constrained_types: NotRequired[bool]
     use_decimal_for_multiple_of: NotRequired[bool]
     collapse_root_models: NotRequired[bool]
-    collapse_root_models_name_strategy: NotRequired[
-        CollapseRootModelsNameStrategy | None
-    ]
+    collapse_root_models_name_strategy: NotRequired[CollapseRootModelsNameStrategy | None]
     collapse_reuse_models: NotRequired[bool]
     skip_root_model: NotRequired[bool]
     use_type_alias: NotRequired[bool]
@@ -183,7 +171,7 @@ class GenerateConfig(TypedDict):
     use_standard_primitive_types: NotRequired[bool]
     treat_dot_as_module: NotRequired[bool | None]
     use_exact_imports: NotRequired[bool]
-    union_mode: NotRequired[Literal['smart', 'left_to_right'] | None]
+    union_mode: NotRequired[Literal["smart", "left_to_right"] | None]
     output_datetime_class: NotRequired[DatetimeClassType | None]
     output_date_class: NotRequired[DateClassType | None]
     keyword_only: NotRequired[bool]

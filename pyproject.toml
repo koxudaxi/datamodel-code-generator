@@ -181,6 +181,9 @@ lint.per-file-ignores."scripts/*.py" = [
   "S",       # subprocess security is fine for build scripts
   "T201",    # print is fine for CLI scripts
 ]
+lint.per-file-ignores."src/datamodel_code_generator/config.py" = [
+  "TC", # Pydantic needs these imports at runtime, not just TYPE_CHECKING
+]
 lint.per-file-ignores."tests/**/*.py" = [
   "FBT",     # don't care about booleans as positional arguments in tests
   "INP001",  # no implicit namespace
