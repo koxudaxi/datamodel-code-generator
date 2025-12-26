@@ -3348,7 +3348,7 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = load_yaml(source.text)
+            raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
             if not isinstance(raw_obj, dict):  # pragma: no cover
                 warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
                 continue

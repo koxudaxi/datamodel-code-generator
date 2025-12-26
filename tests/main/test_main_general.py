@@ -1792,3 +1792,67 @@ from pydantic import BaseModel
 class Model(BaseModel):
     id: int | None = None\
 """)
+
+
+def test_generate_with_dict_jsonschema() -> None:
+    """Test generate() with dict input as JsonSchema."""
+    from tests.data.dict_input import jsonschema_dict
+
+    result = generate(
+        jsonschema_dict,
+        input_file_type=InputFileType.JsonSchema,
+    )
+
+    assert result is not None
+    assert "class Model" in result
+    assert "name: str" in result
+
+
+def test_generate_with_dict_openapi() -> None:
+    """Test generate() with dict input as OpenAPI."""
+    from tests.data.dict_input import openapi_dict
+
+    result = generate(
+        openapi_dict,
+        input_file_type=InputFileType.OpenAPI,
+    )
+
+    assert result is not None
+    assert "class User" in result
+
+
+def test_generate_with_dict_auto_raises_error() -> None:
+    """Test generate() with dict input + Auto raises error."""
+    from tests.data.dict_input import auto_error_dict
+
+    with pytest.raises(Error, match="input_file_type=Auto is not supported for dict input"):
+        generate(auto_error_dict, input_file_type=InputFileType.Auto)
+
+
+def test_generate_with_dict_graphql_raises_error() -> None:
+    """Test generate() with dict input + GraphQL raises error."""
+    from tests.data.dict_input import graphql_error_dict
+
+    with pytest.raises(Error, match="Dict input is not supported for GraphQL"):
+        generate(graphql_error_dict, input_file_type=InputFileType.GraphQL)
+
+
+def test_generate_with_dict_openapi_validation_warns() -> None:
+    """Test generate() with dict input + validation skips validation with warning."""
+    import warnings
+
+    from tests.data.dict_input import openapi_dict
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        result = generate(
+            openapi_dict,
+            input_file_type=InputFileType.OpenAPI,
+            validation=True,
+        )
+        assert result is not None
+        assert "class User" in result
+        # Check that both deprecated warning and dict input warning were raised
+        warning_messages = [str(warning.message) for warning in w]
+        assert any("deprecated" in msg.lower() for msg in warning_messages)
+        assert any("dict input" in msg.lower() for msg in warning_messages)
