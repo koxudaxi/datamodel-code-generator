@@ -1,7 +1,7 @@
 [project]
 site_name = "datamodel-code-generator"
 site_description = "This code generator creates pydantic model from an openapi file and others."
-site_url = "https://koxudaxi.github.io/datamodel-code-generator"
+site_url = "https://datamodel-code-generator.koxudaxi.dev"
 repo_name = "koxudaxi/datamodel-code-generator"
 repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
 
