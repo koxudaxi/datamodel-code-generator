@@ -9,11 +9,12 @@ import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol, Required, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
 import pytest
 import time_machine
 from inline_snapshot import external_file, register_format_alias
+from typing_extensions import Required
 
 from datamodel_code_generator import MIN_VERSION
 
