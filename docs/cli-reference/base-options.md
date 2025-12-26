@@ -7,7 +7,7 @@
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
-| [`--input-model`](#input-model) | Import a Pydantic v2 model or dict schema from a Python modu... |
+| [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -223,19 +223,96 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
 
 ## `--input-model` {#input-model}
 
-Import a Pydantic v2 model or dict schema from a Python module.
+Import a Python type or dict schema from a module and generate code from it.
+
+Supports:
+
+- **Pydantic BaseModel** - Pydantic v2 models
+- **dataclass** - Standard library or Pydantic dataclasses
+- **TypedDict** - `typing.TypedDict` subclasses
+- **dict** - Dict containing JSON Schema or OpenAPI spec
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --input-model mymodule:MyModel # (1)!
+    datamodel-codegen --input-model mymodule:MyModel --output model.py # (1)!
     ```
 
     1. :material-arrow-left: `--input-model` - the option documented here
 
 ??? example "Examples"
 
-    **Output:**
+    === "Pydantic BaseModel"
+
+        **mymodule.py:**
+        ```python
+        from pydantic import BaseModel
+
+        class User(BaseModel):
+            name: str
+            age: int
+        ```
+
+        **Command:**
+        ```bash
+        datamodel-codegen --input-model mymodule:User --output model.py
+        ```
+
+    === "dataclass"
+
+        **mymodule.py:**
+        ```python
+        from dataclasses import dataclass
+
+        @dataclass
+        class User:
+            name: str
+            age: int
+        ```
+
+        **Command:**
+        ```bash
+        datamodel-codegen --input-model mymodule:User --output model.py
+        ```
+
+    === "TypedDict"
+
+        **mymodule.py:**
+        ```python
+        from typing import TypedDict
+
+        class User(TypedDict):
+            name: str
+            age: int
+        ```
+
+        **Command:**
+        ```bash
+        datamodel-codegen --input-model mymodule:User --output model.py
+        ```
+
+    === "dict (JSON Schema)"
+
+        **mymodule.py:**
+        ```python
+        USER_SCHEMA = {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"},
+            },
+        }
+        ```
+
+        **Command:**
+        ```bash
+        datamodel-codegen --input-model mymodule:USER_SCHEMA --input-file-type jsonschema --output model.py
+        ```
+
+!!! note
+    - All Python type inputs (except raw dict) require Pydantic v2 runtime.
+    - Cannot be used with `--input`, `--url`, or `--watch`.
+    - See [Python Models](../python-model.md) for more details.
 
 ---
 

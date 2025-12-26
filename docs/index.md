@@ -94,6 +94,7 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 | 📋 [JSON Schema](jsonschema.md) | `.json` | Data validation schemas |
 | 🔷 [GraphQL](graphql.md) | `.graphql` | GraphQL type definitions |
 | 📊 [JSON/YAML Data](jsondata.md) | `.json`, `.yaml` | Infer schema from data |
+| 🐍 [Python Models](python-model.md) | `.py` | Pydantic, dataclass, TypedDict |
 
 ---
 

@@ -647,7 +647,27 @@ def _load_model_schema(
             raise Error(msg)
         return obj.model_json_schema()
 
-    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel"
+    # Check for dataclass or TypedDict - use TypeAdapter
+    from dataclasses import is_dataclass  # noqa: PLC0415
+
+    is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
+    if is_dataclass(obj) or is_typed_dict:
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+            msg = (
+                f"--input-file-type must be 'jsonschema' (or omitted) "
+                f"when --input-model points to a dataclass or TypedDict, "
+                f"got '{input_file_type.value}'"
+            )
+            raise Error(msg)
+        try:
+            from pydantic import TypeAdapter  # noqa: PLC0415
+
+            return TypeAdapter(obj).json_schema()
+        except ImportError as e:
+            msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
+            raise Error(msg) from e
+
+    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
     raise Error(msg)
 
 
