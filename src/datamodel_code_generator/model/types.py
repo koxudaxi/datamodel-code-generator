@@ -6,7 +6,6 @@ Provides DataTypeManager implementation with type mapping factory.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar
-from warnings import warn
 
 from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
@@ -156,9 +155,8 @@ class DataTypeManager(_DataTypeManager):
         """Get data type for schema type."""
         if types in self.type_map:
             return self.type_map[types]
-        warn(
-            f"Type mapping for {types.name!r} not found - using 'str'. "
-            f"Use --type-mappings to specify a custom mapping.",
-            stacklevel=2,
+        msg = (
+            f"Type mapping for {types.name!r} not implemented. "
+            f"Please report this at https://github.com/koxudaxi/datamodel-code-generator/issues"
         )
-        return self.data_type(type="str")
+        raise NotImplementedError(msg)
