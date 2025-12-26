@@ -124,14 +124,16 @@ def get_data_model_types(  # noqa: PLR0912
             union_model=union_class,
         )
     if data_model_type == DataModelType.TypingTypedDict:
+        if target_python_version.has_typed_dict_read_only:
+            typed_dict_field_model: type[DataModelFieldBase] = typed_dict.DataModelField
+        elif target_python_version.has_typed_dict_non_required:
+            typed_dict_field_model = typed_dict.DataModelFieldReadOnlyBackport
+        else:
+            typed_dict_field_model = typed_dict.DataModelFieldBackport
         return DataModelSet(
             data_model=typed_dict.TypedDict,
             root_model=type_alias_class,
-            field_model=(
-                typed_dict.DataModelField
-                if target_python_version.has_typed_dict_non_required
-                else typed_dict.DataModelFieldBackport
-            ),
+            field_model=typed_dict_field_model,
             data_type_manager=DataTypeManager,
             dump_resolve_reference_action=None,
             scalar_model=scalar_class,

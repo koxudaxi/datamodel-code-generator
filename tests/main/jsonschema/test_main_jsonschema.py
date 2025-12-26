@@ -27,6 +27,7 @@ from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
+    BLACK_PY313_SKIP,
     DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -5679,6 +5680,48 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="use_frozen_field_no_readonly.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-frozen-field"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        pytest.param("3.13", "use_frozen_field_typed_dict.py", marks=BLACK_PY313_SKIP),
+        ("3.11", "use_frozen_field_typed_dict_py311.py"),
+        ("3.10", "use_frozen_field_typed_dict_py310.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-frozen-field"],
+    input_schema="jsonschema/use_frozen_field.json",
+    cli_args=["--output-model-type", "typing.TypedDict", "--use-frozen-field"],
+    model_outputs={
+        "typeddict": "main/jsonschema/use_frozen_field_typed_dict.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_typed_dict(target_python_version: str, expected_file: str, output_file: Path) -> None:
+    """Generate ReadOnly type hints for readOnly properties in TypedDict.
+
+    The `--use-frozen-field` flag generates ReadOnly type hints for TypedDict:
+    - Python 3.13+: uses `typing.ReadOnly`
+    - Python 3.11-3.12: uses `typing_extensions.ReadOnly`
+    - Python 3.10: uses `typing_extensions.ReadOnly` and `typing_extensions.NotRequired`
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-frozen-field",
+            "--target-python-version",
+            target_python_version,
+        ],
     )
 
 

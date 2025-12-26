@@ -86,6 +86,9 @@ STR = "str"
 NOT_REQUIRED = "NotRequired"
 NOT_REQUIRED_PREFIX = f"{NOT_REQUIRED}["
 
+READ_ONLY = "ReadOnly"
+READ_ONLY_PREFIX = f"{READ_ONLY}["
+
 
 def __getattr__(name: str) -> Any:
     """Provide lazy access to StrictTypes for backwards compatibility."""
