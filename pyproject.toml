@@ -257,3 +257,31 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
+
+[tool.datamodel-codegen.profiles.base-config-dict]
+input-model = "src/datamodel_code_generator/config.py:BaseConfig"
+output = "src/datamodel_code_generator/_types/base_config_dict.py"
+output-model-type = "typing.TypedDict"
+disable-timestamp = true
+type-overrides = { "path" = "pathlib.Path" }
+
+[tool.datamodel-codegen.profiles.generate-config-dict]
+input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
+output = "src/datamodel_code_generator/_types/generate_config_dict.py"
+output-model-type = "typing.TypedDict"
+disable-timestamp = true
+type-overrides = { "path" = "pathlib.Path" }
+
+[tool.datamodel-codegen.profiles.parser-config-dict]
+input-model = "src/datamodel_code_generator/config.py:ParserConfig"
+output = "src/datamodel_code_generator/_types/parser_config_dict.py"
+output-model-type = "typing.TypedDict"
+disable-timestamp = true
+type-overrides = { "path" = "pathlib.Path" }
+
+[tool.datamodel-codegen.profiles.parse-config-dict]
+input-model = "src/datamodel_code_generator/config.py:ParseConfig"
+output = "src/datamodel_code_generator/_types/parse_config_dict.py"
+output-model-type = "typing.TypedDict"
+disable-timestamp = true
+type-overrides = { "path" = "pathlib.Path" }

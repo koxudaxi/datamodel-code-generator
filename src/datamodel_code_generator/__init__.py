@@ -60,6 +60,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 if TYPE_CHECKING:
     from collections import defaultdict
 
+    from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
@@ -450,6 +451,7 @@ def _build_module_content(
 def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
+    config: GenerateConfig | None = None,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
@@ -576,12 +578,141 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
     GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
 
+    Args:
+        input_: The input source (Path, str, ParseResult, or dict).
+        config: A GenerateConfig object containing all generation options.
+            When provided, overrides all individual option parameters.
+        options: Individual generation options (see GenerateConfig for details).
+            Ignored when the config parameter is provided.
+
     Returns:
         - When output is a Path: None (writes to file system)
         - When output is None and single module: str (generated code)
         - When output is None and multiple modules: GeneratedModules (dict mapping
           module path tuples to generated code strings)
     """
+    # Extract values from config if provided
+    if config is not None:
+        input_filename = config.input_filename
+        input_file_type = config.input_file_type
+        output = config.output
+        output_model_type = config.output_model_type
+        target_python_version = config.target_python_version
+        target_pydantic_version = config.target_pydantic_version
+        base_class = config.base_class
+        base_class_map = config.base_class_map
+        additional_imports = config.additional_imports
+        class_decorators = config.class_decorators
+        custom_template_dir = config.custom_template_dir
+        extra_template_data = cast("defaultdict[str, dict[str, Any]] | None", config.extra_template_data)
+        validation = config.validation
+        field_constraints = config.field_constraints
+        snake_case_field = config.snake_case_field
+        strip_default_none = config.strip_default_none
+        aliases = config.aliases
+        disable_timestamp = config.disable_timestamp
+        enable_version_header = config.enable_version_header
+        enable_command_header = config.enable_command_header
+        command_line = config.command_line
+        allow_population_by_field_name = config.allow_population_by_field_name
+        allow_extra_fields = config.allow_extra_fields
+        extra_fields = config.extra_fields
+        use_generic_base_class = config.use_generic_base_class
+        apply_default_values_for_required_fields = config.apply_default_values_for_required_fields
+        force_optional_for_required_fields = config.force_optional_for_required_fields
+        class_name = config.class_name
+        use_standard_collections = config.use_standard_collections
+        use_schema_description = config.use_schema_description
+        use_field_description = config.use_field_description
+        use_field_description_example = config.use_field_description_example
+        use_attribute_docstrings = config.use_attribute_docstrings
+        use_inline_field_description = config.use_inline_field_description
+        use_default_kwarg = config.use_default_kwarg
+        reuse_model = config.reuse_model
+        reuse_scope = config.reuse_scope
+        shared_module_name = config.shared_module_name
+        encoding = config.encoding
+        enum_field_as_literal = config.enum_field_as_literal
+        enum_field_as_literal_map = config.enum_field_as_literal_map
+        ignore_enum_constraints = config.ignore_enum_constraints
+        use_one_literal_as_default = config.use_one_literal_as_default
+        use_enum_values_in_discriminator = config.use_enum_values_in_discriminator
+        set_default_enum_member = config.set_default_enum_member
+        use_subclass_enum = config.use_subclass_enum
+        use_specialized_enum = config.use_specialized_enum
+        strict_nullable = config.strict_nullable
+        use_generic_container_types = config.use_generic_container_types
+        enable_faux_immutability = config.enable_faux_immutability
+        disable_appending_item_suffix = config.disable_appending_item_suffix
+        strict_types = config.strict_types
+        empty_enum_field_name = config.empty_enum_field_name
+        custom_class_name_generator = config.custom_class_name_generator
+        field_extra_keys = config.field_extra_keys
+        field_include_all_keys = config.field_include_all_keys
+        field_extra_keys_without_x_prefix = config.field_extra_keys_without_x_prefix
+        model_extra_keys = config.model_extra_keys
+        model_extra_keys_without_x_prefix = config.model_extra_keys_without_x_prefix
+        openapi_scopes = config.openapi_scopes
+        include_path_parameters = config.include_path_parameters
+        wrap_string_literal = config.wrap_string_literal
+        use_title_as_name = config.use_title_as_name
+        use_operation_id_as_name = config.use_operation_id_as_name
+        use_unique_items_as_set = config.use_unique_items_as_set
+        use_tuple_for_fixed_items = config.use_tuple_for_fixed_items
+        allof_merge_mode = config.allof_merge_mode
+        http_headers = config.http_headers
+        http_ignore_tls = config.http_ignore_tls
+        http_timeout = config.http_timeout
+        use_annotated = config.use_annotated
+        use_serialize_as_any = config.use_serialize_as_any
+        use_non_positive_negative_number_constrained_types = config.use_non_positive_negative_number_constrained_types
+        use_decimal_for_multiple_of = config.use_decimal_for_multiple_of
+        original_field_name_delimiter = config.original_field_name_delimiter
+        use_double_quotes = config.use_double_quotes
+        use_union_operator = config.use_union_operator
+        collapse_root_models = config.collapse_root_models
+        collapse_root_models_name_strategy = config.collapse_root_models_name_strategy
+        collapse_reuse_models = config.collapse_reuse_models
+        skip_root_model = config.skip_root_model
+        use_type_alias = config.use_type_alias
+        use_root_model_type_alias = config.use_root_model_type_alias
+        special_field_name_prefix = config.special_field_name_prefix
+        remove_special_field_name_prefix = config.remove_special_field_name_prefix
+        capitalise_enum_members = config.capitalise_enum_members
+        keep_model_order = config.keep_model_order
+        custom_file_header = config.custom_file_header
+        custom_file_header_path = config.custom_file_header_path
+        custom_formatters = config.custom_formatters
+        custom_formatters_kwargs = config.custom_formatters_kwargs
+        use_pendulum = config.use_pendulum
+        use_standard_primitive_types = config.use_standard_primitive_types
+        http_query_parameters = config.http_query_parameters
+        treat_dot_as_module = config.treat_dot_as_module
+        use_exact_imports = config.use_exact_imports
+        union_mode = cast("UnionMode | None", config.union_mode)
+        output_datetime_class = config.output_datetime_class
+        output_date_class = config.output_date_class
+        keyword_only = config.keyword_only
+        frozen_dataclasses = config.frozen_dataclasses
+        no_alias = config.no_alias
+        use_frozen_field = config.use_frozen_field
+        use_default_factory_for_optional_nested_models = config.use_default_factory_for_optional_nested_models
+        formatters = config.formatters
+        settings_path = config.settings_path
+        parent_scoped_naming = config.parent_scoped_naming
+        naming_strategy = config.naming_strategy
+        duplicate_name_suffix = config.duplicate_name_suffix
+        dataclass_arguments = config.dataclass_arguments
+        disable_future_imports = config.disable_future_imports
+        type_mappings = config.type_mappings
+        type_overrides = config.type_overrides
+        read_only_write_only_model_type = config.read_only_write_only_model_type
+        use_status_code_in_response_name = config.use_status_code_in_response_name
+        all_exports_scope = config.all_exports_scope
+        all_exports_collision_strategy = config.all_exports_collision_strategy
+        field_type_collision_strategy = config.field_type_collision_strategy
+        module_split_mode = config.module_split_mode
+
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:
         case str():
@@ -1053,6 +1184,7 @@ __all__ = [
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",
+    "GenerateConfig",
     "GeneratedModules",
     "InputFileType",
     "InvalidClassNameError",
@@ -1066,3 +1198,13 @@ __all__ = [
     "TargetPydanticVersion",
     "generate",
 ]
+
+
+def __getattr__(name: str) -> type:
+    """Lazy import for GenerateConfig to avoid circular imports."""
+    if name == "GenerateConfig":
+        from datamodel_code_generator.config import GenerateConfig  # noqa: PLC0415
+
+        return GenerateConfig
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)

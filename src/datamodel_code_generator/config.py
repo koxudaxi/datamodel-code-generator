@@ -1,0 +1,225 @@
+"""Configuration models for datamodel-code-generator.
+
+Provides unified configuration classes for generate(), Parser, and parse() functions.
+These models consolidate the 120+ parameters into structured, type-safe configurations.
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Literal
+
+from pydantic import BaseModel, ConfigDict
+from pydantic.json_schema import SkipJsonSchema
+
+from datamodel_code_generator.enums import (
+    DEFAULT_SHARED_MODULE_NAME,
+    AllExportsCollisionStrategy,
+    AllExportsScope,
+    AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
+    DataclassArguments,
+    DataModelType,
+    FieldTypeCollisionStrategy,
+    GraphQLScope,
+    InputFileType,
+    ModuleSplitMode,
+    NamingStrategy,
+    OpenAPIScope,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
+    TargetPydanticVersion,
+)
+from datamodel_code_generator.format import (
+    DEFAULT_FORMATTERS,
+    DateClassType,
+    DatetimeClassType,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+)
+from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.types import StrictTypes
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+
+# Use Literal type to avoid circular import
+UnionModeType = Literal["smart", "left_to_right"] | None
+
+
+class BaseConfig(BaseModel):
+    """Base configuration with common parameters shared across generate() and Parser.
+
+    Contains ~88 parameters that are used by both the generate() function and
+    the Parser class. These are the core code generation settings.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    output_model_type: DataModelType = DataModelType.PydanticBaseModel
+    target_python_version: PythonVersion = PythonVersionMin
+    target_pydantic_version: TargetPydanticVersion | None = None
+    base_class: str = ""
+    base_class_map: dict[str, str] | None = None
+    additional_imports: list[str] | None = None
+    class_decorators: list[str] | None = None
+    custom_template_dir: Path | None = None
+    extra_template_data: dict[str, dict[str, Any]] | None = None
+    validation: bool = False
+    field_constraints: bool = False
+    snake_case_field: bool = False
+    strip_default_none: bool = False
+    aliases: Mapping[str, str] | None = None
+    allow_population_by_field_name: bool = False
+    allow_extra_fields: bool = False
+    extra_fields: str | None = None
+    use_generic_base_class: bool = False
+    apply_default_values_for_required_fields: bool = False
+    force_optional_for_required_fields: bool = False
+    class_name: str | None = None
+    use_standard_collections: bool = True
+    use_generic_container_types: bool = False
+    use_union_operator: bool = True
+    strict_nullable: bool = False
+    strict_types: Sequence[StrictTypes] | None = None
+    use_schema_description: bool = False
+    use_field_description: bool = False
+    use_field_description_example: bool = False
+    use_attribute_docstrings: bool = False
+    use_inline_field_description: bool = False
+    use_default_kwarg: bool = False
+    reuse_model: bool = False
+    reuse_scope: ReuseScope = ReuseScope.Module
+    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
+    encoding: str = "utf-8"
+    enum_field_as_literal: LiteralType | None = None
+    enum_field_as_literal_map: dict[str, str] | None = None
+    ignore_enum_constraints: bool = False
+    use_one_literal_as_default: bool = False
+    use_enum_values_in_discriminator: bool = False
+    set_default_enum_member: bool = False
+    use_subclass_enum: bool = False
+    use_specialized_enum: bool = True
+    empty_enum_field_name: str | None = None
+    capitalise_enum_members: bool = False
+    enable_faux_immutability: bool = False
+    disable_appending_item_suffix: bool = False
+    custom_class_name_generator: SkipJsonSchema[Callable[[str], str]] | None = None
+    special_field_name_prefix: str | None = None
+    remove_special_field_name_prefix: bool = False
+    field_extra_keys: set[str] | None = None
+    field_include_all_keys: bool = False
+    field_extra_keys_without_x_prefix: set[str] | None = None
+    model_extra_keys: set[str] | None = None
+    model_extra_keys_without_x_prefix: set[str] | None = None
+    openapi_scopes: list[OpenAPIScope] | None = None
+    include_path_parameters: bool = False
+    graphql_scopes: list[GraphQLScope] | None = None
+    wrap_string_literal: bool | None = None
+    use_double_quotes: bool = False
+    original_field_name_delimiter: str | None = None
+    use_title_as_name: bool = False
+    use_operation_id_as_name: bool = False
+    use_unique_items_as_set: bool = False
+    use_tuple_for_fixed_items: bool = False
+    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    use_annotated: bool = False
+    use_serialize_as_any: bool = False
+    use_non_positive_negative_number_constrained_types: bool = False
+    use_decimal_for_multiple_of: bool = False
+    collapse_root_models: bool = False
+    collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None
+    collapse_reuse_models: bool = False
+    skip_root_model: bool = False
+    use_type_alias: bool = False
+    use_root_model_type_alias: bool = False
+    keep_model_order: bool = False
+    custom_formatters: list[str] | None = None
+    custom_formatters_kwargs: dict[str, Any] | None = None
+    use_pendulum: bool = False
+    use_standard_primitive_types: bool = False
+    treat_dot_as_module: bool | None = None
+    use_exact_imports: bool = False
+    union_mode: UnionModeType = None
+    output_datetime_class: DatetimeClassType | None = None
+    output_date_class: DateClassType | None = None
+    keyword_only: bool = False
+    frozen_dataclasses: bool = False
+    dataclass_arguments: DataclassArguments | None = None
+    no_alias: bool = False
+    use_frozen_field: bool = False
+    use_default_factory_for_optional_nested_models: bool = False
+    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    parent_scoped_naming: bool = False
+    naming_strategy: NamingStrategy | None = None
+    duplicate_name_suffix: dict[str, str] | None = None
+    type_mappings: list[str] | None = None
+    type_overrides: dict[str, str] | None = None
+    read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None
+    use_status_code_in_response_name: bool = False
+    field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
+
+
+class GenerateConfig(BaseConfig):
+    """Configuration for the generate() function.
+
+    Extends BaseConfig with generate()-specific parameters for input handling,
+    output routing, headers, and HTTP settings.
+    """
+
+    input_filename: str | None = None
+    input_file_type: InputFileType = InputFileType.Auto
+    output: Path | None = None
+    disable_timestamp: bool = False
+    enable_version_header: bool = False
+    enable_command_header: bool = False
+    command_line: str | None = None
+    custom_file_header: str | None = None
+    custom_file_header_path: Path | None = None
+    http_headers: Sequence[tuple[str, str]] | None = None
+    http_ignore_tls: bool = False
+    http_timeout: float | None = None
+    http_query_parameters: Sequence[tuple[str, str]] | None = None
+    settings_path: Path | None = None
+    disable_future_imports: bool = False
+    all_exports_scope: AllExportsScope | None = None
+    all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
+    module_split_mode: ModuleSplitMode | None = None
+
+
+class ParserConfig(BaseConfig):
+    """Configuration for Parser.__init__().
+
+    Extends BaseConfig with Parser-specific internal parameters
+    for the Parser class initialization.
+    """
+
+    base_path: Path | None = None
+    allow_responses_without_content: bool = False
+    known_third_party: list[str] | None = None
+    defer_formatting: bool = False
+    target_datetime_class: DatetimeClassType | None = None
+    target_date_class: DateClassType | None = None
+    default_field_extras: dict[str, Any] | None = None
+    http_headers: Sequence[tuple[str, str]] | None = None
+    http_ignore_tls: bool = False
+    http_timeout: float | None = None
+    http_query_parameters: Sequence[tuple[str, str]] | None = None
+
+
+class ParseConfig(BaseModel):
+    """Configuration for Parser.parse() method.
+
+    Contains settings that are applied after parser construction,
+    during the actual parsing phase.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    settings_path: Path | None = None
+    disable_future_imports: bool = False
+    all_exports_scope: AllExportsScope | None = None
+    all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
+    module_split_mode: ModuleSplitMode | None = None
