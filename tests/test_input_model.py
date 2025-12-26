@@ -353,3 +353,26 @@ def test_input_model_mutual_exclusion_with_watch(
         capsys=capsys,
         expected_stderr_contains="--watch cannot be used with --input-model",
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_adds_cwd_to_sys_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that --input-model adds cwd to sys.path if not present."""
+    import sys
+
+    cwd = str(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    assert cwd not in sys.path
+
+    original_sys_path = sys.path.copy()
+    try:
+        run_input_model_and_assert(
+            input_model="tests.data.python.input_model.pydantic_models:User",
+            output_path=tmp_path / "output.py",
+        )
+        assert cwd in sys.path
+    finally:
+        sys.path[:] = original_sys_path

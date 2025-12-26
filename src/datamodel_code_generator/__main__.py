@@ -610,11 +610,16 @@ def _load_model_schema(
         Error: If format invalid, object cannot be loaded, or input_file_type invalid
     """
     import importlib  # noqa: PLC0415
+    import sys  # noqa: PLC0415
 
     modname, sep, qualname = input_model.partition(":")
     if not sep or not qualname:
         msg = f"Invalid --input-model format: {input_model!r}. Expected 'module.path:ObjectName' format."
         raise Error(msg)
+
+    cwd = str(Path.cwd())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
 
     try:
         module = importlib.import_module(modname)
