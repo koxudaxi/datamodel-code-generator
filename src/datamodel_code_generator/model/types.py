@@ -62,12 +62,14 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
         Types.uuid3: data_type_str,
         Types.uuid4: data_type_str,
         Types.uuid5: data_type_str,
+        Types.ulid: data_type_str,
         Types.uri: data_type_str,
         Types.hostname: data_type_str,
         Types.ipv4: data_type_str,
         Types.ipv6: data_type_str,
         Types.ipv4_network: data_type_str,
         Types.ipv6_network: data_type_str,
+        Types.path: data_type_str,
         Types.boolean: data_type(type="bool"),
         Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
         Types.null: data_type(type="None"),
@@ -151,4 +153,10 @@ class DataTypeManager(_DataTypeManager):
         **_: Any,
     ) -> DataType:
         """Get data type for schema type."""
-        return self.type_map[types]
+        if types in self.type_map:
+            return self.type_map[types]
+        msg = (
+            f"Type mapping for {types.name!r} not implemented. "
+            f"Please report this at https://github.com/koxudaxi/datamodel-code-generator/issues"
+        )
+        raise NotImplementedError(msg)
