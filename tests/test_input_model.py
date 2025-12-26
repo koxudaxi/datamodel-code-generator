@@ -177,11 +177,6 @@ def openapi_dict_module(tmp_path: Path) -> Generator[str, None, None]:
         sys.modules.pop("test_openapi_spec", None)
 
 
-# =============================================================================
-# Pydantic Model Tests
-# =============================================================================
-
-
 @SKIP_PYDANTIC_V1
 @pytest.mark.cli_doc(
     options=["--input-model"],
@@ -243,11 +238,6 @@ def test_input_model_pydantic_non_jsonschema_error(
     )
 
 
-# =============================================================================
-# Dict Schema Tests
-# =============================================================================
-
-
 def test_input_model_dict_with_jsonschema(
     dict_schema_module: str,
     tmp_path: Path,
@@ -285,11 +275,6 @@ def test_input_model_dict_openapi(
         extra_args=["--input-file-type", "openapi"],
         expected_output_contains=["User"],
     )
-
-
-# =============================================================================
-# Error Handling Tests
-# =============================================================================
 
 
 def test_input_model_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
@@ -353,11 +338,6 @@ def test_input_model_pydantic_v1_error(
         capsys=capsys,
         expected_stderr_contains="requires Pydantic v2 runtime",
     )
-
-
-# =============================================================================
-# Mutual Exclusion Tests
-# =============================================================================
 
 
 @SKIP_PYDANTIC_V1
