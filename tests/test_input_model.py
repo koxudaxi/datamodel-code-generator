@@ -275,6 +275,12 @@ class TestInputModelDict:
 class TestInputModelErrors:
     """Tests for --input-model error handling."""
 
+    @pytest.mark.cli_doc(
+        options=["--input-model"],
+        cli_args=["--input-model", "module:ObjectName"],
+        input_model="module:ObjectName",
+        expected_stdout="",
+    )
     def test_invalid_format_no_colon(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test error when colon is missing."""
         exit_code = main([
