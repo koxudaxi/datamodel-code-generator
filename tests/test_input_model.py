@@ -7,6 +7,7 @@ from argparse import Namespace
 from textwrap import dedent
 from typing import TYPE_CHECKING
 
+import pydantic
 import pytest
 
 from datamodel_code_generator import __main__ as main_module
@@ -15,6 +16,11 @@ from datamodel_code_generator.__main__ import Exit, main
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+SKIP_PYDANTIC_V1 = pytest.mark.skipif(
+    pydantic.VERSION < "2.0.0",
+    reason="--input-model with Pydantic models requires Pydantic v2",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -42,10 +48,10 @@ def pydantic_model_module(tmp_path: Path) -> Path:
     return tmp_path
 
 
+@SKIP_PYDANTIC_V1
 class TestInputModelPydantic:
     """Tests for --input-model with Pydantic models."""
 
-    @pytest.mark.cli_doc(options=["--input-model"])
     def test_basic_usage(self, pydantic_model_module: Path, tmp_path: Path) -> None:
         """Test basic --input-model usage with Pydantic BaseModel."""
         output_file = tmp_path / "output.py"
@@ -317,6 +323,7 @@ class TestInputModelErrors:
         captured = capsys.readouterr()
         assert "is not a supported type" in captured.err
 
+    @SKIP_PYDANTIC_V1
     def test_pydantic_v1_model_error(
         self,
         pydantic_model_module: Path,
