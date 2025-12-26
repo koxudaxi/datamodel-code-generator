@@ -61,6 +61,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--include-path-parameters": "Include OpenAPI path parameters in generated parameter models.",
     "--input": "Specify the input schema file path.",
     "--input-file-type": "Specify the input file type for code generation.",
+    "--input-model": "Test error when colon is missing.",
     "--keep-model-order": "Keep model definition order as specified in schema.",
     "--keyword-only": "Generate dataclasses with keyword-only fields (Python 3.10+).",
     "--model-extra-keys": "Add model-level schema extensions to ConfigDict json_schema_extra.",
