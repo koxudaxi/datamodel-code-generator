@@ -1,6 +1,6 @@
 """TypedDict models for --input-model tests."""
 
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 
 class User(TypedDict):
