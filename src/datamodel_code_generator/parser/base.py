@@ -35,6 +35,7 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    YamlValue,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -661,7 +662,8 @@ class Source(BaseModel):
     """Schema source file with path and content."""
 
     path: Path
-    text: str
+    text: str = ""
+    raw_data: dict[str, YamlValue] | None = None
 
     @classmethod
     def from_path(cls, path: Path, base_path: Path, encoding: str) -> Source:
@@ -670,6 +672,11 @@ class Source(BaseModel):
             path=path.relative_to(base_path),
             text=path.read_text(encoding=encoding),
         )
+
+    @classmethod
+    def from_dict(cls, data: dict[str, YamlValue]) -> Source:
+        """Create a Source from a dict."""
+        return cls(path=Path(), raw_data=data)
 
 
 class Parser(ABC):
@@ -681,7 +688,7 @@ class Parser(ABC):
 
     def __init__(  # noqa: PLR0912, PLR0913, PLR0915
         self,
-        source: str | Path | list[Path] | ParseResult,
+        source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
@@ -873,7 +880,7 @@ class Parser(ABC):
         else:
             self.base_path = Path.cwd()
 
-        self.source: str | Path | list[Path] | ParseResult = source
+        self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self.custom_template_dir = custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = extra_template_data or defaultdict(dict)
 
@@ -1026,6 +1033,8 @@ class Parser(ABC):
         match self.source:
             case str():
                 yield Source(path=Path(), text=self.source)
+            case dict():
+                yield Source.from_dict(self.source)
             case Path() as path:  # pragma: no cover
                 if path.is_dir():
                     for p in sorted(path.rglob("*"), key=lambda p: p.name):
