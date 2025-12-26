@@ -55,7 +55,6 @@ def run_input_model_and_assert(
     input_model: str,
     output_path: Path,
     extra_args: Sequence[str] | None = None,
-    expected_exit: Exit = Exit.OK,
     expected_output_contains: Sequence[str] | None = None,
 ) -> None:
     """Run main with --input-model and assert results."""
@@ -65,12 +64,10 @@ def run_input_model_and_assert(
         args.extend(extra_args)
 
     return_code = main(args)
-    _assert_exit_code(return_code, expected_exit, f"--input-model {input_model}")
+    _assert_exit_code(return_code, Exit.OK, f"--input-model {input_model}")
+    _assert_file_exists(output_path)
 
-    if expected_exit == Exit.OK:
-        _assert_file_exists(output_path)
-
-    if expected_output_contains and output_path.exists():
+    if expected_output_contains:
         content = output_path.read_text(encoding="utf-8")
         for expected in expected_output_contains:
             _assert_output_contains(content, expected)
