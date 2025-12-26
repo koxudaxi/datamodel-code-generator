@@ -248,6 +248,7 @@ class JsonSchemaObject(BaseModel):
         "examples",
         "example",
         "x_enum_varnames",
+        "x_enum_field_as_literal",
         "definitions",
         "$defs",
         "default",
@@ -357,6 +358,7 @@ class JsonSchemaObject(BaseModel):
     nullable: Optional[bool] = None  # noqa: UP045
     x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
     x_enum_names: list[str] = Field(default_factory=list, alias="x-enumNames")
+    x_enum_field_as_literal: Optional[bool] = Field(default=None, alias="x-enum-field-as-literal")  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     title: Optional[str] = None  # noqa: UP045
     example: Any = None
@@ -573,6 +575,7 @@ class JsonSchemaParser(Parser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        enum_field_as_literal_map: dict[str, str] | None = None,
         ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
@@ -687,6 +690,7 @@ class JsonSchemaParser(Parser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            enum_field_as_literal_map=enum_field_as_literal_map,
             ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
@@ -830,8 +834,29 @@ class JsonSchemaParser(Parser):
         """Set the root $id in the model resolver."""
         self.model_resolver.set_root_id(value)
 
-    def should_parse_enum_as_literal(self, obj: JsonSchemaObject) -> bool:
-        """Determine if an enum should be parsed as a literal type."""
+    def should_parse_enum_as_literal(
+        self,
+        obj: JsonSchemaObject,
+        property_name: str | None = None,
+        property_obj: JsonSchemaObject | None = None,
+    ) -> bool:
+        """Determine if an enum should be parsed as a literal type.
+
+        Priority (highest to lowest):
+        1. x-enum-field-as-literal on the property schema
+        2. enum_field_as_literal_map matching Model.field or field
+        3. Global enum_field_as_literal setting
+        """
+        # Check x-enum-field-as-literal on property or obj
+        target_obj = property_obj if property_obj is not None else obj
+        if target_obj.x_enum_field_as_literal is not None:
+            return target_obj.x_enum_field_as_literal
+
+        # Check enum_field_as_literal_map for matching keys
+        if property_name and self.enum_field_as_literal_map and property_name in self.enum_field_as_literal_map:
+            return self.enum_field_as_literal_map[property_name] == "literal"
+
+        # Fall back to global setting
         if self.enum_field_as_literal == LiteralType.All:
             return True
         if self.enum_field_as_literal == LiteralType.One:
@@ -2506,7 +2531,7 @@ class JsonSchemaParser(Parser):
             if const_enum_data is not None:
                 enum_values, varnames, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(item, enum_values, varnames, enum_type, nullable)
-                if self.should_parse_enum_as_literal(synthetic_obj):
+                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
                     return self.parse_enum_as_literal(synthetic_obj)
                 return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
@@ -2515,7 +2540,7 @@ class JsonSchemaParser(Parser):
             if const_enum_data is not None:
                 enum_values, varnames, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(item, enum_values, varnames, enum_type, nullable)
-                if self.should_parse_enum_as_literal(synthetic_obj):
+                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
                     return self.parse_enum_as_literal(synthetic_obj)
                 return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
@@ -2557,7 +2582,7 @@ class JsonSchemaParser(Parser):
                 Types.object,
             )
         if item.enum and not self.ignore_enum_constraints:
-            if self.should_parse_enum_as_literal(item):
+            if self.should_parse_enum_as_literal(item, property_name=name):
                 return self.parse_enum_as_literal(item)
             return self.parse_enum(name, item, get_special_path("enum", path), singular_name=singular_name)
         return self.get_data_type(item)
@@ -2736,7 +2761,7 @@ class JsonSchemaParser(Parser):
             if const_enum_data is not None:  # pragma: no cover
                 enum_values, varnames, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, enum_type, nullable)
-                if self.should_parse_enum_as_literal(synthetic_obj):
+                if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
                     data_type = self.parse_enum_as_literal(synthetic_obj)
                 else:
                     data_type = self.parse_enum(name, synthetic_obj, path)
@@ -2758,7 +2783,7 @@ class JsonSchemaParser(Parser):
         elif obj.propertyNames:
             data_type = self.parse_property_names(name, obj.propertyNames, obj.additionalProperties, path)
         elif obj.enum and not self.ignore_enum_constraints:
-            if self.should_parse_enum_as_literal(obj):
+            if self.should_parse_enum_as_literal(obj, property_name=name):
                 data_type = self.parse_enum_as_literal(obj)
             else:  # pragma: no cover
                 data_type = self.parse_enum(name, obj, path)
@@ -3295,7 +3320,7 @@ class JsonSchemaParser(Parser):
             if const_enum_data is not None:
                 enum_values, varnames, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(obj, enum_values, varnames, enum_type, nullable)
-                if not self.should_parse_enum_as_literal(synthetic_obj):
+                if not self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=obj):
                     self.parse_enum(name, synthetic_obj, path)
                 else:
                     self.parse_root_type(name, synthetic_obj, path)
@@ -3312,7 +3337,11 @@ class JsonSchemaParser(Parser):
             self.parse_root_type(name, obj, path)
         elif obj.type == "object":
             self.parse_object(name, obj, path)
-        elif obj.enum and not self.ignore_enum_constraints and not self.should_parse_enum_as_literal(obj):
+        elif (
+            obj.enum
+            and not self.ignore_enum_constraints
+            and not self.should_parse_enum_as_literal(obj, property_name=name)
+        ):
             self.parse_enum(name, obj, path)
         else:
             self.parse_root_type(name, obj, path)
