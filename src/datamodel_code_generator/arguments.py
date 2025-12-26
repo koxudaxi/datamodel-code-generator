@@ -86,8 +86,8 @@ class SortingHelpFormatter(RawDescriptionHelpFormatter):
 arg_parser = ArgumentParser(
     usage="\n  datamodel-codegen [options]",
     description="Generate Python data models from schema definitions or structured data\n\n"
-    "For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator",
-    epilog="Documentation: https://koxudaxi.github.io/datamodel-code-generator\n"
+    "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
+    epilog="Documentation: https://datamodel-code-generator.koxudaxi.dev\n"
     "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
