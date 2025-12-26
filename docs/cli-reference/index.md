@@ -8,10 +8,10 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 5 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 22 | Type annotation and import behavior |
+| 📁 [Base Options](base-options.md) | 6 | Input/output configuration |
+| 🔧 [Typing Customization](typing-customization.md) | 23 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 34 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 17 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
@@ -70,6 +70,7 @@ This documentation is auto-generated from test cases.
 - [`--enable-version-header`](template-customization.md#enable-version-header)
 - [`--encoding`](base-options.md#encoding)
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal)
+- [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map)
 - [`--extra-fields`](field-customization.md#extra-fields)
 - [`--extra-template-data`](template-customization.md#extra-template-data)
 
@@ -105,6 +106,7 @@ This documentation is auto-generated from test cases.
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters)
 - [`--input`](base-options.md#input)
 - [`--input-file-type`](base-options.md#input-file-type)
+- [`--input-model`](base-options.md#input-model)
 
 ### K {#k}
 
@@ -113,6 +115,8 @@ This documentation is auto-generated from test cases.
 
 ### M {#m}
 
+- [`--model-extra-keys`](model-customization.md#model-extra-keys)
+- [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix)
 - [`--module-split-mode`](general-options.md#module-split-mode)
 
 ### N {#n}

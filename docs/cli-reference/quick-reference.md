@@ -19,6 +19,7 @@ datamodel-codegen [OPTIONS]
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
 | [`--input`](base-options.md#input) | Specify the input schema file path. |
 | [`--input-file-type`](base-options.md#input-file-type) | Specify the input file type for code generation. |
+| [`--input-model`](base-options.md#input-model) | Import a Python type or dict schema from a module (module:Object or path/to/file... |
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -29,6 +30,7 @@ datamodel-codegen [OPTIONS]
 | [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) | Merge constraints from root model references in allOf schemas. |
 | [`--disable-future-imports`](typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
+| [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) | Test --enum-field-as-literal-map for per-field enum/literal control. |
 | [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of Enum classes. |
 | [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code generation. |
 | [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
@@ -95,6 +97,8 @@ datamodel-codegen [OPTIONS]
 | [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only fields. |
 | [`--keep-model-order`](model-customization.md#keep-model-order) | Keep model definition order as specified in schema. |
 | [`--keyword-only`](model-customization.md#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+). |
+| [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
+| [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
 | [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec). |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
@@ -219,6 +223,7 @@ All options sorted alphabetically:
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...
+- [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) - Test --enum-field-as-literal-map for per-field enum/literal ...
 - [`--extra-fields`](field-customization.md#extra-fields) - Configure how generated models handle extra fields not defin...
 - [`--extra-template-data`](template-customization.md#extra-template-data) - Pass custom template variables from JSON file for code gener...
 - [`--field-constraints`](field-customization.md#field-constraints) - Generate Field() with validation constraints from schema.
@@ -242,8 +247,11 @@ All options sorted alphabetically:
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
 - [`--input`](base-options.md#input) - Specify the input schema file path.
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
+- [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module (module:Ob...
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
+- [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
+- [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
 - [`--module-split-mode`](general-options.md#module-split-mode) - Split generated models into separate files, one per model cl...
 - [`--naming-strategy`](model-customization.md#naming-strategy) - Use parent-prefixed naming strategy for duplicate model name...
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...

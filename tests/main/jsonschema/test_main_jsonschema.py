@@ -27,6 +27,7 @@ from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
+    BLACK_PY313_SKIP,
     DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -3590,6 +3591,55 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--enum-field-as-literal-map"],
+    input_schema="jsonschema/enum_field_as_literal_map.json",
+    cli_args=["--enum-field-as-literal-map", '{"status": "literal"}'],
+    golden_output="jsonschema/enum_field_as_literal_map.py",
+)
+def test_main_enum_field_as_literal_map(output_file: Path) -> None:
+    """Test --enum-field-as-literal-map for per-field enum/literal control."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            '{"status": "literal"}',
+        ],
+    )
+
+
+def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> None:
+    """Test --enum-field-as-literal-map overrides global --enum-field-as-literal."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map_override.py",
+        extra_args=[
+            "--enum-field-as-literal",
+            "all",
+            "--enum-field-as-literal-map",
+            '{"priority": "enum"}',
+        ],
+    )
+
+
+def test_main_x_enum_field_as_literal(output_file: Path) -> None:
+    """Test x-enum-field-as-literal schema extension for per-field control."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_enum_field_as_literal.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="x_enum_field_as_literal.py",
+    )
+
+
 def test_main_dataclass_const(output_file: Path) -> None:
     """Test main function writing to dataclass with const fields."""
     run_main_and_assert(
@@ -5683,6 +5733,48 @@ def test_main_use_frozen_field_no_readonly(output_file: Path) -> None:
 
 
 @pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        pytest.param("3.13", "use_frozen_field_typed_dict.py", marks=BLACK_PY313_SKIP),
+        ("3.11", "use_frozen_field_typed_dict_py311.py"),
+        ("3.10", "use_frozen_field_typed_dict_py310.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-frozen-field"],
+    input_schema="jsonschema/use_frozen_field.json",
+    cli_args=["--output-model-type", "typing.TypedDict", "--use-frozen-field"],
+    model_outputs={
+        "typeddict": "main/jsonschema/use_frozen_field_typed_dict.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_frozen_field_typed_dict(target_python_version: str, expected_file: str, output_file: Path) -> None:
+    """Generate ReadOnly type hints for readOnly properties in TypedDict.
+
+    The `--use-frozen-field` flag generates ReadOnly type hints for TypedDict:
+    - Python 3.13+: uses `typing.ReadOnly`
+    - Python 3.11-3.12: uses `typing_extensions.ReadOnly`
+    - Python 3.10: uses `typing_extensions.ReadOnly` and `typing_extensions.NotRequired`
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_frozen_field.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--use-frozen-field",
+            "--target-python-version",
+            target_python_version,
+        ],
+    )
+
+
+@pytest.mark.parametrize(
     ("output_model", "expected_file"),
     [
         ("dataclasses.dataclass", "default_factory_nested_model_dataclass.py"),
@@ -6365,4 +6457,132 @@ def test_main_jsonschema_schema_id(
                 "--output-model-type",
                 "pydantic_v2.BaseModel",
             ],
+        )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_v2.py",
+        ),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--model-extra-keys"],
+    input_schema="jsonschema/model_extras.json",
+    cli_args=["--model-extra-keys", "x-custom-metadata"],
+    model_outputs={
+        "pydantic_v2": "main/jsonschema/model_extras_v2.py",
+    },
+)
+def test_main_jsonschema_model_extras(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Add model-level schema extensions to ConfigDict json_schema_extra.
+
+    The `--model-extra-keys` flag adds specified x-* extensions from the schema
+    to the model's ConfigDict json_schema_extra.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys",
+            "x-custom-metadata",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_without_x_prefix_v2.py",
+        ),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--model-extra-keys-without-x-prefix"],
+    input_schema="jsonschema/model_extras.json",
+    cli_args=["--model-extra-keys-without-x-prefix", "x-custom-metadata", "x-version"],
+    model_outputs={
+        "pydantic_v2": "main/jsonschema/model_extras_without_x_prefix_v2.py",
+    },
+)
+def test_main_jsonschema_model_extras_without_x_prefix(
+    output_model: str, expected_output: str, output_file: Path
+) -> None:
+    """Strip x- prefix from model-level schema extensions and add to ConfigDict json_schema_extra.
+
+    The `--model-extra-keys-without-x-prefix` flag adds specified x-* extensions
+    from the schema to the model's ConfigDict json_schema_extra with the x- prefix stripped.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys-without-x-prefix",
+            "x-custom-metadata",
+            "x-version",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic_v2.BaseModel",
+            "model_extras_no_match_v2.py",
+        ),
+    ],
+)
+def test_main_jsonschema_model_extras_no_match(output_model: str, expected_output: str, output_file: Path) -> None:
+    """No json_schema_extra when specified model-extra-keys don't match schema extensions.
+
+    When the specified key doesn't exist in the schema's x-* extensions,
+    no json_schema_extra is added to ConfigDict.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "model_extras.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--model-extra-keys",
+            "x-nonexistent",
+        ],
+    )
+
+
+def test_main_jsonschema_non_dict_files_in_directory(output_dir: Path) -> None:
+    """Test that non-dict files (lists, empty files) are skipped with warnings."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "non_dict_files",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "non_dict_files",
+        input_file_type="jsonschema",
+    )
+
+
+def test_main_jsonschema_ref_to_json_list_file() -> None:
+    """Test that $ref to a JSON file containing a list raises TypeError."""
+    with pytest.raises(TypeError, match="Expected dict, got list"):
+        generate(
+            input_=JSON_SCHEMA_DATA_PATH / "ref_to_json_list" / "main.json",
+            input_file_type=InputFileType.JsonSchema,
         )

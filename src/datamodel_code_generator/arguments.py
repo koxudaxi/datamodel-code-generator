@@ -8,7 +8,6 @@ template customization, OpenAPI-specific options, and general options.
 from __future__ import annotations
 
 import json
-import locale
 from argparse import ArgumentParser, ArgumentTypeError, BooleanOptionalAction, Namespace, RawDescriptionHelpFormatter
 from operator import attrgetter
 from pathlib import Path
@@ -40,7 +39,7 @@ if TYPE_CHECKING:
     from argparse import Action
     from collections.abc import Iterable
 
-DEFAULT_ENCODING = locale.getpreferredencoding()
+DEFAULT_ENCODING = "utf-8"
 
 namespace = Namespace(no_color=False)
 
@@ -87,8 +86,8 @@ class SortingHelpFormatter(RawDescriptionHelpFormatter):
 arg_parser = ArgumentParser(
     usage="\n  datamodel-codegen [options]",
     description="Generate Python data models from schema definitions or structured data\n\n"
-    "For detailed usage, see: https://koxudaxi.github.io/datamodel-code-generator",
-    epilog="Documentation: https://koxudaxi.github.io/datamodel-code-generator\n"
+    "For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev",
+    epilog="Documentation: https://datamodel-code-generator.koxudaxi.dev\n"
     "GitHub: https://github.com/koxudaxi/datamodel-code-generator",
     formatter_class=SortingHelpFormatter,
     add_help=False,
@@ -155,6 +154,14 @@ base_options.add_argument(
 base_options.add_argument(
     "--url",
     help="Input file URL. `--input` is ignored when `--url` is used",
+)
+base_options.add_argument(
+    "--input-model",
+    help="Python import path to a Pydantic v2 model or schema dict "
+    "(e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). "
+    "For dict input, --input-file-type is required. "
+    "Cannot be used with --input or --url.",
+    metavar="MODULE:NAME",
 )
 
 # ======================================================================================
@@ -440,6 +447,15 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--enum-field-as-literal-map",
+    help="Per-field override for enum/literal generation. "
+    "Format: JSON object mapping field names to 'literal' or 'enum'. "
+    'Example: \'{"status": "literal", "priority": "enum"}\'. '
+    "Overrides --enum-field-as-literal for matched fields.",
+    type=json.loads,
+    default=None,
+)
+typing_options.add_argument(
     "--ignore-enum-constraints",
     help="Ignore enum constraints and use the base type (e.g., str, int) instead of generating Enum classes",
     action="store_true",
@@ -623,6 +639,19 @@ field_options.add_argument(
     help="Add all keys to field parameters",
     action="store_true",
     default=None,
+)
+field_options.add_argument(
+    "--model-extra-keys",
+    help="Add extra keys from schema extensions (x-* fields) to model_config json_schema_extra",
+    type=str,
+    nargs="+",
+)
+field_options.add_argument(
+    "--model-extra-keys-without-x-prefix",
+    help="Add extra keys with `x-` prefix to model_config json_schema_extra. "
+    "The extra keys are stripped of the `x-` prefix.",
+    type=str,
+    nargs="+",
 )
 field_options.add_argument(
     "--force-optional",

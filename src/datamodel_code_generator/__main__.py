@@ -442,6 +442,7 @@ class Config(BaseModel):
             return values
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
+    input_model: Optional[str] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
@@ -483,6 +484,7 @@ class Config(BaseModel):
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME
     encoding: str = DEFAULT_ENCODING
     enum_field_as_literal: Optional[LiteralType] = None  # noqa: UP045
+    enum_field_as_literal_map: Optional[dict[str, str]] = None  # noqa: UP045
     ignore_enum_constraints: bool = False
     use_one_literal_as_default: bool = False
     use_enum_values_in_discriminator: bool = False
@@ -500,6 +502,8 @@ class Config(BaseModel):
     field_extra_keys: Optional[set[str]] = None  # noqa: UP045
     field_include_all_keys: bool = False
     field_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
+    model_extra_keys: Optional[set[str]] = None  # noqa: UP045
+    model_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
     include_path_parameters: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
@@ -588,6 +592,111 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
             elif isinstance(imports, list):
                 additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
     return additional_imports
+
+
+def _load_model_schema(  # noqa: PLR0912, PLR0915
+    input_model: str,
+    input_file_type: InputFileType,
+) -> dict[str, object]:
+    """Load schema from a Python import path.
+
+    Args:
+        input_model: Import path in 'module.path:ObjectName' format
+        input_file_type: Current input file type setting for validation
+
+    Returns:
+        Schema dict
+
+    Raises:
+        Error: If format invalid, object cannot be loaded, or input_file_type invalid
+    """
+    import importlib.util  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+
+    modname, sep, qualname = input_model.rpartition(":")
+    if not sep or not modname:
+        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+        raise Error(msg)
+
+    is_path = "/" in modname or "\\" in modname
+    if not is_path and modname.endswith(".py"):
+        is_path = Path(modname).exists()
+
+    cwd = str(Path.cwd())
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    if is_path:
+        file_path = Path(modname).resolve()
+        if not file_path.exists():
+            msg = f"File not found: {modname!r}"
+            raise Error(msg)
+        module_name = file_path.stem
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        if spec is None or spec.loader is None:
+            msg = f"Cannot load module from {modname!r}"
+            raise Error(msg)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+    else:
+        try:
+            module = importlib.util.find_spec(modname)
+            if module is None:
+                msg = f"Cannot find module {modname!r}"
+                raise Error(msg)
+            module = importlib.import_module(modname)
+        except ImportError as e:
+            msg = f"Cannot import module {modname!r}: {e}"
+            raise Error(msg) from e
+
+    try:
+        obj = getattr(module, qualname)
+    except AttributeError as e:
+        msg = f"Module {modname!r} has no attribute {qualname!r}"
+        raise Error(msg) from e
+
+    if isinstance(obj, dict):
+        if input_file_type == InputFileType.Auto:
+            msg = "--input-file-type is required when --input-model points to a dict"
+            raise Error(msg)
+        return obj
+
+    if isinstance(obj, type) and issubclass(obj, BaseModel):
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+            msg = (
+                f"--input-file-type must be 'jsonschema' (or omitted) "
+                f"when --input-model points to a Pydantic model, "
+                f"got '{input_file_type.value}'"
+            )
+            raise Error(msg)
+        if not hasattr(obj, "model_json_schema"):
+            msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
+            raise Error(msg)
+        return obj.model_json_schema()
+
+    # Check for dataclass or TypedDict - use TypeAdapter
+    from dataclasses import is_dataclass  # noqa: PLC0415
+
+    is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
+    if is_dataclass(obj) or is_typed_dict:
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
+            msg = (
+                f"--input-file-type must be 'jsonschema' (or omitted) "
+                f"when --input-model points to a dataclass or TypedDict, "
+                f"got '{input_file_type.value}'"
+            )
+            raise Error(msg)
+        try:
+            from pydantic import TypeAdapter  # noqa: PLC0415
+
+            return TypeAdapter(obj).json_schema()
+        except ImportError as e:
+            msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
+            raise Error(msg) from e
+
+    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
+    raise Error(msg)
 
 
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
@@ -818,6 +927,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         shared_module_name=config.shared_module_name,
         encoding=config.encoding,
         enum_field_as_literal=config.enum_field_as_literal,
+        enum_field_as_literal_map=config.enum_field_as_literal_map,
         ignore_enum_constraints=config.ignore_enum_constraints,
         use_one_literal_as_default=config.use_one_literal_as_default,
         use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
@@ -833,6 +943,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         field_extra_keys=config.field_extra_keys,
         field_include_all_keys=config.field_include_all_keys,
         field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
+        model_extra_keys=config.model_extra_keys,
+        model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
         openapi_scopes=config.openapi_scopes,
         include_path_parameters=config.include_path_parameters,
         wrap_string_literal=config.wrap_string_literal,
@@ -962,12 +1074,19 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(e.message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    if not config.input and not config.url and sys.stdin.isatty():
+    if not config.input and not config.url and not config.input_model and sys.stdin.isatty():
         print(  # noqa: T201
-            "Not Found Input: require `stdin` or arguments `--input` or `--url`",
+            "Not Found Input: require `stdin` or arguments `--input`, `--url`, or `--input-model`",
             file=sys.stderr,
         )
         arg_parser.print_help()
+        return Exit.ERROR
+
+    if config.input_model and (config.input or config.url):
+        print(  # noqa: T201
+            "Error: --input-model cannot be used with --input or --url",
+            file=sys.stderr,
+        )
         return Exit.ERROR
 
     if config.check and config.output is None:
@@ -980,6 +1099,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.watch and config.check:
         print(  # noqa: T201
             "Error: --watch and --check cannot be used together",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
+
+    if config.watch and config.input_model:
+        print(  # noqa: T201
+            "Error: --watch cannot be used with --input-model",
             file=sys.stderr,
         )
         return Exit.ERROR
@@ -1107,9 +1233,18 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         is_directory_output = False
 
     try:
+        input_: Path | str | ParseResult
+        if config.input_model:
+            schema = _load_model_schema(config.input_model, config.input_file_type)
+            input_ = json.dumps(schema)
+            if config.input_file_type == InputFileType.Auto:
+                config.input_file_type = InputFileType.JsonSchema
+        else:
+            input_ = config.url or config.input or sys.stdin.read()
+
         run_generate_from_config(
             config=config,
-            input_=config.url or config.input or sys.stdin.read(),
+            input_=input_,
             output=generate_output,
             extra_template_data=extra_template_data,
             aliases=aliases,

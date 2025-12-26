@@ -65,6 +65,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--input": CLIOptionMeta(name="--input", category=OptionCategory.BASE),
     "--output": CLIOptionMeta(name="--output", category=OptionCategory.BASE),
     "--url": CLIOptionMeta(name="--url", category=OptionCategory.BASE),
+    "--input-model": CLIOptionMeta(name="--input-model", category=OptionCategory.BASE),
     "--input-file-type": CLIOptionMeta(name="--input-file-type", category=OptionCategory.BASE),
     "--encoding": CLIOptionMeta(name="--encoding", category=OptionCategory.BASE),
     # ==========================================================================
@@ -115,6 +116,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-serialize-as-any": CLIOptionMeta(name="--use-serialize-as-any", category=OptionCategory.MODEL),
     "--skip-root-model": CLIOptionMeta(name="--skip-root-model", category=OptionCategory.MODEL),
     "--use-generic-base-class": CLIOptionMeta(name="--use-generic-base-class", category=OptionCategory.MODEL),
+    "--model-extra-keys": CLIOptionMeta(name="--model-extra-keys", category=OptionCategory.MODEL),
+    "--model-extra-keys-without-x-prefix": CLIOptionMeta(
+        name="--model-extra-keys-without-x-prefix", category=OptionCategory.MODEL
+    ),
     # ==========================================================================
     # Field Customization
     # ==========================================================================
@@ -169,6 +174,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-root-model-type-alias": CLIOptionMeta(name="--use-root-model-type-alias", category=OptionCategory.TYPING),
     "--strict-types": CLIOptionMeta(name="--strict-types", category=OptionCategory.TYPING),
     "--enum-field-as-literal": CLIOptionMeta(name="--enum-field-as-literal", category=OptionCategory.TYPING),
+    "--enum-field-as-literal-map": CLIOptionMeta(name="--enum-field-as-literal-map", category=OptionCategory.TYPING),
     "--ignore-enum-constraints": CLIOptionMeta(name="--ignore-enum-constraints", category=OptionCategory.TYPING),
     "--disable-future-imports": CLIOptionMeta(name="--disable-future-imports", category=OptionCategory.TYPING),
     "--use-pendulum": CLIOptionMeta(name="--use-pendulum", category=OptionCategory.TYPING),

@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional
 
 from pydantic import Field
 
+from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.model import (
     ConstraintsBase,
     DataModel,
@@ -323,7 +324,7 @@ class BaseModelBase(DataModel, ABC):
         # But, Future version will support only '{custom_template_dir}/pydantic/BaseModel.jinja'
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / Path(self.TEMPLATE_FILE_PATH).name
-            if custom_template_file_path.exists():
+            if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path
         return super().template_file_path
 

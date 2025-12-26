@@ -18,6 +18,7 @@ from warnings import warn
 from pydantic import Field
 from typing_extensions import Self
 
+from datamodel_code_generator import cached_path_exists
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATED,
     IMPORT_OPTIONAL,
@@ -72,6 +73,12 @@ def escape_docstring(value: str | None) -> str | None:
 ALL_MODEL: str = "#all#"
 GENERIC_BASE_CLASS_PATH: str = "#/__datamodel_code_generator__/generic_base_class__"
 GENERIC_BASE_CLASS_NAME: str = "__generic_base_class__"
+
+
+def _copy_all_model_data(source: dict[str, Any], target: dict[str, Any]) -> None:
+    """Copy ALL_MODEL data to target dict, deep copying mutable containers only."""
+    for key, value in source.items():
+        target[key] = deepcopy(value) if isinstance(value, (dict, list, set)) else value
 
 
 def repr_set_sorted(value: set[Any]) -> str:
@@ -470,7 +477,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
 
     if custom_template_dir is not None:
         custom_dir = custom_template_dir / template_subdir
-        if custom_dir.exists():
+        if cached_path_exists(custom_dir):
             loaders.append(FileSystemLoader(str(custom_dir)))
 
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
@@ -691,9 +698,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         if extra_template_data is not None:
             all_model_extra_template_data = extra_template_data.get(ALL_MODEL)
             if all_model_extra_template_data:
-                # The deepcopy is needed here to ensure that different models don't
-                # end up inadvertently sharing state (such as "base_class_kwargs")
-                self.extra_template_data.update(deepcopy(all_model_extra_template_data))
+                _copy_all_model_data(all_model_extra_template_data, self.extra_template_data)
 
         self.methods: list[str] = methods or []
 
@@ -789,7 +794,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         template_file_path = Path(self.TEMPLATE_FILE_PATH)
         if self._custom_template_dir is not None:
             custom_template_file_path = self._custom_template_dir / template_file_path
-            if custom_template_file_path.exists():
+            if cached_path_exists(custom_template_file_path):
                 return custom_template_file_path
         return template_file_path
 

@@ -33,7 +33,7 @@ from datamodel_code_generator import (
     ReuseScope,
     TargetPydanticVersion,
     YamlValue,
-    load_yaml_dict,
+    load_data,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
@@ -222,6 +222,7 @@ class OpenAPIParser(JsonSchemaParser):
         shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
         encoding: str = "utf-8",
         enum_field_as_literal: LiteralType | None = None,
+        enum_field_as_literal_map: dict[str, str] | None = None,
         ignore_enum_constraints: bool = False,
         use_one_literal_as_default: bool = False,
         use_enum_values_in_discriminator: bool = False,
@@ -239,6 +240,8 @@ class OpenAPIParser(JsonSchemaParser):
         field_extra_keys: set[str] | None = None,
         field_include_all_keys: bool = False,
         field_extra_keys_without_x_prefix: set[str] | None = None,
+        model_extra_keys: set[str] | None = None,
+        model_extra_keys_without_x_prefix: set[str] | None = None,
         openapi_scopes: list[OpenAPIScope] | None = None,
         include_path_parameters: bool = False,
         wrap_string_literal: bool | None = False,
@@ -337,6 +340,7 @@ class OpenAPIParser(JsonSchemaParser):
             shared_module_name=shared_module_name,
             encoding=encoding,
             enum_field_as_literal=enum_field_as_literal,
+            enum_field_as_literal_map=enum_field_as_literal_map,
             ignore_enum_constraints=ignore_enum_constraints,
             use_one_literal_as_default=use_one_literal_as_default,
             use_enum_values_in_discriminator=use_enum_values_in_discriminator,
@@ -354,6 +358,8 @@ class OpenAPIParser(JsonSchemaParser):
             field_extra_keys=field_extra_keys,
             field_include_all_keys=field_include_all_keys,
             field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
+            model_extra_keys=model_extra_keys,
+            model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
             wrap_string_literal=wrap_string_literal,
             use_title_as_name=use_title_as_name,
             use_operation_id_as_name=use_operation_id_as_name,
@@ -844,7 +850,7 @@ class OpenAPIParser(JsonSchemaParser):
                 path=[*path, "tags"],
             )
 
-    def parse_raw(self) -> None:
+    def parse_raw(self) -> None:  # noqa: PLR0912
         """Parse OpenAPI specification including schemas, paths, and operations."""
         for source, path_parts in self._get_context_source_path_parts():
             if self.validation:
@@ -854,24 +860,33 @@ class OpenAPIParser(JsonSchemaParser):
                     stacklevel=2,
                 )
 
-                try:
-                    from prance import BaseParser  # noqa: PLC0415
-
-                    BaseParser(
-                        spec_string=source.text,
-                        backend="openapi-spec-validator",
-                        encoding=self.encoding,
-                    )
-                except ImportError:  # pragma: no cover
+                if source.raw_data is not None:
                     warn(
-                        "Warning: Validation was skipped for OpenAPI. `prance` or `openapi-spec-validator` are not "
-                        "installed.\n"
-                        "To use --validation option after datamodel-code-generator 0.24.0, Please run `$pip install "
-                        "'datamodel-code-generator[validation]'`.\n",
+                        "Warning: Validation was skipped for dict input. "
+                        "The --validation option only works with file or text input.\n",
                         stacklevel=2,
                     )
+                else:
+                    try:
+                        from prance import BaseParser  # noqa: PLC0415
 
-            specification: dict[str, Any] = load_yaml_dict(source.text)
+                        BaseParser(
+                            spec_string=source.text,
+                            backend="openapi-spec-validator",
+                            encoding=self.encoding,
+                        )
+                    except ImportError:  # pragma: no cover
+                        warn(
+                            "Warning: Validation was skipped for OpenAPI. "
+                            "`prance` or `openapi-spec-validator` are not installed.\n"
+                            "To use --validation option after datamodel-code-generator 0.24.0, "
+                            "Please run `$pip install 'datamodel-code-generator[validation]'`.\n",
+                            stacklevel=2,
+                        )
+
+            specification: dict[str, Any] = (
+                dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
+            )
             self.raw_obj = specification
             self._collect_discriminator_schemas()
             schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})

@@ -11,6 +11,7 @@ import os
 import sys
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from datetime import datetime, timezone
+from functools import lru_cache as _lru_cache
 from pathlib import Path
 from typing import (
     IO,
@@ -109,9 +110,81 @@ def load_yaml_dict(stream: str | TextIO) -> dict[str, YamlValue]:
 
 
 def load_yaml_dict_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
-    """Load YAML and return as dict from a file path."""
+    """Load YAML and return as dict from a file path.
+
+    Uses LRU cache with (path, mtime) as key for performance optimization.
+    This avoids re-reading the same file multiple times during $ref resolution.
+    """
+    return _load_yaml_dict_from_path_cached(path, path.stat().st_mtime, encoding)
+
+
+@_lru_cache(maxsize=128)
+def _load_yaml_dict_from_path_cached(
+    path: Path,
+    mtime: float,  # noqa: ARG001  # Used as cache key for invalidation
+    encoding: str,
+) -> dict[str, YamlValue]:
+    """Load YAML dict from path with caching (internal implementation)."""
     with path.open(encoding=encoding) as f:
         return load_yaml_dict(f)
+
+
+def _is_json_text(text: str) -> bool:
+    """Check if text likely contains JSON by examining the first non-whitespace character.
+
+    Skips BOM, spaces, tabs, carriage returns, and newlines.
+    Returns True if the first significant character is '{' or '['.
+    """
+    for ch in text:
+        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
+            continue
+        return ch in {"{", "["}
+    return False
+
+
+def load_data(text: str) -> dict[str, YamlValue]:
+    """Load text as JSON or YAML based on content.
+
+    For stdin/string input: tries JSON first if content looks like JSON,
+    falls back to YAML on failure.
+    """
+    import json  # noqa: PLC0415
+
+    if _is_json_text(text):
+        with contextlib.suppress(json.JSONDecodeError):
+            result = json.loads(text)
+            if isinstance(result, dict):
+                return result
+    return load_yaml_dict(text)
+
+
+def load_data_from_path(path: Path, encoding: str) -> dict[str, YamlValue]:
+    """Load file as JSON or YAML based on file extension.
+
+    For file input: tries json.load() for .json files (more efficient than
+    read_text + json.loads), falls back to YAML if JSON parsing fails
+    (e.g., trailing commas) or if content is not a dict. Uses YAML for all other extensions.
+    """
+    import json  # noqa: PLC0415
+
+    if path.suffix.lower() == ".json":
+        with contextlib.suppress(json.JSONDecodeError), path.open(encoding=encoding) as f:
+            result = json.load(f)
+            if isinstance(result, dict):
+                return result
+    return load_yaml_dict_from_path(path, encoding)
+
+
+@_lru_cache(maxsize=256)
+def cached_path_exists(path: Path) -> bool:
+    """Check if a path exists with LRU caching.
+
+    Caches the result of Path.exists() to reduce filesystem I/O
+    when checking the same path multiple times (e.g., custom template directories).
+
+    Note: This cache is safe for CLI usage where files don't change during execution.
+    """
+    return path.exists()
 
 
 def get_version() -> str:
@@ -417,6 +490,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
     encoding: str = "utf-8",
     enum_field_as_literal: LiteralType | None = None,
+    enum_field_as_literal_map: dict[str, str] | None = None,
     ignore_enum_constraints: bool = False,
     use_one_literal_as_default: bool = False,
     use_enum_values_in_discriminator: bool = False,
@@ -433,6 +507,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     field_extra_keys: set[str] | None = None,
     field_include_all_keys: bool = False,
     field_extra_keys_without_x_prefix: set[str] | None = None,
+    model_extra_keys: set[str] | None = None,
+    model_extra_keys_without_x_prefix: set[str] | None = None,
     openapi_scopes: list[OpenAPIScope] | None = None,
     include_path_parameters: bool = False,
     graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
@@ -532,6 +608,29 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
+    if input_file_type == InputFileType.Auto and isinstance(input_, Mapping):
+        msg = (
+            "input_file_type=Auto is not supported for dict input. "
+            "Please specify input_file_type explicitly (e.g., InputFileType.JsonSchema)."
+        )
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type == InputFileType.GraphQL:
+        msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
+        raise Error(msg)
+
+    if isinstance(input_, Mapping) and input_file_type in {
+        InputFileType.Json,
+        InputFileType.Yaml,
+        InputFileType.CSV,
+    }:
+        msg = (
+            f"Dict input is not supported for {input_file_type.value}. "
+            f"Use InputFileType.Dict to generate schema from dict data, "
+            f"or provide text/file input for {input_file_type.value} format."
+        )
+        raise Error(msg)
+
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
@@ -657,8 +756,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         kwargs["data_model_scalar_type"] = data_model_types.scalar_model
         kwargs["data_model_union_type"] = data_model_types.union_model
 
-    source = input_text or input_
-    assert not isinstance(source, Mapping)
+    if isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
+        source = dict(input_)
+    else:
+        source = input_text or input_
+        assert not isinstance(source, Mapping)
 
     defer_formatting = output is not None and not output.suffix
 
@@ -702,6 +804,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         enum_field_as_literal=enum_field_as_literal
         if enum_field_as_literal is not None
         else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
+        enum_field_as_literal_map=enum_field_as_literal_map,
         ignore_enum_constraints=ignore_enum_constraints,
         use_one_literal_as_default=use_one_literal_as_default,
         use_enum_values_in_discriminator=use_enum_values_in_discriminator,
@@ -721,6 +824,8 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         field_extra_keys=field_extra_keys,
         field_include_all_keys=field_include_all_keys,
         field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
+        model_extra_keys=model_extra_keys,
+        model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
         wrap_string_literal=wrap_string_literal,
         use_title_as_name=use_title_as_name,
         use_operation_id_as_name=use_operation_id_as_name,

@@ -244,6 +244,12 @@ class BaseModel(BaseModelBase):
             for key, value in self.extra_template_data["config"].items():
                 config_parameters[key] = value  # noqa: PERF403
 
+        # Handle json_schema_extra from schema extensions (x-* fields)
+        model_extras = self.extra_template_data.get("model_extras")
+        if model_extras:
+            existing = config_parameters.get("json_schema_extra") or {}
+            config_parameters["json_schema_extra"] = {**existing, **model_extras}
+
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 

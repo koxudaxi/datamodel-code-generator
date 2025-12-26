@@ -14,6 +14,7 @@
 ## ✨ What it does
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
+- 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
 - 🎯 Generates **Pydantic v1/v2**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
@@ -22,13 +23,13 @@
 
 ## 📖 Documentation
 
-**👉 [koxudaxi.github.io/datamodel-code-generator](https://koxudaxi.github.io/datamodel-code-generator)**
+**👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
 
-- 🖥️ [CLI Reference](https://koxudaxi.github.io/datamodel-code-generator/cli-reference/) - All command-line options
-- ⚙️ [pyproject.toml](https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/) - Configuration file
-- 🔄 [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) - GitHub Actions, pre-commit hooks
-- 🚀 [One-liner Usage](https://koxudaxi.github.io/datamodel-code-generator/oneliner/) - uvx, pipx, clipboard integration
-- ❓ [FAQ](https://koxudaxi.github.io/datamodel-code-generator/faq/) - Common questions
+- 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
+- ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
+- 🔄 [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) - GitHub Actions, pre-commit hooks
+- 🚀 [One-liner Usage](https://datamodel-code-generator.koxudaxi.dev/oneliner/) - uvx, pipx, clipboard integration
+- ❓ [FAQ](https://datamodel-code-generator.koxudaxi.dev/faq/) - Common questions
 
 ---
 
@@ -153,6 +154,7 @@ class Pet(BaseModel):
 - JSON Schema
 - JSON / YAML / CSV data
 - GraphQL schema
+- Python types (Pydantic, dataclass, TypedDict) via `--input-model`
 - Python dictionary
 
 ## 📤 Supported Output
@@ -176,7 +178,7 @@ Generate a prompt to ask LLMs about CLI options:
 datamodel-codegen --generate-prompt "Best options for Pydantic v2?" | claude -p
 ```
 
-See [LLM Integration](https://koxudaxi.github.io/datamodel-code-generator/llm-integration/) for more examples.
+See [LLM Integration](https://datamodel-code-generator.koxudaxi.dev/llm-integration/) for more examples.
 
 ### 🌐 Generate from URL
 
@@ -200,7 +202,7 @@ Then simply run:
 datamodel-codegen
 ```
 
-See [pyproject.toml Configuration](https://koxudaxi.github.io/datamodel-code-generator/pyproject_toml/) for more options.
+See [pyproject.toml Configuration](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) for more options.
 
 ### 🔄 CI/CD Integration
 
@@ -213,7 +215,7 @@ Validate generated models in your CI pipeline:
     output: src/models/api.py
 ```
 
-See [CI/CD Integration](https://koxudaxi.github.io/datamodel-code-generator/ci-cd/) for more options.
+See [CI/CD Integration](https://datamodel-code-generator.koxudaxi.dev/ci-cd/) for more options.
 
 ---
 
@@ -264,7 +266,7 @@ These projects use datamodel-code-generator. See the linked examples for real-wo
 
 ## 🤝 Contributing
 
-See [Development & Contributing](https://koxudaxi.github.io/datamodel-code-generator/development-contributing/) for how to get started!
+See [Development & Contributing](https://datamodel-code-generator.koxudaxi.dev/development-contributing/) for how to get started!
 
 ## 📄 License
 

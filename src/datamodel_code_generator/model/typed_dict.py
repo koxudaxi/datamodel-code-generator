@@ -13,9 +13,11 @@ from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import (
     IMPORT_NOT_REQUIRED,
     IMPORT_NOT_REQUIRED_BACKPORT,
+    IMPORT_READ_ONLY,
+    IMPORT_READ_ONLY_BACKPORT,
     IMPORT_TYPED_DICT,
 )
-from datamodel_code_generator.types import NOT_REQUIRED_PREFIX
+from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -113,9 +115,13 @@ class TypedDict(DataModel):
 
 
 class DataModelField(DataModelFieldBase):
-    """Field implementation for TypedDict models."""
+    """Field implementation for TypedDict models.
+
+    For Python 3.13+: uses typing.NotRequired and typing.ReadOnly.
+    """
 
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED,)
+    DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY,)
 
     def process_const(self) -> None:
         """Process const field constraint using literal type."""
@@ -130,10 +136,13 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def type_hint(self) -> str:
-        """Get type hint with NotRequired wrapper if needed."""
+        """Get type hint with ReadOnly and/or NotRequired wrapper if needed."""
         type_hint = super().type_hint
+        # Apply ReadOnly first (inner), then NotRequired (outer)
+        if self._read_only:
+            type_hint = f"{READ_ONLY_PREFIX}{type_hint}]"
         if self._not_required:
-            return f"{NOT_REQUIRED_PREFIX}{type_hint}]"
+            type_hint = f"{NOT_REQUIRED_PREFIX}{type_hint}]"
         return type_hint
 
     @property
@@ -142,20 +151,39 @@ class DataModelField(DataModelFieldBase):
         return not self.required and isinstance(self.parent, TypedDict)
 
     @property
+    def _read_only(self) -> bool:
+        """Check if field should be marked as ReadOnly."""
+        return self.use_frozen_field and self.read_only and isinstance(self.parent, TypedDict)
+
+    @property
     def fall_back_to_nullable(self) -> bool:
         """Check if field should fall back to nullable."""
         return not self._not_required
 
     @property
     def imports(self) -> tuple[Import, ...]:
-        """Get imports including NotRequired if needed."""
+        """Get imports including NotRequired and ReadOnly if needed."""
         return (
             *super().imports,
             *(self.DEFAULT_IMPORTS if self._not_required else ()),
+            *(self.DEFAULT_READ_ONLY_IMPORTS if self._read_only else ()),
         )
 
 
+class DataModelFieldReadOnlyBackport(DataModelField):
+    """Field implementation for TypedDict models using typing_extensions.ReadOnly.
+
+    For Python 3.11-3.12: uses typing.NotRequired and typing_extensions.ReadOnly.
+    """
+
+    DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY_BACKPORT,)
+
+
 class DataModelFieldBackport(DataModelField):
-    """Field implementation for TypedDict models using typing_extensions."""
+    """Field implementation for TypedDict models using typing_extensions.
+
+    For Python 3.10: uses typing_extensions.NotRequired and typing_extensions.ReadOnly.
+    """
 
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_NOT_REQUIRED_BACKPORT,)
+    DEFAULT_READ_ONLY_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_READ_ONLY_BACKPORT,)

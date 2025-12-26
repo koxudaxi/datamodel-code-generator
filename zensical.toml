@@ -1,7 +1,7 @@
 [project]
 site_name = "datamodel-code-generator"
 site_description = "This code generator creates pydantic model from an openapi file and others."
-site_url = "https://koxudaxi.github.io/datamodel-code-generator"
+site_url = "https://datamodel-code-generator.koxudaxi.dev"
 repo_name = "koxudaxi/datamodel-code-generator"
 repo_url = "https://github.com/koxudaxi/datamodel-code-generator"
 
@@ -25,7 +25,8 @@ nav = [
       { "OpenAPI" = "openapi.md" },
       { "JSON Schema" = "jsonschema.md" },
       { "JSON Data" = "jsondata.md" },
-      { "GraphQL" = "graphql.md" }
+      { "GraphQL" = "graphql.md" },
+      { "Python Models" = "python-model.md" }
     ]},
     { "Output Customization" = [
       { "Output Model Types" = "what_is_the_difference_between_v1_and_v2.md" },

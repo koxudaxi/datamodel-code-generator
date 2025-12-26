@@ -1,14 +1,13 @@
 name: Docs
 
 on:
+  pull_request:
   push:
     branches:
-    - main
+      - main
+  release:
+    types: [published]
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Update CHANGELOG"]
-    types:
-      - completed
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -16,8 +15,11 @@ concurrency:
 
 jobs:
   build-deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run == null }}
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
     - uses: actions/checkout@v4
     - name: Install the latest version of uv
@@ -41,9 +43,63 @@ jobs:
         GH_TOKEN: ${{ github.token }}
     - name: build site
       run: zensical build --clean
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v2
-      env:
-        PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
-        PUBLISH_BRANCH: gh-pages
-        PUBLISH_DIR: ./site
+
+    # PR Preview Deploy (skip forked PRs as secrets are not available)
+    - name: Deploy Preview
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy site --project-name=datamodel-code-generator --branch=pr-${{ github.event.pull_request.number }}
+
+    - name: Comment Preview URL on PR
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const previewUrl = 'https://pr-${{ github.event.pull_request.number }}.datamodel-code-generator.pages.dev';
+          const body = `📚 **Docs Preview:** ${previewUrl}`;
+
+          // Check if comment already exists
+          const comments = await github.rest.issues.listComments({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          });
+
+          const existingComment = comments.data.find(c => c.body.includes('Docs Preview:'));
+
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: body
+            });
+          } else {
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+          }
+
+    # Dev Deploy (on push to main)
+    - name: Deploy Dev
+      if: github.event_name == 'push'
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy site --project-name=datamodel-code-generator --branch=dev
+
+    # Production Deploy (on release only)
+    - name: Deploy Production
+      if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy site --project-name=datamodel-code-generator --branch=main

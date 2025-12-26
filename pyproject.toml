@@ -221,6 +221,7 @@ filterwarnings = [
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
+  "ignore:^.*is empty or not a dict. Skipping this file.*:UserWarning",
 ]
 norecursedirs = [ "tests/data/*", ".tox" ]
 verbosity_assertions = 2
@@ -242,7 +243,7 @@ paths.other = [
   "*\\datamodel-code-generator",
 ]
 run.dynamic_context = "none"
-run.omit = [ "tests/data/*" ]
+run.omit = [ "tests/data/*", "tests/main/test_performance.py" ]
 report.fail_under = 88
 run.parallel = true
 run.plugins = [
