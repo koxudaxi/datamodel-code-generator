@@ -32,4 +32,4 @@ jobs:
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
           run: .venv/bin/pytest tests/main/test_performance.py --codspeed -n auto
-          mode: "instrumentation"
+          mode: "simulation"
