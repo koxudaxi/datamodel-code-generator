@@ -2,13 +2,12 @@ name: Docs
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
   release:
     types: [published]
   workflow_dispatch:
-  workflow_run:
-    workflows: ["Update CHANGELOG"]
-    types:
-      - completed
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -16,7 +15,6 @@ concurrency:
 
 jobs:
   build-deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event.workflow_run == null }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -88,9 +86,18 @@ jobs:
             });
           }
 
-    # Production Deploy (on release or CHANGELOG update)
+    # Dev Deploy (on push to main)
+    - name: Deploy Dev
+      if: github.event_name == 'push'
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy site --project-name=datamodel-code-generator --branch=dev
+
+    # Production Deploy (on release only)
     - name: Deploy Production
-      if: github.event_name == 'release' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch'
+      if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
       uses: cloudflare/wrangler-action@v3
       with:
         apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
