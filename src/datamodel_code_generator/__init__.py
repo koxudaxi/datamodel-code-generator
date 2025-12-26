@@ -583,6 +583,21 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
           module path tuples to generated code strings)
     """
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+
+    # Convert string paths to Path objects for consistent handling
+    # This allows users to pass file paths as strings (e.g., "/path/to/schema.json")
+    # rather than requiring Path objects. We detect file paths by checking if the
+    # string refers to an existing file or directory.
+    if isinstance(input_, str):
+        potential_path = Path(input_).expanduser()
+        try:
+            # Check if it's an existing file or directory path
+            if potential_path.exists():
+                input_ = potential_path
+        except OSError:
+            # Path is too long or invalid - treat as content string
+            pass
+
     match input_:
         case str():
             input_text: str | None = input_

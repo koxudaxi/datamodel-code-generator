@@ -1868,3 +1868,99 @@ def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFi
 
     with pytest.raises(Error, match=f"Dict input is not supported for {input_file_type.value}"):
         generate(auto_error_dict, input_file_type=input_file_type)
+
+
+def test_generate_with_string_file_path(tmp_path: Path) -> None:
+    """Test generate() accepts string file path (issue #2381).
+
+    Users should be able to pass file paths as strings without needing to
+    convert them to Path objects explicitly.
+    """
+    schema_file = tmp_path / "schema.json"
+    schema_file.write_text(
+        '{"type": "object", "properties": {"name": {"type": "string"}}}',
+        encoding="utf-8",
+    )
+
+    # Pass the path as a string instead of Path object
+    result = generate(
+        str(schema_file),
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+
+    assert result is not None
+    assert "class Model" in result
+    assert "name: str" in result
+
+
+def test_generate_with_string_directory_path(tmp_path: Path) -> None:
+    """Test generate() accepts string directory path for multi-file input."""
+    schema_dir = tmp_path / "schemas"
+    schema_dir.mkdir()
+    schema_file = schema_dir / "schema.json"
+    schema_file.write_text(
+        '{"type": "object", "properties": {"id": {"type": "integer"}}}',
+        encoding="utf-8",
+    )
+
+    # Pass the directory path as a string instead of Path object
+    result = generate(
+        str(schema_dir),
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+
+    # Directory input returns a GeneratedModules dict
+    assert result is not None
+    assert isinstance(result, dict)
+    assert ("schema.py",) in result
+    assert "class Model" in result["schema.py",]
+
+
+def test_generate_with_string_content_still_works() -> None:
+    """Test generate() still accepts raw JSON/YAML string content.
+
+    This ensures backward compatibility - when a string is not an existing file,
+    it should be treated as raw schema content.
+    """
+    json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'
+
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+
+    assert result is not None
+    assert "class Model" in result
+    assert "value: float" in result
+
+
+def test_generate_with_tilde_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test generate() handles tilde (~) paths correctly.
+
+    The tilde should be expanded to the user's home directory.
+    """
+    # Create a schema file in a "home" directory
+    fake_home = tmp_path / "fake_home"
+    fake_home.mkdir()
+    schema_file = fake_home / "schema.json"
+    schema_file.write_text(
+        '{"type": "object", "properties": {"name": {"type": "string"}}}',
+        encoding="utf-8",
+    )
+
+    # Mock expanduser to use our fake home directory
+    monkeypatch.setenv("HOME", str(fake_home))
+
+    # Pass the path using tilde notation
+    result = generate(
+        "~/schema.json",
+        input_file_type=InputFileType.JsonSchema,
+        disable_timestamp=True,
+    )
+
+    assert result is not None
+    assert "class Model" in result
+    assert "name: str" in result
