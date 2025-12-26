@@ -7,13 +7,15 @@ from typing import Literal, TypeAlias, TypedDict
 
 from typing_extensions import NotRequired
 
-AllExportsCollisionStrategy: TypeAlias = Literal["error", "minimal-prefix", "full-prefix"]
+AllExportsCollisionStrategy: TypeAlias = Literal[
+    'error', 'minimal-prefix', 'full-prefix'
+]
 
 
-AllExportsScope: TypeAlias = Literal["children", "recursive"]
+AllExportsScope: TypeAlias = Literal['children', 'recursive']
 
 
-ModuleSplitMode: TypeAlias = Literal["single"]
+ModuleSplitMode: TypeAlias = Literal['single']
 
 
 class ParseConfig(TypedDict):
