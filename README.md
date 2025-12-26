@@ -22,7 +22,7 @@
 
 ## 📖 Documentation
 
-**👉 [koxudaxi.github.io/datamodel-code-generator](https://datamodel-code-generator.koxudaxi.dev)**
+**👉 [datamodel-code-generator.koxudaxi.dev](https://datamodel-code-generator.koxudaxi.dev)**
 
 - 🖥️ [CLI Reference](https://datamodel-code-generator.koxudaxi.dev/cli-reference/) - All command-line options
 - ⚙️ [pyproject.toml](https://datamodel-code-generator.koxudaxi.dev/pyproject_toml/) - Configuration file
