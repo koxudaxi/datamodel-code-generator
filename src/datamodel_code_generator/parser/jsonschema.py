@@ -34,9 +34,8 @@ from datamodel_code_generator import (
     SchemaParseError,
     TargetPydanticVersion,
     YamlValue,
-    load_yaml,
-    load_yaml_dict,
-    load_yaml_dict_from_path,
+    load_data,
+    load_data_from_path,
     snooper_to_methods,
 )
 from datamodel_code_generator.format import (
@@ -3104,21 +3103,19 @@ class JsonSchemaParser(Parser):
                 path = f"//{parsed.netloc}{path}"
             file_path = Path(path)
             return self.remote_object_cache.get_or_put(
-                ref, default_factory=lambda _: load_yaml_dict_from_path(file_path, self.encoding)
+                ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
         return self.remote_object_cache.get_or_put(
-            ref, default_factory=lambda key: load_yaml_dict(self._get_text_from_url(key))
+            ref, default_factory=lambda key: load_data(self._get_text_from_url(key))
         )
 
     def _get_ref_body_from_remote(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get reference body from a remote file path."""
-        # Remote Reference: $ref: 'document.json' Uses the whole document located on the same server and in
-        # the same location. TODO treat edge case
         full_path = self.base_path / resolved_ref
 
         return self.remote_object_cache.get_or_put(
             str(full_path),
-            default_factory=lambda _: load_yaml_dict_from_path(full_path, self.encoding),
+            default_factory=lambda _: load_data_from_path(full_path, self.encoding),
         )
 
     def resolve_ref(self, object_ref: str) -> Reference:
@@ -3348,10 +3345,17 @@ class JsonSchemaParser(Parser):
     def parse_raw(self) -> None:
         """Parse all raw input sources into data models."""
         for source, path_parts in self._get_context_source_path_parts():
-            raw_obj = source.raw_data if source.raw_data is not None else load_yaml(source.text)
-            if not isinstance(raw_obj, dict):  # pragma: no cover
-                warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
-                continue
+            if source.raw_data is not None:
+                raw_obj = source.raw_data
+                if not isinstance(raw_obj, dict):  # pragma: no cover
+                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
+                    continue
+            else:
+                try:
+                    raw_obj = load_data(source.text)
+                except TypeError:
+                    warn(f"{source.path} is empty or not a dict. Skipping this file", stacklevel=2)
+                    continue
             self.raw_obj = raw_obj
             title = self.raw_obj.get("title")
             title_str = str(title) if title is not None else "Model"
@@ -3388,8 +3392,7 @@ class JsonSchemaParser(Parser):
                 for reserved_ref in sorted(reserved_refs):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
-                    # for root model
-                    self.raw_obj = dict(source.raw_data) if source.raw_data is not None else load_yaml_dict(source.text)
+                    self.raw_obj = dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
 
         if model_count != len(self.results):
