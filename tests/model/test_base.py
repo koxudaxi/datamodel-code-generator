@@ -426,3 +426,23 @@ def test_inline_field_docstring_escapes_triple_quotes() -> None:
         use_inline_field_description=True,
     )
     assert field.inline_field_docstring == r'"""Contains \"\"\"quotes\"\"\""""'
+
+
+def test_data_type_manager_unknown_type_raises_error() -> None:
+    """Test DataTypeManager raises NotImplementedError for unknown types."""
+    from datamodel_code_generator.model.types import DataTypeManager
+
+    manager = DataTypeManager()
+    del manager.type_map[Types.path]
+
+    with pytest.raises(NotImplementedError, match="Type mapping for 'path' not implemented"):
+        manager.get_data_type(Types.path)
+
+
+def test_data_type_manager_has_all_types() -> None:
+    """Test DataTypeManager has mappings for all Types enum members."""
+    from datamodel_code_generator.model.types import DataTypeManager
+
+    manager = DataTypeManager()
+    missing_types = [t for t in Types if t not in manager.type_map]
+    assert not missing_types, f"Missing type mappings: {[t.name for t in missing_types]}"
