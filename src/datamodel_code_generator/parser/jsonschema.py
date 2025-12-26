@@ -3389,7 +3389,7 @@ class JsonSchemaParser(Parser):
                     if self.model_resolver.add_ref(reserved_ref, resolved=True).loaded:
                         continue
                     # for root model
-                    self.raw_obj = load_yaml_dict(source.text)
+                    self.raw_obj = dict(source.raw_data) if source.raw_data is not None else load_yaml_dict(source.text)
                     self.parse_json_pointer(self.raw_obj, reserved_ref, path_parts)
 
         if model_count != len(self.results):

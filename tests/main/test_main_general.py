@@ -1856,3 +1856,16 @@ def test_generate_with_dict_openapi_validation_warns() -> None:
         warning_messages = [str(warning.message) for warning in w]
         assert any("deprecated" in msg.lower() for msg in warning_messages)
         assert any("dict input" in msg.lower() for msg in warning_messages)
+
+
+@pytest.mark.parametrize(
+    "input_file_type",
+    [InputFileType.Json, InputFileType.Yaml, InputFileType.CSV],
+    ids=["json", "yaml", "csv"],
+)
+def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFileType) -> None:
+    """Test generate() with dict input + Json/Yaml/CSV raises error."""
+    from tests.data.dict_input import auto_error_dict
+
+    with pytest.raises(Error, match=f"Dict input is not supported for {input_file_type.value}"):
+        generate(auto_error_dict, input_file_type=input_file_type)

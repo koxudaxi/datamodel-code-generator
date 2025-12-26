@@ -545,6 +545,18 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         msg = "Dict input is not supported for GraphQL. GraphQL requires text input (SDL format)."
         raise Error(msg)
 
+    if isinstance(input_, Mapping) and input_file_type in {
+        InputFileType.Json,
+        InputFileType.Yaml,
+        InputFileType.CSV,
+    }:
+        msg = (
+            f"Dict input is not supported for {input_file_type.value}. "
+            f"Use InputFileType.Dict to generate schema from dict data, "
+            f"or provide text/file input for {input_file_type.value} format."
+        )
+        raise Error(msg)
+
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
