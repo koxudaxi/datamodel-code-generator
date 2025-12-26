@@ -66,9 +66,11 @@ def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:
 
     has_input_schema = "input_schema" in kwargs and kwargs["input_schema"] is not None
     has_config_content = "config_content" in kwargs and kwargs["config_content"] is not None
-    if not has_input_schema and not has_config_content and not has_stdout:
+    has_input_model = "input_model" in kwargs and kwargs["input_model"] is not None
+    if not has_input_schema and not has_config_content and not has_input_model and not has_stdout:
         errors.append(
-            "Either 'input_schema' or 'config_content' is required (or 'expected_stdout' with cli_args as input)"
+            "Either 'input_schema', 'config_content', or 'input_model' is required "
+            "(or 'expected_stdout' with cli_args as input)"
         )
 
     if "options" in kwargs:
@@ -91,6 +93,13 @@ def _validate_cli_doc_marker(node_id: str, kwargs: dict[str, Any]) -> list[str]:
         schema = kwargs["input_schema"]
         if not isinstance(schema, str):
             errors.append(f"'input_schema' must be a string, got {type(schema).__name__}")
+
+    if has_input_model:
+        input_model = kwargs["input_model"]
+        if not isinstance(input_model, str):
+            errors.append(f"'input_model' must be a string, got {type(input_model).__name__}")
+        elif ":" not in input_model:
+            errors.append(f"'input_model' must be in 'module:name' format, got {input_model!r}")
 
     if has_golden:
         golden = kwargs["golden_output"]
