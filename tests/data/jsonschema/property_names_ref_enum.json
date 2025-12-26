@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnumKeys",
+  "type": "object",
+  "propertyNames": {
+    "$ref": "#/definitions/EnumKey"
+  },
+  "additionalProperties": {
+    "type": "string"
+  },
+  "definitions": {
+    "EnumKey": {
+      "enum": ["name", "age", "email"]
+    }
+  }
+}
