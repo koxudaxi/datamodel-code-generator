@@ -13,16 +13,86 @@ import pytest
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit, main
-from tests.main.conftest import run_main_with_args
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Generator, Sequence
     from pathlib import Path
 
 SKIP_PYDANTIC_V1 = pytest.mark.skipif(
     pydantic.VERSION < "2.0.0",
     reason="--input-model with Pydantic models requires Pydantic v2",
 )
+
+
+def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
+    """Assert exit code matches expected value."""
+    __tracebackhide__ = True
+    if return_code != expected_exit:  # pragma: no cover
+        pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
+
+
+def _assert_stderr_contains(captured_err: str, expected: str) -> None:
+    """Assert stderr contains expected string."""
+    __tracebackhide__ = True
+    if expected not in captured_err:  # pragma: no cover
+        pytest.fail(f"Expected stderr to contain: {expected!r}\n\nActual stderr:\n{captured_err}")
+
+
+def _assert_output_contains(content: str, expected: str) -> None:
+    """Assert output contains expected string."""
+    __tracebackhide__ = True
+    if expected not in content:  # pragma: no cover
+        pytest.fail(f"Expected output to contain: {expected!r}\n\nActual output:\n{content}")
+
+
+def _assert_file_exists(path: Path) -> None:
+    """Assert file exists."""
+    __tracebackhide__ = True
+    if not path.exists():  # pragma: no cover
+        pytest.fail(f"Expected file to exist: {path}")
+
+
+def run_input_model_and_assert(
+    *,
+    input_model: str,
+    output_path: Path,
+    extra_args: Sequence[str] | None = None,
+    expected_exit: Exit = Exit.OK,
+    expected_output_contains: Sequence[str] | None = None,
+) -> None:
+    """Run main with --input-model and assert results."""
+    __tracebackhide__ = True
+    args = ["--input-model", input_model, "--output", str(output_path)]
+    if extra_args:
+        args.extend(extra_args)
+
+    return_code = main(args)
+    _assert_exit_code(return_code, expected_exit, f"--input-model {input_model}")
+    _assert_file_exists(output_path)
+
+    if expected_output_contains:
+        content = output_path.read_text(encoding="utf-8")
+        for expected in expected_output_contains:
+            _assert_output_contains(content, expected)
+
+
+def run_input_model_error_and_assert(
+    *,
+    input_model: str,
+    extra_args: Sequence[str] | None = None,
+    capsys: pytest.CaptureFixture[str],
+    expected_stderr_contains: str,
+) -> None:
+    """Run main with --input-model expecting error and assert stderr."""
+    __tracebackhide__ = True
+    args = ["--input-model", input_model]
+    if extra_args:
+        args.extend(extra_args)
+
+    return_code = main(args)
+    _assert_exit_code(return_code, Exit.ERROR, f"--input-model {input_model}")
+    captured = capsys.readouterr()
+    _assert_stderr_contains(captured.err, expected_stderr_contains)
 
 
 @pytest.fixture(autouse=True)
@@ -124,14 +194,11 @@ def test_input_model_pydantic_basic(
     tmp_path: Path,
 ) -> None:
     """Import a Pydantic v2 model or dict schema from a Python module."""
-    output_file = tmp_path / "output.py"
-    run_main_with_args(
-        ["--input-model", pydantic_model_module, "--output", str(output_file)],
-        expected_exit=Exit.OK,
+    run_input_model_and_assert(
+        input_model=pydantic_model_module,
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["name", "age"],
     )
-    content = output_file.read_text()
-    assert "name" in content
-    assert "age" in content
 
 
 @SKIP_PYDANTIC_V1
@@ -140,20 +207,12 @@ def test_input_model_pydantic_to_typeddict(
     tmp_path: Path,
 ) -> None:
     """Test generating TypedDict from Pydantic model."""
-    output_file = tmp_path / "output.py"
-    run_main_with_args(
-        [
-            "--input-model",
-            pydantic_model_module,
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(output_file),
-        ],
-        expected_exit=Exit.OK,
+    run_input_model_and_assert(
+        input_model=pydantic_model_module,
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=["TypedDict"],
     )
-    content = output_file.read_text()
-    assert "TypedDict" in content
 
 
 @SKIP_PYDANTIC_V1
@@ -162,19 +221,11 @@ def test_input_model_pydantic_with_jsonschema_type(
     tmp_path: Path,
 ) -> None:
     """Test --input-model with explicit jsonschema input-file-type."""
-    output_file = tmp_path / "output.py"
-    run_main_with_args(
-        [
-            "--input-model",
-            pydantic_model_module,
-            "--input-file-type",
-            "jsonschema",
-            "--output",
-            str(output_file),
-        ],
-        expected_exit=Exit.OK,
+    run_input_model_and_assert(
+        input_model=pydantic_model_module,
+        output_path=tmp_path / "output.py",
+        extra_args=["--input-file-type", "jsonschema"],
     )
-    assert output_file.exists()
 
 
 @SKIP_PYDANTIC_V1
@@ -184,18 +235,12 @@ def test_input_model_pydantic_non_jsonschema_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test error when Pydantic model used with non-jsonschema input-file-type."""
-    output_file = tmp_path / "output.py"
-    return_code = main([
-        "--input-model",
-        pydantic_model_module,
-        "--input-file-type",
-        "openapi",
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "--input-file-type must be 'jsonschema'" in captured.err
+    run_input_model_error_and_assert(
+        input_model=pydantic_model_module,
+        extra_args=["--input-file-type", "openapi", "--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="--input-file-type must be 'jsonschema'",
+    )
 
 
 # =============================================================================
@@ -208,19 +253,11 @@ def test_input_model_dict_with_jsonschema(
     tmp_path: Path,
 ) -> None:
     """Test dict input with --input-file-type jsonschema."""
-    output_file = tmp_path / "output.py"
-    run_main_with_args(
-        [
-            "--input-model",
-            dict_schema_module,
-            "--input-file-type",
-            "jsonschema",
-            "--output",
-            str(output_file),
-        ],
-        expected_exit=Exit.OK,
+    run_input_model_and_assert(
+        input_model=dict_schema_module,
+        output_path=tmp_path / "output.py",
+        extra_args=["--input-file-type", "jsonschema"],
     )
-    assert output_file.exists()
 
 
 def test_input_model_dict_without_type_error(
@@ -229,16 +266,12 @@ def test_input_model_dict_without_type_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test that dict without --input-file-type raises error."""
-    output_file = tmp_path / "output.py"
-    return_code = main([
-        "--input-model",
-        dict_schema_module,
-        "--output",
-        str(output_file),
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "--input-file-type is required" in captured.err
+    run_input_model_error_and_assert(
+        input_model=dict_schema_module,
+        extra_args=["--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="--input-file-type is required",
+    )
 
 
 def test_input_model_dict_openapi(
@@ -246,20 +279,12 @@ def test_input_model_dict_openapi(
     tmp_path: Path,
 ) -> None:
     """Test dict input as OpenAPI spec."""
-    output_file = tmp_path / "output.py"
-    run_main_with_args(
-        [
-            "--input-model",
-            openapi_dict_module,
-            "--input-file-type",
-            "openapi",
-            "--output",
-            str(output_file),
-        ],
-        expected_exit=Exit.OK,
+    run_input_model_and_assert(
+        input_model=openapi_dict_module,
+        output_path=tmp_path / "output.py",
+        extra_args=["--input-file-type", "openapi"],
+        expected_output_contains=["User"],
     )
-    content = output_file.read_text()
-    assert "User" in content
 
 
 # =============================================================================
@@ -269,34 +294,38 @@ def test_input_model_dict_openapi(
 
 def test_input_model_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
     """Test error when colon is missing."""
-    return_code = main(["--input-model", "pydantic.BaseModel"])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "Invalid --input-model format" in captured.err
+    run_input_model_error_and_assert(
+        input_model="pydantic.BaseModel",
+        capsys=capsys,
+        expected_stderr_contains="Invalid --input-model format",
+    )
 
 
 def test_input_model_invalid_module(capsys: pytest.CaptureFixture[str]) -> None:
     """Test error when module doesn't exist."""
-    return_code = main(["--input-model", "nonexistent_module_12345:Model"])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "Cannot import module" in captured.err
+    run_input_model_error_and_assert(
+        input_model="nonexistent_module_12345:Model",
+        capsys=capsys,
+        expected_stderr_contains="Cannot import module",
+    )
 
 
 def test_input_model_invalid_attr(capsys: pytest.CaptureFixture[str]) -> None:
     """Test error when class doesn't exist in module."""
-    return_code = main(["--input-model", "pydantic:NonexistentClass12345"])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "has no attribute" in captured.err
+    run_input_model_error_and_assert(
+        input_model="pydantic:NonexistentClass12345",
+        capsys=capsys,
+        expected_stderr_contains="has no attribute",
+    )
 
 
 def test_input_model_unsupported_type(capsys: pytest.CaptureFixture[str]) -> None:
     """Test error when object is not a Pydantic model or dict."""
-    return_code = main(["--input-model", "pathlib:Path"])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "is not a supported type" in captured.err
+    run_input_model_error_and_assert(
+        input_model="pathlib:Path",
+        capsys=capsys,
+        expected_stderr_contains="is not a supported type",
+    )
 
 
 @SKIP_PYDANTIC_V1
@@ -319,10 +348,11 @@ def test_input_model_pydantic_v1_error(
 
     monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
 
-    return_code = main(["--input-model", pydantic_model_module])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "requires Pydantic v2 model" in captured.err
+    run_input_model_error_and_assert(
+        input_model=pydantic_model_module,
+        capsys=capsys,
+        expected_stderr_contains="requires Pydantic v2 model",
+    )
 
 
 # =============================================================================
@@ -337,15 +367,12 @@ def test_input_model_mutual_exclusion_with_input(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test --input-model cannot be used with --input."""
-    return_code = main([
-        "--input-model",
-        pydantic_model_module,
-        "--input",
-        str(tmp_path / "schema.json"),
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "--input-model cannot be used with --input or --url" in captured.err
+    run_input_model_error_and_assert(
+        input_model=pydantic_model_module,
+        extra_args=["--input", str(tmp_path / "schema.json")],
+        capsys=capsys,
+        expected_stderr_contains="--input-model cannot be used with --input or --url",
+    )
 
 
 @SKIP_PYDANTIC_V1
@@ -354,15 +381,12 @@ def test_input_model_mutual_exclusion_with_url(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test --input-model cannot be used with --url."""
-    return_code = main([
-        "--input-model",
-        pydantic_model_module,
-        "--url",
-        "https://example.com/schema.json",
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "--input-model cannot be used with --input or --url" in captured.err
+    run_input_model_error_and_assert(
+        input_model=pydantic_model_module,
+        extra_args=["--url", "https://example.com/schema.json"],
+        capsys=capsys,
+        expected_stderr_contains="--input-model cannot be used with --input or --url",
+    )
 
 
 @SKIP_PYDANTIC_V1
@@ -372,13 +396,9 @@ def test_input_model_mutual_exclusion_with_watch(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Test --input-model cannot be used with --watch."""
-    return_code = main([
-        "--input-model",
-        pydantic_model_module,
-        "--watch",
-        "--output",
-        str(tmp_path / "output.py"),
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "--watch cannot be used with --input-model" in captured.err
+    run_input_model_error_and_assert(
+        input_model=pydantic_model_module,
+        extra_args=["--watch", "--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="--watch cannot be used with --input-model",
+    )
