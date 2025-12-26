@@ -7,7 +7,7 @@
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
-| [`--input-model`](#input-model) | Test error when colon is missing. |
+| [`--input-model`](#input-model) | Import a Pydantic v2 model or dict schema from a Python modu... |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -225,7 +225,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
 
 ## `--input-model` {#input-model}
 
-Test error when colon is missing.
+Import a Pydantic v2 model or dict schema from a Python module.
 
 !!! tip "Usage"
 

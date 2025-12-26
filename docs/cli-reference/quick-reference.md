@@ -19,7 +19,7 @@ datamodel-codegen [OPTIONS]
 | [`--encoding`](base-options.md#encoding) | Specify character encoding for input and output files. |
 | [`--input`](base-options.md#input) | Specify the input schema file path. |
 | [`--input-file-type`](base-options.md#input-file-type) | Specify the input file type for code generation. |
-| [`--input-model`](base-options.md#input-model) | Test error when colon is missing. |
+| [`--input-model`](base-options.md#input-model) | Import a Pydantic v2 model or dict schema from a Python module. |
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -245,7 +245,7 @@ All options sorted alphabetically:
 - [`--include-path-parameters`](openapi-only-options.md#include-path-parameters) - Include OpenAPI path parameters in generated parameter model...
 - [`--input`](base-options.md#input) - Specify the input schema file path.
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
-- [`--input-model`](base-options.md#input-model) - Test error when colon is missing.
+- [`--input-model`](base-options.md#input-model) - Import a Pydantic v2 model or dict schema from a Python modu...
 - [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
