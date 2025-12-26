@@ -187,8 +187,7 @@ class TestInputModelDict:
             ])
         finally:
             sys.path.remove(str(tmp_path))
-            if module_name in sys.modules:
-                del sys.modules[module_name]
+            sys.modules.pop(module_name, None)
 
         assert exit_code == Exit.OK
         assert output_file.exists()
@@ -216,8 +215,7 @@ class TestInputModelDict:
             ])
         finally:
             sys.path.remove(str(tmp_path))
-            if module_name in sys.modules:
-                del sys.modules[module_name]
+            sys.modules.pop(module_name, None)
 
         assert exit_code == Exit.ERROR
         captured = capsys.readouterr()
@@ -264,8 +262,7 @@ class TestInputModelDict:
             ])
         finally:
             sys.path.remove(str(tmp_path))
-            if module_name in sys.modules:
-                del sys.modules[module_name]
+            sys.modules.pop(module_name, None)
 
         assert exit_code == Exit.OK
         content = output_file.read_text()
@@ -282,7 +279,7 @@ class TestInputModelErrors:
         expected_stdout="",
     )
     def test_invalid_format_no_colon(self, capsys: pytest.CaptureFixture[str]) -> None:
-        """Test error when colon is missing."""
+        """Import a Pydantic v2 model or dict schema from a Python module."""
         exit_code = main([
             "--ignore-pyproject",
             "--input-model",
