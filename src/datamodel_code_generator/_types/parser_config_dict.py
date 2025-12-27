@@ -75,6 +75,9 @@ StrictTypes: TypeAlias = Literal["str", "bytes", "int", "float", "bool"]
 TargetPydanticVersion: TypeAlias = Literal["2", "2.11"]
 
 
+UnionMode: TypeAlias = Literal["smart", "left_to_right"]
+
+
 class ParserConfig(TypedDict):
     output_model_type: NotRequired[DataModelType]
     target_python_version: NotRequired[PythonVersion]
@@ -159,7 +162,7 @@ class ParserConfig(TypedDict):
     use_standard_primitive_types: NotRequired[bool]
     treat_dot_as_module: NotRequired[bool | None]
     use_exact_imports: NotRequired[bool]
-    union_mode: NotRequired[Literal["smart", "left_to_right"] | None]
+    union_mode: NotRequired[UnionMode | Literal["smart", "left_to_right"] | None]
     output_datetime_class: NotRequired[DatetimeClassType | None]
     output_date_class: NotRequired[DateClassType | None]
     keyword_only: NotRequired[bool]
