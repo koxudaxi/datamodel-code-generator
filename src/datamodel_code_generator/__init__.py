@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping
 from datetime import datetime, timezone
 from functools import lru_cache as _lru_cache
 from pathlib import Path
@@ -21,6 +21,7 @@ from typing import (
     TypeAlias,
     TypeVar,
     cast,
+    overload,
 )
 from urllib.parse import ParseResult
 
@@ -37,7 +38,6 @@ from datamodel_code_generator.enums import (
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
-    GraphQLScope,
     InputFileType,
     ModuleSplitMode,
     NamingStrategy,
@@ -58,8 +58,9 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
-    from collections import defaultdict
+    from typing_extensions import Unpack
 
+    from datamodel_code_generator.config import GenerateConfig, GenerateConfigDict, ParseConfig, ParserConfig
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser.base import Parser
     from datamodel_code_generator.types import StrictTypes
@@ -70,7 +71,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # Import is_pydantic_v2 here for module-level YamlValue type definition
-from datamodel_code_generator.util import is_pydantic_v2  # noqa: E402
+from datamodel_code_generator.util import is_pydantic_v2, model_dump, model_validate  # noqa: E402
 
 if not TYPE_CHECKING:  # pragma: no branch
     YamlScalar: TypeAlias = str | int | float | bool | None
@@ -447,129 +448,26 @@ def _build_module_content(
     return "\n".join(lines)
 
 
-def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+@overload
+def generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
-    input_filename: str | None = None,
-    input_file_type: InputFileType = InputFileType.Auto,
-    output: Path | None = None,
-    output_model_type: DataModelType = DataModelType.PydanticBaseModel,
-    target_python_version: PythonVersion = PythonVersionMin,
-    target_pydantic_version: TargetPydanticVersion | None = None,
-    base_class: str = "",
-    base_class_map: dict[str, str] | None = None,
-    additional_imports: list[str] | None = None,
-    class_decorators: list[str] | None = None,
-    custom_template_dir: Path | None = None,
-    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-    validation: bool = False,
-    field_constraints: bool = False,
-    snake_case_field: bool = False,
-    strip_default_none: bool = False,
-    aliases: Mapping[str, str] | None = None,
-    disable_timestamp: bool = False,
-    enable_version_header: bool = False,
-    enable_command_header: bool = False,
-    command_line: str | None = None,
-    allow_population_by_field_name: bool = False,
-    allow_extra_fields: bool = False,
-    extra_fields: str | None = None,
-    use_generic_base_class: bool = False,
-    apply_default_values_for_required_fields: bool = False,
-    force_optional_for_required_fields: bool = False,
-    class_name: str | None = None,
-    use_standard_collections: bool = True,
-    use_schema_description: bool = False,
-    use_field_description: bool = False,
-    use_field_description_example: bool = False,
-    use_attribute_docstrings: bool = False,
-    use_inline_field_description: bool = False,
-    use_default_kwarg: bool = False,
-    reuse_model: bool = False,
-    reuse_scope: ReuseScope = ReuseScope.Module,
-    shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
-    encoding: str = "utf-8",
-    enum_field_as_literal: LiteralType | None = None,
-    enum_field_as_literal_map: dict[str, str] | None = None,
-    ignore_enum_constraints: bool = False,
-    use_one_literal_as_default: bool = False,
-    use_enum_values_in_discriminator: bool = False,
-    set_default_enum_member: bool = False,
-    use_subclass_enum: bool = False,
-    use_specialized_enum: bool = True,
-    strict_nullable: bool = False,
-    use_generic_container_types: bool = False,
-    enable_faux_immutability: bool = False,
-    disable_appending_item_suffix: bool = False,
-    strict_types: Sequence[StrictTypes] | None = None,
-    empty_enum_field_name: str | None = None,
-    custom_class_name_generator: Callable[[str], str] | None = None,
-    field_extra_keys: set[str] | None = None,
-    field_include_all_keys: bool = False,
-    field_extra_keys_without_x_prefix: set[str] | None = None,
-    model_extra_keys: set[str] | None = None,
-    model_extra_keys_without_x_prefix: set[str] | None = None,
-    openapi_scopes: list[OpenAPIScope] | None = None,
-    include_path_parameters: bool = False,
-    graphql_scopes: list[GraphQLScope] | None = None,  # noqa: ARG001
-    wrap_string_literal: bool | None = None,
-    use_title_as_name: bool = False,
-    use_operation_id_as_name: bool = False,
-    use_unique_items_as_set: bool = False,
-    use_tuple_for_fixed_items: bool = False,
-    allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
-    http_headers: Sequence[tuple[str, str]] | None = None,
-    http_ignore_tls: bool = False,
-    http_timeout: float | None = None,
-    use_annotated: bool = False,
-    use_serialize_as_any: bool = False,
-    use_non_positive_negative_number_constrained_types: bool = False,
-    use_decimal_for_multiple_of: bool = False,
-    original_field_name_delimiter: str | None = None,
-    use_double_quotes: bool = False,
-    use_union_operator: bool = True,
-    collapse_root_models: bool = False,
-    collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
-    collapse_reuse_models: bool = False,
-    skip_root_model: bool = False,
-    use_type_alias: bool = False,
-    use_root_model_type_alias: bool = False,
-    special_field_name_prefix: str | None = None,
-    remove_special_field_name_prefix: bool = False,
-    capitalise_enum_members: bool = False,
-    keep_model_order: bool = False,
-    custom_file_header: str | None = None,
-    custom_file_header_path: Path | None = None,
-    custom_formatters: list[str] | None = None,
-    custom_formatters_kwargs: dict[str, Any] | None = None,
-    use_pendulum: bool = False,
-    use_standard_primitive_types: bool = False,
-    http_query_parameters: Sequence[tuple[str, str]] | None = None,
-    treat_dot_as_module: bool | None = None,
-    use_exact_imports: bool = False,
-    union_mode: UnionMode | None = None,
-    output_datetime_class: DatetimeClassType | None = None,
-    output_date_class: DateClassType | None = None,
-    keyword_only: bool = False,
-    frozen_dataclasses: bool = False,
-    no_alias: bool = False,
-    use_frozen_field: bool = False,
-    use_default_factory_for_optional_nested_models: bool = False,
-    formatters: list[Formatter] = DEFAULT_FORMATTERS,
-    settings_path: Path | None = None,
-    parent_scoped_naming: bool = False,
-    naming_strategy: NamingStrategy | None = None,
-    duplicate_name_suffix: dict[str, str] | None = None,
-    dataclass_arguments: DataclassArguments | None = None,
-    disable_future_imports: bool = False,
-    type_mappings: list[str] | None = None,
-    type_overrides: dict[str, str] | None = None,
-    read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
-    use_status_code_in_response_name: bool = False,
-    all_exports_scope: AllExportsScope | None = None,
-    all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
-    field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
-    module_split_mode: ModuleSplitMode | None = None,
+    config: GenerateConfig,
+) -> str | GeneratedModules | None: ...
+
+
+@overload
+def generate(
+    input_: Path | str | ParseResult | Mapping[str, Any],
+    **options: Unpack[GenerateConfigDict],
+) -> str | GeneratedModules | None: ...
+
+
+def generate(  # noqa: PLR0912, PLR0914, PLR0915
+    input_: Path | str | ParseResult | Mapping[str, Any],
+    *,
+    config: GenerateConfig | None = None,
+    **options: Unpack[GenerateConfigDict],
 ) -> str | GeneratedModules | None:
     """Generate Python data models from schema definitions or structured data.
 
@@ -582,6 +480,18 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         - When output is None and multiple modules: GeneratedModules (dict mapping
           module path tuples to generated code strings)
     """
+    from datamodel_code_generator.config import GenerateConfig, ParseConfig, ParserConfig  # noqa: PLC0415
+
+    if config is not None and options:
+        msg = "Cannot specify both 'config' and individual options"
+        raise ValueError(msg)
+    if config is None:
+        config = model_validate(GenerateConfig, options)
+    elif not isinstance(config, GenerateConfig):
+        config = model_validate(GenerateConfig, config)
+
+    input_file_type = config.input_file_type
+
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:
         case str():
@@ -589,22 +499,23 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         case ParseResult():
             from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
-            timeout = http_timeout if http_timeout is not None else DEFAULT_HTTP_TIMEOUT
+            timeout = config.http_timeout if config.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
             input_text = remote_text_cache.get_or_put(
                 input_.geturl(),
                 default_factory=lambda url: get_body(
-                    url, http_headers, http_ignore_tls, http_query_parameters, timeout
+                    url, config.http_headers, config.http_ignore_tls, config.http_query_parameters, timeout
                 ),
             )
         case _:
             input_text = None
 
-    if dataclass_arguments is None:
-        dataclass_arguments = {}
-        if frozen_dataclasses:
-            dataclass_arguments["frozen"] = True
-        if keyword_only:
-            dataclass_arguments["kw_only"] = True
+    effective_dataclass_arguments = config.dataclass_arguments
+    if effective_dataclass_arguments is None:
+        effective_dataclass_arguments = {}
+        if config.frozen_dataclasses:
+            effective_dataclass_arguments["frozen"] = True
+        if config.keyword_only:
+            effective_dataclass_arguments["kw_only"] = True
 
     if isinstance(input_, Path) and not input_.is_absolute():
         input_ = input_.expanduser().resolve()
@@ -634,7 +545,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
-                get_first_file(input_).read_text(encoding=encoding) if isinstance(input_, Path) else input_text
+                get_first_file(input_).read_text(encoding=config.encoding) if isinstance(input_, Path) else input_text
             )
         except FileNotFoundError as exc:
             msg = "File not found"
@@ -660,9 +571,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
         parser_class: type[Parser] = OpenAPIParser
-        kwargs["openapi_scopes"] = openapi_scopes
-        kwargs["include_path_parameters"] = include_path_parameters
-        kwargs["use_status_code_in_response_name"] = use_status_code_in_response_name
+        kwargs["openapi_scopes"] = config.openapi_scopes
+        kwargs["include_path_parameters"] = config.include_path_parameters
+        kwargs["use_status_code_in_response_name"] = config.use_status_code_in_response_name
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -689,7 +600,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                         return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
 
                     if isinstance(input_, Path):
-                        with input_.open(encoding=encoding) as f:
+                        with input_.open(encoding=config.encoding) as f:
                             obj = get_header_and_first_line(f)
                     else:
                         import io  # noqa: PLC0415
@@ -697,13 +608,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
                     if isinstance(input_, Path):
-                        obj = load_yaml_dict(input_.read_text(encoding=encoding))
+                        obj = load_yaml_dict(input_.read_text(encoding=config.encoding))
                     else:  # pragma: no cover
                         assert input_text is not None
                         obj = load_yaml_dict(input_text)
                 elif input_file_type == InputFileType.Json:
                     if isinstance(input_, Path):
-                        obj = json.loads(input_.read_text(encoding=encoding))
+                        obj = json.loads(input_.read_text(encoding=config.encoding))
                     else:
                         assert input_text is not None
                         obj = json.loads(input_text)
@@ -712,7 +623,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
                     # Input can be a dict object stored in a python file
                     obj = (
-                        ast.literal_eval(input_.read_text(encoding=encoding))
+                        ast.literal_eval(input_.read_text(encoding=config.encoding))
                         if isinstance(input_, Path)
                         else cast("dict[str, Any]", input_)
                     )
@@ -733,9 +644,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
-    if union_mode is not None:
-        if output_model_type == DataModelType.PydanticV2BaseModel:
-            default_field_extras = {"union_mode": union_mode}
+    if config.union_mode is not None:
+        if config.output_model_type == DataModelType.PydanticV2BaseModel:
+            default_field_extras = {"union_mode": config.union_mode}
         else:  # pragma: no cover
             msg = "union_mode is only supported for pydantic_v2.BaseModel"
             raise Error(msg)
@@ -745,10 +656,10 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
     data_model_types = get_data_model_types(
-        output_model_type,
-        target_python_version,
-        use_type_alias=use_type_alias,
-        use_root_model_type_alias=use_root_model_type_alias,
+        config.output_model_type,
+        config.target_python_version,
+        use_type_alias=config.use_type_alias,
+        use_root_model_type_alias=config.use_root_model_type_alias,
     )
 
     # Add GraphQL-specific model types if needed
@@ -762,134 +673,58 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         source = input_text or input_
         assert not isinstance(source, Mapping)
 
-    defer_formatting = output is not None and not output.suffix
+    defer_formatting = config.output is not None and not config.output.suffix
+
+    parser_config_data = model_dump(config)
+    effective_enum_field_as_literal = config.enum_field_as_literal
+    if effective_enum_field_as_literal is None and config.output_model_type == DataModelType.TypingTypedDict:
+        effective_enum_field_as_literal = LiteralType.All
+    if config.output_model_type == DataModelType.DataclassesDataclass:
+        effective_set_default_enum_member = True
+    else:
+        effective_set_default_enum_member = config.set_default_enum_member
+    parser_config_data.update({
+        "data_model_type": data_model_types.data_model,
+        "data_model_root_type": data_model_types.root_model,
+        "data_model_field_type": data_model_types.field_model,
+        "data_type_manager_type": data_model_types.data_type_manager,
+        "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
+        "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
+        "remote_text_cache": remote_text_cache,
+        "known_third_party": data_model_types.known_third_party,
+        "default_field_extras": default_field_extras,
+        "target_datetime_class": config.output_datetime_class,
+        "target_date_class": config.output_date_class,
+        "defer_formatting": defer_formatting,
+        "dataclass_arguments": effective_dataclass_arguments,
+        "enum_field_as_literal": effective_enum_field_as_literal,
+        "set_default_enum_member": effective_set_default_enum_member,
+    })
+    parser_fields = ParserConfig.model_fields if is_pydantic_v2() else ParserConfig.__fields__
+    parser_config = model_validate(
+        ParserConfig,
+        {k: v for k, v in parser_config_data.items() if k in parser_fields},
+    )
 
     parser = parser_class(
         source=source,
-        data_model_type=data_model_types.data_model,
-        data_model_root_type=data_model_types.root_model,
-        data_model_field_type=data_model_types.field_model,
-        data_type_manager_type=data_model_types.data_type_manager,
-        base_class=base_class,
-        base_class_map=base_class_map,
-        additional_imports=additional_imports,
-        class_decorators=class_decorators,
-        custom_template_dir=custom_template_dir,
-        extra_template_data=extra_template_data,
-        target_python_version=target_python_version,
-        dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
-        validation=validation,
-        field_constraints=field_constraints,
-        snake_case_field=snake_case_field,
-        strip_default_none=strip_default_none,
-        aliases=aliases,
-        allow_population_by_field_name=allow_population_by_field_name,
-        allow_extra_fields=allow_extra_fields,
-        extra_fields=extra_fields,
-        use_generic_base_class=use_generic_base_class,
-        apply_default_values_for_required_fields=apply_default_values_for_required_fields,
-        force_optional_for_required_fields=force_optional_for_required_fields,
-        class_name=class_name,
-        use_standard_collections=use_standard_collections,
-        base_path=input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-        use_schema_description=use_schema_description,
-        use_field_description=use_field_description,
-        use_field_description_example=use_field_description_example,
-        use_attribute_docstrings=use_attribute_docstrings,
-        use_inline_field_description=use_inline_field_description,
-        use_default_kwarg=use_default_kwarg,
-        reuse_model=reuse_model,
-        reuse_scope=reuse_scope,
-        shared_module_name=shared_module_name,
-        enum_field_as_literal=enum_field_as_literal
-        if enum_field_as_literal is not None
-        else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
-        enum_field_as_literal_map=enum_field_as_literal_map,
-        ignore_enum_constraints=ignore_enum_constraints,
-        use_one_literal_as_default=use_one_literal_as_default,
-        use_enum_values_in_discriminator=use_enum_values_in_discriminator,
-        set_default_enum_member=True
-        if output_model_type == DataModelType.DataclassesDataclass
-        else set_default_enum_member,
-        use_subclass_enum=use_subclass_enum,
-        use_specialized_enum=use_specialized_enum,
-        strict_nullable=strict_nullable,
-        use_generic_container_types=use_generic_container_types,
-        enable_faux_immutability=enable_faux_immutability,
-        remote_text_cache=remote_text_cache,
-        disable_appending_item_suffix=disable_appending_item_suffix,
-        strict_types=strict_types,
-        empty_enum_field_name=empty_enum_field_name,
-        custom_class_name_generator=custom_class_name_generator,
-        field_extra_keys=field_extra_keys,
-        field_include_all_keys=field_include_all_keys,
-        field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
-        model_extra_keys=model_extra_keys,
-        model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
-        wrap_string_literal=wrap_string_literal,
-        use_title_as_name=use_title_as_name,
-        use_operation_id_as_name=use_operation_id_as_name,
-        use_unique_items_as_set=use_unique_items_as_set,
-        use_tuple_for_fixed_items=use_tuple_for_fixed_items,
-        allof_merge_mode=allof_merge_mode,
-        http_headers=http_headers,
-        http_ignore_tls=http_ignore_tls,
-        http_timeout=http_timeout,
-        use_annotated=use_annotated,
-        use_serialize_as_any=use_serialize_as_any,
-        use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-        use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-        original_field_name_delimiter=original_field_name_delimiter,
-        use_double_quotes=use_double_quotes,
-        use_union_operator=use_union_operator,
-        collapse_root_models=collapse_root_models,
-        collapse_root_models_name_strategy=collapse_root_models_name_strategy,
-        collapse_reuse_models=collapse_reuse_models,
-        skip_root_model=skip_root_model,
-        use_type_alias=use_type_alias,
-        special_field_name_prefix=special_field_name_prefix,
-        remove_special_field_name_prefix=remove_special_field_name_prefix,
-        capitalise_enum_members=capitalise_enum_members,
-        keep_model_order=keep_model_order,
-        known_third_party=data_model_types.known_third_party,
-        custom_formatters=custom_formatters,
-        custom_formatters_kwargs=custom_formatters_kwargs,
-        use_pendulum=use_pendulum,
-        use_standard_primitive_types=use_standard_primitive_types,
-        http_query_parameters=http_query_parameters,
-        treat_dot_as_module=treat_dot_as_module,
-        use_exact_imports=use_exact_imports,
-        default_field_extras=default_field_extras,
-        target_datetime_class=output_datetime_class,
-        target_date_class=output_date_class,
-        keyword_only=keyword_only,
-        frozen_dataclasses=frozen_dataclasses,
-        no_alias=no_alias,
-        use_frozen_field=use_frozen_field,
-        use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-        formatters=formatters,
-        defer_formatting=defer_formatting,
-        encoding=encoding,
-        parent_scoped_naming=parent_scoped_naming,
-        naming_strategy=naming_strategy,
-        duplicate_name_suffix=duplicate_name_suffix,
-        dataclass_arguments=dataclass_arguments,
-        type_mappings=type_mappings,
-        type_overrides=type_overrides,
-        read_only_write_only_model_type=read_only_write_only_model_type,
-        field_type_collision_strategy=field_type_collision_strategy,
-        target_pydantic_version=target_pydantic_version,
+        config=parser_config,
         **kwargs,
     )
 
-    with chdir(output):
-        results = parser.parse(
-            settings_path=settings_path,
-            disable_future_imports=disable_future_imports,
-            all_exports_scope=all_exports_scope,
-            all_exports_collision_strategy=all_exports_collision_strategy,
-            module_split_mode=module_split_mode,
-        )
+    parse_config = model_validate(
+        ParseConfig,
+        {
+            "settings_path": config.settings_path,
+            "disable_future_imports": config.disable_future_imports,
+            "all_exports_scope": config.all_exports_scope,
+            "all_exports_collision_strategy": config.all_exports_collision_strategy,
+            "module_split_mode": config.module_split_mode,
+        },
+    )
+    with chdir(config.output):
+        results = parser.parse(config=parse_config)
+    input_filename = config.input_filename
     if not input_filename:  # pragma: no cover
         match input_:
             case str():
@@ -906,22 +741,24 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         raise Error(msg)
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
+    custom_file_header = config.custom_file_header
+    custom_file_header_path = config.custom_file_header_path
     if custom_file_header is None and custom_file_header_path:
-        custom_file_header = custom_file_header_path.read_text(encoding=encoding)
+        custom_file_header = custom_file_header_path.read_text(encoding=config.encoding)
 
     header = """\
 # generated by datamodel-codegen:
 #   filename:  {}"""
-    if not disable_timestamp:
+    if not config.disable_timestamp:
         header += f"\n#   timestamp: {timestamp}"
-    if enable_version_header:
+    if config.enable_version_header:
         header += f"\n#   version:   {get_version()}"
-    if enable_command_header and command_line:
-        safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
+    if config.enable_command_header and config.command_line:
+        safe_command_line = config.command_line.replace("\n", " ").replace("\r", " ")
         header += f"\n#   command:   {safe_command_line}"
 
     # When output is None, return generated code as string(s) instead of writing to files
-    if output is None:
+    if config.output is None:
         if isinstance(results, str):
             # Single-file output: return str
             safe_filename = input_filename.replace("\n", " ").replace("\r", " ") if input_filename else ""
@@ -941,13 +778,13 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         # Single-file output: body already contains future imports
         body = results
         future_imports = ""
-        modules: dict[Path, tuple[str, str, str | None]] = {output: (body, future_imports, input_filename)}
+        modules: dict[Path, tuple[str, str, str | None]] = {config.output: (body, future_imports, input_filename)}
     else:
-        if output.suffix:
+        if config.output.suffix:
             msg = "Modular references require an output directory, not a file"
             raise Error(msg)
         modules = {
-            output.joinpath(*name): (
+            config.output.joinpath(*name): (
                 result.body,
                 result.future_imports,
                 str(result.source.as_posix() if result.source else input_filename),
@@ -959,7 +796,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
-        file = path.open("wt", encoding=encoding)
+        file = path.open("wt", encoding=config.encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
@@ -1001,19 +838,19 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
 
         file.close()
 
-    if defer_formatting and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters):
+    if defer_formatting and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters):
         code_formatter = CodeFormatter(
-            target_python_version,
-            settings_path,
-            wrap_string_literal,
-            skip_string_normalization=not use_double_quotes,
+            config.target_python_version,
+            config.settings_path,
+            config.wrap_string_literal,
+            skip_string_normalization=not config.use_double_quotes,
             known_third_party=data_model_types.known_third_party,
-            custom_formatters=custom_formatters,
-            custom_formatters_kwargs=custom_formatters_kwargs,
-            encoding=encoding,
-            formatters=formatters,
+            custom_formatters=config.custom_formatters,
+            custom_formatters_kwargs=config.custom_formatters_kwargs,
+            encoding=config.encoding,
+            formatters=config.formatters,
         )
-        code_formatter.format_directory(output)
+        code_formatter.format_directory(config.output)
 
     return None
 
@@ -1044,15 +881,40 @@ inferred_message = (
     "`--input-file-type` option."
 )
 
+
+def __getattr__(name: str) -> Any:
+    """Lazily expose config models to keep imports light on fast paths."""
+    if name in {
+        "GenerateConfig",
+        "GenerateConfigDict",
+        "ParserConfig",
+        "ParserConfigDict",
+        "ParseConfig",
+        "ParseConfigDict",
+    }:
+        from datamodel_code_generator import config as _config  # noqa: PLC0415
+
+        return getattr(_config, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
 __all__ = [
+    "DEFAULT_FORMATTERS",
+    "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
     "MIN_VERSION",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
+    "AllOfMergeMode",
+    "CollapseRootModelsNameStrategy",
+    "DataclassArguments",
     "DateClassType",
     "DatetimeClassType",
     "DefaultPutDict",
     "Error",
+    "FieldTypeCollisionStrategy",
+    "GenerateConfig",
     "GeneratedModules",
     "InputFileType",
     "InvalidClassNameError",
@@ -1060,9 +922,16 @@ __all__ = [
     "LiteralType",
     "ModuleSplitMode",
     "NamingStrategy",
+    "OpenAPIScope",
+    "ParseConfig",
+    "ParserConfig",
     "PythonVersion",
+    "PythonVersionMin",
     "ReadOnlyWriteOnlyModelType",
+    "ReuseScope",
     "SchemaParseError",
+    "StrictTypes",
     "TargetPydanticVersion",
+    "UnionMode",
     "generate",
 ]

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import io
+import json
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
@@ -22,7 +24,11 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
+from datamodel_code_generator.config import GenerateConfig, ParseConfig, ParserConfig
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.parser.base import Parser
+from datamodel_code_generator.parser.graphql import GraphQLParser
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
@@ -99,6 +105,74 @@ def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
         assert getattr(namespace, field, None) is None
 
 
+def test_config_validate_file_none() -> None:
+    """Validate file fields accept explicit None values."""
+    config = Config(extra_template_data=None)
+    assert config.extra_template_data is None
+
+
+def test_config_validate_file_dict() -> None:
+    """Validate file fields accept dict input."""
+    value = {"model": {"key": "value"}}
+    config = Config(extra_template_data=value)
+    assert config.extra_template_data == value
+
+
+def test_config_validate_file_text_io() -> None:
+    """Validate file fields accept file-like input."""
+    value = io.StringIO(json.dumps({"model": {"key": "value"}}))
+    config = Config(extra_template_data=value)
+    assert config.extra_template_data == {"model": {"key": "value"}}
+
+
+def test_config_validate_file_invalid_path(tmp_path: Path) -> None:
+    """Validate file fields reject non-file paths."""
+    with pytest.raises(expected_exception=Error):
+        Config(extra_template_data=tmp_path / "missing.json")
+
+
+def test_main_rejects_invalid_extra_template_data(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """main() rejects extra_template_data with non-string keys."""
+    original_parse_obj = Config.parse_obj
+
+    def parse_obj(_cls: type[Config], obj: object) -> Config:
+        config = original_parse_obj(obj)
+        config.extra_template_data = {1: {}}
+        return config
+
+    monkeypatch.setattr(Config, "parse_obj", classmethod(parse_obj))
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=tmp_path / "out.py",
+        extra_args=["--ignore-pyproject"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_rejects_invalid_aliases_file(tmp_path: Path) -> None:
+    """main() rejects aliases file with non-string values."""
+    aliases_path = tmp_path / "aliases.json"
+    aliases_path.write_text(json.dumps({"name": 1}))
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=tmp_path / "out.py",
+        extra_args=["--ignore-pyproject", "--aliases", str(aliases_path)],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_rejects_invalid_custom_formatters_kwargs_file(tmp_path: Path) -> None:
+    """main() rejects custom_formatters_kwargs file with non-string values."""
+    kwargs_path = tmp_path / "custom_formatters_kwargs.json"
+    kwargs_path.write_text(json.dumps({"format": 1}))
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=tmp_path / "out.py",
+        extra_args=["--ignore-pyproject", "--custom-formatters-kwargs", str(kwargs_path)],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_space_and_special_characters_dict(output_file: Path) -> None:
     """Test dict input with space and special characters."""
     run_main_and_assert(
@@ -121,6 +195,133 @@ def test_direct_input_dict(tmp_path: Path) -> None:
         snake_case_field=True,
     )
     assert_file_content(output_file)
+
+
+def test_generate_rejects_config_and_options(tmp_path: Path) -> None:
+    """generate() rejects config with additional options."""
+    config = GenerateConfig(output=tmp_path / "output.py")
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        generate(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=config,
+            input_file_type=InputFileType.JsonSchema,
+        )
+
+
+def test_generate_accepts_config_mapping(tmp_path: Path) -> None:
+    """generate() accepts config dict input."""
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config={
+            "output": tmp_path / "output.py",
+            "input_file_type": InputFileType.JsonSchema,
+        },
+    )
+    assert result is None
+
+
+def test_parser_init_rejects_config_and_options() -> None:
+    """Parser __init__ rejects config with options."""
+
+    class DummyParser(Parser):
+        def parse_raw(self) -> None:
+            return None
+
+    config = ParserConfig()
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        DummyParser(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=config,
+            reuse_model=True,
+        )
+    parser = DummyParser(JSON_SCHEMA_DATA_PATH / "person.json", config={"reuse_model": True})
+    parser.parse_raw()
+
+
+def test_parser_init_accepts_config_mapping() -> None:
+    """Parser __init__ accepts config dict input."""
+
+    class DummyParser(Parser):
+        def parse_raw(self) -> None:
+            return None
+
+    parser = DummyParser(JSON_SCHEMA_DATA_PATH / "person.json", config={"reuse_model": True})
+    parser.parse_raw()
+
+
+def test_parse_rejects_config_and_options() -> None:
+    """Parser.parse rejects config with options."""
+    parser = JsonSchemaParser(JSON_SCHEMA_DATA_PATH / "person.json")
+    config = ParseConfig()
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        parser.parse(config=config, with_import=True)
+
+
+def test_parse_accepts_config_mapping() -> None:
+    """Parser.parse accepts config dict input."""
+    parser = JsonSchemaParser(JSON_SCHEMA_DATA_PATH / "person.json")
+    result = parser.parse(config={"with_import": True, "format_": True})
+    assert result
+
+
+def test_graphql_parser_rejects_config_and_options() -> None:
+    """GraphQLParser rejects config with options."""
+    config = ParserConfig()
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        GraphQLParser(
+            DATA_PATH / "graphql" / "annotated.graphql",
+            config=config,
+            reuse_model=True,
+        )
+
+
+def test_graphql_parser_accepts_config_mapping() -> None:
+    """GraphQLParser accepts config dict input."""
+    parser = GraphQLParser(
+        DATA_PATH / "graphql" / "annotated.graphql",
+        config={"reuse_model": True},
+    )
+    assert parser.use_standard_collections is not None
+
+
+def test_jsonschema_parser_rejects_config_and_options() -> None:
+    """JsonSchemaParser rejects config with options."""
+    config = ParserConfig()
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        JsonSchemaParser(
+            JSON_SCHEMA_DATA_PATH / "person.json",
+            config=config,
+            reuse_model=True,
+        )
+
+
+def test_jsonschema_parser_accepts_config_mapping() -> None:
+    """JsonSchemaParser accepts config dict input."""
+    parser = JsonSchemaParser(
+        JSON_SCHEMA_DATA_PATH / "person.json",
+        config={"reuse_model": True},
+    )
+    assert parser.base_path is not None
+
+
+def test_openapi_parser_rejects_config_and_options() -> None:
+    """OpenAPIParser rejects config with options."""
+    config = ParserConfig()
+    with pytest.raises(expected_exception=ValueError, match="Cannot specify both 'config' and individual options"):
+        OpenAPIParser(
+            OPEN_API_DATA_PATH / "additional_properties.yaml",
+            config=config,
+            reuse_model=True,
+        )
+
+
+def test_openapi_parser_accepts_config_mapping() -> None:
+    """OpenAPIParser accepts config dict input."""
+    parser = OpenAPIParser(
+        OPEN_API_DATA_PATH / "additional_properties.yaml",
+        config={"reuse_model": True},
+    )
+    assert parser.open_api_scopes
 
 
 @freeze_time(TIMESTAMP)

@@ -39,14 +39,14 @@ import signal
 import tempfile
 import warnings
 from collections import defaultdict
-from collections.abc import Sequence  # noqa: TC003  # pydantic needs it
+from collections.abc import Mapping, Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ValidationError
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -58,6 +58,7 @@ from datamodel_code_generator import (
     DataModelType,
     Error,
     FieldTypeCollisionStrategy,
+    GenerateConfig,
     InputFileType,
     InvalidClassNameError,
     ModuleSplitMode,
@@ -89,6 +90,8 @@ from datamodel_code_generator.util import (
     field_validator,
     is_pydantic_v2,
     load_toml,
+    model_dump,
+    model_validate,
     model_validator,
 )
 
@@ -137,7 +140,7 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 signal.signal(signal.SIGINT, sig_int_handler)
 
 
-class Config(BaseModel):
+class Config(GenerateConfig):
     """Configuration model for code generation."""
 
     if is_pydantic_v2():
@@ -163,29 +166,25 @@ class Config(BaseModel):
 
     else:
 
-        class Config:
-            """Pydantic v1 configuration."""
-
-            # Pydantic 1.5.1 doesn't support validate_assignment correctly
-            arbitrary_types_allowed = (TextIOBase,)
-
         @classmethod
         def get_fields(cls) -> dict[str, Any]:
             """Get model fields."""
             return cls.__fields__
 
     @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
-    def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
-        """Validate and open file path."""
-        if value is None:  # pragma: no cover
+    def validate_file(cls, value: Any) -> dict[str, Any] | None:  # noqa: N805
+        """Validate and load JSON from a file path or file-like object."""
+        if value is None:
+            return None
+        if isinstance(value, dict):
             return value
-
+        if isinstance(value, TextIOBase):
+            return json.load(value)
         path = Path(value)
         if path.is_file():
-            return cast("TextIOBase", path.expanduser().resolve().open("rt"))
-
-        msg = f"A file was expected but {value} is not a file."  # pragma: no cover
-        raise Error(msg)  # pragma: no cover
+            return json.loads(path.expanduser().resolve().read_text())
+        msg = f"A file was expected but {value} is not a file."
+        raise Error(msg)
 
     @field_validator(
         "input",
@@ -456,12 +455,12 @@ class Config(BaseModel):
     additional_imports: Optional[list[str]] = None  # noqa: UP045
     class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
-    extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
+    extra_template_data: dict[str, dict[str, Any]] | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Optional[TextIOBase] = None  # noqa: UP045
+    aliases: Mapping[str, str] | None = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
@@ -497,14 +496,14 @@ class Config(BaseModel):
     enable_faux_immutability: bool = False
     url: Optional[ParseResult] = None  # noqa: UP045
     disable_appending_item_suffix: bool = False
-    strict_types: list[StrictTypes] = []
+    strict_types: Sequence[StrictTypes] | None = None
     empty_enum_field_name: Optional[str] = None  # noqa: UP045
     field_extra_keys: Optional[set[str]] = None  # noqa: UP045
     field_include_all_keys: bool = False
     field_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
     model_extra_keys: Optional[set[str]] = None  # noqa: UP045
     model_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
-    openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
+    openapi_scopes: list[OpenAPIScope] | None = Field(default_factory=lambda: [OpenAPIScope.Schemas])
     include_path_parameters: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
@@ -534,7 +533,7 @@ class Config(BaseModel):
     custom_file_header: Optional[str] = None  # noqa: UP045
     custom_file_header_path: Optional[Path] = None  # noqa: UP045
     custom_formatters: Optional[list[str]] = None  # noqa: UP045
-    custom_formatters_kwargs: Optional[TextIOBase] = None  # noqa: UP045
+    custom_formatters_kwargs: dict[str, Any] | None = None
     use_pendulum: bool = False
     use_standard_primitive_types: bool = False
     http_query_parameters: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
@@ -567,7 +566,13 @@ class Config(BaseModel):
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
-        set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
+        set_args: dict[str, Any] = {}
+        for field_name in self.get_fields():
+            if not hasattr(args, field_name):
+                continue
+            value = getattr(args, field_name)
+            if value is not None:
+                set_args[field_name] = value
 
         if set_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
             set_args["use_annotated"] = True
@@ -579,8 +584,50 @@ class Config(BaseModel):
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 
+    def to_generate_config(  # noqa: PLR0913
+        self,
+        *,
+        extra_template_data: dict[str, dict[str, Any]] | None,
+        aliases: dict[str, str] | None,
+        custom_formatters_kwargs: dict[str, Any] | None,
+        output: Path | None,
+        command_line: str | None,
+        settings_path: Path | None = None,
+    ) -> GenerateConfig:
+        """Convert CLI Config to GenerateConfig."""
+        data = model_dump(self)
+        for key in (
+            "input",
+            "input_model",
+            "url",
+            "check",
+            "debug",
+            "disable_warnings",
+            "watch",
+            "watch_delay",
+            "extra_template_data",
+            "aliases",
+            "custom_formatters_kwargs",
+            "use_default",
+            "force_optional",
+        ):
+            data.pop(key, None)
+        data["apply_default_values_for_required_fields"] = (
+            data.get("apply_default_values_for_required_fields") or self.use_default
+        )
+        data["force_optional_for_required_fields"] = (
+            data.get("force_optional_for_required_fields") or self.force_optional
+        )
+        data["extra_template_data"] = extra_template_data
+        data["aliases"] = aliases
+        data["custom_formatters_kwargs"] = custom_formatters_kwargs
+        data["output"] = output
+        data["command_line"] = command_line
+        data["settings_path"] = settings_path
+        return model_validate(GenerateConfig, data)
 
-def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, Any]]) -> list[str]:
+
+def _extract_additional_imports(extra_template_data: Mapping[str, dict[str, Any]]) -> list[str]:
     """Extract additional_imports from extra_template_data entries."""
     additional_imports: list[str] = []
     for type_data in extra_template_data.values():
@@ -882,130 +929,19 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     extra_template_data: dict[str, Any] | None,
     aliases: dict[str, str] | None,
     command_line: str | None,
-    custom_formatters_kwargs: dict[str, str] | None,
+    custom_formatters_kwargs: dict[str, Any] | None,
     settings_path: Path | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
-    result = generate(
-        input_=input_,
-        input_file_type=config.input_file_type,
-        output=output,
-        output_model_type=config.output_model_type,
-        target_python_version=config.target_python_version,
-        target_pydantic_version=config.target_pydantic_version,
-        base_class=config.base_class,
-        base_class_map=config.base_class_map,
-        additional_imports=config.additional_imports,
-        class_decorators=config.class_decorators,
-        custom_template_dir=config.custom_template_dir,
-        validation=config.validation,
-        field_constraints=config.field_constraints,
-        snake_case_field=config.snake_case_field,
-        strip_default_none=config.strip_default_none,
-        extra_template_data=extra_template_data,  # pyright: ignore[reportArgumentType]
+    generate_config = config.to_generate_config(
+        extra_template_data=cast("dict[str, dict[str, Any]] | None", extra_template_data),
         aliases=aliases,
-        disable_timestamp=config.disable_timestamp,
-        enable_version_header=config.enable_version_header,
-        enable_command_header=config.enable_command_header,
-        command_line=command_line,
-        allow_population_by_field_name=config.allow_population_by_field_name,
-        allow_extra_fields=config.allow_extra_fields,
-        extra_fields=config.extra_fields,
-        use_generic_base_class=config.use_generic_base_class,
-        apply_default_values_for_required_fields=config.use_default,
-        force_optional_for_required_fields=config.force_optional,
-        class_name=config.class_name,
-        use_standard_collections=config.use_standard_collections,
-        use_schema_description=config.use_schema_description,
-        use_field_description=config.use_field_description,
-        use_field_description_example=config.use_field_description_example,
-        use_attribute_docstrings=config.use_attribute_docstrings,
-        use_inline_field_description=config.use_inline_field_description,
-        use_default_kwarg=config.use_default_kwarg,
-        reuse_model=config.reuse_model,
-        reuse_scope=config.reuse_scope,
-        shared_module_name=config.shared_module_name,
-        encoding=config.encoding,
-        enum_field_as_literal=config.enum_field_as_literal,
-        enum_field_as_literal_map=config.enum_field_as_literal_map,
-        ignore_enum_constraints=config.ignore_enum_constraints,
-        use_one_literal_as_default=config.use_one_literal_as_default,
-        use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
-        set_default_enum_member=config.set_default_enum_member,
-        use_subclass_enum=config.use_subclass_enum,
-        use_specialized_enum=config.use_specialized_enum,
-        strict_nullable=config.strict_nullable,
-        use_generic_container_types=config.use_generic_container_types,
-        enable_faux_immutability=config.enable_faux_immutability,
-        disable_appending_item_suffix=config.disable_appending_item_suffix,
-        strict_types=config.strict_types,
-        empty_enum_field_name=config.empty_enum_field_name,
-        field_extra_keys=config.field_extra_keys,
-        field_include_all_keys=config.field_include_all_keys,
-        field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
-        model_extra_keys=config.model_extra_keys,
-        model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
-        openapi_scopes=config.openapi_scopes,
-        include_path_parameters=config.include_path_parameters,
-        wrap_string_literal=config.wrap_string_literal,
-        use_title_as_name=config.use_title_as_name,
-        use_operation_id_as_name=config.use_operation_id_as_name,
-        use_unique_items_as_set=config.use_unique_items_as_set,
-        use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
-        allof_merge_mode=config.allof_merge_mode,
-        http_headers=config.http_headers,
-        http_ignore_tls=config.http_ignore_tls,
-        http_timeout=config.http_timeout,
-        use_annotated=config.use_annotated,
-        use_serialize_as_any=config.use_serialize_as_any,
-        use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
-        use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
-        original_field_name_delimiter=config.original_field_name_delimiter,
-        use_double_quotes=config.use_double_quotes,
-        collapse_root_models=config.collapse_root_models,
-        collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
-        collapse_reuse_models=config.collapse_reuse_models,
-        skip_root_model=config.skip_root_model,
-        use_type_alias=config.use_type_alias,
-        use_root_model_type_alias=config.use_root_model_type_alias,
-        use_union_operator=config.use_union_operator,
-        special_field_name_prefix=config.special_field_name_prefix,
-        remove_special_field_name_prefix=config.remove_special_field_name_prefix,
-        capitalise_enum_members=config.capitalise_enum_members,
-        keep_model_order=config.keep_model_order,
-        custom_file_header=config.custom_file_header,
-        custom_file_header_path=config.custom_file_header_path,
-        custom_formatters=config.custom_formatters,
         custom_formatters_kwargs=custom_formatters_kwargs,
-        use_pendulum=config.use_pendulum,
-        use_standard_primitive_types=config.use_standard_primitive_types,
-        http_query_parameters=config.http_query_parameters,
-        treat_dot_as_module=config.treat_dot_as_module,
-        use_exact_imports=config.use_exact_imports,
-        union_mode=config.union_mode,
-        output_datetime_class=config.output_datetime_class,
-        output_date_class=config.output_date_class,
-        keyword_only=config.keyword_only,
-        frozen_dataclasses=config.frozen_dataclasses,
-        no_alias=config.no_alias,
-        use_frozen_field=config.use_frozen_field,
-        use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
-        formatters=config.formatters,
+        output=output,
+        command_line=command_line,
         settings_path=settings_path,
-        parent_scoped_naming=config.parent_scoped_naming,
-        naming_strategy=config.naming_strategy,
-        duplicate_name_suffix=config.duplicate_name_suffix,
-        dataclass_arguments=config.dataclass_arguments,
-        disable_future_imports=config.disable_future_imports,
-        type_mappings=config.type_mappings,
-        type_overrides=config.type_overrides,
-        read_only_write_only_model_type=config.read_only_write_only_model_type,
-        use_status_code_in_response_name=config.use_status_code_in_response_name,
-        all_exports_scope=config.all_exports_scope,
-        all_exports_collision_strategy=config.all_exports_collision_strategy,
-        field_type_collision_strategy=config.field_type_collision_strategy,
-        module_split_mode=config.module_split_mode,
     )
+    result = generate(input_=input_, config=generate_config)
 
     if output is None and result is not None:  # pragma: no cover
         if isinstance(result, str):
@@ -1070,8 +1006,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     try:
         config = Config.parse_obj(pyproject_config)
         config.merge_args(namespace)
-    except Error as e:
-        print(e.message, file=sys.stderr)  # noqa: T201
+    except (Error, ValidationError) as e:
+        message = e.message if isinstance(e, Error) else str(e)
+        print(message, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
     if not config.input and not config.url and not config.input_model and sys.stdin.isatty():
@@ -1159,19 +1096,16 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         )
         return Exit.ERROR
 
-    extra_template_data: defaultdict[str, dict[str, Any]] | None
+    extra_template_data: dict[str, dict[str, Any]] | None
     if config.extra_template_data is None:
         extra_template_data = None
     else:
-        with config.extra_template_data as data:
-            try:
-                extra_template_data = json.load(data, object_hook=lambda d: defaultdict(dict, **d))
-            except json.JSONDecodeError as e:
-                print(f"Unable to load extra template data: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
+        try:
+            extra_template_data = defaultdict(dict, **config.extra_template_data)
+        except (TypeError, ValueError):
+            return Exit.ERROR
 
-        # Extract additional_imports from extra_template_data entries and merge with config
-        assert extra_template_data is not None
+    if extra_template_data is not None:
         additional_imports_from_template_data = _extract_additional_imports(extra_template_data)
         if additional_imports_from_template_data:
             if config.additional_imports is None:
@@ -1182,40 +1116,19 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.aliases is None:
         aliases = None
     else:
-        with config.aliases as data:
-            try:
-                aliases = json.load(data)
-            except json.JSONDecodeError as e:
-                print(f"Unable to load alias mapping: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
+        aliases = config.aliases
         if not isinstance(aliases, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
-            print(  # noqa: T201
-                'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
-                file=sys.stderr,
-            )
             return Exit.ERROR
 
     if config.custom_formatters_kwargs is None:
         custom_formatters_kwargs = None
     else:
-        with config.custom_formatters_kwargs as data:
-            try:
-                custom_formatters_kwargs = json.load(data)
-            except json.JSONDecodeError as e:  # pragma: no cover
-                print(  # noqa: T201
-                    f"Unable to load custom_formatters_kwargs mapping: {e}",
-                    file=sys.stderr,
-                )
-                return Exit.ERROR
+        custom_formatters_kwargs = config.custom_formatters_kwargs
         if not isinstance(custom_formatters_kwargs, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in custom_formatters_kwargs.items()
-        ):  # pragma: no cover
-            print(  # noqa: T201
-                'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
-                file=sys.stderr,
-            )
+        ):
             return Exit.ERROR
 
     if config.check:
