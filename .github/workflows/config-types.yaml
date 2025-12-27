@@ -58,6 +58,9 @@ jobs:
           .tox/config-types/bin/datamodel-codegen --profile generate-config-dict
           .tox/config-types/bin/datamodel-codegen --profile parser-config-dict
           .tox/config-types/bin/datamodel-codegen --profile parse-config-dict
+      - name: Format generated files
+        run: |
+          uv tool run ruff format src/datamodel_code_generator/_types/
       - name: Commit and push if changed
         if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
