@@ -42,6 +42,7 @@ from datamodel_code_generator.enums import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    UnionMode,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -54,8 +55,8 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import LiteralType
 from datamodel_code_generator.types import StrictTypes
 
-# Use Literal type to avoid circular import
-UnionModeType = Literal["smart", "left_to_right"] | None
+# Accept both UnionMode enum and literal string values
+UnionModeType = UnionMode | Literal["smart", "left_to_right"] | None
 
 
 class BaseConfig(BaseModel):

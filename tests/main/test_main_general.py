@@ -1910,3 +1910,14 @@ def test_module_getattr_raises_for_unknown_attribute() -> None:
 
     with pytest.raises(AttributeError, match="module 'datamodel_code_generator' has no attribute 'NonExistentClass'"):
         _ = datamodel_code_generator.NonExistentClass
+
+
+def test_generate_with_config_and_options_raises_error() -> None:
+    """Test that providing both config and options raises ValueError."""
+    from datamodel_code_generator import GenerateConfig
+
+    json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
+    config = GenerateConfig(input_file_type=InputFileType.JsonSchema)
+
+    with pytest.raises(ValueError, match="Cannot specify both 'config' and individual options"):
+        generate(json_schema, config=config, snake_case_field=True)
