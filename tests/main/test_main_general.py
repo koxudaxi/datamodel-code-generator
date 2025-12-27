@@ -152,7 +152,7 @@ def test_main_rejects_invalid_extra_template_data(monkeypatch: pytest.MonkeyPatc
 def test_main_rejects_invalid_aliases_file(tmp_path: Path) -> None:
     """main() rejects aliases file with non-string values."""
     aliases_path = tmp_path / "aliases.json"
-    aliases_path.write_text(json.dumps({"name": 1}))
+    aliases_path.write_text(json.dumps({"name": {"nested": 1}}))
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=tmp_path / "out.py",
@@ -164,7 +164,7 @@ def test_main_rejects_invalid_aliases_file(tmp_path: Path) -> None:
 def test_main_rejects_invalid_custom_formatters_kwargs_file(tmp_path: Path) -> None:
     """main() rejects custom_formatters_kwargs file with non-string values."""
     kwargs_path = tmp_path / "custom_formatters_kwargs.json"
-    kwargs_path.write_text(json.dumps({"format": 1}))
+    kwargs_path.write_text(json.dumps({"format": {"arg": 1}}))
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=tmp_path / "out.py",

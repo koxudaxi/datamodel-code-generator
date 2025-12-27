@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, TypeAlias
 from urllib.parse import ParseResult
-from typing import Any, TYPE_CHECKING, TypeAlias
-
-from typing_extensions import TypedDict
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -40,16 +39,24 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.parser.base import title_to_class_name
 from datamodel_code_generator.types import DataTypeManager, StrictTypes
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
+
+_PydanticTypeReferences = (
+    Path,
+    ParseResult,
+    DataModel,
+    DataModelFieldBase,
+    DataTypeManager,
+    StrictTypes,
+)
 
 if TYPE_CHECKING:
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
 else:
     try:
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-    except Exception:  # pragma: no cover - fallback for minimal installs
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    except ImportError:  # pragma: no cover - fallback for minimal installs
         UnionMode = Any  # type: ignore[assignment]
 
 if TYPE_CHECKING:
@@ -57,7 +64,8 @@ if TYPE_CHECKING:
     DumpResolveReferenceAction: TypeAlias = Callable[[Iterable[str]], str]
     DefaultPutDictSchema: TypeAlias = DefaultPutDict[str, str]
 elif is_pydantic_v2():
-    from typing_extensions import Annotated
+    from typing import Annotated
+
     from pydantic import WithJsonSchema
 
     CallableSchema = Annotated[Callable[[str], str], WithJsonSchema({"type": "string"})]
@@ -329,6 +337,8 @@ class GenerateConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
@@ -462,6 +472,8 @@ class CliConfigSchema(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
@@ -598,6 +610,8 @@ class ParserConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
@@ -721,6 +735,8 @@ class ParseConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 configuration."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
