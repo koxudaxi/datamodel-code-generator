@@ -178,7 +178,9 @@ class OpenAPIParser(JsonSchemaParser):
         **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the OpenAPI parser with configuration options."""
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.config import ParserConfig, _rebuild_config_models  # noqa: PLC0415
+
+        _rebuild_config_models()
 
         if config is not None and options:
             msg = "Cannot specify both 'config' and individual options"

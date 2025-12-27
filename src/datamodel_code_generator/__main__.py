@@ -697,6 +697,10 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
             msg = f"Cannot import module {modname!r}: {e}"
             raise Error(msg) from e
 
+    rebuild = getattr(module, "_rebuild_config_models", None)
+    if callable(rebuild):
+        rebuild()
+
     try:
         obj = getattr(module, qualname)
     except AttributeError as e:
@@ -720,7 +724,13 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
-        return obj.model_json_schema()
+        import warnings  # noqa: PLC0415
+
+        from pydantic.json_schema import PydanticJsonSchemaWarning  # noqa: PLC0415
+
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)
+            return obj.model_json_schema()
 
     # Check for dataclass or TypedDict - use TypeAdapter
     from dataclasses import is_dataclass  # noqa: PLC0415
@@ -735,9 +745,14 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
             )
             raise Error(msg)
         try:
-            from pydantic import TypeAdapter  # noqa: PLC0415
+            import warnings  # noqa: PLC0415
 
-            return TypeAdapter(obj).json_schema()
+            from pydantic import TypeAdapter  # noqa: PLC0415
+            from pydantic.json_schema import PydanticJsonSchemaWarning  # noqa: PLC0415
+
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)
+                return TypeAdapter(obj).json_schema()
         except ImportError as e:
             msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
             raise Error(msg) from e
@@ -1004,6 +1019,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.OK
 
     try:
+        from datamodel_code_generator.config import _rebuild_config_models  # noqa: PLC0415
+
+        _rebuild_config_models()
         config = Config.parse_obj(pyproject_config)
         config.merge_args(namespace)
     except (Error, ValidationError) as e:
@@ -1163,7 +1181,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             aliases=aliases,
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
-            settings_path=config.output if config.check else None,
+            settings_path=config.output,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

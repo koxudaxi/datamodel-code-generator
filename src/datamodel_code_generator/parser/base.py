@@ -696,7 +696,9 @@ class Parser(ABC):
         **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the Parser with configuration options."""
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.config import ParserConfig, _rebuild_config_models  # noqa: PLC0415
+
+        _rebuild_config_models()
 
         if config is not None and options:
             msg = "Cannot specify both 'config' and individual options"
@@ -3109,7 +3111,14 @@ class Parser(ABC):
         **options: Unpack[ParseConfigDict],
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
-        from datamodel_code_generator.config import ParseConfig as ParseConfigModel  # noqa: PLC0415
+        from datamodel_code_generator.config import (  # noqa: PLC0415
+            ParseConfig as ParseConfigModel,
+        )
+        from datamodel_code_generator.config import (  # noqa: PLC0415
+            _rebuild_config_models,
+        )
+
+        _rebuild_config_models()
 
         if config is not None and options:
             msg = "Cannot specify both 'config' and individual options"

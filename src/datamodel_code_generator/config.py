@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeAlias
-from urllib.parse import ParseResult
 
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
@@ -37,27 +35,25 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.types import DataTypeManager, StrictTypes
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 
-_PydanticTypeReferences = (
-    Path,
-    ParseResult,
-    DataModel,
-    DataModelFieldBase,
-    DataTypeManager,
-    StrictTypes,
-)
-
 if TYPE_CHECKING:
+    from pathlib import Path
+    from urllib.parse import ParseResult
+
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
 else:
-    try:
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    except ImportError:  # pragma: no cover - fallback for minimal installs
-        UnionMode = Any  # type: ignore[assignment]
+    if not is_pydantic_v2():
+        Path = Any  # type: ignore[assignment]
+        ParseResult = Any  # type: ignore[assignment]
+        DataModel = Any  # type: ignore[assignment]
+        DataModelFieldBase = Any  # type: ignore[assignment]
+        DataTypeManager = Any  # type: ignore[assignment]
+        StrictTypes = Any  # type: ignore[assignment]
+    UnionMode = Any  # type: ignore[assignment]
 
 if TYPE_CHECKING:
     CallableSchema: TypeAlias = Callable[[str], str]
@@ -747,3 +743,44 @@ class ParseConfig(BaseModel):
     all_exports_scope: AllExportsScope | None = None
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
+
+
+_CONFIG_MODELS_STATE = {"built": False}
+
+
+def _rebuild_config_models() -> None:
+    if _CONFIG_MODELS_STATE["built"]:
+        return
+    from pathlib import Path  # noqa: PLC0415
+    from urllib.parse import ParseResult  # noqa: PLC0415
+
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
+
+    try:
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+    except ImportError:
+        runtime_union_mode = Any
+    else:
+        runtime_union_mode = UnionMode
+
+    types_namespace = {
+        "Path": Path,
+        "ParseResult": ParseResult,
+        "DataModel": DataModel,
+        "DataModelFieldBase": DataModelFieldBase,
+        "DataTypeManager": DataTypeManager,
+        "StrictTypes": StrictTypes,
+        "UnionMode": runtime_union_mode,
+    }
+    if is_pydantic_v2():
+        GenerateConfig.model_rebuild(_types_namespace=types_namespace)
+        ParserConfig.model_rebuild(_types_namespace=types_namespace)
+        ParseConfig.model_rebuild(_types_namespace=types_namespace)
+        CliConfigSchema.model_rebuild(_types_namespace=types_namespace)
+    else:
+        GenerateConfig.update_forward_refs(**types_namespace)
+        ParserConfig.update_forward_refs(**types_namespace)
+        ParseConfig.update_forward_refs(**types_namespace)
+        CliConfigSchema.update_forward_refs(**types_namespace)
+    _CONFIG_MODELS_STATE["built"] = True

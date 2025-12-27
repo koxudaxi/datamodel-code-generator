@@ -480,7 +480,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         - When output is None and multiple modules: GeneratedModules (dict mapping
           module path tuples to generated code strings)
     """
-    from datamodel_code_generator.config import GenerateConfig, ParseConfig, ParserConfig  # noqa: PLC0415
+    from datamodel_code_generator.config import (  # noqa: PLC0415
+        GenerateConfig,
+        ParseConfig,
+        ParserConfig,
+        _rebuild_config_models,
+    )
+
+    _rebuild_config_models()
 
     if config is not None and options:
         msg = "Cannot specify both 'config' and individual options"
