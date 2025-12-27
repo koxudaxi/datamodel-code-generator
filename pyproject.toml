@@ -259,24 +259,32 @@ ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
 
 [tool.datamodel-codegen.profiles.generate-config-dict]
+enum-field-as-literal = "none"
+use-standard-primitive-types = true
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
 output-model-type = "typing.TypedDict"
 output = "src/datamodel_code_generator/_types/generate_config_dict.py"
 
 [tool.datamodel-codegen.profiles.parser-config-dict]
+enum-field-as-literal = "none"
+use-standard-primitive-types = true
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:ParserConfig"
 output-model-type = "typing.TypedDict"
 output = "src/datamodel_code_generator/_types/parser_config_dict.py"
 
 [tool.datamodel-codegen.profiles.parse-config-dict]
+enum-field-as-literal = "none"
+use-standard-primitive-types = true
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:ParseConfig"
 output-model-type = "typing.TypedDict"
 output = "src/datamodel_code_generator/_types/parse_config_dict.py"
 
 [tool.datamodel-codegen.profiles.cli-config-dict]
+enum-field-as-literal = "none"
+use-standard-primitive-types = true
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:CliConfigSchema"
 output-model-type = "typing.TypedDict"
