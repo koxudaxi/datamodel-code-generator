@@ -8,10 +8,22 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict
-from pydantic.json_schema import SkipJsonSchema
+
+if TYPE_CHECKING:
+    from pydantic.json_schema import SkipJsonSchema
+else:
+    # SkipJsonSchema is pydantic v2 only - for v1 we use identity via __class_getitem__
+    try:
+        from pydantic.json_schema import SkipJsonSchema
+    except ImportError:
+
+        class SkipJsonSchema:  # noqa: D101
+            def __class_getitem__(cls, item: Any) -> Any:  # noqa: D105
+                return item
+
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
