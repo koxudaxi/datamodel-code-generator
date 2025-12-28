@@ -19,7 +19,7 @@
 | [`--type-overrides`](#type-overrides) | Replace schema model types with custom Python types via JSON... |
 | [`--use-annotated`](#use-annotated) | Test GraphQL annotated types with standard collections and u... |
 | [`--use-decimal-for-multiple-of`](#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint... |
-| [`--use-generic-container-types`](#use-generic-container-types) | Use typing.Dict/List instead of dict/list for container type... |
+| [`--use-generic-container-types`](#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hin... |
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](#use-pendulum) | Use pendulum types for date/time fields instead of datetime ... |
 | [`--use-root-model-type-alias`](#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy supp... |
@@ -2792,11 +2792,12 @@ precise decimal arithmetic when validating values against the constraint.
 
 ## `--use-generic-container-types` {#use-generic-container-types}
 
-Use typing.Dict/List instead of dict/list for container types.
+Use generic container types (Sequence, Mapping) for type hinting.
 
-The `--use-generic-container-types` flag generates typing module generic
-containers (Dict, List, etc.) instead of built-in types. This is useful for
-Python 3.8 compatibility or when explicit typing imports are preferred.
+The `--use-generic-container-types` flag generates abstract container types
+(Sequence, Mapping, FrozenSet) instead of concrete types (list, dict, set).
+If `--use-standard-collections` is set, imports from `collections.abc`;
+otherwise imports from `typing`.
 
 **Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 

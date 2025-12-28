@@ -1106,11 +1106,12 @@ def test_main_root_model_with_additional_properties(output_file: Path) -> None:
     related_options=["--use-standard-collections"],
 )
 def test_main_root_model_with_additional_properties_use_generic_container_types(output_file: Path) -> None:
-    """Use typing.Dict/List instead of dict/list for container types.
+    """Use generic container types (Sequence, Mapping) for type hinting.
 
-    The `--use-generic-container-types` flag generates typing module generic
-    containers (Dict, List, etc.) instead of built-in types. This is useful for
-    Python 3.8 compatibility or when explicit typing imports are preferred.
+    The `--use-generic-container-types` flag generates abstract container types
+    (Sequence, Mapping, FrozenSet) instead of concrete types (list, dict, set).
+    If `--use-standard-collections` is set, imports from `collections.abc`;
+    otherwise imports from `typing`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
