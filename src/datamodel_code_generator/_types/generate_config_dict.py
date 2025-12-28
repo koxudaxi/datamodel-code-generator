@@ -3,35 +3,33 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from collections.abc import Callable, Mapping, Sequence
+from pathlib import Path
+from typing import Any, TypedDict
 
 from typing_extensions import NotRequired
 
-if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
-    from pathlib import Path
-
-    from datamodel_code_generator.enums import (
-        AllExportsCollisionStrategy,
-        AllExportsScope,
-        AllOfMergeMode,
-        CollapseRootModelsNameStrategy,
-        DataclassArguments,
-        DataModelType,
-        FieldTypeCollisionStrategy,
-        GraphQLScope,
-        InputFileType,
-        ModuleSplitMode,
-        NamingStrategy,
-        OpenAPIScope,
-        ReadOnlyWriteOnlyModelType,
-        ReuseScope,
-        TargetPydanticVersion,
-    )
-    from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.parser import LiteralType
-    from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.enums import (
+    AllExportsCollisionStrategy,
+    AllExportsScope,
+    AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
+    DataclassArguments,
+    DataModelType,
+    FieldTypeCollisionStrategy,
+    GraphQLScope,
+    InputFileType,
+    ModuleSplitMode,
+    NamingStrategy,
+    OpenAPIScope,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
+    TargetPydanticVersion,
+)
+from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.types import StrictTypes
 
 
 class GenerateConfigDict(TypedDict):

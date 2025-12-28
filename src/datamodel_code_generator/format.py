@@ -338,7 +338,7 @@ class CodeFormatter:
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""
         result = subprocess.run(
-            ("ruff", "check", "--fix", "--unsafe-fixes", "-"),
+            ("ruff", "check", "--fix", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -361,7 +361,7 @@ class CodeFormatter:
         """Run ruff check and format in a single pipeline for better performance."""
         ruff_path = self._find_ruff_path()
         check_proc = subprocess.Popen(  # noqa: S603
-            [ruff_path, "check", "--fix", "--unsafe-fixes", "-"],
+            [ruff_path, "check", "--fix", "-"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -407,7 +407,7 @@ class CodeFormatter:
         """Apply ruff formatting to all Python files in a directory."""
         if Formatter.RUFF_CHECK in self.formatters:
             subprocess.run(  # noqa: S603
-                ("ruff", "check", "--fix", "--unsafe-fixes", str(directory)),
+                ("ruff", "check", "--fix", str(directory)),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,

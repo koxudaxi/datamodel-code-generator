@@ -18,9 +18,9 @@ repos:
   rev: 'v0.14.9'
   hooks:
   - id: ruff-format
-    exclude: "^tests/data"
+    exclude: "^tests/data|^src/datamodel_code_generator/_types/"
   - id: ruff
-    exclude: "^tests/data"
+    exclude: "^tests/data|^src/datamodel_code_generator/_types/"
     args: ["--fix", "--unsafe-fixes", "--exit-non-zero-on-fix"]
 - repo: https://github.com/codespell-project/codespell
   rev: v2.4.1
