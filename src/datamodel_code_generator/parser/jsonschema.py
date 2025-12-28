@@ -1739,7 +1739,8 @@ class JsonSchemaParser(Parser):
         """Merge allOf items when they share object properties to avoid duplicate models.
 
         Skip merging when there is exactly one $ref (inheritance with property overrides).
-        Continue merging when multiple $refs share properties to avoid duplicate fields.
+        Continue merging when multiple $refs have conflicting property definitions to avoid MRO issues.
+        Child property overrides (obj.properties) are not considered conflicts.
         """
         ref_count = sum(1 for item in obj.allOf if item.ref)
         if ref_count == 1:
@@ -1753,10 +1754,6 @@ class JsonSchemaParser(Parser):
             if resolved_item.properties:
                 for prop_name, prop_schema in resolved_item.properties.items():
                     property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
-
-        if obj.properties:
-            for prop_name, prop_schema in obj.properties.items():
-                property_signatures.setdefault(prop_name, set()).add(self._schema_signature(prop_schema))
 
         if not any(len(signatures) > 1 for signatures in property_signatures.values()):
             return None
