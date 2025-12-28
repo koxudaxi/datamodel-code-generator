@@ -183,7 +183,7 @@ class _BaselineParser:
         additional_imports: list[str] | None = None,
         class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
-    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
