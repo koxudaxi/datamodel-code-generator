@@ -1236,8 +1236,6 @@ class JsonSchemaParser(Parser):
         if not x_python_type or not isinstance(x_python_type, str):
             return {}
 
-        base_type = x_python_type.split("[")[0].strip()
-
         type_to_flag: dict[str, dict[str, bool]] = {
             "Set": {"is_set": True},
             "FrozenSet": {"is_frozen_set": True},
@@ -1249,7 +1247,34 @@ class JsonSchemaParser(Parser):
             "MutableSet": {"is_set": True},
         }
 
-        return type_to_flag.get(base_type, {})
+        base_type = x_python_type.split("[")[0].strip()
+        if base_type in type_to_flag:
+            return type_to_flag[base_type]
+
+        if base_type in {"Union", "Optional"}:
+            bracket_start = x_python_type.find("[")
+            if bracket_start != -1:
+                inner = x_python_type[bracket_start + 1 : -1]
+                depth = 0
+                current = ""
+                for char in inner:
+                    if char == "[":
+                        depth += 1
+                    elif char == "]":
+                        depth -= 1
+                    if char == "," and depth == 0:
+                        arg_base = current.strip().split("[")[0]
+                        if arg_base in type_to_flag:
+                            return type_to_flag[arg_base]
+                        current = ""
+                    else:
+                        current += char
+                if current.strip():
+                    arg_base = current.strip().split("[")[0]
+                    if arg_base in type_to_flag:
+                        return type_to_flag[arg_base]
+
+        return {}
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""
