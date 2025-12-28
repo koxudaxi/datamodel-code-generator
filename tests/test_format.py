@@ -175,7 +175,11 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("ruff", "check", "--fix", "-"), input=b"input", capture_output=True, check=False, cwd=str(tmp_path)
+        ("ruff", "check", "--fix", "--unsafe-fixes", "-"),
+        input=b"input",
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
     )
 
 
@@ -227,7 +231,7 @@ def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
-        ("ruff", "check", "--fix", str(output_dir)),
+        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -270,7 +274,7 @@ def test_format_directory_both_ruff_formatters(tmp_path: Path, monkeypatch: pyte
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("ruff", "check", "--fix", str(output_dir)),
+        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -323,7 +327,7 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("ruff", "check", "--fix", str(output_dir)),
+        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=mock.ANY,
