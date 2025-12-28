@@ -23,6 +23,15 @@ assert_file_content = create_assert_file_content(EXPECTED_MAIN_PATH)
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--input-file-type"],
+    option_description="""Generate models from raw YAML sample data.
+
+    The `--input-file-type yaml` option treats the input file as **raw YAML data**
+    and automatically infers a JSON Schema from it.
+
+    **Note:** This is NOT for JSON Schema files written in YAML format.
+    For schema definition files (JSON Schema or OpenAPI), use `--input-file-type jsonschema`
+    or `--input-file-type openapi` instead, regardless of whether the file is in JSON or YAML format.
+    """,
     input_schema="yaml/pet.yaml",
     cli_args=["--input-file-type", "yaml"],
     golden_output="yaml.py",

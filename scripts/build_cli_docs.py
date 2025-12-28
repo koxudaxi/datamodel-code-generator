@@ -45,7 +45,7 @@ class CLIDocExample:
     """Represents a single CLI documentation example from a test."""
 
     node_id: str
-    docstring: str
+    option_description: str
     input_schema: str | None = None
     config_content: str | None = None
     cli_args: list[str] = field(default_factory=list)
@@ -64,7 +64,7 @@ class CLIDocExample:
         kwargs = item.get("marker_kwargs", {})
         return cls(
             node_id=item.get("node_id", ""),
-            docstring=item.get("docstring", ""),
+            option_description=item.get("option_description", ""),
             input_schema=kwargs.get("input_schema"),
             config_content=kwargs.get("config_content"),
             cli_args=kwargs.get("cli_args", []),
@@ -117,10 +117,10 @@ class CLIDocOption:
                 return ex
         return self.examples[0] if self.examples else None
 
-    def get_docstring(self) -> str:
-        """Get docstring from primary example."""
+    def get_option_description(self) -> str:
+        """Get option description from primary example."""
         primary = self.get_primary()
-        return primary.docstring if primary else ""
+        return primary.option_description if primary else ""
 
     def get_aliases(self) -> list[str]:
         """Get all aliases from all examples."""
@@ -577,9 +577,11 @@ def generate_option_section(
 
     md = f"## `{option}` {{#{slugify(option)}}}\n\n"
 
-    # Parse docstring to separate description from admonitions
-    docstring = cli_doc_option.get_docstring()
-    parsed = parse_docstring(docstring) if docstring else ParsedDocstring(description="", admonitions=[])
+    # Parse option_description to separate description from admonitions
+    option_description = cli_doc_option.get_option_description()
+    parsed = (
+        parse_docstring(option_description) if option_description else ParsedDocstring(description="", admonitions=[])
+    )
 
     # Output description (without admonitions)
     if parsed.description:
@@ -709,8 +711,8 @@ def generate_category_page(
     md += "|--------|-------------|\n"
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
-        docstring = cli_doc_option.get_docstring()
-        desc = docstring.split("\n")[0][:DESC_LENGTH_SHORT] if docstring else ""
+        option_description = cli_doc_option.get_option_description()
+        desc = option_description.split("\n")[0][:DESC_LENGTH_SHORT] if option_description else ""
         if len(desc) == DESC_LENGTH_SHORT:
             desc += "..."
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
@@ -736,8 +738,8 @@ def generate_quick_reference(
     all_options: list[tuple[str, str, OptionCategory | None]] = []
     for category, options in categories.items():
         for option, cli_doc_option in options.items():
-            docstring = cli_doc_option.get_docstring()
-            desc = docstring.split("\n")[0] if docstring else ""
+            option_description = cli_doc_option.get_option_description()
+            desc = option_description.split("\n")[0] if option_description else ""
             all_options.append((option, desc, category))
     if manual_docs:
         for option in manual_docs:
@@ -770,8 +772,8 @@ def generate_quick_reference(
 
         for option in sorted(options.keys()):
             cli_doc_option = options[option]
-            docstring = cli_doc_option.get_docstring()
-            desc = docstring.split("\n")[0][:DESC_LENGTH_LONG] if docstring else ""
+            option_description = cli_doc_option.get_option_description()
+            desc = option_description.split("\n")[0][:DESC_LENGTH_LONG] if option_description else ""
             if len(desc) == DESC_LENGTH_LONG:
                 desc += "..."
             slug_opt = slugify(option)

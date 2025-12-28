@@ -30,6 +30,18 @@ assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
 
 @pytest.mark.cli_doc(
     options=["--input-file-type"],
+    option_description="""Specify the input file type for code generation.
+
+    The `--input-file-type` flag explicitly sets the input format.
+
+    **Important distinction:**
+
+    - Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
+    - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
+
+    For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
+    not `--input-file-type yaml`. The `yaml` type treats the file as raw data and infers a schema from it.
+    """,
     input_schema="json/pet.json",
     cli_args=["--input-file-type", "json"],
     golden_output="json/general.py",
@@ -114,6 +126,12 @@ def test_main_json_reuse_model_pydantic2(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--collapse-reuse-models"],
+    option_description="""Collapse duplicate models by replacing references instead of inheritance.
+
+    The `--collapse-reuse-models` flag, when used with `--reuse-model`,
+    eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
+    by replacing all references to duplicate models with the canonical model.
+    """,
     input_schema="json/duplicate_models.json",
     cli_args=["--reuse-model", "--collapse-reuse-models"],
     golden_output="json/json_collapse_reuse_model.py",

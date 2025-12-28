@@ -82,6 +82,10 @@ def test_main_openapi_discriminator_enum(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--use-enum-values-in-discriminator"],
+    option_description="""Use enum values in discriminator mappings for union types.
+
+    The `--use-enum-values-in-discriminator` flag configures the code generation behavior.
+    """,
     input_schema="openapi/discriminator_enum.yaml",
     cli_args=["--use-enum-values-in-discriminator", "--output-model-type", "pydantic_v2.BaseModel"],
     golden_output="openapi/discriminator/enum_use_enum_values.py",
@@ -382,6 +386,10 @@ def test_main_pydantic_basemodel(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--base-class"],
+    option_description="""Specify a custom base class for generated models.
+
+    The `--base-class` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--base-class", "custom_module.Base"],
     golden_output="openapi/base_class.py",
@@ -516,6 +524,12 @@ def test_main_openapi_no_file(
 )
 @pytest.mark.cli_doc(
     options=["--extra-template-data"],
+    option_description="""Pass custom template variables from JSON file for code generation.
+
+    The `--extra-template-data` flag allows you to provide additional variables
+    (from a JSON file) that can be used in custom templates to configure generated
+    model settings like Config classes, enabling customization beyond standard options.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--extra-template-data", "openapi/extra_data.json"],
     model_outputs={
@@ -578,6 +592,13 @@ def test_main_custom_template_dir_old_style(
 
 @pytest.mark.cli_doc(
     options=["--custom-template-dir"],
+    option_description="""Use custom Jinja2 templates for model generation.
+
+    The `--custom-template-dir` option allows you to specify a directory containing custom Jinja2 templates
+    to override the default templates used for generating data models. This enables full customization of
+    the generated code structure and formatting. Use with `--extra-template-data` to pass additional data
+    to the templates.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--custom-template-dir", "templates", "--extra-template-data", "openapi/extra_data.json"],
     golden_output="openapi/custom_template_dir.py",
@@ -701,6 +722,10 @@ def test_stdin(monkeypatch: pytest.MonkeyPatch, output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--validation"],
+    option_description="""Enable validation constraints (deprecated, use --field-constraints).
+
+    The `--validation` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--validation"],
     golden_output="openapi/general.py",
@@ -771,6 +796,12 @@ def test_validation_failed(mocker: MockerFixture, output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--use-unique-items-as-set"],
+    option_description="""Generate set types for arrays with uniqueItems constraint.
+
+    The `--use-unique-items-as-set` flag generates Python set types instead of
+    list types for JSON Schema arrays that have the uniqueItems constraint set
+    to true, enforcing uniqueness at the type level.
+    """,
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--use-unique-items-as-set", "--field-constraints"],
     golden_output="openapi/with_field_constraints_use_unique_items_as_set.py",
@@ -796,6 +827,12 @@ def test_main_with_field_constraints(
 
 @pytest.mark.cli_doc(
     options=["--field-constraints"],
+    option_description="""Generate Field() with validation constraints from schema.
+
+    The `--field-constraints` flag generates Pydantic Field() definitions with
+    validation constraints (min/max length, pattern, etc.) from the schema.
+    Output differs between Pydantic v1 and v2 due to API changes.
+    """,
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--field-constraints"],
     model_outputs={
@@ -866,6 +903,11 @@ def test_main_without_field_constraints(output_model: str, expected_output: str,
 )
 @pytest.mark.cli_doc(
     options=["--aliases"],
+    option_description="""Apply custom field and class name aliases from JSON file.
+
+    The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+    providing fine-grained control over generated names independent of schema definitions.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--aliases", "openapi/aliases.json", "--target-python-version", "3.10"],
     model_outputs={
@@ -945,6 +987,12 @@ def test_main_with_snake_case_field(output_file: Path) -> None:
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--strip-default-none"],
+    option_description="""Remove fields with None as default value from generated models.
+
+    The `--strip-default-none` option removes fields that have None as their default value from the
+    generated models. This results in cleaner model definitions by excluding optional fields that
+    default to None.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--strip-default-none"],
     golden_output="openapi/with_strip_default_none.py",
@@ -978,6 +1026,10 @@ def test_disable_timestamp(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--enable-version-header"],
+    option_description="""Include tool version information in file header.
+
+    The `--enable-version-header` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--enable-version-header"],
     golden_output="openapi/enable_version_header.py",
@@ -1000,6 +1052,11 @@ def test_enable_version_header(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--enable-command-header"],
+    option_description="""Include command-line options in file header for reproducibility.
+
+    The `--enable-command-header` flag adds the full command-line used to generate
+    the file to the header, making it easy to reproduce the generation.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--enable-command-header"],
     golden_output="openapi/enable_command_header.py",
@@ -1045,6 +1102,10 @@ def test_enable_command_header(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--allow-population-by-field-name"],
+    option_description="""Allow Pydantic model population by field name (not just alias).
+
+    The `--allow-population-by-field-name` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--allow-population-by-field-name"],
     model_outputs={
@@ -1086,6 +1147,10 @@ def test_allow_population_by_field_name(output_model: str, expected_output: str,
 )
 @pytest.mark.cli_doc(
     options=["--allow-extra-fields"],
+    option_description="""Allow extra fields in generated Pydantic models (extra='allow').
+
+    The `--allow-extra-fields` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--allow-extra-fields"],
     model_outputs={
@@ -1127,6 +1192,10 @@ def test_allow_extra_fields(output_model: str, expected_output: str, output_file
 )
 @pytest.mark.cli_doc(
     options=["--enable-faux-immutability"],
+    option_description="""Enable faux immutability in Pydantic v1 models (allow_mutation=False).
+
+    The `--enable-faux-immutability` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--enable-faux-immutability"],
     model_outputs={
@@ -1163,6 +1232,10 @@ def test_use_default(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--force-optional"],
+    option_description="""Force all fields to be Optional regardless of required status.
+
+    The `--force-optional` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--force-optional"],
     golden_output="openapi/force_optional.py",
@@ -1224,6 +1297,12 @@ def test_main_specialized_enum(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--no-use-specialized-enum"],
+    option_description="""Disable specialized Enum classes for Python 3.11+ code generation.
+
+    The `--no-use-specialized-enum` flag prevents the generator from using
+    specialized Enum classes (StrEnum, IntEnum) when generating code for
+    Python 3.11+, falling back to standard Enum classes instead.
+    """,
     input_schema="openapi/subclass_enum.json",
     cli_args=["--target-python-version", "3.11", "--no-use-specialized-enum"],
     golden_output="openapi/subclass_enum.py",
@@ -1319,6 +1398,12 @@ def test_main_original_field_name_delimiter_without_snake_case_field(
 )
 @pytest.mark.cli_doc(
     options=["--output-datetime-class"],
+    option_description="""Specify datetime class type for date-time schema fields.
+
+    The `--output-datetime-class` flag controls which datetime type to use for fields
+    with date-time format. Options include 'AwareDatetime' for timezone-aware datetimes
+    or 'datetime' for standard Python datetime objects.
+    """,
     input_schema="openapi/datetime.yaml",
     cli_args=["--output-datetime-class", "AwareDatetime"],
     golden_output="openapi/datetime_pydantic_v2.py",
@@ -1376,6 +1461,12 @@ def test_main_openapi_datetime(output_model: str, expected_output: str, output_f
 )
 @pytest.mark.cli_doc(
     options=["--output-date-class"],
+    option_description="""Specify date class type for date schema fields.
+
+    The `--output-date-class` flag controls which date type to use for fields
+    with date format. Options include 'PastDate' for past dates only
+    or 'FutureDate' for future dates only. This is a Pydantic v2 only feature.
+    """,
     input_schema="openapi/date_class.yaml",
     cli_args=["--output-date-class", "PastDate"],
     golden_output="openapi/date_class_past_date.py",
@@ -1416,6 +1507,11 @@ def test_main_models_not_found(capsys: pytest.CaptureFixture, output_file: Path)
 )
 @pytest.mark.cli_doc(
     options=["--enum-field-as-literal"],
+    option_description="""Convert single-member enums to Literal types in OpenAPI schemas.
+
+    The `--enum-field-as-literal one` flag converts enums with a single member
+    to Literal type annotations while keeping multi-member enums as Enum classes.
+    """,
     input_schema="openapi/enum_models.yaml",
     cli_args=["--enum-field-as-literal", "one"],
     golden_output="openapi/enum_models/one.py",
@@ -1442,6 +1538,10 @@ def test_main_openapi_enum_models_as_literal_one(min_version: str, output_file: 
 )
 @pytest.mark.cli_doc(
     options=["--use-one-literal-as-default"],
+    option_description="""Use single literal value as default when enum has only one option.
+
+    The `--use-one-literal-as-default` flag configures the code generation behavior.
+    """,
     input_schema="openapi/enum_models.yaml",
     cli_args=["--use-one-literal-as-default", "--enum-field-as-literal", "one"],
     golden_output="openapi/enum_models/one_literal_as_default.py",
@@ -1533,6 +1633,14 @@ def test_main_openapi_nullable(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--strict-nullable"],
+    option_description="""Treat default field as a non-nullable field.
+
+    The `--strict-nullable` flag ensures that fields with default values are generated
+    with their exact schema type (non-nullable), rather than being made nullable.
+
+    This is particularly useful when combined with `--use-default` to generate models
+    where optional fields have defaults but cannot accept `None` values.
+    """,
     input_schema="openapi/nullable.yaml",
     cli_args=["--strict-nullable"],
     golden_output="openapi/nullable_strict_nullable.py",
@@ -1700,6 +1808,10 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--disable-appending-item-suffix"],
+    option_description="""Disable appending 'Item' suffix to array item types.
+
+    The `--disable-appending-item-suffix` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--disable-appending-item-suffix", "--field-constraints"],
     golden_output="openapi/disable_appending_item_suffix.py",
@@ -1720,6 +1832,10 @@ def test_main_disable_appending_item_suffix(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--openapi-scopes"],
+    option_description="""Specify OpenAPI scopes to generate (schemas, paths, parameters).
+
+    The `--openapi-scopes` flag configures the code generation behavior.
+    """,
     input_schema="openapi/body_and_parameters.yaml",
     cli_args=["--openapi-scopes", "paths", "schemas"],
     golden_output="openapi/body_and_parameters/general.py",
@@ -1840,6 +1956,12 @@ def test_main_openapi_json_pointer(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--use-annotated"],
+    option_description="""Use typing.Annotated for field constraints in OpenAPI schemas.
+
+    The `--use-annotated` flag wraps field types with `typing.Annotated` to
+    include constraint metadata, enabling runtime validation frameworks to
+    access constraints directly from type annotations.
+    """,
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--field-constraints", "--use-annotated"],
     golden_output="openapi/use_annotated_with_field_constraints.py",
@@ -1948,6 +2070,12 @@ def test_paths_ref_with_external_schema(output_file: Path) -> None:
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--collapse-root-models"],
+    option_description="""Inline root model definitions into their referencing locations.
+
+    The `--collapse-root-models` flag collapses root model definitions by
+    inlining their types directly where they are referenced, reducing the
+    number of generated classes.
+    """,
     input_schema="openapi/not_real_string.json",
     cli_args=["--collapse-root-models"],
     golden_output="openapi/not_real_string_collapse_root_models.py",
@@ -2053,6 +2181,12 @@ def test_main_openapi_const(output_model: str, expected_output: str, output_file
 )
 @pytest.mark.cli_doc(
     options=["--collapse-root-models"],
+    option_description="""Inline root model definitions instead of creating separate wrapper classes.
+
+    The `--collapse-root-models` option generates simpler output by inlining root models
+    directly instead of creating separate wrapper types. This shows how different output
+    model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
+    """,
     input_schema="openapi/const.yaml",
     cli_args=["--collapse-root-models"],
     model_outputs={
@@ -2284,6 +2418,13 @@ def test_main_openapi_allof_partial_override_unique_items(
 
 @pytest.mark.cli_doc(
     options=["--allof-merge-mode"],
+    option_description="""Merge all properties from parent schemas in allOf.
+
+    The `--allof-merge-mode` flag controls how parent schema properties are merged
+    in allOf compositions. With `all` mode, constraints plus annotations (default,
+    examples) are merged from parent properties. This ensures child schemas inherit
+    all metadata from parents.
+    """,
     input_schema="openapi/allof_materialize_defaults.yaml",
     cli_args=["--allof-merge-mode", "all"],
     golden_output="main/openapi/allof_materialize_defaults.py",
@@ -2308,6 +2449,12 @@ def test_main_openapi_allof_merge_mode_all(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--allof-merge-mode"],
+    option_description="""Disable property merging from parent schemas in allOf.
+
+    With `none` mode, no fields are merged from parent properties. This is useful
+    when you want child schemas to define all their own constraints without inheriting
+    from parents.
+    """,
     input_schema="openapi/allof_merge_mode_none.yaml",
     cli_args=["--allof-merge-mode", "none"],
     golden_output="main/openapi/allof_merge_mode_none.py",
@@ -2673,6 +2820,10 @@ def test_main_openapi_max_min(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-operation-id-as-name"],
+    option_description="""Use OpenAPI operationId as the generated function/class name.
+
+    The `--use-operation-id-as-name` flag configures the code generation behavior.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--use-operation-id-as-name", "--openapi-scopes", "paths", "schemas", "parameters"],
     golden_output="openapi/use_operation_id_as_name.py",
@@ -2835,6 +2986,12 @@ def test_main_openapi_nullable_required_annotated(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-file-header-path"],
+    option_description="""Add custom header content from file to generated code.
+
+    The `--custom-file-header-path` flag allows you to specify a file containing
+    custom header content (like copyright notices, linting directives, or module docstrings)
+    to be inserted at the top of generated Python files.
+    """,
     input_schema="openapi/api.yaml",
     cli_args=["--custom-file-header-path", "custom_file_header.txt"],
     golden_output="openapi/custom_file_header.py",
@@ -2988,6 +3145,12 @@ def test_main_openapi_custom_id_pydantic_v2(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-serialize-as-any"],
+    option_description="""Wrap fields with subtypes in Pydantic's SerializeAsAny.
+
+    The `--use-serialize-as-any` flag applies Pydantic v2's SerializeAsAny wrapper
+    to fields that have subtype relationships, ensuring proper serialization of
+    polymorphic types and inheritance hierarchies.
+    """,
     input_schema="openapi/serialize_as_any.yaml",
     cli_args=["--use-serialize-as-any"],
     golden_output="openapi/serialize_as_any_pydantic_v2.py",
@@ -3092,6 +3255,12 @@ def test_main_openapi_msgspec_use_annotated_with_field_constraints(output_file: 
 )
 @pytest.mark.cli_doc(
     options=["--use-one-literal-as-default"],
+    option_description="""Set default value when only one literal is valid for a discriminator field.
+
+    The `--use-one-literal-as-default` flag sets default values for discriminator
+    fields when only one literal value is valid, reducing boilerplate in model
+    instantiation.
+    """,
     input_schema="openapi/discriminator_enum.yaml",
     cli_args=["--use-one-literal-as-default"],
     model_outputs={
@@ -3380,6 +3549,12 @@ def test_main_openapi_root_model_default_primitive(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--parent-scoped-naming"],
+    option_description="""Namespace models by their parent scope to avoid naming conflicts.
+
+    The `--parent-scoped-naming` flag prefixes model names with their parent scope
+    (operation/path/parameter) to prevent name collisions when the same model name
+    appears in different contexts within an OpenAPI specification.
+    """,
     input_schema="openapi/duplicate_models2.yaml",
     cli_args=[
         "--parent-scoped-naming",
@@ -3771,6 +3946,13 @@ def test_main_openapi_read_only_write_only_default(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--read-only-write-only-model-type"],
+    option_description="""Generate separate request and response models for readOnly/writeOnly fields.
+
+    The `--read-only-write-only-model-type` option controls how models with readOnly or writeOnly
+    properties are generated. The 'request-response' mode creates separate Request and Response
+    variants for each schema that contains readOnly or writeOnly fields, allowing proper type
+    validation for API requests and responses without a shared base model.
+    """,
     input_schema="openapi/read_only_write_only.yaml",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--read-only-write-only-model-type", "request-response"],
     golden_output="openapi/read_only_write_only_request_response.py",
@@ -4415,6 +4597,13 @@ def test_main_openapi_null_only_enum(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-status-code-in-response-name"],
+    option_description="""Include HTTP status code in response model names.
+
+    The `--use-status-code-in-response-name` flag includes the HTTP status code
+    in generated response model class names. Instead of generating ambiguous names
+    like ResourceGetResponse, ResourceGetResponse1, ResourceGetResponse2, it generates
+    clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResponseDefault.
+    """,
     input_schema="openapi/use_status_code_in_response_name.yaml",
     cli_args=["--use-status-code-in-response-name", "--openapi-scopes", "schemas", "paths"],
     golden_output="openapi/use_status_code_in_response_name.py",
