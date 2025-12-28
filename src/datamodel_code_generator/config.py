@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from pathlib import Path
+from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
@@ -36,12 +36,9 @@ from datamodel_code_generator.format import (
 )
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
-from datamodel_code_generator.util import ConfigDict, is_pydantic_v2, model_dump, model_validate
+from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 
 if TYPE_CHECKING:
-    from urllib.parse import ParseResult
-
-    from datamodel_code_generator.model import DataModelSet
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
@@ -332,66 +329,6 @@ class ParserConfig(BaseModel):
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     target_pydantic_version: TargetPydanticVersion | None = None
 
-    @classmethod
-    def _from_generate_config(
-        cls,
-        *,
-        generate_config: GenerateConfig,
-        data_model_types: DataModelSet,
-        input_: Path | str | ParseResult | Mapping[str, Any],
-        remote_text_cache: DefaultPutDict[str, str],
-        default_field_extras: dict[str, Any] | None,
-    ) -> ParserConfig:
-        effective_dataclass_arguments = generate_config.dataclass_arguments
-        if effective_dataclass_arguments is None:
-            effective_dataclass_arguments = {}
-            if generate_config.frozen_dataclasses:
-                effective_dataclass_arguments["frozen"] = True
-            if generate_config.keyword_only:
-                effective_dataclass_arguments["kw_only"] = True
-
-        effective_enum_field_as_literal = generate_config.enum_field_as_literal
-        if (
-            effective_enum_field_as_literal is None
-            and generate_config.output_model_type == DataModelType.TypingTypedDict
-        ):
-            effective_enum_field_as_literal = LiteralType.All
-
-        if generate_config.output_model_type == DataModelType.DataclassesDataclass:
-            effective_set_default_enum_member = True
-        else:
-            effective_set_default_enum_member = generate_config.set_default_enum_member
-
-        parser_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__
-        generate_fields = (
-            generate_config.__class__.model_fields if is_pydantic_v2() else generate_config.__class__.__fields__
-        )
-        parser_config_data = model_dump(
-            generate_config,
-            include=set(parser_fields) & set(generate_fields),
-        )
-        parser_config_data.update({
-            "data_model_type": data_model_types.data_model,
-            "data_model_root_type": data_model_types.root_model,
-            "data_model_field_type": data_model_types.field_model,
-            "data_type_manager_type": data_model_types.data_type_manager,
-            "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
-            "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-            "remote_text_cache": remote_text_cache,
-            "known_third_party": data_model_types.known_third_party,
-            "default_field_extras": default_field_extras,
-            "target_datetime_class": generate_config.output_datetime_class,
-            "target_date_class": generate_config.output_date_class,
-            "defer_formatting": generate_config.output is not None and not generate_config.output.suffix,
-            "dataclass_arguments": effective_dataclass_arguments,
-            "enum_field_as_literal": effective_enum_field_as_literal,
-            "set_default_enum_member": effective_set_default_enum_member,
-        })
-        return model_validate(
-            cls,
-            {k: v for k, v in parser_config_data.items() if k in parser_fields},
-        )
-
 
 class ParseConfig(BaseModel):
     """Configuration model for Parser.parse()."""
@@ -413,53 +350,3 @@ class ParseConfig(BaseModel):
     all_exports_scope: AllExportsScope | None = None
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
-
-    @classmethod
-    def _from_generate_config(cls, *, generate_config: GenerateConfig) -> ParseConfig:
-        parse_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__
-        generate_fields = (
-            generate_config.__class__.model_fields if is_pydantic_v2() else generate_config.__class__.__fields__
-        )
-        return model_validate(
-            cls,
-            model_dump(
-                generate_config,
-                include=set(parse_fields) & set(generate_fields),
-            ),
-        )
-
-
-_CONFIG_MODELS_STATE = {"built": False}
-
-
-def _rebuild_config_models() -> None:
-    if _CONFIG_MODELS_STATE["built"]:
-        return
-
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
-    from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
-
-    try:
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-    except ImportError:
-        runtime_union_mode = Any
-    else:
-        runtime_union_mode = UnionMode
-
-    types_namespace = {
-        "Path": Path,
-        "DataModel": DataModel,
-        "DataModelFieldBase": DataModelFieldBase,
-        "DataTypeManager": DataTypeManager,
-        "StrictTypes": StrictTypes,
-        "UnionMode": runtime_union_mode,
-    }
-    if is_pydantic_v2():
-        GenerateConfig.model_rebuild(_types_namespace=types_namespace)
-        ParserConfig.model_rebuild(_types_namespace=types_namespace)
-        ParseConfig.model_rebuild(_types_namespace=types_namespace)
-    else:
-        GenerateConfig.update_forward_refs(**types_namespace)
-        ParserConfig.update_forward_refs(**types_namespace)
-        ParseConfig.update_forward_refs(**types_namespace)
-    _CONFIG_MODELS_STATE["built"] = True
