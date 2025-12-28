@@ -590,3 +590,17 @@ def test_input_model_union_none_frozenset(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         expected_output_contains=["frozenset[str] | None", "nullable_frozenset:"],
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
+    """Test that Mapping[str, str] | None using | syntax is preserved correctly.
+
+    In Python 3.10-3.13, get_origin(X | Y) returns types.UnionType.
+    This test verifies that types.UnionType is handled correctly in those versions.
+    """
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Mapping[str, str] | None", "optional_mapping:"],
+    )

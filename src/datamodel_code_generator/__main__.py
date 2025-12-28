@@ -632,11 +632,28 @@ def _serialize_python_type(tp: type) -> str | None:
 
     Returns None if the type doesn't need to be preserved (e.g., standard dict, list).
     """
+    import types  # noqa: PLC0415
     from typing import get_args, get_origin  # noqa: PLC0415
 
     origin = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
+
+    # Handle types.UnionType (X | Y syntax) in Python 3.10-3.13
+    # In Python 3.10-3.13, get_origin(X | Y) returns types.UnionType which is distinct from typing.Union
+    # In Python 3.14+, types.UnionType is the same as typing.Union, so this check is skipped
+    from typing import Union  # noqa: PLC0415
+
+    if (
+        hasattr(types, "UnionType")
+        and types.UnionType is not Union  # Only applies to Python 3.10-3.13
+        and origin is types.UnionType
+    ):
+        if args:
+            nested = [_serialize_python_type(a) for a in args]
+            if any(n is not None for n in nested):
+                return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
+        return None  # pragma: no cover
 
     if origin in preserved_origins:
         type_name = preserved_origins[origin]
