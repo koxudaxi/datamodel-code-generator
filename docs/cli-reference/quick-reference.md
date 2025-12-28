@@ -42,7 +42,7 @@ datamodel-codegen [OPTIONS]
 | [`--type-overrides`](typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
 | [`--use-annotated`](typing-customization.md#use-annotated) | Test GraphQL annotated types with standard collections and union operator. |
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
-| [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use typing.Dict/List instead of dict/list for container types. |
+| [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date/time fields instead of datetime module. |
 | [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support (issue #1903). |
@@ -299,7 +299,7 @@ All options sorted alphabetically:
 - [`--use-field-description-example`](field-customization.md#use-field-description-example) - Add field examples to docstrings.
 - [`--use-frozen-field`](model-customization.md#use-frozen-field) - Generate frozen (immutable) field definitions for readOnly p...
 - [`--use-generic-base-class`](model-customization.md#use-generic-base-class) - Generate a shared base class with model configuration to avo...
-- [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) - Use typing.Dict/List instead of dict/list for container type...
+- [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) - Use generic container types (Sequence, Mapping) for type hinting.
 - [`--use-inline-field-description`](field-customization.md#use-inline-field-description) - Add field descriptions as inline comments.
 - [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) - Use NonPositive/NonNegative types for number constraints.
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) - Use single literal value as default when enum has only one o...
