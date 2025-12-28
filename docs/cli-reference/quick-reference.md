@@ -181,7 +181,7 @@ datamodel-codegen [OPTIONS]
 | Option | Description |
 |--------|-------------|
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
-| [`--generate-prompt`](utility-options.md#generate-prompt) |  |
+| [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |

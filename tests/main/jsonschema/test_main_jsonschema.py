@@ -5485,7 +5485,11 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--aliases"],
-    option_description="""Test hierarchical aliases with scoped format (ClassName.field).""",
+    option_description="""Apply custom field and class name aliases from JSON file.
+
+The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+providing fine-grained control over generated names independent of schema definitions.
+Supports scoped format (ClassName.field) for hierarchical aliasing.""",
     input_schema="jsonschema/hierarchical_aliases.json",
     cli_args=["--aliases", "aliases/hierarchical_aliases_scoped.json"],
     golden_output="jsonschema/jsonschema_hierarchical_aliases_scoped.py",
@@ -5960,12 +5964,11 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Test reserved field name handling across model types (Issue #1833).
+    option_description="""Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
 
-This demonstrates how 'schema' field is handled:
-- TypedDict: not renamed (schema is not reserved)
-- dataclass: not renamed (schema is not reserved)
-- Pydantic: renamed to 'schema_' with alias (BaseModel.schema conflicts)""",
+The `--output-model-type` flag specifies which Python data model framework to use.
+Each model type has different handling for reserved field names like 'schema':
+TypedDict and dataclass preserve the name, while Pydantic renames with alias.""",
     input_schema="jsonschema/reserved_field_name_schema.json",
     cli_args=["--target-python-version", "3.11"],
     model_outputs={
@@ -6833,7 +6836,10 @@ def test_main_parent_scoped_naming_backward_compat(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-root-model-type-alias"],
-    option_description="""Generate RootModel as type alias format for better mypy support (issue #1903).""",
+    option_description="""Generate RootModel as type alias format for better mypy support.
+
+When enabled, root models with simple types are generated as type aliases
+instead of class definitions, improving mypy type inference.""",
     input_schema="jsonschema/root_model_type_alias.json",
     cli_args=["--use-root-model-type-alias", "--output-model-type", "pydantic_v2.BaseModel"],
     golden_output="jsonschema/root_model_type_alias.py",

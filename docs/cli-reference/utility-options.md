@@ -5,7 +5,7 @@
 | Option | Description |
 |--------|-------------|
 | [`--debug`](#debug) | Show debug messages during code generation |
-| [`--generate-prompt`](#generate-prompt) |  |
+| [`--generate-prompt`](#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](#help) | Show help message and exit |
 | [`--no-color`](#no-color) | Disable colorized output |
 | [`--profile`](#profile) | Use a named profile from pyproject.toml |
@@ -46,7 +46,7 @@ Outputs a formatted prompt containing your current options, all available
 options by category, and full help text. Pipe to CLI LLM tools or copy
 to clipboard for web-based LLM chats.
 
-**See also:** [LLM Integration](../../llm-integration.md) for detailed usage examples
+**See also:** [LLM Integration](../llm-integration.md) for detailed usage examples
 
 !!! tip "Usage"
 
@@ -139,7 +139,7 @@ Use a named profile from pyproject.toml configuration.
 Profiles allow you to define multiple named configurations in your pyproject.toml
 file. Each profile can override the default settings with its own set of options.
 
-**Related:** [pyproject.toml Configuration](../../pyproject_toml.md)
+**Related:** [pyproject.toml Configuration](../pyproject_toml.md)
 
 !!! tip "Usage"
 
