@@ -781,7 +781,7 @@ def _try_rebuild_model(obj: type) -> None:
     module = getattr(obj, "__module__", "")
     class_name = getattr(obj, "__name__", "")
     config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
-    if module == "datamodel_code_generator.config" and class_name in config_classes:
+    if module in {"datamodel_code_generator.config", "config"} and class_name in config_classes:
         from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
         from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
 

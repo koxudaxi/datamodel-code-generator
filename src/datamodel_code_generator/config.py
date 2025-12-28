@@ -8,8 +8,6 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel
 
-from datamodel_code_generator._types import GenerateConfigDict, ParseConfigDict, ParserConfigDict
-
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
@@ -83,6 +81,8 @@ class GenerateConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 model config."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
@@ -216,6 +216,8 @@ class ParserConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 model config."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 
@@ -368,25 +370,23 @@ class ParserConfig(BaseModel):
             generate_config,
             include=set(parser_fields) & set(generate_fields),
         )
-        parser_config_data.update(
-            {
-                "data_model_type": data_model_types.data_model,
-                "data_model_root_type": data_model_types.root_model,
-                "data_model_field_type": data_model_types.field_model,
-                "data_type_manager_type": data_model_types.data_type_manager,
-                "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
-                "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-                "remote_text_cache": remote_text_cache,
-                "known_third_party": data_model_types.known_third_party,
-                "default_field_extras": default_field_extras,
-                "target_datetime_class": generate_config.output_datetime_class,
-                "target_date_class": generate_config.output_date_class,
-                "defer_formatting": generate_config.output is not None and not generate_config.output.suffix,
-                "dataclass_arguments": effective_dataclass_arguments,
-                "enum_field_as_literal": effective_enum_field_as_literal,
-                "set_default_enum_member": effective_set_default_enum_member,
-            }
-        )
+        parser_config_data.update({
+            "data_model_type": data_model_types.data_model,
+            "data_model_root_type": data_model_types.root_model,
+            "data_model_field_type": data_model_types.field_model,
+            "data_type_manager_type": data_model_types.data_type_manager,
+            "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
+            "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
+            "remote_text_cache": remote_text_cache,
+            "known_third_party": data_model_types.known_third_party,
+            "default_field_extras": default_field_extras,
+            "target_datetime_class": generate_config.output_datetime_class,
+            "target_date_class": generate_config.output_date_class,
+            "defer_formatting": generate_config.output is not None and not generate_config.output.suffix,
+            "dataclass_arguments": effective_dataclass_arguments,
+            "enum_field_as_literal": effective_enum_field_as_literal,
+            "set_default_enum_member": effective_set_default_enum_member,
+        })
         return model_validate(
             cls,
             {k: v for k, v in parser_config_data.items() if k in parser_fields},
@@ -401,6 +401,8 @@ class ParseConfig(BaseModel):
     else:
 
         class Config:
+            """Pydantic v1 model config."""
+
             extra = "forbid"
             arbitrary_types_allowed = True
 

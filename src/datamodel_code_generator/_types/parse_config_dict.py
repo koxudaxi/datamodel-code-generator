@@ -3,12 +3,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 from typing_extensions import NotRequired
 
-from datamodel_code_generator.enums import AllExportsCollisionStrategy, AllExportsScope, ModuleSplitMode
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from datamodel_code_generator.enums import AllExportsCollisionStrategy, AllExportsScope, ModuleSplitMode
 
 
 class ParseConfigDict(TypedDict):
