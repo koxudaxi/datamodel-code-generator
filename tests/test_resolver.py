@@ -180,3 +180,19 @@ def test_multiple_aliases_mixed_with_single() -> None:
     field_name, alias = resolver.get_valid_field_name_and_alias("single")
     assert field_name == "single_alias"
     assert alias == "single"
+
+
+def test_empty_list_aliases_flat() -> None:
+    """Test empty list aliases are ignored and field is treated as no alias."""
+    resolver = FieldNameResolver(aliases={"my_field": []})
+    field_name, alias = resolver.get_valid_field_name_and_alias("my_field")
+    assert field_name == "my_field"
+    assert alias is None  # Empty list is ignored
+
+
+def test_empty_list_aliases_scoped() -> None:
+    """Test empty list aliases with scoped format are ignored."""
+    resolver = FieldNameResolver(aliases={"User.name": []})
+    field_name, alias = resolver.get_valid_field_name_and_alias("name", class_name="User")
+    assert field_name == "name"
+    assert alias is None  # Empty list is ignored
