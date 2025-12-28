@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import enum as _enum
 import json
+import re
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager, suppress
@@ -1334,6 +1335,13 @@ class JsonSchemaParser(Parser):
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
         return base_type in compatible
 
+    def _extract_all_type_names(self, type_str: str) -> list[str]:  # noqa: PLR6301
+        """Extract all type names from a type annotation string."""
+        # Match type names: word characters starting with uppercase, not preceded by a dot
+        # This handles cases like Callable[[Iterable[str]], str]
+        pattern = r"(?<![.\w])([A-Z]\w*)"
+        return re.findall(pattern, type_str)
+
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
         x_python_type = obj.extras.get("x-python-type")
@@ -1357,7 +1365,18 @@ class JsonSchemaParser(Parser):
                 # If not in predefined imports, create import from the full path
                 import_ = Import.from_full_path(prefix)
 
-        return self.data_type(type=type_str, import_=import_)
+        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
+        nested_imports: list[DataType] = []
+        for type_name in self._extract_all_type_names(type_str):
+            if type_name != base_type:
+                nested_import = self.PYTHON_TYPE_IMPORTS.get(type_name)
+                if nested_import:
+                    nested_imports.append(self.data_type(import_=nested_import))
+
+        result = self.data_type(type=type_str, import_=import_)
+        if nested_imports:
+            result.data_types.extend(nested_imports)
+        return result
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""
