@@ -453,14 +453,16 @@ def generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
     config: GenerateConfig,
-) -> str | GeneratedModules | None: ...
+) -> str | GeneratedModules | None:
+    pass
 
 
 @overload
 def generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     **options: Unpack[GenerateConfigDict],
-) -> str | GeneratedModules | None: ...
+) -> str | GeneratedModules | None:
+    pass
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
