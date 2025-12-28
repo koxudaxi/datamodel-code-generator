@@ -7,25 +7,28 @@
 | [`--allof-merge-mode`](#allof-merge-mode) | Merge constraints from root model references in allOf schema... |
 | [`--disable-future-imports`](#disable-future-imports) | Prevent automatic addition of __future__ imports in generate... |
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
-| [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Test --enum-field-as-literal-map for per-field enum/literal ... |
+| [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping.... |
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
-| [`--no-use-standard-collections`](#no-use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
-| [`--no-use-union-operator`](#no-use-union-operator) | Test GraphQL annotated types with standard collections and u... |
+| [`--no-use-standard-collections`](#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for conta... |
+| [`--no-use-union-operator`](#no-use-union-operator) | Use Union[X, Y] / Optional[X] instead of X | Y union operato... |
 | [`--output-date-class`](#output-date-class) | Specify date class type for date schema fields. |
 | [`--output-datetime-class`](#output-datetime-class) | Specify datetime class type for date-time schema fields. |
 | [`--strict-types`](#strict-types) | Enable strict type validation for specified Python types. |
 | [`--type-mappings`](#type-mappings) | Override default type mappings for schema formats. |
 | [`--type-overrides`](#type-overrides) | Replace schema model types with custom Python types via JSON... |
-| [`--use-annotated`](#use-annotated) | Test GraphQL annotated types with standard collections and u... |
+| [`--use-annotated`](#use-annotated) | Use typing.Annotated for Field() with constraints. |
 | [`--use-decimal-for-multiple-of`](#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint... |
 | [`--use-generic-container-types`](#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hin... |
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](#use-pendulum) | Use pendulum types for date/time fields instead of datetime ... |
 | [`--use-root-model-type-alias`](#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy supp... |
+| [`--use-specialized-enum`](#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.... |
+| [`--use-standard-collections`](#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
 | [`--use-standard-primitive-types`](#use-standard-primitive-types) | Use Python standard library types for string formats instead... |
 | [`--use-tuple-for-fixed-items`](#use-tuple-for-fixed-items) | Generate tuple types for arrays with items array syntax. |
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
+| [`--use-union-operator`](#use-union-operator) | Use | operator for Union types (PEP 604). |
 | [`--use-unique-items-as-set`](#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
 
 ---
@@ -1201,7 +1204,10 @@ of Enum classes for all enumerations.
 
 ## `--enum-field-as-literal-map` {#enum-field-as-literal-map}
 
-Test --enum-field-as-literal-map for per-field enum/literal control.
+Override enum/literal generation per-field via JSON mapping.
+
+The `--enum-field-as-literal-map` option allows per-field control over whether
+to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
 
 !!! tip "Usage"
 
@@ -1414,7 +1420,7 @@ The `--no-use-specialized-enum` flag prevents the generator from using
 specialized Enum classes (StrEnum, IntEnum) when generating code for
 Python 3.11+, falling back to standard Enum classes instead.
 
-**Related:** [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--target-python-version`](model-customization.md#target-python-version), [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+**Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
 !!! tip "Usage"
 
@@ -1563,12 +1569,12 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         from __future__ import annotations
         
-        from enum import Enum, IntEnum, StrEnum
+        from enum import Enum
         
         from pydantic import BaseModel
         
         
-        class IntEnumModel(IntEnum):
+        class IntEnum(Enum):
             integer_1 = 1
             integer_2 = 2
             integer_3 = 3
@@ -1580,7 +1586,7 @@ Python 3.11+, falling back to standard Enum classes instead.
             number_3_1 = 3.1
         
         
-        class StrEnumModel(StrEnum):
+        class StrEnum(Enum):
             field_1 = '1'
             field_2 = '2'
             field_3 = '3'
@@ -1603,9 +1609,9 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         
         class Model(BaseModel):
-            IntEnum: IntEnumModel | None = None
+            IntEnum: IntEnum | None = None
             FloatEnum: FloatEnum | None = None
-            StrEnum: StrEnumModel | None = None
+            StrEnum: StrEnum | None = None
             NonTypedEnum: NonTypedEnum | None = None
             BooleanEnum: BooleanEnum | None = None
             UnknownEnum: UnknownEnum | None = None
@@ -1682,20 +1688,18 @@ Python 3.11+, falling back to standard Enum classes instead.
 
 ## `--no-use-standard-collections` {#no-use-standard-collections}
 
-Use built-in dict/list instead of typing.Dict/List.
+Use typing.Dict/List instead of built-in dict/list for container types.
 
-The `--use-standard-collections` flag generates built-in container types
-(dict, list) instead of typing module equivalents. This produces cleaner
-code for Python 3.10+ where built-in types support subscripting.
-
-**Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
+The `--no-use-standard-collections` flag generates typing module containers
+(Dict, List) instead of built-in types. This is useful for older Python
+versions or when explicit typing imports are preferred.
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --use-standard-collections # (1)!
+    datamodel-codegen --input schema.json --no-use-standard-collections # (1)!
     ```
 
     1. :material-arrow-left: `--no-use-standard-collections` - the option documented here
@@ -1844,6 +1848,7 @@ code for Python 3.10+ where built-in types support subscripting.
     from __future__ import annotations
     
     from enum import Enum
+    from typing import Dict
     
     from pydantic import BaseModel, Field
     
@@ -1876,31 +1881,33 @@ code for Python 3.10+ where built-in types support subscripting.
     class Model(BaseModel):
         test_id: str = Field(..., description='test ID')
         test_ip: str = Field(..., description='test IP')
-        result: dict[str, int]
-        nested_object_result: dict[str, NestedObjectResult]
-        nested_enum_result: dict[str, NestedEnumResult]
-        all_of_result: dict[str, AllOfResult] | None = None
-        one_of_result: dict[str, User | OneOfResult] | None = None
-        any_of_result: dict[str, User | AnyOfResult] | None = None
-        all_of_with_unknown_object: dict[str, User] | None = None
-        objectRef: dict[str, User] | None = None
-        deepNestedObjectRef: dict[str, dict[str, dict[str, User]]] | None = None
+        result: Dict[str, int]
+        nested_object_result: Dict[str, NestedObjectResult]
+        nested_enum_result: Dict[str, NestedEnumResult]
+        all_of_result: Dict[str, AllOfResult] | None = None
+        one_of_result: Dict[str, User | OneOfResult] | None = None
+        any_of_result: Dict[str, User | AnyOfResult] | None = None
+        all_of_with_unknown_object: Dict[str, User] | None = None
+        objectRef: Dict[str, User] | None = None
+        deepNestedObjectRef: Dict[str, Dict[str, Dict[str, User]]] | None = None
     ```
 
 ---
 
 ## `--no-use-union-operator` {#no-use-union-operator}
 
-Test GraphQL annotated types with standard collections and union operator.
+Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 
-**Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+The `--no-use-union-operator` flag generates union types using typing.Union
+and typing.Optional instead of the | operator (PEP 604). This is useful
+for older Python versions or when explicit typing imports are preferred.
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated --use-standard-collections --use-union-operator # (1)!
+    datamodel-codegen --input schema.json --no-use-union-operator # (1)!
     ```
 
     1. :material-arrow-left: `--no-use-union-operator` - the option documented here
@@ -1909,15 +1916,133 @@ Test GraphQL annotated types with standard collections and union operator.
 
     **Input Schema:**
 
-    ```graphql
-    type A {
-        field: String!
-        optionalField: String
-        listField: [String!]!
-        listOptionalField: [String]!
-        optionalListField: [String!]
-        optionalListOptionalField: [String]
-        listListField:[[String!]!]!
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "test.json",
+      "description": "test",
+      "type": "object",
+      "required": [
+        "test_id",
+        "test_ip",
+        "result",
+        "nested_object_result",
+        "nested_enum_result"
+      ],
+      "properties": {
+        "test_id": {
+          "type": "string",
+          "description": "test ID"
+        },
+        "test_ip": {
+          "type": "string",
+          "description": "test IP"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "nested_object_result": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "status":{
+                "type": "integer"
+              }
+            },
+            "required": ["status"]
+          }
+        },
+        "nested_enum_result": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["red", "green"]
+          }
+        },
+        "all_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "allOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "one_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "oneOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "any_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "anyOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "all_of_with_unknown_object" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "allOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "description": "TODO" }
+            ]
+          }
+        },
+        "objectRef": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/User"
+          }
+        },
+        "deepNestedObjectRef": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                 "$ref": "#/definitions/User"
+              }
+            }
+          }
+        }
+      },
+      "definitions": {
+        "User": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
     ```
 
@@ -1925,37 +2050,54 @@ Test GraphQL annotated types with standard collections and union operator.
 
     ```python
     # generated by datamodel-codegen:
-    #   filename:  annotated.graphql
+    #   filename:  root_model_with_additional_properties.json
     #   timestamp: 2019-07-26T00:00:00+00:00
     
     from __future__ import annotations
     
-    from typing import Annotated, Literal
+    from enum import Enum
+    from typing import Optional, Union
     
     from pydantic import BaseModel, Field
-    from typing_extensions import TypeAliasType
-    
-    Boolean = TypeAliasType("Boolean", bool)
-    """
-    The `Boolean` scalar type represents `true` or `false`.
-    """
     
     
-    String = TypeAliasType("String", str)
-    """
-    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
-    """
+    class NestedObjectResult(BaseModel):
+        status: int
     
     
-    class A(BaseModel):
-        field: String
-        listField: list[String]
-        listListField: list[list[String]]
-        listOptionalField: list[String | None]
-        optionalField: String | None = None
-        optionalListField: list[String] | None = None
-        optionalListOptionalField: list[String | None] | None = None
-        typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
+    class NestedEnumResult(Enum):
+        red = 'red'
+        green = 'green'
+    
+    
+    class OneOfResult(BaseModel):
+        description: Optional[str] = None
+    
+    
+    class AnyOfResult(BaseModel):
+        description: Optional[str] = None
+    
+    
+    class User(BaseModel):
+        name: Optional[str] = None
+    
+    
+    class AllOfResult(User):
+        description: Optional[str] = None
+    
+    
+    class Model(BaseModel):
+        test_id: str = Field(..., description='test ID')
+        test_ip: str = Field(..., description='test IP')
+        result: dict[str, int]
+        nested_object_result: dict[str, NestedObjectResult]
+        nested_enum_result: dict[str, NestedEnumResult]
+        all_of_result: Optional[dict[str, AllOfResult]] = None
+        one_of_result: Optional[dict[str, Union[User, OneOfResult]]] = None
+        any_of_result: Optional[dict[str, Union[User, AnyOfResult]]] = None
+        all_of_with_unknown_object: Optional[dict[str, User]] = None
+        objectRef: Optional[dict[str, User]] = None
+        deepNestedObjectRef: Optional[dict[str, dict[str, dict[str, User]]]] = None
     ```
 
 ---
@@ -2318,16 +2460,19 @@ Replace schema model types with custom Python types via JSON mapping.
 
 ## `--use-annotated` {#use-annotated}
 
-Test GraphQL annotated types with standard collections and union operator.
+Use typing.Annotated for Field() with constraints.
 
-**Related:** [`--field-constraints`](field-customization.md#field-constraints), [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+The `--use-annotated` flag generates Field definitions using typing.Annotated
+syntax instead of default values. This also enables `--field-constraints`.
+
+**Related:** [`--field-constraints`](field-customization.md#field-constraints)
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated --use-standard-collections --use-union-operator # (1)!
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated # (1)!
     ```
 
     1. :material-arrow-left: `--use-annotated` - the option documented here
@@ -3219,6 +3364,350 @@ Generate RootModel as type alias format for better mypy support (issue #1903).
 
 ---
 
+## `--use-specialized-enum` {#use-specialized-enum}
+
+Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
+
+The `--use-specialized-enum` flag generates specialized enum types:
+- `StrEnum` for string enums
+- `IntEnum` for integer enums
+
+This is the default behavior for Python 3.11+ targets.
+
+**Related:** [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --target-python-version 3.11 --use-specialized-enum # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-specialized-enum` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "properties": {
+        "IntEnum": {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        },
+        "FloatEnum": {
+          "type": "number",
+          "enum": [
+            1.1,
+            2.1,
+            3.1
+          ]
+        },
+        "StrEnum": {
+          "type": "string",
+          "enum": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "NonTypedEnum": {
+          "enum": [
+            "1",
+            "2",
+            "3"
+          ]
+        },
+        "BooleanEnum": {
+          "type": "boolean",
+          "enum": [
+            true,
+            false
+          ]
+        },
+        "UnknownEnum": {
+          "type": "unknown",
+          "enum": [
+            "a",
+            "b"
+          ]
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  subclass_enum.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum, IntEnum, StrEnum
+    
+    from pydantic import BaseModel
+    
+    
+    class IntEnumModel(IntEnum):
+        integer_1 = 1
+        integer_2 = 2
+        integer_3 = 3
+    
+    
+    class FloatEnum(Enum):
+        number_1_1 = 1.1
+        number_2_1 = 2.1
+        number_3_1 = 3.1
+    
+    
+    class StrEnumModel(StrEnum):
+        field_1 = '1'
+        field_2 = '2'
+        field_3 = '3'
+    
+    
+    class NonTypedEnum(Enum):
+        field_1 = '1'
+        field_2 = '2'
+        field_3 = '3'
+    
+    
+    class BooleanEnum(Enum):
+        boolean_True = True
+        boolean_False = False
+    
+    
+    class UnknownEnum(Enum):
+        a = 'a'
+        b = 'b'
+    
+    
+    class Model(BaseModel):
+        IntEnum: IntEnumModel | None = None
+        FloatEnum: FloatEnum | None = None
+        StrEnum: StrEnumModel | None = None
+        NonTypedEnum: NonTypedEnum | None = None
+        BooleanEnum: BooleanEnum | None = None
+        UnknownEnum: UnknownEnum | None = None
+    ```
+
+---
+
+## `--use-standard-collections` {#use-standard-collections}
+
+Use built-in dict/list instead of typing.Dict/List.
+
+The `--use-standard-collections` flag generates built-in container types
+(dict, list) instead of typing module equivalents. This produces cleaner
+code for Python 3.10+ where built-in types support subscripting.
+
+**Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --use-standard-collections # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-standard-collections` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "$id": "test.json",
+      "description": "test",
+      "type": "object",
+      "required": [
+        "test_id",
+        "test_ip",
+        "result",
+        "nested_object_result",
+        "nested_enum_result"
+      ],
+      "properties": {
+        "test_id": {
+          "type": "string",
+          "description": "test ID"
+        },
+        "test_ip": {
+          "type": "string",
+          "description": "test IP"
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer"
+          }
+        },
+        "nested_object_result": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "status":{
+                "type": "integer"
+              }
+            },
+            "required": ["status"]
+          }
+        },
+        "nested_enum_result": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["red", "green"]
+          }
+        },
+        "all_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "allOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "one_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "oneOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "any_of_result" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "anyOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "type" : "object",
+                "properties": {
+                  "description": {"type" : "string" }
+                }
+              }
+            ]
+          }
+        },
+        "all_of_with_unknown_object" :{
+          "type" : "object",
+          "additionalProperties" :
+          {
+            "allOf" : [
+              { "$ref" : "#/definitions/User" },
+              { "description": "TODO" }
+            ]
+          }
+        },
+        "objectRef": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/User"
+          }
+        },
+        "deepNestedObjectRef": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": {
+                 "$ref": "#/definitions/User"
+              }
+            }
+          }
+        }
+      },
+      "definitions": {
+        "User": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  root_model_with_additional_properties.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from enum import Enum
+    
+    from pydantic import BaseModel, Field
+    
+    
+    class NestedObjectResult(BaseModel):
+        status: int
+    
+    
+    class NestedEnumResult(Enum):
+        red = 'red'
+        green = 'green'
+    
+    
+    class OneOfResult(BaseModel):
+        description: str | None = None
+    
+    
+    class AnyOfResult(BaseModel):
+        description: str | None = None
+    
+    
+    class User(BaseModel):
+        name: str | None = None
+    
+    
+    class AllOfResult(User):
+        description: str | None = None
+    
+    
+    class Model(BaseModel):
+        test_id: str = Field(..., description='test ID')
+        test_ip: str = Field(..., description='test IP')
+        result: dict[str, int]
+        nested_object_result: dict[str, NestedObjectResult]
+        nested_enum_result: dict[str, NestedEnumResult]
+        all_of_result: dict[str, AllOfResult] | None = None
+        one_of_result: dict[str, User | OneOfResult] | None = None
+        any_of_result: dict[str, User | AnyOfResult] | None = None
+        all_of_with_unknown_object: dict[str, User] | None = None
+        objectRef: dict[str, User] | None = None
+        deepNestedObjectRef: dict[str, dict[str, dict[str, User]]] | None = None
+    ```
+
+---
+
 ## `--use-standard-primitive-types` {#use-standard-primitive-types}
 
 Use Python standard library types for string formats instead of str.
@@ -3526,6 +4015,79 @@ syntax. This feature is experimental.
                 'ModelWithTypeAliasField', alias='__typename'
             )
         ```
+
+---
+
+## `--use-union-operator` {#use-union-operator}
+
+Use | operator for Union types (PEP 604).
+
+The `--use-union-operator` flag generates union types using the | operator
+(e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
+This is the default behavior.
+
+**Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel --use-annotated --use-union-operator # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-union-operator` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```graphql
+    type A {
+        field: String!
+        optionalField: String
+        listField: [String!]!
+        listOptionalField: [String]!
+        optionalListField: [String!]
+        optionalListOptionalField: [String]
+        listListField:[[String!]!]!
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  annotated.graphql
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Annotated, Literal
+    
+    from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
+    
+    Boolean = TypeAliasType("Boolean", bool)
+    """
+    The `Boolean` scalar type represents `true` or `false`.
+    """
+    
+    
+    String = TypeAliasType("String", str)
+    """
+    The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
+    """
+    
+    
+    class A(BaseModel):
+        field: String
+        listField: list[String]
+        listListField: list[list[String]]
+        listOptionalField: list[String | None]
+        optionalField: String | None = None
+        optionalListField: list[String] | None = None
+        optionalListOptionalField: list[String | None] | None = None
+        typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
+    ```
 
 ---
 

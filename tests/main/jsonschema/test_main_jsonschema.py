@@ -1145,6 +1145,52 @@ def test_main_root_model_with_additional_properties_use_standard_collections(out
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--no-use-standard-collections"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--no-use-standard-collections"],
+    golden_output="jsonschema/root_model_with_additional_properties_no_use_standard_collections.py",
+    related_options=["--use-standard-collections"],
+)
+def test_main_root_model_with_additional_properties_no_use_standard_collections(output_file: Path) -> None:
+    """Use typing.Dict/List instead of built-in dict/list for container types.
+
+    The `--no-use-standard-collections` flag generates typing module containers
+    (Dict, List) instead of built-in types. This is useful for older Python
+    versions or when explicit typing imports are preferred.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--no-use-standard-collections"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--no-use-union-operator"],
+    input_schema="jsonschema/root_model_with_additional_properties.json",
+    cli_args=["--no-use-union-operator"],
+    golden_output="jsonschema/root_model_with_additional_properties_no_use_union_operator.py",
+    related_options=["--use-union-operator"],
+)
+def test_main_root_model_with_additional_properties_no_use_union_operator(output_file: Path) -> None:
+    """Use Union[X, Y] / Optional[X] instead of X | Y union operator.
+
+    The `--no-use-union-operator` flag generates union types using typing.Union
+    and typing.Optional instead of the | operator (PEP 604). This is useful
+    for older Python versions or when explicit typing imports are preferred.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--no-use-union-operator"],
+    )
+
+
 def test_main_root_model_with_additional_properties_literal(min_version: str, output_file: Path) -> None:
     """Test root model additional properties with literal types."""
     run_main_and_assert(
@@ -2498,7 +2544,11 @@ def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
     related_options=["--base-class"],
 )
 def test_main_jsonschema_base_class_map(output_file: Path) -> None:
-    """Test --base-class-map option for model-specific base classes."""
+    """Specify different base classes for specific models via JSON mapping.
+
+    The `--base-class-map` option allows you to assign different base classes
+    to specific models. Priority: base-class-map > customBasePath > base-class.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
         output_path=output_file,
@@ -3629,7 +3679,11 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     golden_output="jsonschema/enum_field_as_literal_map.py",
 )
 def test_main_enum_field_as_literal_map(output_file: Path) -> None:
-    """Test --enum-field-as-literal-map for per-field enum/literal control."""
+    """Override enum/literal generation per-field via JSON mapping.
+
+    The `--enum-field-as-literal-map` option allows per-field control over whether
+    to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+    """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
         output_path=output_file,
@@ -6367,10 +6421,11 @@ def test_main_naming_strategy_complex_duplicate_suffix(output_file: Path) -> Non
     golden_output="jsonschema/naming_strategy/complex_primary_first/output.py",
 )
 def test_main_naming_strategy_primary_first(output_file: Path) -> None:
-    """Test primary-first strategy keeps clean names for primary definitions.
+    """Use primary-first strategy to keep clean names for top-level definitions.
 
-    Primary definitions (directly under #/definitions/, #/components/schemas/, #/$defs/)
-    keep their clean names. Inline/nested definitions get numeric suffixes.
+    The `--naming-strategy primary-first` keeps clean names for primary definitions
+    (directly under #/definitions/, #/components/schemas/, #/$defs/).
+    Inline/nested definitions get numeric suffixes.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "naming_strategy" / "primary_first_input.json",

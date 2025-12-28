@@ -472,32 +472,31 @@ providing fine-grained control over generated names independent of schema defini
         
         from __future__ import annotations
         
-        from typing import Annotated, Literal
+        from typing import Literal, TypeAlias
         
         from pydantic import BaseModel, Field
-        from typing_extensions import TypeAliasType
         
-        Boolean = TypeAliasType("Boolean", bool)
+        Boolean: TypeAlias = bool
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        DateTime = TypeAliasType("DateTime", str)
+        DateTime: TypeAlias = str
         
         
-        String = TypeAliasType("String", str)
+        String: TypeAlias = str
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
         
         
         class DateTimePeriod(BaseModel):
-            periodFrom: Annotated[DateTime, Field(alias='from')]
-            periodTo: Annotated[DateTime, Field(alias='to')]
-            typename__: Annotated[
-                Literal['DateTimePeriod'] | None, Field(alias='__typename')
-            ] = 'DateTimePeriod'
+            periodFrom: DateTime = Field(..., alias='from')
+            periodTo: DateTime = Field(..., alias='to')
+            typename__: Literal['DateTimePeriod'] | None = Field(
+                'DateTimePeriod', alias='__typename'
+            )
         ```
 
 ---

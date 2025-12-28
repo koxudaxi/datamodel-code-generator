@@ -122,7 +122,11 @@ def test_main_graphql_custom_scalar_types(output_file: Path) -> None:
     golden_output="graphql/field_aliases.py",
 )
 def test_main_graphql_field_aliases(output_file: Path) -> None:
-    """Test GraphQL code generation with field aliases."""
+    """Apply custom field and class name aliases from JSON file.
+
+    The `--aliases` option allows you to rename fields using a JSON mapping file.
+    Supports hierarchical formats for scoped or global aliasing.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "field-aliases.graphql",
         output_path=output_file,
