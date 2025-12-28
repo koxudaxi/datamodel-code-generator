@@ -42,12 +42,9 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
-
-    DataModel: TypeAlias = Any
-    DataModelFieldBase: TypeAlias = Any
-    DataTypeManager: TypeAlias = Any
-    StrictTypes: TypeAlias = Any
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
 else:
     if not is_pydantic_v2():
         Path = Any  # type: ignore[assignment]

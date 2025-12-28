@@ -75,12 +75,15 @@ if TYPE_CHECKING:
 
     from typing_extensions import Unpack
 
-    DataType: TypeAlias = Any
-    DataTypeManager: TypeAlias = Any
-    ParseConfigModel: TypeAlias = Any
-    ParseConfigDict: TypeAlias = Any
-    ParserConfig: TypeAlias = Any
-    ParserConfigDict: TypeAlias = Any
+    from datamodel_code_generator.config import (
+        ParseConfig as ParseConfigModel,
+    )
+    from datamodel_code_generator.config import (
+        ParseConfigDict,
+        ParserConfig,
+        ParserConfigDict,
+    )
+    from datamodel_code_generator.types import DataType, DataTypeManager
 
 
 def _get_data_type_class() -> type[Any]:
