@@ -608,8 +608,8 @@ def _init_preserved_type_origins() -> dict[type, str]:
     from collections.abc import Set as AbstractSet  # noqa: PLC0415
 
     return {
-        set: "Set",
-        frozenset: "FrozenSet",
+        set: "set",
+        frozenset: "frozenset",
         AbstractSet: "AbstractSet",
         ABCMutableSet: "MutableSet",
         ABCMapping: "Mapping",
