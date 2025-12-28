@@ -33,8 +33,8 @@
 
 Apply custom field and class name aliases from JSON file.
 
-    The `--aliases` option allows renaming fields and classes via a JSON mapping file,
-    providing fine-grained control over generated names independent of schema definitions.
+The `--aliases` option allows renaming fields and classes via a JSON mapping file,
+providing fine-grained control over generated names independent of schema definitions.
 
 **See also:** [Field Aliases](../aliases.md)
 
@@ -505,9 +505,9 @@ Apply custom field and class name aliases from JSON file.
 
 Capitalize enum member names to UPPER_CASE format.
 
-    The `--capitalize-enum-members` flag converts enum member names to
-    UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
-    naming conventions for constants.
+The `--capitalize-enum-members` flag converts enum member names to
+UPPER_CASE format (e.g., `active` becomes `ACTIVE`), following Python
+naming conventions for constants.
 
 **Aliases:** `--capitalise-enum-members` | **Related:** [`--snake-case-field`](field-customization.md#snake-case-field)
 
@@ -561,7 +561,7 @@ Capitalize enum member names to UPPER_CASE format.
 
 Name for empty string enum field values.
 
-    The `--empty-enum-field-name` flag configures the code generation behavior.
+The `--empty-enum-field-name` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -628,9 +628,9 @@ Name for empty string enum field values.
 
 Configure how generated models handle extra fields not defined in schema.
 
-    The `--extra-fields` flag sets the generated models to allow, forbid, or
-    ignore extra fields. With `--extra-fields allow`, models will accept and
-    store fields not defined in the schema. Options: allow, ignore, forbid.
+The `--extra-fields` flag sets the generated models to allow, forbid, or
+ignore extra fields. With `--extra-fields allow`, models will accept and
+store fields not defined in the schema. Options: allow, ignore, forbid.
 
 !!! tip "Usage"
 
@@ -976,9 +976,9 @@ Configure how generated models handle extra fields not defined in schema.
 
 Generate Field() with validation constraints from schema.
 
-    The `--field-constraints` flag generates Pydantic Field() definitions with
-    validation constraints (min/max length, pattern, etc.) from the schema.
-    Output differs between Pydantic v1 and v2 due to API changes.
+The `--field-constraints` flag generates Pydantic Field() definitions with
+validation constraints (min/max length, pattern, etc.) from the schema.
+Output differs between Pydantic v1 and v2 due to API changes.
 
 **Related:** [`--strict-types`](typing-customization.md#strict-types)
 
@@ -1511,7 +1511,7 @@ Generate Field() with validation constraints from schema.
 
 Include specific extra keys in Field() definitions.
 
-    The `--field-extra-keys` flag configures the code generation behavior.
+The `--field-extra-keys` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -1624,10 +1624,10 @@ Include specific extra keys in Field() definitions.
 
 Include schema extension keys in Field() without requiring 'x-' prefix.
 
-    The --field-extra-keys-without-x-prefix option allows you to specify custom
-    schema extension keys that should be included in Pydantic Field() extras without
-    the 'x-' prefix requirement. For example, 'x-repr' in the schema becomes 'repr'
-    in Field(). This is useful for custom schema extensions and vendor-specific metadata.
+The --field-extra-keys-without-x-prefix option allows you to specify custom
+schema extension keys that should be included in Pydantic Field() extras without
+the 'x-' prefix requirement. For example, 'x-repr' in the schema becomes 'repr'
+in Field(). This is useful for custom schema extensions and vendor-specific metadata.
 
 !!! tip "Usage"
 
@@ -1761,7 +1761,7 @@ Include schema extension keys in Field() without requiring 'x-' prefix.
 
 Include all schema keys in Field() json_schema_extra.
 
-    The `--field-include-all-keys` flag configures the code generation behavior.
+The `--field-include-all-keys` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -1834,9 +1834,9 @@ Include all schema keys in Field() json_schema_extra.
 
 Rename type class instead of field when names collide (Pydantic v2 only).
 
-    The `--field-type-collision-strategy` flag controls how field name and type name
-    collisions are resolved. With `rename-type`, the type class is renamed with a suffix
-    to preserve the original field name, instead of renaming the field and adding an alias.
+The `--field-type-collision-strategy` flag controls how field name and type name
+collisions are resolved. With `rename-type`, the type class is renamed with a suffix
+to preserve the original field name, instead of renaming the field and adding an alias.
 
 !!! tip "Usage"
 
@@ -1894,10 +1894,10 @@ Rename type class instead of field when names collide (Pydantic v2 only).
 
 Disable Field alias generation for non-Python-safe property names.
 
-    The `--no-alias` flag disables automatic alias generation when JSON property
-    names contain characters invalid in Python (like hyphens). Without this flag,
-    fields are renamed to Python-safe names with `Field(alias='original-name')`.
-    With this flag, only Python-safe names are used without aliases.
+The `--no-alias` flag disables automatic alias generation when JSON property
+names contain characters invalid in Python (like hyphens). Without this flag,
+fields are renamed to Python-safe names with `Field(alias='original-name')`.
+With this flag, only Python-safe names are used without aliases.
 
 **See also:** [Field Aliases](../aliases.md)
 
@@ -1977,10 +1977,10 @@ Disable Field alias generation for non-Python-safe property names.
 
 Specify delimiter for original field names when using snake-case conversion.
 
-    The `--original-field-name-delimiter` option works with `--snake-case-field` to specify
-    the delimiter used in original field names. This is useful when field names contain
-    delimiters like spaces or hyphens that should be treated as word boundaries during
-    snake_case conversion.
+The `--original-field-name-delimiter` option works with `--snake-case-field` to specify
+the delimiter used in original field names. This is useful when field names contain
+delimiters like spaces or hyphens that should be treated as word boundaries during
+snake_case conversion.
 
 !!! tip "Usage"
 
@@ -2042,7 +2042,7 @@ Specify delimiter for original field names when using snake-case conversion.
 
 Remove the special prefix from field names.
 
-    The `--remove-special-field-name-prefix` flag configures the code generation behavior.
+The `--remove-special-field-name-prefix` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2104,7 +2104,7 @@ Remove the special prefix from field names.
 
 Set the first enum member as the default value for enum fields.
 
-    The `--set-default-enum-member` flag configures the code generation behavior.
+The `--set-default-enum-member` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2216,9 +2216,9 @@ Set the first enum member as the default value for enum fields.
 
 Convert field names to snake_case format.
 
-    The `--snake-case-field` flag converts camelCase or PascalCase field names
-    to snake_case format in the generated Python code, following Python naming
-    conventions (PEP 8).
+The `--snake-case-field` flag converts camelCase or PascalCase field names
+to snake_case format in the generated Python code, following Python naming
+conventions (PEP 8).
 
 **Related:** [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members)
 
@@ -2277,7 +2277,7 @@ Convert field names to snake_case format.
 
 Prefix to add to special field names (like reserved keywords).
 
-    The `--special-field-name-prefix` flag configures the code generation behavior.
+The `--special-field-name-prefix` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2344,10 +2344,10 @@ Prefix to add to special field names (like reserved keywords).
 
 Generate field descriptions as attribute docstrings instead of Field descriptions.
 
-    The `--use-attribute-docstrings` flag places field descriptions in Python docstring
-    format (PEP 224 attribute docstrings) rather than in Field(..., description=...).
-    This provides better IDE support for hovering over attributes. Requires
-    `--use-field-description` to be enabled.
+The `--use-attribute-docstrings` flag places field descriptions in Python docstring
+format (PEP 224 attribute docstrings) rather than in Field(..., description=...).
+This provides better IDE support for hovering over attributes. Requires
+`--use-field-description` to be enabled.
 
 **Related:** [`--use-field-description`](field-customization.md#use-field-description)
 
@@ -2414,7 +2414,7 @@ Generate field descriptions as attribute docstrings instead of Field description
 
 Use enum values in discriminator mappings for union types.
 
-    The `--use-enum-values-in-discriminator` flag configures the code generation behavior.
+The `--use-enum-values-in-discriminator` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2514,9 +2514,9 @@ Use enum values in discriminator mappings for union types.
 
 Include schema descriptions as Field docstrings.
 
-    The `--use-field-description` flag extracts the `description` property from
-    schema fields and includes them as docstrings or Field descriptions in the
-    generated models, preserving documentation from the original schema.
+The `--use-field-description` flag extracts the `description` property from
+schema fields and includes them as docstrings or Field descriptions in the
+generated models, preserving documentation from the original schema.
 
 **Related:** [`--use-inline-field-description`](field-customization.md#use-inline-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
 
@@ -2879,9 +2879,9 @@ Include schema descriptions as Field docstrings.
 
 Add field examples to docstrings.
 
-    The `--use-field-description-example` flag adds the `example` or `examples`
-    property from schema fields as docstrings. This provides documentation that
-    is visible in IDE intellisense.
+The `--use-field-description-example` flag adds the `example` or `examples`
+property from schema fields as docstrings. This provides documentation that
+is visible in IDE intellisense.
 
 **Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
 
@@ -2974,9 +2974,9 @@ Add field examples to docstrings.
 
 Add field descriptions as inline comments.
 
-    The `--use-inline-field-description` flag adds the `description` property from
-    schema fields as inline comments after each field definition. This provides
-    documentation without using Field() wrappers.
+The `--use-inline-field-description` flag adds the `description` property from
+schema fields as inline comments after each field definition. This provides
+documentation without using Field() wrappers.
 
 **Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-schema-description`](field-customization.md#use-schema-description)
 
@@ -3310,9 +3310,9 @@ Add field descriptions as inline comments.
 
 Use schema description as class docstring.
 
-    The `--use-schema-description` flag extracts the `description` property from
-    schema definitions and adds it as a docstring to the generated class. This is
-    useful for preserving documentation from your schema in the generated code.
+The `--use-schema-description` flag extracts the `description` property from
+schema definitions and adds it as a docstring to the generated class. This is
+useful for preserving documentation from your schema in the generated code.
 
 **Related:** [`--use-field-description`](field-customization.md#use-field-description), [`--use-inline-field-description`](field-customization.md#use-inline-field-description)
 
@@ -3598,9 +3598,9 @@ Use schema description as class docstring.
 
 Use schema title as the generated class name.
 
-    The `--use-title-as-name` flag uses the `title` property from the schema
-    as the class name instead of deriving it from the property name or path.
-    This is useful when schemas have descriptive titles that should be preserved.
+The `--use-title-as-name` flag uses the `title` property from the schema
+as the class name instead of deriving it from the property name or path.
+This is useful when schemas have descriptive titles that should be preserved.
 
 **Related:** [`--class-name`](model-customization.md#class-name)
 

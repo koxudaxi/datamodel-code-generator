@@ -17,10 +17,10 @@
 
 Include OpenAPI path parameters in generated parameter models.
 
-    The `--include-path-parameters` flag adds path parameters (like /users/{userId})
-    to the generated request parameter models. By default, only query parameters
-    are included. Use this with `--openapi-scopes parameters` to generate parameter
-    models that include both path and query parameters.
+The `--include-path-parameters` flag adds path parameters (like /users/{userId})
+to the generated request parameter models. By default, only query parameters
+are included. Use this with `--openapi-scopes parameters` to generate parameter
+models that include both path and query parameters.
 
 **See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
@@ -112,7 +112,7 @@ Include OpenAPI path parameters in generated parameter models.
 
 Specify OpenAPI scopes to generate (schemas, paths, parameters).
 
-    The `--openapi-scopes` flag configures the code generation behavior.
+The `--openapi-scopes` flag configures the code generation behavior.
 
 **See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
@@ -571,10 +571,10 @@ Specify OpenAPI scopes to generate (schemas, paths, parameters).
 
 Generate separate request and response models for readOnly/writeOnly fields.
 
-    The `--read-only-write-only-model-type` option controls how models with readOnly or writeOnly
-    properties are generated. The 'request-response' mode creates separate Request and Response
-    variants for each schema that contains readOnly or writeOnly fields, allowing proper type
-    validation for API requests and responses without a shared base model.
+The `--read-only-write-only-model-type` option controls how models with readOnly or writeOnly
+properties are generated. The 'request-response' mode creates separate Request and Response
+variants for each schema that contains readOnly or writeOnly fields, allowing proper type
+validation for API requests and responses without a shared base model.
 
 **See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
@@ -652,7 +652,7 @@ Generate separate request and response models for readOnly/writeOnly fields.
 
 Use OpenAPI operationId as the generated function/class name.
 
-    The `--use-operation-id-as-name` flag configures the code generation behavior.
+The `--use-operation-id-as-name` flag configures the code generation behavior.
 
 **See also:** [OpenAPI-Specific Options](../openapi-options.md)
 
@@ -932,10 +932,10 @@ Use OpenAPI operationId as the generated function/class name.
 
 Include HTTP status code in response model names.
 
-    The `--use-status-code-in-response-name` flag includes the HTTP status code
-    in generated response model class names. Instead of generating ambiguous names
-    like ResourceGetResponse, ResourceGetResponse1, ResourceGetResponse2, it generates
-    clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResponseDefault.
+The `--use-status-code-in-response-name` flag includes the HTTP status code
+in generated response model class names. Instead of generating ambiguous names
+like ResourceGetResponse, ResourceGetResponse1, ResourceGetResponse2, it generates
+clear names like ResourceGetResponse200, ResourceGetResponse400, ResourceGetResponseDefault.
 
 !!! tip "Usage"
 
@@ -1024,7 +1024,7 @@ Include HTTP status code in response model names.
 
 Enable validation constraints (deprecated, use --field-constraints).
 
-    The `--validation` flag configures the code generation behavior.
+The `--validation` flag configures the code generation behavior.
 
 **Deprecated:** Use --field-constraints instead
 

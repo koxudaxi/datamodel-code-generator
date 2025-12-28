@@ -17,10 +17,10 @@
 
 Specify character encoding for input and output files.
 
-    The `--encoding` flag sets the character encoding used when reading
-    the schema file and writing the generated Python code. This is useful
-    for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
-    Default is UTF-8, which is the standard encoding for JSON and most modern text files.
+The `--encoding` flag sets the character encoding used when reading
+the schema file and writing the generated Python code. This is useful
+for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
+Default is UTF-8, which is the standard encoding for JSON and most modern text files.
 
 !!! tip "Usage"
 
@@ -75,9 +75,9 @@ Specify character encoding for input and output files.
 
 Specify the input schema file path.
 
-    The `--input` flag specifies the path to the schema file (JSON Schema,
-    OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
-    schemas. Required unless using `--url` to fetch schema from a URL.
+The `--input` flag specifies the path to the schema file (JSON Schema,
+OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+schemas. Required unless using `--url` to fetch schema from a URL.
 
 !!! tip "Usage"
 
@@ -134,15 +134,15 @@ Specify the input schema file path.
 
 Specify the input file type for code generation.
 
-    The `--input-file-type` flag explicitly sets the input format.
+The `--input-file-type` flag explicitly sets the input format.
 
-    **Important distinction:**
+**Important distinction:**
 
-    - Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
-    - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
+- Use `jsonschema`, `openapi`, or `graphql` for **schema definition files**
+- Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
-    For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
-    not `--input-file-type yaml`. The `yaml` type treats the file as raw data and infers a schema from it.
+For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,
+not `--input-file-type yaml`. The `yaml` type treats the file as raw data and infers a schema from it.
 
 !!! tip "Usage"
 
@@ -225,7 +225,7 @@ Specify the input file type for code generation.
 
 Import a Python type or dict schema from a module.
 
-    Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
+Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
 
 !!! tip "Usage"
 
@@ -245,10 +245,10 @@ Import a Python type or dict schema from a module.
 
 Specify the destination path for generated Python code.
 
-    The `--output` flag specifies where to write the generated Python code.
-    It can be either a file path (single-file output) or a directory path
-    (multi-file output for modular schemas). If omitted, the generated code
-    is written to stdout.
+The `--output` flag specifies where to write the generated Python code.
+It can be either a file path (single-file output) or a directory path
+(multi-file output for modular schemas). If omitted, the generated code
+is written to stdout.
 
 !!! tip "Usage"
 
@@ -305,10 +305,10 @@ Specify the destination path for generated Python code.
 
 Fetch schema from URL with custom HTTP headers.
 
-    The `--url` flag specifies a remote URL to fetch the schema from instead of
-    a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-    useful for authentication (e.g., Bearer tokens) or custom API requirements.
-    Format: `HeaderName:HeaderValue`.
+The `--url` flag specifies a remote URL to fetch the schema from instead of
+a local file. The `--http-headers` flag adds custom HTTP headers to the request,
+useful for authentication (e.g., Bearer tokens) or custom API requirements.
+Format: `HeaderName:HeaderValue`.
 
 !!! tip "Usage"
 
