@@ -33,6 +33,7 @@ class ModelWithPythonTypes(BaseModel):
     nested_in_list: list[Set[int]]
     optional_set: Optional[Set[str]]
     nullable_frozenset: Union[None, FrozenSet[str]]
+    optional_mapping: Mapping[str, str] | None
 
 
 class RecursiveNode(BaseModel):
