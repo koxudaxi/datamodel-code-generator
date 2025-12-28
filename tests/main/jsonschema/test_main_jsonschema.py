@@ -6965,3 +6965,69 @@ def test_main_jsonschema_ref_to_json_list_file() -> None:
             input_=JSON_SCHEMA_DATA_PATH / "ref_to_json_list" / "main.json",
             input_file_type=InputFileType.JsonSchema,
         )
+
+
+def test_x_python_type_callable(output_file: Path) -> None:
+    """Test x-python-type with Callable preserves the Callable type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_callable.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_callable_anyof(output_file: Path) -> None:
+    """Test x-python-type in anyOf preserves the Callable type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_callable_anyof.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_compatible_set(output_file: Path) -> None:
+    """Test x-python-type with compatible type (Set) uses existing flag logic."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_compatible_set.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_fqpath(output_file: Path) -> None:
+    """Test x-python-type with fully qualified path (e.g., collections.abc.Callable)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_fqpath.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_no_schema_type(output_file: Path) -> None:
+    """Test x-python-type when schema type is not specified."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_no_schema_type.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_custom_fqpath(output_file: Path) -> None:
+    """Test x-python-type with custom fully qualified path not in predefined imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_custom_fqpath.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
