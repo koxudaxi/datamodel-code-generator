@@ -333,6 +333,9 @@ class DataType(_BaseModel):
     is_dict: bool = False
     is_list: bool = False
     is_set: bool = False
+    is_frozen_set: bool = False
+    is_mapping: bool = False
+    is_sequence: bool = False
     is_tuple: bool = False
     is_custom_type: bool = False
     literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
@@ -489,6 +492,15 @@ class DataType(_BaseModel):
             (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
         )
 
+        imports = (
+            *imports,
+            (self.is_frozen_set and not self.use_standard_collections, IMPORT_FROZEN_SET),
+            (self.is_mapping and self.use_standard_collections, IMPORT_ABC_MAPPING),
+            (self.is_mapping and not self.use_standard_collections, IMPORT_MAPPING),
+            (self.is_sequence and self.use_standard_collections, IMPORT_ABC_SEQUENCE),
+            (self.is_sequence and not self.use_standard_collections, IMPORT_SEQUENCE),
+        )
+
         if self.use_generic_container:
             if self.use_standard_collections:
                 # frozenset is builtin, no import needed for is_set
@@ -516,7 +528,7 @@ class DataType(_BaseModel):
 
         # Yield imports based on conditions
         for field, import_ in imports:
-            if field and import_ != self.import_:
+            if field and import_ is not None and import_ != self.import_:
                 yield import_
 
         # Propagate imports from any dict_key type
@@ -618,14 +630,9 @@ class DataType(_BaseModel):
             is_alias = getattr(source, "is_alias", False)
             if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
-        if self.is_list:
-            if self.use_generic_container:
-                list_ = SEQUENCE
-            elif self.use_standard_collections:
-                list_ = STANDARD_LIST
-            else:
-                list_ = LIST
-            type_ = f"{list_}[{type_}]" if type_ else list_
+        if self.is_frozen_set:
+            set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
+            type_ = f"{set_}[{type_}]" if type_ else set_
         elif self.is_set:
             if self.use_generic_container:
                 set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
@@ -634,6 +641,24 @@ class DataType(_BaseModel):
             else:
                 set_ = SET
             type_ = f"{set_}[{type_}]" if type_ else set_
+        elif self.is_sequence:
+            list_ = SEQUENCE
+            type_ = f"{list_}[{type_}]" if type_ else list_
+        elif self.is_list:
+            if self.use_generic_container:
+                list_ = SEQUENCE
+            elif self.use_standard_collections:
+                list_ = STANDARD_LIST
+            else:
+                list_ = LIST
+            type_ = f"{list_}[{type_}]" if type_ else list_
+        elif self.is_mapping:
+            dict_ = MAPPING
+            if self.dict_key or type_:
+                key = self.dict_key.type_hint if self.dict_key else STR
+                type_ = f"{dict_}[{key}, {type_ or ANY}]"
+            else:  # pragma: no cover
+                type_ = dict_
         elif self.is_dict:
             if self.use_generic_container:
                 dict_ = MAPPING

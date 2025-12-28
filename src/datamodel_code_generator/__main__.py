@@ -594,6 +594,171 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
     return additional_imports
 
 
+# Types that are lost during JSON Schema conversion and need to be preserved
+_PRESERVED_TYPE_ORIGINS: dict[type, str] = {}
+
+
+def _init_preserved_type_origins() -> dict[type, str]:
+    """Initialize preserved type origins mapping (lazy initialization)."""
+    from collections.abc import Mapping as ABCMapping  # noqa: PLC0415
+    from collections.abc import MutableMapping as ABCMutableMapping  # noqa: PLC0415
+    from collections.abc import MutableSequence as ABCMutableSequence  # noqa: PLC0415
+    from collections.abc import MutableSet as ABCMutableSet  # noqa: PLC0415
+    from collections.abc import Sequence as ABCSequence  # noqa: PLC0415
+    from collections.abc import Set as AbstractSet  # noqa: PLC0415
+
+    return {
+        set: "Set",
+        frozenset: "FrozenSet",
+        AbstractSet: "AbstractSet",
+        ABCMutableSet: "MutableSet",
+        ABCMapping: "Mapping",
+        ABCMutableMapping: "MutableMapping",
+        ABCSequence: "Sequence",
+        ABCMutableSequence: "MutableSequence",
+    }
+
+
+def _get_preserved_type_origins() -> dict[type, str]:
+    """Get the preserved type origins mapping, initializing if needed."""
+    global _PRESERVED_TYPE_ORIGINS  # noqa: PLW0603
+    if not _PRESERVED_TYPE_ORIGINS:
+        _PRESERVED_TYPE_ORIGINS = _init_preserved_type_origins()
+    return _PRESERVED_TYPE_ORIGINS
+
+
+def _serialize_python_type(tp: type) -> str | None:
+    """Serialize Python type to a string for x-python-type field.
+
+    Returns None if the type doesn't need to be preserved (e.g., standard dict, list).
+    """
+    from typing import get_args, get_origin  # noqa: PLC0415
+
+    origin = get_origin(tp)
+    args = get_args(tp)
+    preserved_origins = _get_preserved_type_origins()
+
+    if origin in preserved_origins:
+        type_name = preserved_origins[origin]
+        if args:
+            args_str = ", ".join(_serialize_python_type(a) or _simple_type_name(a) for a in args)
+            return f"{type_name}[{args_str}]"
+        return type_name  # pragma: no cover
+
+    if args:
+        nested = [_serialize_python_type(a) for a in args]
+        if any(n is not None for n in nested):
+            origin_name = _simple_type_name(origin or tp)
+            args_str = ", ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
+            return f"{origin_name}[{args_str}]"
+
+    return None
+
+
+def _simple_type_name(tp: type) -> str:
+    """Get a simple string representation of a type."""
+    if tp is type(None):
+        return "None"
+    if hasattr(tp, "__name__"):
+        return tp.__name__
+    return str(tp).replace("typing.", "")  # pragma: no cover
+
+
+def _collect_nested_models(model: type, visited: set[type] | None = None) -> dict[str, type]:
+    """Collect all nested BaseModel subclasses from a model's fields."""
+    if visited is None:
+        visited = set()
+
+    if model in visited:  # pragma: no cover
+        return {}
+    visited.add(model)
+
+    result: dict[str, type] = {}
+    model_fields = getattr(model, "model_fields", None)
+    if model_fields is None:  # pragma: no cover
+        return result
+
+    for field_info in model_fields.values():
+        tp = field_info.annotation
+        _find_models_in_type(tp, result, visited)
+
+    return result
+
+
+def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
+    """Recursively find BaseModel subclasses in a type annotation."""
+    from typing import get_args  # noqa: PLC0415
+
+    if isinstance(tp, type) and issubclass(tp, BaseModel) and tp not in visited:
+        result[tp.__name__] = tp
+        result.update(_collect_nested_models(tp, visited))
+
+    for arg in get_args(tp):
+        _find_models_in_type(arg, result, visited)
+
+
+def _get_type_hints_safe(obj: type) -> dict[str, Any]:
+    """Safely get type hints from a class, handling forward references."""
+    from typing import get_type_hints  # noqa: PLC0415
+
+    try:
+        return get_type_hints(obj)
+    except Exception:  # noqa: BLE001  # pragma: no cover
+        return getattr(obj, "__annotations__", {})
+
+
+def _add_python_type_to_properties(
+    properties: dict[str, Any],
+    model_fields: dict[str, Any],
+) -> None:
+    """Add x-python-type to properties dict for given model fields."""
+    for field_name, field_info in model_fields.items():
+        if field_name not in properties:  # pragma: no cover
+            continue
+        serialized = _serialize_python_type(field_info.annotation)
+        if serialized:
+            properties[field_name]["x-python-type"] = serialized
+
+
+def _add_python_type_info(schema: dict[str, Any], model: type) -> dict[str, Any]:
+    """Add x-python-type information to JSON Schema for types lost during conversion.
+
+    This preserves type information for Set, FrozenSet, Mapping, and other types
+    that are converted to array/object in JSON Schema.
+    """
+    model_fields = getattr(model, "model_fields", None)
+    if model_fields and "properties" in schema:
+        _add_python_type_to_properties(schema["properties"], model_fields)
+
+    if "$defs" in schema:
+        nested_models = _collect_nested_models(model)
+        model_name = getattr(model, "__name__", None)
+        if model_name and model_name in schema["$defs"]:
+            nested_models[model_name] = model
+        for def_name, def_schema in schema["$defs"].items():
+            if def_name not in nested_models or "properties" not in def_schema:  # pragma: no cover
+                continue
+            nested_model = nested_models[def_name]
+            nested_fields = getattr(nested_model, "model_fields", None)
+            if nested_fields:  # pragma: no branch
+                _add_python_type_to_properties(def_schema["properties"], nested_fields)
+
+    return schema
+
+
+def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str, Any]:
+    """Add x-python-type information using get_type_hints (for dataclass/TypedDict)."""
+    type_hints = _get_type_hints_safe(obj)
+    if type_hints and "properties" in schema:  # pragma: no branch
+        for field_name, field_type in type_hints.items():
+            if field_name in schema["properties"]:  # pragma: no branch
+                serialized = _serialize_python_type(field_type)
+                if serialized:
+                    schema["properties"][field_name]["x-python-type"] = serialized
+
+    return schema
+
+
 def _load_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
@@ -673,7 +838,8 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
-        return obj.model_json_schema()
+        schema = obj.model_json_schema()
+        return _add_python_type_info(schema, obj)
 
     # Check for dataclass or TypedDict - use TypeAdapter
     from dataclasses import is_dataclass  # noqa: PLC0415
@@ -690,7 +856,8 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         try:
             from pydantic import TypeAdapter  # noqa: PLC0415
 
-            return TypeAdapter(obj).json_schema()
+            schema = TypeAdapter(obj).json_schema()
+            return _add_python_type_info_generic(schema, cast("type", obj))
         except ImportError as e:
             msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
             raise Error(msg) from e
