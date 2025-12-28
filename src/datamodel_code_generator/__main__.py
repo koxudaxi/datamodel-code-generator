@@ -1132,6 +1132,14 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.disable_warnings:
         warnings.simplefilter("ignore")
 
+    if not is_pydantic_v2():
+        warnings.warn(
+            "Pydantic v1 runtime support is deprecated and will be removed in a future version. "
+            "Please upgrade to Pydantic v2.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+
     if config.reuse_scope == ReuseScope.Tree and not config.reuse_model:
         print(  # noqa: T201
             "Warning: --reuse-scope=tree has no effect without --reuse-model",
