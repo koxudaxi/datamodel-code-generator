@@ -776,6 +776,37 @@ def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str
     return schema
 
 
+def _try_rebuild_model(obj: type) -> None:
+    """Try to rebuild a Pydantic model, handling config models specially."""
+    module = getattr(obj, "__module__", "")
+    class_name = getattr(obj, "__name__", "")
+    config_classes = {"GenerateConfig", "ParserConfig", "ParseConfig"}
+    if module == "datamodel_code_generator.config" and class_name in config_classes:
+        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
+        from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
+
+        try:
+            from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+        except ImportError:
+            from typing import Any  # noqa: PLC0415
+
+            runtime_union_mode = Any
+        else:
+            runtime_union_mode = UnionMode
+
+        types_namespace = {
+            "Path": Path,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+            "UnionMode": runtime_union_mode,
+        }
+        obj.model_rebuild(_types_namespace=types_namespace)
+    else:
+        obj.model_rebuild()
+
+
 def _load_model_schema(  # noqa: PLR0912, PLR0915
     input_model: str,
     input_file_type: InputFileType,
@@ -855,6 +886,8 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
+        if hasattr(obj, "model_rebuild"):
+            _try_rebuild_model(obj)
         schema = obj.model_json_schema()
         return _add_python_type_info(schema, obj)
 

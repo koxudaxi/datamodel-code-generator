@@ -604,3 +604,14 @@ def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         expected_output_contains=["Mapping[str, str] | None", "optional_mapping:"],
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_config_class(tmp_path: Path) -> None:
+    """Test that config classes like GenerateConfig are properly handled."""
+    run_input_model_and_assert(
+        input_model="datamodel_code_generator.config:GenerateConfig",
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=["TypedDict", "Callable[[str], str]"],
+    )

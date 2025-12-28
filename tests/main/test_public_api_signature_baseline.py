@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic import DataTypeManager
@@ -45,6 +46,7 @@ if TYPE_CHECKING:
 def _baseline_generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
+    config: GenerateConfig | None = None,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
