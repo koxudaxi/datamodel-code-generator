@@ -774,7 +774,8 @@ template_options.add_argument(
     "Flat: {'field': 'alias'} applies to all occurrences. "
     "Scoped: {'ClassName.field': 'alias'} applies to specific class. "
     "Priority: scoped > flat. "
-    "Example: {'User.name': 'user_name', 'Address.name': 'addr_name', 'id': 'id_'}",
+    "Multiple aliases (Pydantic v2 only): {'field': ['alias1', 'alias2']} uses AliasChoices for validation. "
+    "Example: {'User.name': 'user_name', 'id': 'id_', 'field': ['my-field', 'my_field']}",
     type=Path,
 )
 template_options.add_argument(

@@ -1144,7 +1144,7 @@ class JsonSchemaParser(Parser):
         field: JsonSchemaObject,
         required: bool,
         field_type: DataType,
-        alias: str | None,
+        alias: str | list[str] | None,
         original_field_name: str | None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
@@ -1155,12 +1155,20 @@ class JsonSchemaParser(Parser):
         if constraints and self._is_fixed_length_tuple(field):
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
+        # Handle multiple aliases (Pydantic v2 AliasChoices)
+        single_alias: str | None = None
+        validation_aliases: list[str] | None = None
+        if isinstance(alias, list):
+            validation_aliases = alias
+        else:
+            single_alias = alias
         return self.data_model_field_type(
             name=field_name,
             default=field.default,
             data_type=field_type,
             required=required,
-            alias=alias,
+            alias=single_alias,
+            validation_aliases=validation_aliases,
             constraints=constraints,
             nullable=field.nullable
             if self.strict_nullable and field.nullable is not None
@@ -2171,7 +2179,7 @@ class JsonSchemaParser(Parser):
 
         return self.data_type(reference=reference)
 
-    def _parse_all_of_item(  # noqa: PLR0912, PLR0913, PLR0917
+    def _parse_all_of_item(  # noqa: PLR0912, PLR0913, PLR0915, PLR0917
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2242,12 +2250,20 @@ class JsonSchemaParser(Parser):
                             data_type = self._get_inherited_field_type(request, base_classes)
                             if data_type is None:
                                 data_type = DataType(type=ANY, import_=IMPORT_ANY)
+                            # Handle multiple aliases (Pydantic v2 AliasChoices)
+                            single_alias: str | None = None
+                            validation_aliases: list[str] | None = None
+                            if isinstance(alias, list):
+                                validation_aliases = alias
+                            else:
+                                single_alias = alias
                             fields.append(
                                 self.data_model_field_type(
                                     name=field_name,
                                     required=True,
                                     original_name=request,
-                                    alias=alias,
+                                    alias=single_alias,
+                                    validation_aliases=validation_aliases,
                                     data_type=data_type,
                                 )
                             )
@@ -2417,6 +2433,13 @@ class JsonSchemaParser(Parser):
             exclude_field_names.add(field_name)
 
             if isinstance(field, bool):
+                # Handle multiple aliases (Pydantic v2 AliasChoices)
+                single_alias: str | None = None
+                validation_aliases: list[str] | None = None
+                if isinstance(alias, list):
+                    validation_aliases = alias
+                else:
+                    single_alias = alias
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
@@ -2424,7 +2447,8 @@ class JsonSchemaParser(Parser):
                             Types.any,
                         ),
                         required=False if self.force_optional_for_required_fields else original_field_name in requires,
-                        alias=alias,
+                        alias=single_alias,
+                        validation_aliases=validation_aliases,
                         strip_default_none=self.strip_default_none,
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,

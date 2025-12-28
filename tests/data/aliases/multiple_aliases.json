@@ -1,0 +1,8 @@
+{
+  "my_field": ["my-field", "myField"],
+  "User.user_name": ["user-name", "userName"],
+  "base_field": ["baseField", "base-field"],
+  "extra_field": ["extraField", "extra-field"],
+  "any_value_field": ["anyValueField", "any-value-field"],
+  "inherited_required": ["inheritedRequired", "inherited-required"]
+}

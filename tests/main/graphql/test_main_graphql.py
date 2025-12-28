@@ -154,6 +154,27 @@ def test_main_graphql_field_aliases(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_graphql_multiple_aliases_pydantic_v2(output_file: Path) -> None:
+    """Test GraphQL with multiple aliases using Pydantic v2 AliasChoices."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "multiple-aliases.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="graphql_multiple_aliases_pydantic_v2.py",
+        extra_args=[
+            "--aliases",
+            str(GRAPHQL_DATA_PATH / "multiple-aliases.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_graphql_casing(output_file: Path) -> None:
     """Test GraphQL code generation with casing transformations."""
     run_main_and_assert(

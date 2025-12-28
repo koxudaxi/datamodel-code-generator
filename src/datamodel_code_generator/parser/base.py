@@ -1489,12 +1489,20 @@ class Parser(ABC):
                         new_data_type = self._create_discriminator_data_type(
                             enum_from_base, type_names, discriminator_model, imports
                         )
+                        # Handle multiple aliases (Pydantic v2 AliasChoices)
+                        single_alias: str | None = None
+                        validation_aliases: list[str] | None = None
+                        if isinstance(alias, list):
+                            validation_aliases = alias
+                        else:
+                            single_alias = alias
                         discriminator_model.fields.append(
                             self.data_model_field_type(
                                 name=field_name,
                                 data_type=new_data_type,
                                 required=True,
-                                alias=alias,
+                                alias=single_alias,
+                                validation_aliases=validation_aliases,
                             )
                         )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
