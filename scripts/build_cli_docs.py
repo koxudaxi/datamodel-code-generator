@@ -599,14 +599,21 @@ def generate_option_section(
     if related_options:
         related_links = []
         for r in related_options:
+            # Skip self-references
+            if r == option:
+                continue
             canonical = get_canonical_option(r)
+            # Also skip if canonical form is the current option
+            if canonical == option:
+                continue
             r_meta = get_option_meta(canonical)
             if r_meta:
                 cat_slug = slugify(r_meta.category.value)
                 related_links.append(f"[`{canonical}`]({cat_slug}.md#{slugify(canonical)})")
             else:
                 related_links.append(f"`{canonical}`")
-        meta_parts.append(f"**Related:** {', '.join(related_links)}")
+        if related_links:  # Only add Related if there are non-self-referencing options
+            meta_parts.append(f"**Related:** {', '.join(related_links)}")
 
     if meta_parts:
         md += " | ".join(meta_parts) + "\n\n"
@@ -942,17 +949,20 @@ def build_docs(*, check: bool = False) -> int:
     if not items and not manual_docs:
         return 0
 
-    # Group by canonical option - collect ALL examples per option
+    # Group by option - collect ALL examples per option
+    # Use the option as-is if it has metadata, otherwise use canonical
     options_map: dict[str, CLIDocOption] = {}
     for item in items:
         example = CLIDocExample.from_item(item)
         for opt in item["marker_kwargs"].get("options", []):
-            canonical = get_canonical_option(opt)
-            if is_manual_doc(canonical):
+            # Use option as-is if it has metadata, otherwise use canonical
+            # This allows --use-* and --no-use-* to be documented separately
+            option_key = opt if get_option_meta(opt) else get_canonical_option(opt)
+            if is_manual_doc(option_key):
                 continue
-            if canonical not in options_map:
-                options_map[canonical] = CLIDocOption(option_name=canonical)
-            options_map[canonical].add_example(example)
+            if option_key not in options_map:
+                options_map[option_key] = CLIDocOption(option_name=option_key)
+            options_map[option_key].add_example(example)
 
     categories: dict[OptionCategory, dict[str, CLIDocOption]] = defaultdict(dict)
 
