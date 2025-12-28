@@ -3,27 +3,25 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from pathlib import Path
+from typing import Any, TypedDict
 
 from typing_extensions import NotRequired
 
-if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
-    from pathlib import Path
-
-    from datamodel_code_generator.enums import (
-        AllOfMergeMode,
-        CollapseRootModelsNameStrategy,
-        DataclassArguments,
-        FieldTypeCollisionStrategy,
-        NamingStrategy,
-        ReadOnlyWriteOnlyModelType,
-        ReuseScope,
-        TargetPydanticVersion,
-    )
-    from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-    from datamodel_code_generator.parser import LiteralType
-    from datamodel_code_generator.types import StrictTypes
+from datamodel_code_generator.enums import (
+    AllOfMergeMode,
+    CollapseRootModelsNameStrategy,
+    DataclassArguments,
+    FieldTypeCollisionStrategy,
+    NamingStrategy,
+    ReadOnlyWriteOnlyModelType,
+    ReuseScope,
+    TargetPydanticVersion,
+)
+from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
+from datamodel_code_generator.parser import LiteralType
+from datamodel_code_generator.types import StrictTypes
 
 
 class ParserConfigDict(TypedDict):
