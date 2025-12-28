@@ -111,7 +111,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-field-description-example": "Add field examples to docstrings.",
     "--use-frozen-field": "Generate frozen (immutable) field definitions for readOnly properties.",
     "--use-generic-base-class": "Generate a shared base class with model configuration to avoid repetition (DRY).",
-    "--use-generic-container-types": "Use typing.Dict/List instead of dict/list for container types.",
+    "--use-generic-container-types": "Use generic container types (Sequence, Mapping) for type hinting.",
     "--use-inline-field-description": "Add field descriptions as inline comments.",
     "--use-non-positive-negative-number-constrained-types": "Use NonPositive/NonNegative types for number constraints.",
     "--use-one-literal-as-default": "Use single literal value as default when enum has only one option.",
