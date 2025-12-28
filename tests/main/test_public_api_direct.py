@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -21,6 +21,8 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
 GENERATE_CASES = [
     pytest.param(
@@ -87,13 +89,14 @@ PARSER_CASES = [
 
 
 @pytest.mark.parametrize("use_config", [False, True])
-@pytest.mark.parametrize("input_path,expected_path,options", GENERATE_CASES)
+@pytest.mark.parametrize(("input_path", "expected_path", "options"), GENERATE_CASES)
 def test_generate_public_api_direct(
     use_config: bool,
     input_path: Path,
     expected_path: Path,
     options: dict[str, object],
 ) -> None:
+    """Call generate directly with options or config and compare output."""
     if use_config:
         config = GenerateConfig(**options)
         output = generate(input_path, config=config)
@@ -103,7 +106,7 @@ def test_generate_public_api_direct(
 
 
 @pytest.mark.parametrize("use_config", [False, True])
-@pytest.mark.parametrize("parser_cls,input_path,expected_path,options", PARSER_CASES)
+@pytest.mark.parametrize(("parser_cls", "input_path", "expected_path", "options"), PARSER_CASES)
 def test_parser_public_api_direct(
     use_config: bool,
     parser_cls: type[object],
@@ -111,6 +114,7 @@ def test_parser_public_api_direct(
     expected_path: Path,
     options: dict[str, object],
 ) -> None:
+    """Call parser classes directly with options or config and compare output."""
     if use_config:
         config = ParserConfig(**options)
         parser = parser_cls(input_path, config=config)
