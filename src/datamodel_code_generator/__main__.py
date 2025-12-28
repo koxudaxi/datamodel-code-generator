@@ -665,6 +665,10 @@ def _serialize_python_type(tp: type) -> str | None:
     if args:
         nested = [_serialize_python_type(a) for a in args]
         if any(n is not None for n in nested):
+            # Handle Union types (types.UnionType from X | Y syntax)
+            if origin is not None and getattr(origin, "__name__", None) == "UnionType":
+                args_strs = [n or _simple_type_name(a) for n, a in zip(nested, args, strict=False)]
+                return " | ".join(args_strs)
             origin_name = _simple_type_name(origin or tp)
             args_str = ", ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
             return f"{origin_name}[{args_str}]"
