@@ -626,7 +626,9 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
             force_optional_for_required_fields or config.force_optional_for_required_fields
         )
         class_name = config.class_name if class_name is None else class_name
-        use_standard_collections = use_standard_collections or config.use_standard_collections
+        use_standard_collections = (
+            config.use_standard_collections if use_standard_collections else use_standard_collections
+        )
         use_schema_description = use_schema_description or config.use_schema_description
         use_field_description = use_field_description or config.use_field_description
         use_field_description_example = use_field_description_example or config.use_field_description_example
