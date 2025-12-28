@@ -7,6 +7,7 @@ code generation.
 
 from __future__ import annotations
 
+import importlib
 import operator
 import os.path
 import re
@@ -86,10 +87,8 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType, DataTypeManager
 
 
-def _get_data_type_class() -> type["DataType"]:
-    from datamodel_code_generator.types import DataType
-
-    return DataType
+def _get_data_type_class() -> type[DataType]:
+    return importlib.import_module("datamodel_code_generator.types").DataType
 
 
 @runtime_checkable

@@ -653,7 +653,8 @@ def test_pyproject(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
     pyproject_toml = (
-        pyproject_toml_path.read_text()
+        pyproject_toml_path
+        .read_text()
         .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
         .replace("OUTPUT_PATH", get_path(output_file))
         .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
