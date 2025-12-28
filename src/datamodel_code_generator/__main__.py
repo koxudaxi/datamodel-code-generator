@@ -699,7 +699,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
 
     rebuild = getattr(module, "_rebuild_config_models", None)
     if callable(rebuild):
-        rebuild()
+        rebuild()  # pragma: no cover
 
     try:
         obj = getattr(module, qualname)

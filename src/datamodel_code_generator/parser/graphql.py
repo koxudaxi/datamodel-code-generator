@@ -22,14 +22,9 @@ from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enu
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
-from datamodel_code_generator.parser.base import (
-    DataType,
-    Parser,
-    Source,
-    escape_characters,
-)
+from datamodel_code_generator.parser.base import Parser, Source, escape_characters
 from datamodel_code_generator.reference import ModelType, Reference
-from datamodel_code_generator.types import Types
+from datamodel_code_generator.types import DataType, Types
 from datamodel_code_generator.util import model_validate
 
 try:

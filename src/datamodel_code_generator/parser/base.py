@@ -7,7 +7,6 @@ code generation.
 
 from __future__ import annotations
 
-import importlib
 import operator
 import os.path
 import re
@@ -85,7 +84,9 @@ if TYPE_CHECKING:
 
 
 def _get_data_type_class() -> type[Any]:
-    return importlib.import_module("datamodel_code_generator.types").DataType
+    from datamodel_code_generator.types import DataType  # noqa: PLC0415
+
+    return DataType
 
 
 @runtime_checkable
@@ -698,7 +699,8 @@ class Parser(ABC):
         **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the Parser with configuration options."""
-        config_module = importlib.import_module("datamodel_code_generator.config")
+        from datamodel_code_generator import config as config_module  # noqa: PLC0415
+
         parser_config_model = config_module.ParserConfig
         rebuild_config_models = config_module._rebuild_config_models  # noqa: SLF001
 
@@ -3116,7 +3118,8 @@ class Parser(ABC):
         **options: Unpack[ParseConfigDict],
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
-        config_module = importlib.import_module("datamodel_code_generator.config")
+        from datamodel_code_generator import config as config_module  # noqa: PLC0415
+
         parse_config_model = config_module.ParseConfig
         rebuild_config_models = config_module._rebuild_config_models  # noqa: SLF001
 

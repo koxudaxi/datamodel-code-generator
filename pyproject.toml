@@ -245,6 +245,8 @@ paths.other = [
 run.dynamic_context = "none"
 run.omit = [
   "src/datamodel_code_generator/_types/*",
+  "*/datamodel_code_generator/_types/*",
+  "*\\datamodel_code_generator\\_types\\*",
   "tests/data/*",
   "tests/main/test_performance.py",
 ]

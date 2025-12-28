@@ -454,7 +454,7 @@ def generate(
     *,
     config: GenerateConfig,
 ) -> str | GeneratedModules | None:
-    pass
+    pass  # pragma: no cover
 
 
 @overload
@@ -462,7 +462,7 @@ def generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     **options: Unpack[GenerateConfigDict],
 ) -> str | GeneratedModules | None:
-    pass
+    pass  # pragma: no cover
 
 
 def generate(  # noqa: PLR0912, PLR0914, PLR0915
@@ -905,11 +905,11 @@ def __getattr__(name: str) -> Any:
         from datamodel_code_generator import config as _config  # noqa: PLC0415
 
         return getattr(_config, name)
-    if name == "StrictTypes":
+    if name == "StrictTypes":  # pragma: no cover
         from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
         return StrictTypes
-    if name == "UnionMode":
+    if name == "UnionMode":  # pragma: no cover
         try:
             from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
         except ImportError:
