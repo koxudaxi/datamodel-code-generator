@@ -511,7 +511,14 @@ class ParserConfig(BaseModel):
         else:
             effective_set_default_enum_member = generate_config.set_default_enum_member
 
-        parser_config_data = model_dump(generate_config)
+        parser_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__
+        generate_fields = (
+            generate_config.__class__.model_fields if is_pydantic_v2() else generate_config.__class__.__fields__
+        )
+        parser_config_data = model_dump(
+            generate_config,
+            include=set(parser_fields) & set(generate_fields),
+        )
         parser_config_data.update({
             "data_model_type": data_model_types.data_model,
             "data_model_root_type": data_model_types.root_model,
@@ -529,7 +536,6 @@ class ParserConfig(BaseModel):
             "enum_field_as_literal": effective_enum_field_as_literal,
             "set_default_enum_member": effective_set_default_enum_member,
         })
-        parser_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__
         return model_validate(
             cls,
             {k: v for k, v in parser_config_data.items() if k in parser_fields},
@@ -559,15 +565,16 @@ class ParseConfig(BaseModel):
 
     @classmethod
     def _from_generate_config(cls, *, generate_config: GenerateConfig) -> ParseConfig:
+        parse_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__
+        generate_fields = (
+            generate_config.__class__.model_fields if is_pydantic_v2() else generate_config.__class__.__fields__
+        )
         return model_validate(
             cls,
-            {
-                "settings_path": generate_config.settings_path,
-                "disable_future_imports": generate_config.disable_future_imports,
-                "all_exports_scope": generate_config.all_exports_scope,
-                "all_exports_collision_strategy": generate_config.all_exports_collision_strategy,
-                "module_split_mode": generate_config.module_split_mode,
-            },
+            model_dump(
+                generate_config,
+                include=set(parse_fields) & set(generate_fields),
+            ),
         )
 
 
