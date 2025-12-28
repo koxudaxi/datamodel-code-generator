@@ -1620,11 +1620,24 @@ class JsonSchemaParser(Parser):
         }
         return model_validate(self.SCHEMA_OBJECT_TYPE, merged_obj_dict)
 
-    def _get_inherited_field_type(self, prop_name: str, base_classes: list[Reference]) -> DataType | None:
-        """Get the data type for an inherited property from parent schemas."""
+    def _get_inherited_field_type(  # noqa: PLR0912
+        self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
+    ) -> DataType | None:
+        """Get the data type for an inherited property from parent schemas.
+
+        Recursively traverses the inheritance chain when a parent property
+        doesn't have type information but the parent itself inherits from another schema.
+        """
+        if visited is None:
+            visited = frozenset()
+
         for base in base_classes:
             if not base.path:  # pragma: no cover
                 continue
+            if base.path in visited:  # pragma: no cover
+                continue
+            visited |= {base.path}
+
             if "#" in base.path:
                 file_part, fragment = base.path.split("#", 1)
                 ref = f"{file_part}#{fragment}" if file_part else f"#{fragment}"
@@ -1634,14 +1647,21 @@ class JsonSchemaParser(Parser):
                 parent_schema = self._load_ref_schema_object(ref)
             except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
-            if not parent_schema.properties:  # pragma: no cover
-                continue
-            prop_schema = parent_schema.properties.get(prop_name)
-            if not isinstance(prop_schema, JsonSchemaObject):  # pragma: no cover
-                continue
-            result = self._build_lightweight_type(prop_schema)
-            if result is not None:
-                return result
+
+            if parent_schema.properties:
+                prop_schema = parent_schema.properties.get(prop_name)
+                if isinstance(prop_schema, JsonSchemaObject):
+                    result = self._build_lightweight_type(prop_schema)
+                    if result is not None:
+                        return result
+
+            if parent_schema.allOf:
+                grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
+                if grandparent_refs:
+                    result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
+                    if result is not None:
+                        return result
+
         return None
 
     def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
