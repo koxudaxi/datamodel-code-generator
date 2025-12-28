@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Child",
+  "$defs": {
+    "Grandparent": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" }
+      }
+    },
+    "Parent": {
+      "allOf": [
+        { "$ref": "#/$defs/Grandparent" }
+      ],
+      "type": "object",
+      "properties": {
+        "category": { "default": "parent-category" }
+      }
+    }
+  },
+  "type": "object",
+  "allOf": [
+    { "$ref": "#/$defs/Parent" }
+  ],
+  "properties": {
+    "category": { "default": "child-category" }
+  }
+}

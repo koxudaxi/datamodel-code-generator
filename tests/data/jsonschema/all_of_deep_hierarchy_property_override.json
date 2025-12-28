@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/person.schema.json",
+  "title": "Person",
+  "$defs": {
+    "Entity": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "default": "playground:Entity" }
+      },
+      "required": ["type"]
+    },
+    "Thing": {
+      "allOf": [
+        { "$ref": "#/$defs/Entity" }
+      ],
+      "type": "object",
+      "properties": {
+        "type": { "default": "playground:Thing" },
+        "name": { "type": "string", "minLength": 1 }
+      },
+      "required": ["type", "name"]
+    }
+  },
+  "type": "object",
+  "allOf": [
+    { "$ref": "#/$defs/Thing" }
+  ],
+  "properties": {
+    "type": { "default": "playground:Person" }
+  }
+}
