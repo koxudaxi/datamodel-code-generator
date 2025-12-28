@@ -179,6 +179,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
     "--no-color": "Disable colorized output",
+    "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
 }
 
 # Regex pattern for detecting MkDocs Material admonitions in docstrings
@@ -907,6 +908,9 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
     for option in sorted(manual_docs.keys()):
         content = manual_docs[option]
+        # Adjust relative paths: manual docs are in manual/ subdirectory,
+        # but utility-options.md is in cli-reference/, so ../../ becomes ../
+        content = content.replace("](../../", "](../")
         md += content
         if not content.endswith("\n"):
             md += "\n"

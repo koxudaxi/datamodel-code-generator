@@ -45,7 +45,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
 | [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date/time fields instead of datetime module. |
-| [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support (issue #1903). |
+| [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support. |
 | [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.11+). |
 | [`--use-standard-collections`](typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
 | [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types) | Use Python standard library types for string formats instead of str. |
@@ -173,15 +173,15 @@ datamodel-codegen [OPTIONS]
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--module-split-mode`](general-options.md#module-split-mode) | Split generated models into separate files, one per model class. |
 | [`--shared-module-name`](general-options.md#shared-module-name) | Customize the name of the shared module for deduplicated models. |
-| [`--watch`](general-options.md#watch) | Watch mode cannot be used with --check mode. |
-| [`--watch-delay`](general-options.md#watch-delay) | Watch mode starts file watcher and handles clean exit. |
+| [`--watch`](general-options.md#watch) | Watch input file(s) for changes and regenerate output automatically. |
+| [`--watch-delay`](general-options.md#watch-delay) | Set debounce delay in seconds for watch mode. |
 
 ### 📝 Utility Options
 
 | Option | Description |
 |--------|-------------|
 | [`--debug`](utility-options.md#debug) | Show debug messages during code generation |
-| [`--generate-prompt`](utility-options.md#generate-prompt) |  |
+| [`--generate-prompt`](utility-options.md#generate-prompt) | Generate a prompt for consulting LLMs about CLI options |
 | [`--help`](utility-options.md#help) | Show help message and exit |
 | [`--no-color`](utility-options.md#no-color) | Disable colorized output |
 | [`--profile`](utility-options.md#profile) | Use a named profile from pyproject.toml |
@@ -239,7 +239,7 @@ All options sorted alphabetically:
 - [`--formatters`](template-customization.md#formatters) - Specify code formatters to apply to generated output.
 - [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) - Generate frozen dataclasses with optional keyword-only field...
 - [`--generate-cli-command`](general-options.md#generate-cli-command) - Generate CLI command from pyproject.toml configuration.
-- [`--generate-prompt`](utility-options.md#generate-prompt) - 
+- [`--generate-prompt`](utility-options.md#generate-prompt) - Generate a prompt for consulting LLMs about CLI options
 - [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) - Generate pyproject.toml configuration from CLI arguments.
 - [`--help`](utility-options.md#help) - Show help message and exit
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
@@ -325,6 +325,6 @@ All options sorted alphabetically:
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...
 - [`--version`](utility-options.md#version) - Show program version and exit
-- [`--watch`](general-options.md#watch) - Watch mode cannot be used with --check mode.
-- [`--watch-delay`](general-options.md#watch-delay) - Watch mode starts file watcher and handles clean exit.
+- [`--watch`](general-options.md#watch) - Watch input file(s) for changes and regenerate output automa...
+- [`--watch-delay`](general-options.md#watch-delay) - Set debounce delay in seconds for watch mode.
 - [`--wrap-string-literal`](template-customization.md#wrap-string-literal) - Wrap long string literals across multiple lines.

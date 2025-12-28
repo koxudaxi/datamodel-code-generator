@@ -3305,7 +3305,10 @@ working with the pendulum library for enhanced timezone and date handling.
 
 ## `--use-root-model-type-alias` {#use-root-model-type-alias}
 
-Generate RootModel as type alias format for better mypy support (issue #1903).
+Generate RootModel as type alias format for better mypy support.
+
+When enabled, root models with simple types are generated as type aliases
+instead of class definitions, improving mypy type inference.
 
 !!! tip "Usage"
 
