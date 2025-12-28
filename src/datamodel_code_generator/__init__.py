@@ -71,7 +71,7 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 # Import is_pydantic_v2 here for module-level YamlValue type definition
-from datamodel_code_generator.util import is_pydantic_v2, model_dump, model_validate  # noqa: E402
+from datamodel_code_generator.util import is_pydantic_v2, model_validate  # noqa: E402
 
 if not TYPE_CHECKING:  # pragma: no branch
     YamlScalar: TypeAlias = str | int | float | bool | None
@@ -685,35 +685,12 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     defer_formatting = config.output is not None and not config.output.suffix
 
-    parser_config_data = model_dump(config)
-    effective_enum_field_as_literal = config.enum_field_as_literal
-    if effective_enum_field_as_literal is None and config.output_model_type == DataModelType.TypingTypedDict:
-        effective_enum_field_as_literal = LiteralType.All
-    if config.output_model_type == DataModelType.DataclassesDataclass:
-        effective_set_default_enum_member = True
-    else:
-        effective_set_default_enum_member = config.set_default_enum_member
-    parser_config_data.update({
-        "data_model_type": data_model_types.data_model,
-        "data_model_root_type": data_model_types.root_model,
-        "data_model_field_type": data_model_types.field_model,
-        "data_type_manager_type": data_model_types.data_type_manager,
-        "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
-        "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-        "remote_text_cache": remote_text_cache,
-        "known_third_party": data_model_types.known_third_party,
-        "default_field_extras": default_field_extras,
-        "target_datetime_class": config.output_datetime_class,
-        "target_date_class": config.output_date_class,
-        "defer_formatting": defer_formatting,
-        "dataclass_arguments": effective_dataclass_arguments,
-        "enum_field_as_literal": effective_enum_field_as_literal,
-        "set_default_enum_member": effective_set_default_enum_member,
-    })
-    parser_fields = ParserConfig.model_fields if is_pydantic_v2() else ParserConfig.__fields__
-    parser_config = model_validate(
-        ParserConfig,
-        {k: v for k, v in parser_config_data.items() if k in parser_fields},
+    parser_config = ParserConfig._from_generate_config(  # noqa: SLF001
+        generate_config=config,
+        data_model_types=data_model_types,
+        input_=input_,
+        remote_text_cache=remote_text_cache,
+        default_field_extras=default_field_extras,
     )
 
     parser = parser_class(
