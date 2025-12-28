@@ -20,6 +20,28 @@
           "type": "integer"
         }
       }
-    }
+    },
+    "merged_obj": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "base_field": {
+              "type": "string"
+            }
+          },
+          "required": ["inherited_required"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "extra_field": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "any_value_field": true
   }
 }

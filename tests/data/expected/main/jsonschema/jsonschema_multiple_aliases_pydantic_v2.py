@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import AliasChoices, BaseModel, Field
 
 
@@ -14,9 +16,31 @@ class User(BaseModel):
     id: int | None = None
 
 
+class MergedObj(BaseModel):
+    baseField: str | None = Field(
+        None, validation_alias=AliasChoices('base_field', 'baseField', 'base-field')
+    )
+    inheritedRequired: Any = Field(
+        ...,
+        validation_alias=AliasChoices(
+            'inherited_required', 'inheritedRequired', 'inherited-required'
+        ),
+    )
+    extraField: int | None = Field(
+        None, validation_alias=AliasChoices('extra_field', 'extraField', 'extra-field')
+    )
+
+
 class Root(BaseModel):
     my_field: str | None = Field(
         None, validation_alias=AliasChoices('my_field', 'my-field', 'myField')
     )
     other_field: int | None = None
     user: User | None = Field(None, title='User')
+    merged_obj: MergedObj | None = None
+    anyValueField: Any | None = Field(
+        None,
+        validation_alias=AliasChoices(
+            'any_value_field', 'anyValueField', 'any-value-field'
+        ),
+    )

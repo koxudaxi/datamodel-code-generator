@@ -931,6 +931,28 @@ def test_main_with_aliases(output_model: str, expected_output: str, output_file:
     )
 
 
+def test_main_multiple_aliases_parameters_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI with multiple aliases for parameters using Pydantic v2 AliasChoices."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "multiple_aliases_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="openapi_multiple_aliases_parameters_pydantic_v2.py",
+        extra_args=[
+            "--aliases",
+            str(DATA_PATH / "aliases" / "multiple_aliases_parameters.json"),
+            "--openapi-scopes",
+            "paths",
+            "schemas",
+            "parameters",
+            "--use-operation-id-as-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_with_bad_aliases(output_file: Path) -> None:
     """Test OpenAPI generation with invalid aliases file."""
     run_main_and_assert(

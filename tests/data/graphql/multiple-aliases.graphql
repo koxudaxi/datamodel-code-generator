@@ -1,0 +1,7 @@
+scalar DateTime
+
+type Event {
+    name: String!
+    startDate: DateTime!
+    endDate: DateTime!
+}

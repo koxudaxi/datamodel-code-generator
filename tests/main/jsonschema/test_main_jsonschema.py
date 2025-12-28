@@ -5479,6 +5479,38 @@ def test_main_jsonschema_multiple_aliases_pydantic_v2(output_file: Path) -> None
     )
 
 
+def test_main_jsonschema_discriminator_multiple_aliases_pydantic_v2(output_file: Path) -> None:
+    """Test discriminator with multiple aliases using AliasChoices for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_multiple_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "discriminator_multiple_aliases.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_discriminator_no_literal_multiple_aliases_pydantic_v2(output_file: Path) -> None:
+    """Test discriminator without literal in child models using multiple aliases for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_no_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "discriminator_no_literal.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_jsonschema_multiple_types_with_object(output_file: Path) -> None:
     """Test multiple types in array including object with properties generates Union type."""
     run_main_and_assert(

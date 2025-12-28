@@ -1,0 +1,6 @@
+{
+  "page_size": ["pageSize", "page-size"],
+  "sort_order": ["sortOrder", "sort-order"],
+  "filter_options": ["filterOptions", "filter-options"],
+  "single_alias_field": "singleAliasField"
+}
