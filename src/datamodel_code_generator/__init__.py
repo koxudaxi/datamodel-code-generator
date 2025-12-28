@@ -576,22 +576,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             if isinstance(input_, Path) and input_.is_file() and input_file_type not in RAW_DATA_TYPES:
                 input_text = input_text_
 
-    kwargs: dict[str, Any] = {}
     if input_file_type == InputFileType.OpenAPI:  # noqa: PLR1702
         from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
-        parser_class: type[Parser] = OpenAPIParser
-        kwargs["openapi_scopes"] = config.openapi_scopes
-        kwargs["include_path_parameters"] = config.include_path_parameters
-        kwargs["use_status_code_in_response_name"] = config.use_status_code_in_response_name
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
-        parser_class: type[Parser] = GraphQLParser
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
-
-        parser_class = JsonSchemaParser
 
         if input_file_type in RAW_DATA_TYPES:
             import json  # noqa: PLC0415
@@ -672,11 +664,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         use_root_model_type_alias=config.use_root_model_type_alias,
     )
 
-    # Add GraphQL-specific model types if needed
-    if input_file_type == InputFileType.GraphQL:
-        kwargs["data_model_scalar_type"] = data_model_types.scalar_model
-        kwargs["data_model_union_type"] = data_model_types.union_model
-
     if isinstance(input_, Mapping) and input_file_type not in RAW_DATA_TYPES:
         source = dict(input_)
     else:
@@ -693,11 +680,26 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         default_field_extras=default_field_extras,
     )
 
-    parser = parser_class(
-        source=source,
-        config=parser_config,
-        **kwargs,
-    )
+    if input_file_type == InputFileType.OpenAPI:
+        parser = OpenAPIParser(
+            source=source,
+            config=parser_config,
+            openapi_scopes=config.openapi_scopes,
+            include_path_parameters=config.include_path_parameters,
+            use_status_code_in_response_name=config.use_status_code_in_response_name,
+        )
+    elif input_file_type == InputFileType.GraphQL:
+        parser = GraphQLParser(
+            source=source,
+            config=parser_config,
+            data_model_scalar_type=data_model_types.scalar_model,
+            data_model_union_type=data_model_types.union_model,
+        )
+    else:
+        parser = JsonSchemaParser(
+            source=source,
+            config=parser_config,
+        )
 
     parse_config = ParseConfig._from_generate_config(generate_config=config)  # noqa: SLF001
     with chdir(config.output):
@@ -914,6 +916,7 @@ __all__ = [
     "NamingStrategy",
     "OpenAPIScope",
     "ParseConfig",
+    "Parser",
     "ParserConfig",
     "PythonVersion",
     "PythonVersionMin",
