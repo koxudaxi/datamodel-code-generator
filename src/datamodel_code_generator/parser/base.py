@@ -68,7 +68,6 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
-from datamodel_code_generator.types import DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump, model_validate
 
 if TYPE_CHECKING:
@@ -84,6 +83,13 @@ if TYPE_CHECKING:
         ParserConfig,
         ParserConfigDict,
     )
+    from datamodel_code_generator.types import DataType, DataTypeManager
+
+
+def _get_data_type_class() -> type["DataType"]:
+    from datamodel_code_generator.types import DataType
+
+    return DataType
 
 
 @runtime_checkable
@@ -1730,6 +1736,7 @@ class Parser(ABC):
         if not self.collapse_root_models:
             return
 
+        data_type_class = _get_data_type_class()
         for model in models:  # noqa: PLR1702
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -1762,7 +1769,7 @@ class Parser(ABC):
                             root_model_wrappers = [
                                 parent_model
                                 for child in inner_reference.children
-                                if isinstance(child, DataType)
+                                if isinstance(child, data_type_class)
                                 and (parent_model := get_most_of_parent(child, DataModel))
                                 and isinstance(parent_model, self.data_model_root_type)
                             ]
@@ -1779,7 +1786,7 @@ class Parser(ABC):
                             direct_refs = [
                                 c
                                 for c in inner_reference.children
-                                if isinstance(c, DataType)
+                                if isinstance(c, data_type_class)
                                 and (parent_model := get_most_of_parent(c, DataModel)) is not None
                                 and parent_model is not root_type_model
                                 and not isinstance(parent_model, self.data_model_root_type)
@@ -1832,7 +1839,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
+                    elif isinstance(data_type.parent, data_type_class) and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1848,11 +1855,11 @@ class Parser(ABC):
                             discriminator = root_type_field.extras.get("discriminator")
                             if discriminator:
                                 model_field.extras["discriminator"] = discriminator
-                        assert isinstance(data_type.parent, DataType)
+                        assert isinstance(data_type.parent, data_type_class)
                         data_type.parent.data_types.remove(data_type)  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
 
-                    elif isinstance(data_type.parent, DataType):
+                    elif isinstance(data_type.parent, data_type_class):
                         # for data_type
                         data_type_id = id(data_type)
                         data_type.parent.data_types = [
