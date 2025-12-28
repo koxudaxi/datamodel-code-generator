@@ -705,7 +705,7 @@ class Parser(ABC):
             raise ValueError(msg)
         if config is None:
             config = model_validate(ParserConfig, options)
-        elif not isinstance(config, ParserConfig):
+        elif not isinstance(config, ParserConfig):  # pragma: no cover
             config = model_validate(ParserConfig, config)
 
         data_model_type = config.data_model_type

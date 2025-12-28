@@ -759,8 +759,8 @@ def _rebuild_config_models() -> None:
 
     try:
         from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-    except ImportError:
-        runtime_union_mode = Any
+    except ImportError:  # pragma: no cover
+        runtime_union_mode = Any  # pragma: no cover
     else:
         runtime_union_mode = UnionMode
 

@@ -729,7 +729,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         from pydantic.json_schema import PydanticJsonSchemaWarning  # noqa: PLC0415
 
         with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)
+            warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)  # pragma: no cover
             return obj.model_json_schema()
 
     # Check for dataclass or TypedDict - use TypeAdapter
@@ -751,7 +751,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
             from pydantic.json_schema import PydanticJsonSchemaWarning  # noqa: PLC0415
 
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)
+                warnings.filterwarnings("ignore", category=PydanticJsonSchemaWarning)  # pragma: no cover
                 return TypeAdapter(obj).json_schema()
         except ImportError as e:
             msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
