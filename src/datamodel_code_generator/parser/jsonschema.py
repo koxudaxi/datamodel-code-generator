@@ -1287,7 +1287,9 @@ class JsonSchemaParser(Parser):
 
         type_to_flag: dict[str, dict[str, bool]] = {
             "Set": {"is_set": True},
+            "set": {"is_set": True},
             "FrozenSet": {"is_frozen_set": True},
+            "frozenset": {"is_frozen_set": True},
             "Mapping": {"is_mapping": True},
             "MutableMapping": {"is_mapping": True},
             "Sequence": {"is_sequence": True},
