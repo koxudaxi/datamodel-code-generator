@@ -1346,7 +1346,18 @@ class JsonSchemaParser(Parser):
 
         base_type = self._get_python_type_base(x_python_type)
         import_ = self.PYTHON_TYPE_IMPORTS.get(base_type)
-        return self.data_type(type=x_python_type, import_=import_)
+
+        # Convert fully qualified path to short name when import is added
+        type_str = x_python_type
+        prefix = x_python_type.split("[", maxsplit=1)[0]
+        if "." in prefix:
+            # Replace the fully qualified prefix with just the base type name
+            type_str = base_type + x_python_type[len(prefix) :]
+            if not import_:
+                # If not in predefined imports, create import from the full path
+                import_ = Import.from_full_path(prefix)
+
+        return self.data_type(type=type_str, import_=import_)
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""

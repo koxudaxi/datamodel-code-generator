@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {"type": "string"},
+      "x-python-type": "Set[str]"
+    }
+  }
+}
