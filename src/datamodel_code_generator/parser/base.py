@@ -86,12 +86,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType, DataTypeManager
 
 
-def _get_data_type_class() -> type[Any]:
-    from datamodel_code_generator.types import DataType  # noqa: PLC0415
-
-    return DataType
-
-
 @runtime_checkable
 class HashableComparable(Hashable, Protocol):
     """Protocol for types that are both hashable and support comparison."""
@@ -1739,7 +1733,8 @@ class Parser(ABC):
         if not self.collapse_root_models:
             return
 
-        data_type_class = _get_data_type_class()
+        from datamodel_code_generator.types import DataType  # noqa: PLC0415
+
         for model in models:  # noqa: PLR1702
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -1772,7 +1767,7 @@ class Parser(ABC):
                             root_model_wrappers = [
                                 parent_model
                                 for child in inner_reference.children
-                                if isinstance(child, data_type_class)
+                                if isinstance(child, DataType)
                                 and (parent_model := get_most_of_parent(child, DataModel))
                                 and isinstance(parent_model, self.data_model_root_type)
                             ]
@@ -1789,7 +1784,7 @@ class Parser(ABC):
                             direct_refs = [
                                 c
                                 for c in inner_reference.children
-                                if isinstance(c, data_type_class)
+                                if isinstance(c, DataType)
                                 and (parent_model := get_most_of_parent(c, DataModel)) is not None
                                 and parent_model is not root_type_model
                                 and not isinstance(parent_model, self.data_model_root_type)
@@ -1842,7 +1837,7 @@ class Parser(ABC):
 
                         data_type.parent.data_type = copied_data_type
 
-                    elif isinstance(data_type.parent, data_type_class) and data_type.parent.is_list:
+                    elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
                         if self.field_constraints:
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
@@ -1858,11 +1853,11 @@ class Parser(ABC):
                             discriminator = root_type_field.extras.get("discriminator")
                             if discriminator:
                                 model_field.extras["discriminator"] = discriminator
-                        assert isinstance(data_type.parent, data_type_class)
+                        assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)  # pragma: no cover
                         data_type.parent.data_types.append(copied_data_type)
 
-                    elif isinstance(data_type.parent, data_type_class):
+                    elif isinstance(data_type.parent, DataType):
                         # for data_type
                         data_type_id = id(data_type)
                         data_type.parent.data_types = [
