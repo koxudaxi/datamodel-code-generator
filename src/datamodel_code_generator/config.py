@@ -355,6 +355,38 @@ class CliConfigSchema(BaseModel):
     watch_delay: float = 0.5
 
 
+def _build_parser_config_overrides(  # noqa: PLR0913
+    *,
+    data_model_types: DataModelSet,
+    input_: Path | str | ParseResult | Mapping[str, Any],
+    remote_text_cache: DefaultPutDict[str, str],
+    default_field_extras: dict[str, Any] | None,
+    generate_config: GenerateConfig,
+    effective_dataclass_arguments: DataclassArguments,
+    effective_enum_field_as_literal: LiteralType | None,
+    effective_set_default_enum_member: bool,
+) -> dict[str, Any]:
+    from pathlib import Path  # noqa: PLC0415
+
+    return {
+        "data_model_type": data_model_types.data_model,
+        "data_model_root_type": data_model_types.root_model,
+        "data_model_field_type": data_model_types.field_model,
+        "data_type_manager_type": data_model_types.data_type_manager,
+        "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
+        "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
+        "remote_text_cache": remote_text_cache,
+        "known_third_party": data_model_types.known_third_party,
+        "default_field_extras": default_field_extras,
+        "target_datetime_class": generate_config.output_datetime_class,
+        "target_date_class": generate_config.output_date_class,
+        "defer_formatting": generate_config.output is not None and not generate_config.output.suffix,
+        "dataclass_arguments": effective_dataclass_arguments,
+        "enum_field_as_literal": effective_enum_field_as_literal,
+        "set_default_enum_member": effective_set_default_enum_member,
+    }
+
+
 class ParserConfig(BaseModel):
     """Configuration model for Parser.__init__()."""
 
@@ -489,8 +521,6 @@ class ParserConfig(BaseModel):
         remote_text_cache: DefaultPutDict[str, str],
         default_field_extras: dict[str, Any] | None,
     ) -> ParserConfig:
-        from pathlib import Path  # noqa: PLC0415
-
         effective_dataclass_arguments = generate_config.dataclass_arguments
         if effective_dataclass_arguments is None:
             effective_dataclass_arguments = {}
@@ -519,23 +549,18 @@ class ParserConfig(BaseModel):
             generate_config,
             include=set(parser_fields) & set(generate_fields),
         )
-        parser_config_data.update({
-            "data_model_type": data_model_types.data_model,
-            "data_model_root_type": data_model_types.root_model,
-            "data_model_field_type": data_model_types.field_model,
-            "data_type_manager_type": data_model_types.data_type_manager,
-            "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
-            "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-            "remote_text_cache": remote_text_cache,
-            "known_third_party": data_model_types.known_third_party,
-            "default_field_extras": default_field_extras,
-            "target_datetime_class": generate_config.output_datetime_class,
-            "target_date_class": generate_config.output_date_class,
-            "defer_formatting": generate_config.output is not None and not generate_config.output.suffix,
-            "dataclass_arguments": effective_dataclass_arguments,
-            "enum_field_as_literal": effective_enum_field_as_literal,
-            "set_default_enum_member": effective_set_default_enum_member,
-        })
+        parser_config_data.update(
+            _build_parser_config_overrides(
+                data_model_types=data_model_types,
+                input_=input_,
+                remote_text_cache=remote_text_cache,
+                default_field_extras=default_field_extras,
+                generate_config=generate_config,
+                effective_dataclass_arguments=effective_dataclass_arguments,
+                effective_enum_field_as_literal=effective_enum_field_as_literal,
+                effective_set_default_enum_member=effective_set_default_enum_member,
+            )
+        )
         return model_validate(
             cls,
             {k: v for k, v in parser_config_data.items() if k in parser_fields},
