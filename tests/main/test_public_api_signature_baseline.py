@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_NAME, generate
-from datamodel_code_generator.arguments import PythonVersionMin
 from datamodel_code_generator.enums import (
     AllExportsCollisionStrategy,
     AllExportsScope,
@@ -23,10 +22,11 @@ from datamodel_code_generator.enums import (
     ReuseScope,
     TargetPydanticVersion,
 )
-from datamodel_code_generator.model import DataModel, DataModelFieldBase, DataTypeManager, pydantic_model
+from datamodel_code_generator.format import PythonVersionMin
+from datamodel_code_generator.model import DataModel, DataModelFieldBase
+from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.pydantic import BaseModel
-from datamodel_code_generator.parser.base import Parser, YamlValue
-from datamodel_code_generator.util import title_to_class_name
+from datamodel_code_generator.parser.base import Parser, YamlValue, title_to_class_name
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -36,13 +36,14 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.dataclass import DataclassArguments
+    from datamodel_code_generator.model.pydantic import DataTypeManager
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.parser import LiteralType
+    from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import StrictTypes
 
 
 def _baseline_generate(
-    input_: Path | str | ParseResult | Mapping[str, object],
+    input_: Path | str | ParseResult | Mapping[str, Any],
     *,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
@@ -55,7 +56,7 @@ def _baseline_generate(
     additional_imports: list[str] | None = None,
     class_decorators: list[str] | None = None,
     custom_template_dir: Path | None = None,
-    extra_template_data: defaultdict[str, dict[str, object]] | None = None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
     validation: bool = False,
     field_constraints: bool = False,
     snake_case_field: bool = False,
@@ -135,7 +136,7 @@ def _baseline_generate(
     custom_file_header: str | None = None,
     custom_file_header_path: Path | None = None,
     custom_formatters: list[str] | None = None,
-    custom_formatters_kwargs: dict[str, object] | None = None,
+    custom_formatters_kwargs: dict[str, Any] | None = None,
     use_pendulum: bool = False,
     use_standard_primitive_types: bool = False,
     http_query_parameters: Sequence[tuple[str, str]] | None = None,
@@ -182,7 +183,7 @@ class _BaselineParser:
         additional_imports: list[str] | None = None,
         class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
-        extra_template_data: defaultdict[str, dict[str, object]] | None = None,
+    extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
         target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,
@@ -218,7 +219,7 @@ class _BaselineParser:
         strict_nullable: bool = False,
         use_generic_container_types: bool = False,
         enable_faux_immutability: bool = False,
-        remote_text_cache: object | None = None,
+        remote_text_cache: DefaultPutDict[str, str] | None = None,
         disable_appending_item_suffix: bool = False,
         strict_types: Sequence[StrictTypes] | None = None,
         empty_enum_field_name: str | None = None,
@@ -258,13 +259,13 @@ class _BaselineParser:
         use_enum_values_in_discriminator: bool = False,
         known_third_party: list[str] | None = None,
         custom_formatters: list[str] | None = None,
-        custom_formatters_kwargs: dict[str, object] | None = None,
+        custom_formatters_kwargs: dict[str, Any] | None = None,
         use_pendulum: bool = False,
         use_standard_primitive_types: bool = False,
         http_query_parameters: Sequence[tuple[str, str]] | None = None,
         treat_dot_as_module: bool | None = None,
         use_exact_imports: bool = False,
-        default_field_extras: dict[str, object] | None = None,
+        default_field_extras: dict[str, Any] | None = None,
         target_datetime_class: DatetimeClassType | None = None,
         target_date_class: DateClassType | None = None,
         keyword_only: bool = False,
