@@ -1223,6 +1223,34 @@ class JsonSchemaParser(Parser):
             if model_extras:
                 self.extra_template_data[path]["model_extras"] = model_extras
 
+    def _get_python_type_flags(self, obj: JsonSchemaObject) -> dict[str, bool]:  # noqa: PLR6301
+        """Get container type flags from x-python-type extension.
+
+        Returns a dict with flags like is_set, is_frozen_set, is_mapping, is_sequence
+        that can be passed to data_type() to override the default container type.
+
+        Note: This is an instance method (not static) due to the snooper_to_methods
+        class decorator which does not preserve staticmethod descriptors.
+        """
+        x_python_type = obj.extras.get("x-python-type")
+        if not x_python_type or not isinstance(x_python_type, str):
+            return {}
+
+        base_type = x_python_type.split("[")[0].strip()
+
+        type_to_flag: dict[str, dict[str, bool]] = {
+            "Set": {"is_set": True},
+            "FrozenSet": {"is_frozen_set": True},
+            "Mapping": {"is_mapping": True},
+            "MutableMapping": {"is_mapping": True},
+            "Sequence": {"is_sequence": True},
+            "MutableSequence": {"is_sequence": True},
+            "AbstractSet": {"is_frozen_set": True},
+            "MutableSet": {"is_set": True},
+        }
+
+        return type_to_flag.get(base_type, {})
+
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""
         if self.use_title_as_name and obj.title:
@@ -2427,12 +2455,13 @@ class JsonSchemaParser(Parser):
 
         return self.data_type(data_types=data_types)
 
-    def parse_property_names(
+    def parse_property_names(  # noqa: PLR0912
         self,
         name: str,
         property_names: JsonSchemaObject,
         additional_properties: JsonSchemaObject | bool | None,  # noqa: FBT001
         path: list[str],
+        parent_obj: JsonSchemaObject | None = None,
     ) -> DataType:
         """Parse propertyNames into a dict data type with constrained keys.
 
@@ -2441,6 +2470,7 @@ class JsonSchemaParser(Parser):
             property_names: Schema constraining property names
             additional_properties: Schema for values (or bool/None)
             path: Current path in schema
+            parent_obj: Parent schema object for x-python-type lookup
 
         Returns:
             DataType representing dict with constrained keys
@@ -2496,9 +2526,15 @@ class JsonSchemaParser(Parser):
         else:
             key_type = self.data_type_manager.get_data_type(Types.string)
 
+        dict_flags: dict[str, bool] = {"is_dict": True}
+        if parent_obj:  # pragma: no branch
+            python_type_flags = self._get_python_type_flags(parent_obj)
+            if python_type_flags:  # pragma: no cover
+                dict_flags = python_type_flags
+
         return self.data_type(
             data_types=[value_type],
-            is_dict=True,
+            **dict_flags,
             dict_key=key_type,
         )
 
@@ -2582,11 +2618,15 @@ class JsonSchemaParser(Parser):
                 # support only single key dict.
                 return self.parse_pattern_properties(name, item.patternProperties, object_path)
             if item.propertyNames:
-                return self.parse_property_names(name, item.propertyNames, item.additionalProperties, object_path)
+                return self.parse_property_names(
+                    name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
+                )
             if isinstance(item.additionalProperties, JsonSchemaObject):
+                python_type_flags = self._get_python_type_flags(item)
+                dict_flags = python_type_flags or {"is_dict": True}
                 return self.data_type(
                     data_types=[self.parse_item(name, item.additionalProperties, object_path)],
-                    is_dict=True,
+                    **dict_flags,
                 )
             return self.data_type_manager.get_data_type(
                 Types.object,
@@ -2662,11 +2702,16 @@ class JsonSchemaParser(Parser):
         else:
             item_data_types = [self.data_type_manager.get_data_type(Types.any)]
 
+        python_type_flags = self._get_python_type_flags(obj)
+        container_flags: dict[str, bool] = {}
+        if not is_tuple:
+            container_flags = python_type_flags or {"is_list": True}
+
         data_types: list[DataType] = [
             self.data_type(
                 data_types=item_data_types,
                 is_tuple=is_tuple,
-                is_list=not is_tuple,
+                **container_flags,
             )
         ]
         # TODO: decide special path word for a combined data model.
@@ -2791,7 +2836,9 @@ class JsonSchemaParser(Parser):
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
         elif obj.propertyNames:
-            data_type = self.parse_property_names(name, obj.propertyNames, obj.additionalProperties, path)
+            data_type = self.parse_property_names(
+                name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
+            )
         elif obj.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(obj, property_name=name):
                 data_type = self.parse_enum_as_literal(obj)

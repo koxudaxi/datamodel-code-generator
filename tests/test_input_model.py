@@ -459,3 +459,100 @@ def test_input_model_module_import_error(
         capsys=capsys,
         expected_stderr_contains="Cannot import module",
     )
+
+
+# ============================================================================
+# x-python-type preservation tests
+# ============================================================================
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_preserves_set_type(tmp_path: Path) -> None:
+    """Test that Set[T] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["set[str]", "tags:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_preserves_frozenset_type(tmp_path: Path) -> None:
+    """Test that FrozenSet[T] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["frozenset[int]", "frozen_tags:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_preserves_mapping_type(tmp_path: Path) -> None:
+    """Test that Mapping[K, V] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Mapping[str, int]", "metadata:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_preserves_sequence_type(tmp_path: Path) -> None:
+    """Test that Sequence[T] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Sequence[str]", "items:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_preserves_nested_model_types(tmp_path: Path) -> None:
+    """Test that types in nested models are also preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["frozenset[str]", "values:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_x_python_type_to_typeddict(tmp_path: Path) -> None:
+    """Test that x-python-type works when outputting to TypedDict."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=["TypedDict", "set[str]", "Mapping[str, int]"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_x_python_type_to_dataclass(tmp_path: Path) -> None:
+    """Test that x-python-type works when outputting to dataclass."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        expected_output_contains=["@dataclass", "set[str]", "Mapping[str, int]"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_dataclass_with_python_types(tmp_path: Path) -> None:
+    """Test that Set/Mapping types are preserved from dataclass input."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.dataclass_models:DataclassWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["set[str]", "frozenset[int]", "Mapping[str, int]", "Sequence[str]"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_recursive_model_types(tmp_path: Path) -> None:
+    """Test that recursive models handle x-python-type correctly."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:RecursiveNode",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["set[str]", "value:"],
+    )
