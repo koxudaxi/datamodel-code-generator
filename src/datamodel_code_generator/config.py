@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from typing import TYPE_CHECKING, Any, TypeAlias
 
@@ -42,9 +43,12 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    DataModel: TypeAlias = Any
+    DataModelFieldBase: TypeAlias = Any
+    DataTypeManager: TypeAlias = Any
+    StrictTypes: TypeAlias = Any
 else:
     if not is_pydantic_v2():
         Path = Any  # type: ignore[assignment]
@@ -754,8 +758,12 @@ def _rebuild_config_models() -> None:
     from pathlib import Path  # noqa: PLC0415
     from urllib.parse import ParseResult  # noqa: PLC0415
 
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase  # noqa: PLC0415
-    from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
+    model_base = importlib.import_module("datamodel_code_generator.model.base")
+    types_module = importlib.import_module("datamodel_code_generator.types")
+    data_model_class = model_base.DataModel
+    data_model_field_base_class = model_base.DataModelFieldBase
+    data_type_manager_class = types_module.DataTypeManager
+    strict_types_class = types_module.StrictTypes
 
     try:
         from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
@@ -767,10 +775,10 @@ def _rebuild_config_models() -> None:
     types_namespace = {
         "Path": Path,
         "ParseResult": ParseResult,
-        "DataModel": DataModel,
-        "DataModelFieldBase": DataModelFieldBase,
-        "DataTypeManager": DataTypeManager,
-        "StrictTypes": StrictTypes,
+        "DataModel": data_model_class,
+        "DataModelFieldBase": data_model_field_base_class,
+        "DataTypeManager": data_type_manager_class,
+        "StrictTypes": strict_types_class,
         "UnionMode": runtime_union_mode,
     }
     if is_pydantic_v2():

@@ -698,17 +698,19 @@ class Parser(ABC):
         **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the Parser with configuration options."""
-        from datamodel_code_generator.config import ParserConfig, _rebuild_config_models  # noqa: PLC0415
+        config_module = importlib.import_module("datamodel_code_generator.config")
+        parser_config_model = config_module.ParserConfig
+        rebuild_config_models = config_module._rebuild_config_models  # noqa: SLF001
 
-        _rebuild_config_models()
+        rebuild_config_models()
 
         if config is not None and options:
             msg = "Cannot specify both 'config' and individual options"
             raise ValueError(msg)
         if config is None:
-            config = model_validate(ParserConfig, options)
-        elif not isinstance(config, ParserConfig):  # pragma: no cover
-            config = model_validate(ParserConfig, config)
+            config = model_validate(parser_config_model, options)
+        elif not isinstance(config, parser_config_model):  # pragma: no cover
+            config = model_validate(parser_config_model, config)
 
         data_model_type = config.data_model_type
         data_model_root_type = config.data_model_root_type
@@ -3114,22 +3116,19 @@ class Parser(ABC):
         **options: Unpack[ParseConfigDict],
     ) -> str | dict[tuple[str, ...], Result]:
         """Parse schema and generate code, returning single file or module dict."""
-        from datamodel_code_generator.config import (  # noqa: PLC0415
-            ParseConfig as ParseConfigModel,
-        )
-        from datamodel_code_generator.config import (  # noqa: PLC0415
-            _rebuild_config_models,
-        )
+        config_module = importlib.import_module("datamodel_code_generator.config")
+        parse_config_model = config_module.ParseConfig
+        rebuild_config_models = config_module._rebuild_config_models  # noqa: SLF001
 
-        _rebuild_config_models()
+        rebuild_config_models()
 
         if config is not None and options:
             msg = "Cannot specify both 'config' and individual options"
             raise ValueError(msg)
         if config is None:
-            config = model_validate(ParseConfigModel, options)
-        elif not isinstance(config, ParseConfigModel):
-            config = model_validate(ParseConfigModel, config)
+            config = model_validate(parse_config_model, options)
+        elif not isinstance(config, parse_config_model):
+            config = model_validate(parse_config_model, config)
 
         with_import = config.with_import
         format_ = config.format_

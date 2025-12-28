@@ -1121,6 +1121,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         try:
             extra_template_data = defaultdict(dict, **config.extra_template_data)
         except (TypeError, ValueError):
+            print(  # noqa: T201
+                "Extra template data must be a mapping of string keys to mapping values.",
+                file=sys.stderr,
+            )
             return Exit.ERROR
 
     if extra_template_data is not None:
@@ -1138,6 +1142,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         if not isinstance(aliases, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
         ):
+            print(  # noqa: T201
+                'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                file=sys.stderr,
+            )
             return Exit.ERROR
 
     if config.custom_formatters_kwargs is None:
@@ -1147,6 +1155,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         if not isinstance(custom_formatters_kwargs, dict) or not all(
             isinstance(k, str) and isinstance(v, str) for k, v in custom_formatters_kwargs.items()
         ):
+            print(  # noqa: T201
+                'Custom formatters kwargs mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                file=sys.stderr,
+            )
             return Exit.ERROR
 
     if config.check:

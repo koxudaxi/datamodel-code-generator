@@ -905,6 +905,18 @@ def __getattr__(name: str) -> Any:
         from datamodel_code_generator import config as _config  # noqa: PLC0415
 
         return getattr(_config, name)
+    if name == "StrictTypes":
+        from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
+
+        return StrictTypes
+    if name == "UnionMode":
+        try:
+            from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+        except ImportError:
+            from datamodel_code_generator import config as _config  # noqa: PLC0415
+
+            return _config.UnionMode
+        return UnionMode
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)
 
