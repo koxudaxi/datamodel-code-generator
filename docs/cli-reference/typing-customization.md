@@ -37,10 +37,10 @@
 
 Merge constraints from root model references in allOf schemas.
 
-The `--allof-merge-mode constraints` merges only constraint properties
-(minLength, maximum, etc.) from parent schemas referenced in allOf.
-This ensures child schemas inherit validation constraints while keeping
-other properties separate.
+    The `--allof-merge-mode constraints` merges only constraint properties
+    (minLength, maximum, etc.) from parent schemas referenced in allOf.
+    This ensures child schemas inherit validation constraints while keeping
+    other properties separate.
 
 !!! tip "Usage"
 
@@ -666,17 +666,17 @@ other properties separate.
 
 Prevent automatic addition of __future__ imports in generated code.
 
-The --disable-future-imports option stops the generator from adding
-'from __future__ import annotations' to the output. This is useful when
-you need compatibility with tools or environments that don't support
-postponed evaluation of annotations (PEP 563).
+    The --disable-future-imports option stops the generator from adding
+    'from __future__ import annotations' to the output. This is useful when
+    you need compatibility with tools or environments that don't support
+    postponed evaluation of annotations (PEP 563).
 
-**Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
+    **Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
+    with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
+    deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
 
-- Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-- Use this `--disable-future-imports` flag as a workaround
+    - Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
+    - Use this `--disable-future-imports` flag as a workaround
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -743,9 +743,9 @@ deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
 
 Convert all enum fields to Literal types instead of Enum classes.
 
-The `--enum-field-as-literal all` flag converts all enum types to Literal
-type annotations. This is useful when you want string literal types instead
-of Enum classes for all enumerations.
+    The `--enum-field-as-literal all` flag converts all enum types to Literal
+    type annotations. This is useful when you want string literal types instead
+    of Enum classes for all enumerations.
 
 !!! tip "Usage"
 
@@ -1206,8 +1206,8 @@ of Enum classes for all enumerations.
 
 Override enum/literal generation per-field via JSON mapping.
 
-The `--enum-field-as-literal-map` option allows per-field control over whether
-to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+    The `--enum-field-as-literal-map` option allows per-field control over whether
+    to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
 
 !!! tip "Usage"
 
@@ -1287,10 +1287,10 @@ to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
 
 Ignore enum constraints and use base string type instead of Enum classes.
 
-The `--ignore-enum-constraints` flag ignores enum constraints and uses
-the base type (str) instead of generating Enum classes. This is useful
-when you need flexibility in the values a field can accept beyond the
-defined enum members.
+    The `--ignore-enum-constraints` flag ignores enum constraints and uses
+    the base type (str) instead of generating Enum classes. This is useful
+    when you need flexibility in the values a field can accept beyond the
+    defined enum members.
 
 !!! tip "Usage"
 
@@ -1416,9 +1416,9 @@ defined enum members.
 
 Disable specialized Enum classes for Python 3.11+ code generation.
 
-The `--no-use-specialized-enum` flag prevents the generator from using
-specialized Enum classes (StrEnum, IntEnum) when generating code for
-Python 3.11+, falling back to standard Enum classes instead.
+    The `--no-use-specialized-enum` flag prevents the generator from using
+    specialized Enum classes (StrEnum, IntEnum) when generating code for
+    Python 3.11+, falling back to standard Enum classes instead.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
@@ -1690,9 +1690,9 @@ Python 3.11+, falling back to standard Enum classes instead.
 
 Use typing.Dict/List instead of built-in dict/list for container types.
 
-The `--no-use-standard-collections` flag generates typing module containers
-(Dict, List) instead of built-in types. This is useful for older Python
-versions or when explicit typing imports are preferred.
+    The `--no-use-standard-collections` flag generates typing module containers
+    (Dict, List) instead of built-in types. This is useful for older Python
+    versions or when explicit typing imports are preferred.
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -1898,9 +1898,9 @@ versions or when explicit typing imports are preferred.
 
 Use Union[X, Y] / Optional[X] instead of X | Y union operator.
 
-The `--no-use-union-operator` flag generates union types using typing.Union
-and typing.Optional instead of the | operator (PEP 604). This is useful
-for older Python versions or when explicit typing imports are preferred.
+    The `--no-use-union-operator` flag generates union types using typing.Union
+    and typing.Optional instead of the | operator (PEP 604). This is useful
+    for older Python versions or when explicit typing imports are preferred.
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -2106,9 +2106,9 @@ for older Python versions or when explicit typing imports are preferred.
 
 Specify date class type for date schema fields.
 
-The `--output-date-class` flag controls which date type to use for fields
-with date format. Options include 'PastDate' for past dates only
-or 'FutureDate' for future dates only. This is a Pydantic v2 only feature.
+    The `--output-date-class` flag controls which date type to use for fields
+    with date format. Options include 'PastDate' for past dates only
+    or 'FutureDate' for future dates only. This is a Pydantic v2 only feature.
 
 !!! tip "Usage"
 
@@ -2159,9 +2159,9 @@ or 'FutureDate' for future dates only. This is a Pydantic v2 only feature.
 
 Specify datetime class type for date-time schema fields.
 
-The `--output-datetime-class` flag controls which datetime type to use for fields
-with date-time format. Options include 'AwareDatetime' for timezone-aware datetimes
-or 'datetime' for standard Python datetime objects.
+    The `--output-datetime-class` flag controls which datetime type to use for fields
+    with date-time format. Options include 'AwareDatetime' for timezone-aware datetimes
+    or 'datetime' for standard Python datetime objects.
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
@@ -2223,10 +2223,10 @@ or 'datetime' for standard Python datetime objects.
 
 Enable strict type validation for specified Python types.
 
-The --strict-types option enforces stricter type checking by preventing implicit
-type coercion for the specified types (str, bytes, int, float, bool). This
-generates StrictStr, StrictBytes, StrictInt, StrictFloat, and StrictBool types
-in Pydantic models, ensuring values match exactly without automatic conversion.
+    The --strict-types option enforces stricter type checking by preventing implicit
+    type coercion for the specified types (str, bytes, int, float, bool). This
+    generates StrictStr, StrictBytes, StrictInt, StrictFloat, and StrictBool types
+    in Pydantic models, ensuring values match exactly without automatic conversion.
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
@@ -2337,7 +2337,7 @@ in Pydantic models, ensuring values match exactly without automatic conversion.
 
 Override default type mappings for schema formats.
 
-The `--type-mappings` flag configures the code generation behavior.
+    The `--type-mappings` flag configures the code generation behavior.
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
@@ -2462,8 +2462,8 @@ Replace schema model types with custom Python types via JSON mapping.
 
 Use typing.Annotated for Field() with constraints.
 
-The `--use-annotated` flag generates Field definitions using typing.Annotated
-syntax instead of default values. This also enables `--field-constraints`.
+    The `--use-annotated` flag generates Field definitions using typing.Annotated
+    syntax instead of default values. This also enables `--field-constraints`.
 
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
 
@@ -2867,9 +2867,9 @@ syntax instead of default values. This also enables `--field-constraints`.
 
 Generate Decimal types for fields with multipleOf constraint.
 
-The `--use-decimal-for-multiple-of` flag generates `condecimal` or `Decimal`
-types for numeric fields that have a `multipleOf` constraint. This ensures
-precise decimal arithmetic when validating values against the constraint.
+    The `--use-decimal-for-multiple-of` flag generates `condecimal` or `Decimal`
+    types for numeric fields that have a `multipleOf` constraint. This ensures
+    precise decimal arithmetic when validating values against the constraint.
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
@@ -2939,10 +2939,10 @@ precise decimal arithmetic when validating values against the constraint.
 
 Use generic container types (Sequence, Mapping) for type hinting.
 
-The `--use-generic-container-types` flag generates abstract container types
-(Sequence, Mapping, FrozenSet) instead of concrete types (list, dict, set).
-If `--use-standard-collections` is set, imports from `collections.abc`;
-otherwise imports from `typing`.
+    The `--use-generic-container-types` flag generates abstract container types
+    (Sequence, Mapping, FrozenSet) instead of concrete types (list, dict, set).
+    If `--use-standard-collections` is set, imports from `collections.abc`;
+    otherwise imports from `typing`.
 
 **Related:** [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 
@@ -3150,10 +3150,10 @@ otherwise imports from `typing`.
 
 Use NonPositive/NonNegative types for number constraints.
 
-The `--use-non-positive-negative-number-constrained-types` flag generates
-Pydantic's NonPositiveInt, NonNegativeInt, NonPositiveFloat, and NonNegativeFloat
-types for fields with minimum: 0 or maximum: 0 constraints, instead of using
-conint/confloat with ge/le parameters.
+    The `--use-non-positive-negative-number-constrained-types` flag generates
+    Pydantic's NonPositiveInt, NonNegativeInt, NonPositiveFloat, and NonNegativeFloat
+    types for fields with minimum: 0 or maximum: 0 constraints, instead of using
+    conint/confloat with ge/le parameters.
 
 !!! tip "Usage"
 
@@ -3237,9 +3237,9 @@ conint/confloat with ge/le parameters.
 
 Use pendulum types for date/time fields instead of datetime module.
 
-The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
-Time, Duration) instead of standard datetime types. This is useful when
-working with the pendulum library for enhanced timezone and date handling.
+    The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
+    Time, Duration) instead of standard datetime types. This is useful when
+    working with the pendulum library for enhanced timezone and date handling.
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
@@ -3368,11 +3368,11 @@ Generate RootModel as type alias format for better mypy support (issue #1903).
 
 Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).
 
-The `--use-specialized-enum` flag generates specialized enum types:
-- `StrEnum` for string enums
-- `IntEnum` for integer enums
+    The `--use-specialized-enum` flag generates specialized enum types:
+    - `StrEnum` for string enums
+    - `IntEnum` for integer enums
 
-This is the default behavior for Python 3.11+ targets.
+    This is the default behavior for Python 3.11+ targets.
 
 **Related:** [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum), [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 
@@ -3505,9 +3505,9 @@ This is the default behavior for Python 3.11+ targets.
 
 Use built-in dict/list instead of typing.Dict/List.
 
-The `--use-standard-collections` flag generates built-in container types
-(dict, list) instead of typing module equivalents. This produces cleaner
-code for Python 3.10+ where built-in types support subscripting.
+    The `--use-standard-collections` flag generates built-in container types
+    (dict, list) instead of typing module equivalents. This produces cleaner
+    code for Python 3.10+ where built-in types support subscripting.
 
 **Related:** [`--use-generic-container-types`](typing-customization.md#use-generic-container-types)
 
@@ -3712,10 +3712,10 @@ code for Python 3.10+ where built-in types support subscripting.
 
 Use Python standard library types for string formats instead of str.
 
-The `--use-standard-primitive-types` flag configures the code generation to use
-Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
-string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
-output types. Pydantic already uses these types by default.
+    The `--use-standard-primitive-types` flag configures the code generation to use
+    Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
+    string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
+    output types. Pydantic already uses these types by default.
 
 **Related:** [`--output-datetime-class`](typing-customization.md#output-datetime-class), [`--output-model-type`](model-customization.md#output-model-type)
 
@@ -3779,8 +3779,8 @@ output types. Pydantic already uses these types by default.
 
 Generate tuple types for arrays with items array syntax.
 
-When `--use-tuple-for-fixed-items` is enabled and an array has `items` as an array
-with `minItems == maxItems == len(items)`, generate a tuple type instead of a list.
+    When `--use-tuple-for-fixed-items` is enabled and an array has `items` as an array
+    with `minItems == maxItems == len(items)`, generate a tuple type instead of a list.
 
 !!! tip "Usage"
 
@@ -3832,10 +3832,10 @@ with `minItems == maxItems == len(items)`, generate a tuple type instead of a li
 
 Use TypeAlias instead of root models for type definitions (experimental).
 
-The `--use-type-alias` flag generates TypeAlias declarations instead of
-root model classes for certain type definitions. For Python 3.10-3.11, it
-generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
-syntax. This feature is experimental.
+    The `--use-type-alias` flag generates TypeAlias declarations instead of
+    root model classes for certain type definitions. For Python 3.10-3.11, it
+    generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
+    syntax. This feature is experimental.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
 
@@ -4022,9 +4022,9 @@ syntax. This feature is experimental.
 
 Use | operator for Union types (PEP 604).
 
-The `--use-union-operator` flag generates union types using the | operator
-(e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
-This is the default behavior.
+    The `--use-union-operator` flag generates union types using the | operator
+    (e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
+    This is the default behavior.
 
 **Related:** [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
 
@@ -4095,9 +4095,9 @@ This is the default behavior.
 
 Generate set types for arrays with uniqueItems constraint.
 
-The `--use-unique-items-as-set` flag generates Python set types instead of
-list types for JSON Schema arrays that have the uniqueItems constraint set
-to true, enforcing uniqueness at the type level.
+    The `--use-unique-items-as-set` flag generates Python set types instead of
+    list types for JSON Schema arrays that have the uniqueItems constraint set
+    to true, enforcing uniqueness at the type level.
 
 !!! tip "Usage"
 

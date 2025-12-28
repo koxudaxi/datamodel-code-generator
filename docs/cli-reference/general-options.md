@@ -26,10 +26,10 @@
 
 Handle name collisions when exporting recursive module hierarchies.
 
-The `--all-exports-collision-strategy` flag determines how to resolve naming conflicts
-when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds the
-minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
-uses the complete module path. Requires `--all-exports-scope=recursive`.
+    The `--all-exports-collision-strategy` flag determines how to resolve naming conflicts
+    when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds the
+    minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
+    uses the complete module path. Requires `--all-exports-scope=recursive`.
 
 **Related:** [`--all-exports-scope`](general-options.md#all-exports-scope)
 
@@ -596,9 +596,9 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
 
 Generate __all__ exports for child modules in __init__.py files.
 
-The `--all-exports-scope=children` flag adds __all__ to each __init__.py containing
-exports from direct child modules. This improves IDE autocomplete and explicit exports.
-Use 'recursive' to include all descendant exports with collision handling.
+    The `--all-exports-scope=children` flag adds __all__ to each __init__.py containing
+    exports from direct child modules. This improves IDE autocomplete and explicit exports.
+    Use 'recursive' to include all descendant exports with collision handling.
 
 **Related:** [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 
@@ -1165,9 +1165,9 @@ Use 'recursive' to include all descendant exports with collision handling.
 
 Verify generated code matches existing output without modifying files.
 
-The `--check` flag compares the generated output with existing files and exits with
-a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
-and generated code stay in sync. Works with both single files and directory outputs.
+    The `--check` flag compares the generated output with existing files and exits with
+    a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
+    and generated code stay in sync. Works with both single files and directory outputs.
 
 **See also:** [CI/CD Integration](../ci-cd.md)
 
@@ -1241,9 +1241,9 @@ and generated code stay in sync. Works with both single files and directory outp
 
 Suppress warning messages during code generation.
 
-The --disable-warnings option silences all warning messages that the generator
-might emit during processing (e.g., about unsupported features, ambiguous schemas,
-or potential issues). Useful for clean output in CI/CD pipelines.
+    The --disable-warnings option silences all warning messages that the generator
+    might emit during processing (e.g., about unsupported features, ambiguous schemas,
+    or potential issues). Useful for clean output in CI/CD pipelines.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -1361,9 +1361,9 @@ or potential issues). Useful for clean output in CI/CD pipelines.
 
 Generate CLI command from pyproject.toml configuration.
 
-The `--generate-cli-command` flag reads your pyproject.toml configuration
-and outputs the equivalent CLI command. This is useful for debugging
-configuration issues or sharing commands with others.
+    The `--generate-cli-command` flag reads your pyproject.toml configuration
+    and outputs the equivalent CLI command. This is useful for debugging
+    configuration issues or sharing commands with others.
 
 **See also:** [pyproject.toml Configuration](../pyproject_toml.md)
 
@@ -1397,9 +1397,9 @@ configuration issues or sharing commands with others.
 
 Generate pyproject.toml configuration from CLI arguments.
 
-The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
-snippet based on the provided CLI arguments. This is useful for converting
-a working CLI command into a reusable configuration file.
+    The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
+    snippet based on the provided CLI arguments. This is useful for converting
+    a working CLI command into a reusable configuration file.
 
 **See also:** [pyproject.toml Configuration](../pyproject_toml.md)
 
@@ -1427,10 +1427,10 @@ a working CLI command into a reusable configuration file.
 
 Fetch schema from URL with custom HTTP headers.
 
-The `--url` flag specifies a remote URL to fetch the schema from instead of
-a local file. The `--http-headers` flag adds custom HTTP headers to the request,
-useful for authentication (e.g., Bearer tokens) or custom API requirements.
-Format: `HeaderName:HeaderValue`.
+    The `--url` flag specifies a remote URL to fetch the schema from instead of
+    a local file. The `--http-headers` flag adds custom HTTP headers to the request,
+    useful for authentication (e.g., Bearer tokens) or custom API requirements.
+    Format: `HeaderName:HeaderValue`.
 
 !!! tip "Usage"
 
@@ -1487,9 +1487,9 @@ Format: `HeaderName:HeaderValue`.
 
 Disable TLS certificate verification for HTTPS requests.
 
-The `--http-ignore-tls` flag disables SSL/TLS certificate verification
-when fetching schemas from HTTPS URLs. This is useful for development
-environments with self-signed certificates. Not recommended for production.
+    The `--http-ignore-tls` flag disables SSL/TLS certificate verification
+    when fetching schemas from HTTPS URLs. This is useful for development
+    environments with self-signed certificates. Not recommended for production.
 
 !!! tip "Usage"
 
@@ -1546,10 +1546,10 @@ environments with self-signed certificates. Not recommended for production.
 
 Add query parameters to HTTP requests for remote schemas.
 
-The `--http-query-parameters` flag adds query parameters to HTTP requests
-when fetching schemas from URLs. Useful for APIs that require version
-or format parameters. Format: `key=value`. Multiple parameters can be
-specified: `--http-query-parameters version=v2 format=json`.
+    The `--http-query-parameters` flag adds query parameters to HTTP requests
+    when fetching schemas from URLs. Useful for APIs that require version
+    or format parameters. Format: `key=value`. Multiple parameters can be
+    specified: `--http-query-parameters version=v2 format=json`.
 
 !!! tip "Usage"
 
@@ -1606,9 +1606,9 @@ specified: `--http-query-parameters version=v2 format=json`.
 
 Set timeout for HTTP requests to remote hosts.
 
-The `--http-timeout` flag sets the timeout in seconds for HTTP requests
-when fetching schemas from URLs. Useful for slow servers or large schemas.
-Default is 30 seconds.
+    The `--http-timeout` flag sets the timeout in seconds for HTTP requests
+    when fetching schemas from URLs. Useful for slow servers or large schemas.
+    Default is 30 seconds.
 
 !!! tip "Usage"
 
@@ -1665,10 +1665,10 @@ Default is 30 seconds.
 
 Ignore pyproject.toml configuration file.
 
-The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
-[tool.datamodel-codegen] configuration in pyproject.toml. This is useful
-when you want to override project defaults with CLI arguments, or when
-testing without project configuration.
+    The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
+    [tool.datamodel-codegen] configuration in pyproject.toml. This is useful
+    when you want to override project defaults with CLI arguments, or when
+    testing without project configuration.
 
 **See also:** [pyproject.toml Configuration](../pyproject_toml.md)
 
@@ -1735,9 +1735,9 @@ testing without project configuration.
 
 Split generated models into separate files, one per model class.
 
-The `--module-split-mode=single` flag generates each model class in its own file,
-named after the class in snake_case. Use with `--all-exports-scope=recursive` to
-create an __init__.py that re-exports all models for convenient imports.
+    The `--module-split-mode=single` flag generates each model class in its own file,
+    named after the class in snake_case. Use with `--all-exports-scope=recursive` to
+    create an __init__.py that re-exports all models for convenient imports.
 
 **Related:** [`--all-exports-scope`](general-options.md#all-exports-scope), [`--use-exact-imports`](template-customization.md#use-exact-imports)
 
@@ -1843,12 +1843,12 @@ create an __init__.py that re-exports all models for convenient imports.
 
 Customize the name of the shared module for deduplicated models.
 
-The `--shared-module-name` flag sets the name of the shared module created
-when using `--reuse-model` with `--reuse-scope=tree`. This module contains
-deduplicated models that are referenced from multiple files. Default is
-`shared`. Use this if your schema already has a file named `shared`.
+    The `--shared-module-name` flag sets the name of the shared module created
+    when using `--reuse-model` with `--reuse-scope=tree`. This module contains
+    deduplicated models that are referenced from multiple files. Default is
+    `shared`. Use this if your schema already has a file named `shared`.
 
-Note: This option only affects modular output with tree-level model reuse.
+    Note: This option only affects modular output with tree-level model reuse.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -1907,9 +1907,9 @@ Note: This option only affects modular output with tree-level model reuse.
 
 Watch mode cannot be used with --check mode.
 
-The `--watch` flag enables file watching for automatic regeneration.
-It cannot be combined with `--check` since check mode requires a single
-comparison, not continuous watching.
+    The `--watch` flag enables file watching for automatic regeneration.
+    It cannot be combined with `--check` since check mode requires a single
+    comparison, not continuous watching.
 
 !!! tip "Usage"
 
@@ -1974,10 +1974,10 @@ comparison, not continuous watching.
 
 Watch mode starts file watcher and handles clean exit.
 
-The `--watch` flag starts a file watcher that monitors the input file
-or directory for changes. The `--watch-delay` option sets the debounce
-delay in seconds (default: 0.5) to prevent multiple regenerations for
-rapid file changes. Press Ctrl+C to stop watching.
+    The `--watch` flag starts a file watcher that monitors the input file
+    or directory for changes. The `--watch-delay` option sets the debounce
+    delay in seconds (default: 0.5) to prevent multiple regenerations for
+    rapid file changes. Press Ctrl+C to stop watching.
 
 !!! tip "Usage"
 

@@ -47,7 +47,7 @@
 
 Allow extra fields in generated Pydantic models (extra='allow').
 
-The `--allow-extra-fields` flag configures the code generation behavior.
+    The `--allow-extra-fields` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -446,7 +446,7 @@ The `--allow-extra-fields` flag configures the code generation behavior.
 
 Allow Pydantic model population by field name (not just alias).
 
-The `--allow-population-by-field-name` flag configures the code generation behavior.
+    The `--allow-population-by-field-name` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -845,7 +845,7 @@ The `--allow-population-by-field-name` flag configures the code generation behav
 
 Specify a custom base class for generated models.
 
-The `--base-class` flag configures the code generation behavior.
+    The `--base-class` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -1121,8 +1121,8 @@ The `--base-class` flag configures the code generation behavior.
 
 Specify different base classes for specific models via JSON mapping.
 
-The `--base-class-map` option allows you to assign different base classes
-to specific models. Priority: base-class-map > customBasePath > base-class.
+    The `--base-class-map` option allows you to assign different base classes
+    to specific models. Priority: base-class-map > customBasePath > base-class.
 
 **Related:** [`--base-class`](model-customization.md#base-class)
 
@@ -1174,10 +1174,10 @@ to specific models. Priority: base-class-map > customBasePath > base-class.
 
 Override the auto-generated class name with a custom name.
 
-The --class-name option allows you to specify a custom class name for the
-generated model. This is useful when the schema title is invalid as a Python
-class name (e.g., starts with a number) or when you want to use a different
-naming convention than what's in the schema.
+    The --class-name option allows you to specify a custom class name for the
+    generated model. This is useful when the schema title is invalid as a Python
+    class name (e.g., starts with a number) or when you want to use a different
+    naming convention than what's in the schema.
 
 !!! tip "Usage"
 
@@ -1250,9 +1250,9 @@ naming convention than what's in the schema.
 
 Collapse duplicate models by replacing references instead of inheritance.
 
-The `--collapse-reuse-models` flag, when used with `--reuse-model`,
-eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
-by replacing all references to duplicate models with the canonical model.
+    The `--collapse-reuse-models` flag, when used with `--reuse-model`,
+    eliminates redundant empty subclasses (e.g., `class Foo(Bar): pass`)
+    by replacing all references to duplicate models with the canonical model.
 
 **Related:** [`--reuse-model`](model-customization.md#reuse-model)
 
@@ -1320,9 +1320,9 @@ by replacing all references to duplicate models with the canonical model.
 
 Inline root model definitions instead of creating separate wrapper classes.
 
-The `--collapse-root-models` option generates simpler output by inlining root models
-directly instead of creating separate wrapper types. This shows how different output
-model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
+    The `--collapse-root-models` option generates simpler output by inlining root models
+    directly instead of creating separate wrapper types. This shows how different output
+    model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -1516,8 +1516,8 @@ model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
 
 Select which name to keep when collapsing root models with object references.
 
-The --collapse-root-models-name-strategy option controls naming when collapsing
-root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
+    The --collapse-root-models-name-strategy option controls naming when collapsing
+    root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's name.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
@@ -1585,10 +1585,10 @@ root models. 'child' keeps the inner model's name, 'parent' uses the wrapper's n
 
 Customize dataclass decorator arguments via JSON dictionary.
 
-The `--dataclass-arguments` flag accepts custom dataclass arguments as a JSON
-dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": true}').
-This overrides individual flags like --frozen-dataclasses and provides fine-grained
-control over dataclass generation.
+    The `--dataclass-arguments` flag accepts custom dataclass arguments as a JSON
+    dictionary (e.g., '{"frozen": true, "kw_only": true, "slots": true, "order": true}').
+    This overrides individual flags like --frozen-dataclasses and provides fine-grained
+    control over dataclass generation.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
 
@@ -1921,10 +1921,10 @@ control over dataclass generation.
 
 Customize suffix for duplicate model names.
 
-The `--duplicate-name-suffix` flag allows specifying custom suffixes for
-resolving duplicate names by type. The value is a JSON mapping where keys
-are type names ('model', 'enum', 'default') and values are suffix strings.
-For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
+    The `--duplicate-name-suffix` flag allows specifying custom suffixes for
+    resolving duplicate names by type. The value is a JSON mapping where keys
+    are type names ('model', 'enum', 'default') and values are suffix strings.
+    For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 
 **Related:** [`--naming-strategy`](model-customization.md#naming-strategy)
 
@@ -2010,7 +2010,7 @@ For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 
 Enable faux immutability in Pydantic v1 models (allow_mutation=False).
 
-The `--enable-faux-immutability` flag configures the code generation behavior.
+    The `--enable-faux-immutability` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2424,7 +2424,7 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
 
 Force all fields to be Optional regardless of required status.
 
-The `--force-optional` flag configures the code generation behavior.
+    The `--force-optional` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -2698,9 +2698,9 @@ The `--force-optional` flag configures the code generation behavior.
 
 Generate frozen dataclasses with optional keyword-only fields.
 
-The `--frozen-dataclasses` flag generates dataclass instances that are immutable
-(frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
-keyword-only arguments.
+    The `--frozen-dataclasses` flag generates dataclass instances that are immutable
+    (frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
+    keyword-only arguments.
 
 **Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
 
@@ -2764,9 +2764,9 @@ keyword-only arguments.
 
 Keep model definition order as specified in schema.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.
+    The `--keep-model-order` flag preserves the original definition order from the schema
+    instead of reordering models based on dependencies. This is useful when the order
+    of model definitions matters for documentation or readability.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
@@ -2944,11 +2944,11 @@ of model definitions matters for documentation or readability.
 
 Generate dataclasses with keyword-only fields (Python 3.10+).
 
-The `--keyword-only` flag generates dataclasses where all fields must be
-specified as keyword arguments (kw_only=True). This is only available for
-Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
-dataclasses with keyword-only arguments, improving code clarity and preventing
-positional argument errors.
+    The `--keyword-only` flag generates dataclasses where all fields must be
+    specified as keyword arguments (kw_only=True). This is only available for
+    Python 3.10+. When combined with `--frozen-dataclasses`, it creates immutable
+    dataclasses with keyword-only arguments, improving code clarity and preventing
+    positional argument errors.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
 
@@ -3338,8 +3338,8 @@ positional argument errors.
 
 Add model-level schema extensions to ConfigDict json_schema_extra.
 
-The `--model-extra-keys` flag adds specified x-* extensions from the schema
-to the model's ConfigDict json_schema_extra.
+    The `--model-extra-keys` flag adds specified x-* extensions from the schema
+    to the model's ConfigDict json_schema_extra.
 
 !!! tip "Usage"
 
@@ -3393,8 +3393,8 @@ to the model's ConfigDict json_schema_extra.
 
 Strip x- prefix from model-level schema extensions and add to ConfigDict json_schema_extra.
 
-The `--model-extra-keys-without-x-prefix` flag adds specified x-* extensions
-from the schema to the model's ConfigDict json_schema_extra with the x- prefix stripped.
+    The `--model-extra-keys-without-x-prefix` flag adds specified x-* extensions
+    from the schema to the model's ConfigDict json_schema_extra with the x- prefix stripped.
 
 !!! tip "Usage"
 
@@ -3448,9 +3448,9 @@ from the schema to the model's ConfigDict json_schema_extra with the x- prefix s
 
 Use parent-prefixed naming strategy for duplicate model names.
 
-The `--naming-strategy parent-prefixed` flag prefixes model names with their
-parent model name when duplicates occur. For example, if both `Order` and
-`Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
+    The `--naming-strategy parent-prefixed` flag prefixes model names with their
+    parent model name when duplicates occur. For example, if both `Order` and
+    `Cart` have an inline `Item` definition, they become `OrderItem` and `CartItem`.
 
 **Related:** [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix), [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming)
 
@@ -3536,10 +3536,10 @@ parent model name when duplicates occur. For example, if both `Order` and
 
 Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
 
-The `--output-model-type` flag specifies which Python data model framework to use
-for the generated code. Supported values include `pydantic.BaseModel`,
-`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
-`msgspec.Struct`.
+    The `--output-model-type` flag specifies which Python data model framework to use
+    for the generated code. Supported values include `pydantic.BaseModel`,
+    `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
+    `msgspec.Struct`.
 
 **See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
@@ -4116,9 +4116,9 @@ for the generated code. Supported values include `pydantic.BaseModel`,
 
 Namespace models by their parent scope to avoid naming conflicts.
 
-The `--parent-scoped-naming` flag prefixes model names with their parent scope
-(operation/path/parameter) to prevent name collisions when the same model name
-appears in different contexts within an OpenAPI specification.
+    The `--parent-scoped-naming` flag prefixes model names with their parent scope
+    (operation/path/parameter) to prevent name collisions when the same model name
+    appears in different contexts within an OpenAPI specification.
 
 **Deprecated:** Use --naming-strategy parent-prefixed instead.
 
@@ -4266,9 +4266,9 @@ appears in different contexts within an OpenAPI specification.
 
 Reuse identical model definitions instead of generating duplicates.
 
-The `--reuse-model` flag detects identical enum or model definitions
-across the schema and generates a single shared definition, reducing
-code duplication in the output.
+    The `--reuse-model` flag detects identical enum or model definitions
+    across the schema and generates a single shared definition, reducing
+    code duplication in the output.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
@@ -4384,7 +4384,7 @@ code duplication in the output.
 
 Scope for model reuse detection (root or tree).
 
-The `--reuse-scope` flag configures the code generation behavior.
+    The `--reuse-scope` flag configures the code generation behavior.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -4499,9 +4499,9 @@ The `--reuse-scope` flag configures the code generation behavior.
 
 Skip generation of root model when schema contains nested definitions.
 
-The `--skip-root-model` flag prevents generating a model for the root schema object
-when the schema primarily contains reusable definitions. This is useful when the root
-object is just a container for $defs and not a meaningful model itself.
+    The `--skip-root-model` flag prevents generating a model for the root schema object
+    when the schema primarily contains reusable definitions. This is useful when the root
+    object is just a container for $defs and not a meaningful model itself.
 
 !!! tip "Usage"
 
@@ -4556,11 +4556,11 @@ object is just a container for $defs and not a meaningful model itself.
 
 Treat default field as a non-nullable field.
 
-The `--strict-nullable` flag ensures that fields with default values are generated
-with their exact schema type (non-nullable), rather than being made nullable.
+    The `--strict-nullable` flag ensures that fields with default values are generated
+    with their exact schema type (non-nullable), rather than being made nullable.
 
-This is particularly useful when combined with `--use-default` to generate models
-where optional fields have defaults but cannot accept `None` values.
+    This is particularly useful when combined with `--use-default` to generate models
+    where optional fields have defaults but cannot accept `None` values.
 
 **Related:** [`--use-default`](model-customization.md#use-default)
 
@@ -4793,9 +4793,9 @@ where optional fields have defaults but cannot accept `None` values.
 
 Remove fields with None as default value from generated models.
 
-The `--strip-default-none` option removes fields that have None as their default value from the
-generated models. This results in cleaner model definitions by excluding optional fields that
-default to None.
+    The `--strip-default-none` option removes fields that have None as their default value from the
+    generated models. This results in cleaner model definitions by excluding optional fields that
+    default to None.
 
 !!! tip "Usage"
 
@@ -5069,12 +5069,12 @@ default to None.
 
 Target Pydantic version for generated code compatibility.
 
-The `--target-pydantic-version` flag controls Pydantic version-specific config:
+    The `--target-pydantic-version` flag controls Pydantic version-specific config:
 
-- **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
-- **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
+    - **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
+    - **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
 
-This prevents breaking changes when generated code is used on older Pydantic versions.
+    This prevents breaking changes when generated code is used on older Pydantic versions.
 
 !!! tip "Usage"
 
@@ -5150,12 +5150,12 @@ This prevents breaking changes when generated code is used on older Pydantic ver
 
 Target Python version for generated code syntax and imports.
 
-The `--target-python-version` flag controls Python version-specific syntax:
+    The `--target-python-version` flag controls Python version-specific syntax:
 
-- **Python 3.10-3.11**: Uses `X | None` union operator, `TypeAlias` annotation
-- **Python 3.12+**: Uses `type` statement for type aliases
+    - **Python 3.10-3.11**: Uses `X | None` union operator, `TypeAlias` annotation
+    - **Python 3.12+**: Uses `type` statement for type aliases
 
-This affects import statements and type annotation syntax in generated code.
+    This affects import statements and type annotation syntax in generated code.
 
 **See also:** [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
@@ -5232,7 +5232,7 @@ This affects import statements and type annotation syntax in generated code.
 
 Union mode for combining anyOf/oneOf schemas (smart or left_to_right).
 
-The `--union-mode` flag configures the code generation behavior.
+    The `--union-mode` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -5350,8 +5350,8 @@ The `--union-mode` flag configures the code generation behavior.
 
 Use default values from schema in generated models.
 
-The `--use-default` flag allows required fields with default values to be generated
-with their defaults, making them optional to provide when instantiating the model.
+    The `--use-default` flag allows required fields with default values to be generated
+    with their defaults, making them optional to provide when instantiating the model.
 
 **Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
 
@@ -5419,11 +5419,11 @@ with their defaults, making them optional to provide when instantiating the mode
 
 Generate default_factory for optional nested model fields.
 
-The `--use-default-factory-for-optional-nested-models` flag generates default_factory
-for optional nested model fields instead of None default:
-- Dataclasses: `field: Model | None = field(default_factory=Model)`
-- Pydantic: `field: Model | None = Field(default_factory=Model)`
-- msgspec: `field: Model | UnsetType = field(default_factory=Model)`
+    The `--use-default-factory-for-optional-nested-models` flag generates default_factory
+    for optional nested model fields instead of None default:
+    - Dataclasses: `field: Model | None = field(default_factory=Model)`
+    - Pydantic: `field: Model | None = Field(default_factory=Model)`
+    - msgspec: `field: Model | UnsetType = field(default_factory=Model)`
 
 !!! tip "Usage"
 
@@ -5561,9 +5561,9 @@ for optional nested model fields instead of None default:
 
 Use default= keyword argument instead of positional argument for fields with defaults.
 
-The `--use-default-kwarg` flag generates Field() declarations using `default=`
-as a keyword argument instead of a positional argument for fields that have
-default values.
+    The `--use-default-kwarg` flag generates Field() declarations using `default=`
+    as a keyword argument instead of a positional argument for fields that have
+    default values.
 
 !!! tip "Usage"
 
@@ -5631,10 +5631,10 @@ default values.
 
 Generate frozen (immutable) field definitions for readOnly properties.
 
-The `--use-frozen-field` flag generates frozen field definitions:
-- Pydantic v1: `Field(allow_mutation=False)`
-- Pydantic v2: `Field(frozen=True)`
-- Dataclasses: silently ignored (no frozen fields generated)
+    The `--use-frozen-field` flag generates frozen field definitions:
+    - Pydantic v1: `Field(allow_mutation=False)`
+    - Pydantic v2: `Field(frozen=True)`
+    - Dataclasses: silently ignored (no frozen fields generated)
 
 !!! tip "Usage"
 
@@ -5851,7 +5851,7 @@ Generate a shared base class with model configuration to avoid repetition (DRY).
 
 Use single literal value as default when enum has only one option.
 
-The `--use-one-literal-as-default` flag configures the code generation behavior.
+    The `--use-one-literal-as-default` flag configures the code generation behavior.
 
 !!! tip "Usage"
 
@@ -6155,9 +6155,9 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
 
 Wrap fields with subtypes in Pydantic's SerializeAsAny.
 
-The `--use-serialize-as-any` flag applies Pydantic v2's SerializeAsAny wrapper
-to fields that have subtype relationships, ensuring proper serialization of
-polymorphic types and inheritance hierarchies.
+    The `--use-serialize-as-any` flag applies Pydantic v2's SerializeAsAny wrapper
+    to fields that have subtype relationships, ensuring proper serialization of
+    polymorphic types and inheritance hierarchies.
 
 !!! tip "Usage"
 
@@ -6261,9 +6261,9 @@ polymorphic types and inheritance hierarchies.
 
 Generate typed Enum subclasses for enums with specific field types.
 
-The `--use-subclass-enum` flag generates Enum classes as subclasses of the
-appropriate field type (int, float, bytes, str) when an enum has a specific
-type, providing better type safety and IDE support.
+    The `--use-subclass-enum` flag generates Enum classes as subclasses of the
+    appropriate field type (int, float, bytes, str) when an enum has a specific
+    type, providing better type safety and IDE support.
 
 !!! tip "Usage"
 
