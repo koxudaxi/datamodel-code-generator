@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import importlib
 import io
 import json
 from argparse import ArgumentTypeError, Namespace
@@ -33,6 +32,7 @@ from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
+    ALIASES_DATA_PATH,
     DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
@@ -162,28 +162,35 @@ def test_main_rejects_invalid_aliases_file(tmp_path: Path) -> None:
     )
 
 
-def test_main_aliases_with_pydantic_v1_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Run main with aliases while exercising pydantic v1 config branches."""
+def test_main_aliases_with_pydantic_v1_config(tmp_path: Path) -> None:
+    """Exercise pydantic v1 config branches for coverage."""
     import datamodel_code_generator.config as config_module
     from datamodel_code_generator import util
 
-    original_is_v2 = util._is_v2
-    monkeypatch.setattr(util, "_is_v2", False)
-    importlib.reload(config_module)
-
-    aliases_path = tmp_path / "aliases.json"
-    aliases_path.write_text("{}")
+    if util.is_pydantic_v2():
+        pytest.skip("pydantic v1-only coverage")
+    assert config_module.Path is config_module.Any
+    config_module._rebuild_config_models()
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "person.json",
         output_path=tmp_path / "out.py",
         input_file_type="jsonschema",
-        extra_args=["--ignore-pyproject", "--aliases", str(aliases_path)],
+        extra_args=["--ignore-pyproject"],
         assert_func=assert_file_content,
         expected_file="jsonschema/general.py",
     )
 
-    monkeypatch.setattr(util, "_is_v2", original_is_v2)
-    importlib.reload(config_module)
+
+def test_main_aliases_mapping_file(tmp_path: Path) -> None:
+    """main() accepts aliases mapping file and applies it."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=tmp_path / "out.py",
+        input_file_type="jsonschema",
+        extra_args=["--ignore-pyproject", "--aliases", str(ALIASES_DATA_PATH / "hierarchical_aliases_scoped.json")],
+        assert_func=assert_file_content,
+        expected_file="jsonschema/general.py",
+    )
 
 
 def test_main_rejects_invalid_custom_formatters_kwargs_file(tmp_path: Path) -> None:
