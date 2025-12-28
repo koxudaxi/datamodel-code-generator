@@ -500,9 +500,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     input_file_type = config.input_file_type
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
+    input_text: str | None = None
     match input_:
         case str():
-            input_text: str | None = input_
+            input_text = input_
         case ParseResult():
             from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
