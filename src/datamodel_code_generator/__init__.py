@@ -699,16 +699,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         **kwargs,
     )
 
-    parse_config = model_validate(
-        ParseConfig,
-        {
-            "settings_path": config.settings_path,
-            "disable_future_imports": config.disable_future_imports,
-            "all_exports_scope": config.all_exports_scope,
-            "all_exports_collision_strategy": config.all_exports_collision_strategy,
-            "module_split_mode": config.module_split_mode,
-        },
-    )
+    parse_config = ParseConfig._from_generate_config(generate_config=config)  # noqa: SLF001
     with chdir(config.output):
         results = parser.parse(config=parse_config)
     input_filename = config.input_filename

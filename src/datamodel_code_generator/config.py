@@ -557,6 +557,19 @@ class ParseConfig(BaseModel):
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
 
+    @classmethod
+    def _from_generate_config(cls, *, generate_config: GenerateConfig) -> ParseConfig:
+        return model_validate(
+            cls,
+            {
+                "settings_path": generate_config.settings_path,
+                "disable_future_imports": generate_config.disable_future_imports,
+                "all_exports_scope": generate_config.all_exports_scope,
+                "all_exports_collision_strategy": generate_config.all_exports_collision_strategy,
+                "module_split_mode": generate_config.module_split_mode,
+            },
+        )
+
 
 _CONFIG_MODELS_STATE = {"built": False}
 
