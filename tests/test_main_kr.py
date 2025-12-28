@@ -258,6 +258,11 @@ strict-types = ["str"]
 
 @pytest.mark.cli_doc(
     options=["--use-schema-description"],
+    option_description="""Use schema description as class docstring.
+
+The `--use-schema-description` flag extracts the `description` property from
+schema definitions and adds it as a docstring to the generated class. This is
+useful for preserving documentation from your schema in the generated code.""",
     input_schema="openapi/api_multiline_docstrings.yaml",
     cli_args=["--use-schema-description"],
     golden_output="main_kr/main_use_schema_description/output.py",
@@ -301,6 +306,11 @@ def test_main_docstring_special_chars(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-field-description"],
+    option_description="""Add field descriptions using Pydantic Field().
+
+The `--use-field-description` flag adds the `description` property from
+schema fields as the `description` parameter in Pydantic Field(). This
+provides documentation that is accessible via model schema and OpenAPI docs.""",
     input_schema="openapi/api_multiline_docstrings.yaml",
     cli_args=["--use-field-description"],
     golden_output="main_kr/main_use_field_description/output.py",
@@ -326,6 +336,11 @@ def test_main_use_field_description(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-inline-field-description"],
+    option_description="""Add field descriptions as inline comments.
+
+The `--use-inline-field-description` flag adds the `description` property from
+schema fields as inline comments after each field definition. This provides
+documentation without using Field() wrappers.""",
     input_schema="openapi/api_multiline_docstrings.yaml",
     cli_args=["--use-inline-field-description"],
     golden_output="main_kr/main_use_inline_field_description/output.py",
@@ -351,6 +366,11 @@ def test_main_use_inline_field_description(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-field-description-example"],
+    option_description="""Add field examples to docstrings.
+
+The `--use-field-description-example` flag adds the `example` or `examples`
+property from schema fields as docstrings. This provides documentation that
+is visible in IDE intellisense.""",
     input_schema="jsonschema/extras.json",
     cli_args=["--use-field-description-example"],
     golden_output="main_kr/main_use_field_description_example/output.py",
@@ -376,6 +396,10 @@ def test_main_use_field_description_example(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-field-description", "--use-field-description-example"],
+    option_description="""Add field descriptions and examples to docstrings.
+
+When both `--use-field-description` and `--use-field-description-example` are used,
+the docstring includes both the description and example(s).""",
     input_schema="jsonschema/extras.json",
     cli_args=["--use-field-description", "--use-field-description-example"],
     golden_output="main_kr/main_use_field_description_with_example/output.py",
@@ -400,6 +424,10 @@ def test_main_use_field_description_with_example(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-inline-field-description", "--use-field-description-example"],
+    option_description="""Add field descriptions and examples to docstrings with inline description.
+
+When both `--use-inline-field-description` and `--use-field-description-example` are used,
+multi-line descriptions and examples are included in the docstring.""",
     input_schema="jsonschema/multiline_description_with_example.json",
     cli_args=["--use-inline-field-description", "--use-field-description-example"],
     golden_output="main_kr/main_use_inline_field_description_with_example/output.py",
@@ -563,6 +591,11 @@ EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH = EXPECTED_MAIN_KR_PATH / "generate_pypr
 
 @pytest.mark.cli_doc(
     options=["--generate-pyproject-config"],
+    option_description="""Generate pyproject.toml configuration from CLI arguments.
+
+The `--generate-pyproject-config` flag outputs a pyproject.toml configuration
+snippet based on the provided CLI arguments. This is useful for converting
+a working CLI command into a reusable configuration file.""",
     cli_args=["--generate-pyproject-config", "--input", "schema.yaml", "--output", "model.py"],
     expected_stdout="main_kr/generate_pyproject_config/basic.txt",
 )
@@ -670,6 +703,11 @@ EXPECTED_GENERATE_CLI_COMMAND_PATH = EXPECTED_MAIN_KR_PATH / "generate_cli_comma
 
 @pytest.mark.cli_doc(
     options=["--generate-cli-command"],
+    option_description="""Generate CLI command from pyproject.toml configuration.
+
+The `--generate-cli-command` flag reads your pyproject.toml configuration
+and outputs the equivalent CLI command. This is useful for debugging
+configuration issues or sharing commands with others.""",
     cli_args=["--generate-cli-command"],
     config_content="""[tool.datamodel-codegen]
 input = "schema.yaml"
@@ -1169,6 +1207,11 @@ def test_allof_with_description_generates_class_not_alias(output_file: Path) -> 
 
 @pytest.mark.cli_doc(
     options=["--use-decimal-for-multiple-of"],
+    option_description="""Generate Decimal types for fields with multipleOf constraint.
+
+The `--use-decimal-for-multiple-of` flag generates `condecimal` or `Decimal`
+types for numeric fields that have a `multipleOf` constraint. This ensures
+precise decimal arithmetic when validating values against the constraint.""",
     input_schema="jsonschema/use_decimal_for_multiple_of.json",
     cli_args=["--use-decimal-for-multiple-of"],
     golden_output="main_kr/use_decimal_for_multiple_of/output.py",
@@ -1193,6 +1236,11 @@ def test_use_decimal_for_multiple_of(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-pendulum"],
+    option_description="""Use pendulum types for date/time fields instead of datetime module.
+
+The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
+Time, Duration) instead of standard datetime types. This is useful when
+working with the pendulum library for enhanced timezone and date handling.""",
     input_schema="jsonschema/use_pendulum.json",
     cli_args=["--use-pendulum"],
     golden_output="main_kr/use_pendulum/output.py",
@@ -1217,6 +1265,12 @@ def test_use_pendulum(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-non-positive-negative-number-constrained-types"],
+    option_description="""Use NonPositive/NonNegative types for number constraints.
+
+The `--use-non-positive-negative-number-constrained-types` flag generates
+Pydantic's NonPositiveInt, NonNegativeInt, NonPositiveFloat, and NonNegativeFloat
+types for fields with minimum: 0 or maximum: 0 constraints, instead of using
+conint/confloat with ge/le parameters.""",
     input_schema="jsonschema/use_non_positive_negative.json",
     cli_args=["--use-non-positive-negative-number-constrained-types"],
     golden_output="main_kr/use_non_positive_negative/output.py",
@@ -1243,6 +1297,12 @@ def test_use_non_positive_negative_number_constrained_types(output_file: Path) -
 
 @pytest.mark.cli_doc(
     options=["--include-path-parameters"],
+    option_description="""Include OpenAPI path parameters in generated parameter models.
+
+The `--include-path-parameters` flag adds path parameters (like /users/{userId})
+to the generated request parameter models. By default, only query parameters
+are included. Use this with `--openapi-scopes parameters` to generate parameter
+models that include both path and query parameters.""",
     input_schema="openapi/include_path_parameters.yaml",
     cli_args=["--include-path-parameters", "--openapi-scopes", "schemas", "paths", "parameters"],
     golden_output="main_kr/include_path_parameters/output.py",
@@ -1268,6 +1328,12 @@ def test_include_path_parameters(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--no-alias"],
+    option_description="""Disable Field alias generation for non-Python-safe property names.
+
+The `--no-alias` flag disables automatic alias generation when JSON property
+names contain characters invalid in Python (like hyphens). Without this flag,
+fields are renamed to Python-safe names with `Field(alias='original-name')`.
+With this flag, only Python-safe names are used without aliases.""",
     input_schema="jsonschema/no_alias.json",
     cli_args=["--no-alias"],
     golden_output="main_kr/no_alias/with_option.py",
@@ -1294,6 +1360,11 @@ def test_no_alias(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-file-header"],
+    option_description="""Add custom header text to the generated file.
+
+The `--custom-file-header` flag replaces the default "generated by datamodel-codegen"
+header with custom text. This is useful for adding copyright notices, license
+headers, or other metadata to generated files.""",
     input_schema="jsonschema/no_alias.json",
     cli_args=["--custom-file-header", "# Copyright 2024 MyCompany"],
     golden_output="main_kr/custom_file_header/with_option.py",
@@ -1319,6 +1390,12 @@ def test_custom_file_header(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--url", "--http-headers"],
+    option_description="""Fetch schema from URL with custom HTTP headers.
+
+The `--url` flag specifies a remote URL to fetch the schema from instead of
+a local file. The `--http-headers` flag adds custom HTTP headers to the request,
+useful for authentication (e.g., Bearer tokens) or custom API requirements.
+Format: `HeaderName:HeaderValue`.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--url", "https://api.example.com/schema.json", "--http-headers", "Authorization:Bearer token"],
     golden_output="main_kr/url_with_headers/output.py",
@@ -1353,6 +1430,11 @@ def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None
 
 @pytest.mark.cli_doc(
     options=["--input"],
+    option_description="""Specify the input schema file path.
+
+The `--input` flag specifies the path to the schema file (JSON Schema,
+OpenAPI, GraphQL, etc.). Multiple input files can be specified to merge
+schemas. Required unless using `--url` to fetch schema from a URL.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--input", "pet_simple.json", "--output", "output.py"],
     golden_output="main_kr/input_output/output.py",
@@ -1376,6 +1458,12 @@ def test_input_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--output"],
+    option_description="""Specify the destination path for generated Python code.
+
+The `--output` flag specifies where to write the generated Python code.
+It can be either a file path (single-file output) or a directory path
+(multi-file output for modular schemas). If omitted, the generated code
+is written to stdout.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--input", "pet_simple.json", "--output", "output.py"],
     golden_output="main_kr/input_output/output.py",
@@ -1400,6 +1488,12 @@ def test_output_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--encoding"],
+    option_description="""Specify character encoding for input and output files.
+
+The `--encoding` flag sets the character encoding used when reading
+the schema file and writing the generated Python code. This is useful
+for schemas containing non-ASCII characters (e.g., Japanese, Chinese).
+Default is UTF-8, which is the standard encoding for JSON and most modern text files.""",
     input_schema="jsonschema/encoding_test.json",
     cli_args=["--encoding", "utf-8"],
     golden_output="main_kr/encoding/output.py",
@@ -1425,6 +1519,12 @@ def test_encoding_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--formatters"],
+    option_description="""Specify code formatters to apply to generated output.
+
+The `--formatters` flag specifies which code formatters to apply to
+the generated Python code. Available formatters are: black, isort,
+ruff, yapf, autopep8, autoflake. Default is [black, isort].
+Use this to customize formatting or disable formatters entirely.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--formatters", "isort"],
     golden_output="main_kr/formatters/output.py",
@@ -1450,6 +1550,14 @@ def test_formatters_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--custom-formatters-kwargs"],
+    option_description="""Pass custom arguments to custom formatters via JSON file.
+
+The `--custom-formatters-kwargs` flag accepts a path to a JSON file containing
+custom configuration for custom formatters (used with --custom-formatters).
+The file should contain a JSON object mapping formatter names to their kwargs.
+
+Note: This option is primarily used with --custom-formatters to pass
+configuration to user-defined formatter modules.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--custom-formatters-kwargs", "formatter_kwargs.json"],
     golden_output="main_kr/input_output/output.py",
@@ -1478,6 +1586,11 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--http-ignore-tls"],
+    option_description="""Disable TLS certificate verification for HTTPS requests.
+
+The `--http-ignore-tls` flag disables SSL/TLS certificate verification
+when fetching schemas from HTTPS URLs. This is useful for development
+environments with self-signed certificates. Not recommended for production.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--url", "https://api.example.com/schema.json", "--http-ignore-tls"],
     golden_output="main_kr/url_with_headers/output.py",
@@ -1512,6 +1625,12 @@ def test_http_ignore_tls(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--http-query-parameters"],
+    option_description="""Add query parameters to HTTP requests for remote schemas.
+
+The `--http-query-parameters` flag adds query parameters to HTTP requests
+when fetching schemas from URLs. Useful for APIs that require version
+or format parameters. Format: `key=value`. Multiple parameters can be
+specified: `--http-query-parameters version=v2 format=json`.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--url", "https://api.example.com/schema.json", "--http-query-parameters", "version=v2", "format=json"],
     golden_output="main_kr/url_with_headers/output.py",
@@ -1553,6 +1672,11 @@ def test_http_query_parameters(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--http-timeout"],
+    option_description="""Set timeout for HTTP requests to remote hosts.
+
+The `--http-timeout` flag sets the timeout in seconds for HTTP requests
+when fetching schemas from URLs. Useful for slow servers or large schemas.
+Default is 30 seconds.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--url", "https://api.example.com/schema.json", "--http-timeout", "60"],
     golden_output="main_kr/url_with_headers/output.py",
@@ -1588,6 +1712,12 @@ def test_http_timeout(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--ignore-pyproject"],
+    option_description="""Ignore pyproject.toml configuration file.
+
+The `--ignore-pyproject` flag tells datamodel-codegen to ignore any
+[tool.datamodel-codegen] configuration in pyproject.toml. This is useful
+when you want to override project defaults with CLI arguments, or when
+testing without project configuration.""",
     input_schema="jsonschema/ignore_pyproject_example.json",
     cli_args=["--ignore-pyproject"],
     golden_output="main_kr/ignore_pyproject/output.py",
@@ -1634,6 +1764,14 @@ snake-case-field = true
 
 @pytest.mark.cli_doc(
     options=["--shared-module-name"],
+    option_description="""Customize the name of the shared module for deduplicated models.
+
+The `--shared-module-name` flag sets the name of the shared module created
+when using `--reuse-model` with `--reuse-scope=tree`. This module contains
+deduplicated models that are referenced from multiple files. Default is
+`shared`. Use this if your schema already has a file named `shared`.
+
+Note: This option only affects modular output with tree-level model reuse.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--shared-module-name", "my_shared"],
     golden_output="main_kr/input_output/output.py",
@@ -1662,6 +1800,15 @@ def test_shared_module_name(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-exact-imports"],
+    option_description="""Import exact types instead of modules.
+
+The `--use-exact-imports` flag changes import style from module imports
+to exact type imports. For example, instead of `from . import foo` then
+`foo.Bar`, it generates `from .foo import Bar`. This can make the generated
+code more explicit and easier to read.
+
+Note: This option primarily affects modular output where imports between
+modules are generated. For single-file output, the difference is minimal.""",
     input_schema="jsonschema/pet_simple.json",
     cli_args=["--use-exact-imports"],
     golden_output="main_kr/input_output/output.py",
@@ -1691,6 +1838,14 @@ def test_use_exact_imports(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--target-python-version"],
+    option_description="""Target Python version for generated code syntax and imports.
+
+The `--target-python-version` flag controls Python version-specific syntax:
+
+- **Python 3.10-3.11**: Uses `X | None` union operator, `TypeAlias` annotation
+- **Python 3.12+**: Uses `type` statement for type aliases
+
+This affects import statements and type annotation syntax in generated code.""",
     input_schema="jsonschema/person.json",
     cli_args=["--target-python-version", "3.10", "--use-standard-collections"],
     version_outputs={
@@ -1721,6 +1876,14 @@ def test_target_python_version_outputs(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--target-pydantic-version"],
+    option_description="""Target Pydantic version for generated code compatibility.
+
+The `--target-pydantic-version` flag controls Pydantic version-specific config:
+
+- **2**: Uses `populate_by_name=True` (compatible with Pydantic 2.0-2.10)
+- **2.11**: Uses `validate_by_name=True` (for Pydantic 2.11+)
+
+This prevents breaking changes when generated code is used on older Pydantic versions.""",
     input_schema="jsonschema/person.json",
     cli_args=[
         "--target-pydantic-version",

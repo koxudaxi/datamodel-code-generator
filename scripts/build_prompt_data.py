@@ -1,7 +1,7 @@
 """Build prompt data from cli_doc collection.
 
 Generates src/datamodel_code_generator/prompt_data.py containing
-option descriptions extracted from test docstrings.
+option descriptions extracted from cli_doc markers.
 
 Usage:
     # First, collect CLI doc metadata
@@ -41,10 +41,10 @@ def build_prompt_data(*, check: bool = False) -> int:
 
     descriptions: dict[str, str] = {}
     for item in collection.get("items", []):
-        docstring = item.get("docstring", "")
-        if not docstring:
+        option_description = item.get("option_description", "")
+        if not option_description:
             continue
-        first_line = docstring.split("\n")[0].strip()
+        first_line = option_description.split("\n")[0].strip()
         for opt in item.get("marker_kwargs", {}).get("options", []):
             if opt not in descriptions:
                 descriptions[opt] = first_line
@@ -58,7 +58,7 @@ def build_prompt_data(*, check: bool = False) -> int:
         "",
         "from __future__ import annotations",
         "",
-        "# Option descriptions extracted from test docstrings",
+        "# Option descriptions extracted from cli_doc markers",
         "OPTION_DESCRIPTIONS: dict[str, str] = {",
     ]
     for opt, desc in sorted(descriptions.items()):

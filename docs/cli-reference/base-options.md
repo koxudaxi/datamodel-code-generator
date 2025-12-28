@@ -7,7 +7,7 @@
 | [`--encoding`](#encoding) | Specify character encoding for input and output files. |
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
-| [`--input-model`](#input-model) | Import a Python type or dict schema from a module (module:Ob... |
+| [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -223,7 +223,9 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
 
 ## `--input-model` {#input-model}
 
-Import a Python type or dict schema from a module (module:Object or path/to/file.py:Object).
+Import a Python type or dict schema from a module.
+
+Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
 
 !!! tip "Usage"
 
