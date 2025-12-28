@@ -601,6 +601,25 @@ def assert_parser_modules(
         _assert_with_external_file(_get_full_body(result), expected_path)
 
 
+def assert_error_message(
+    capsys: pytest.CaptureFixture[str],
+    expected: str,
+) -> None:
+    """Assert that stderr contains the expected error message.
+
+    Args:
+        capsys: pytest capsys fixture for capturing output.
+        expected: Expected substring in stderr.
+
+    Usage:
+        return_code = run_main_with_args([...], expected_exit=Exit.ERROR, capsys=capsys)
+        assert_error_message(capsys, "Error message")
+    """
+    __tracebackhide__ = True
+    captured = capsys.readouterr()
+    assert expected in captured.err, f"Expected '{expected}' in stderr, got: {captured.err}"
+
+
 @pytest.fixture(autouse=True)
 def _inline_snapshot_file_formats() -> None:
     register_format_alias(".py", ".txt")

@@ -699,6 +699,46 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
     raise Error(msg)
 
 
+def _resolve_profile_extends(
+    profiles: dict[str, Any],
+    profile_name: str,
+    visited: set[str] | None = None,
+) -> dict[str, Any]:
+    """Resolve profile inheritance via extends key."""
+    if visited is None:
+        visited = set()
+
+    if profile_name in visited:
+        chain = " -> ".join(visited) + f" -> {profile_name}"
+        msg = f"Circular extends detected: {chain}"
+        raise Error(msg)
+
+    if profile_name not in profiles:
+        available = list(profiles.keys()) if profiles else "none"
+        msg = f"Extended profile '{profile_name}' not found in pyproject.toml. Available profiles: {available}"
+        raise Error(msg)
+
+    visited.add(profile_name)
+    profile = profiles[profile_name]
+    extends = profile.get("extends")
+
+    if not extends:
+        return dict(profile.items())
+
+    parents = [extends] if isinstance(extends, str) else extends
+    result: dict[str, Any] = {}
+
+    for parent in parents:
+        if parent == profile_name:
+            msg = f"Profile '{profile_name}' cannot extend itself"
+            raise Error(msg)
+        parent_config = _resolve_profile_extends(profiles, parent, visited.copy())
+        result.update(parent_config)
+
+    result.update({k: v for k, v in profile.items() if k != "extends"})
+    return result
+
+
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
     """Find and return the [tool.datamodel-codegen] section of the closest pyproject.toml if it exists."""
     current_path = source
@@ -716,11 +756,10 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                         available = list(profiles.keys()) if profiles else "none"
                         msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
                         raise Error(msg)
-                    profile_config = profiles[profile]
-                    base_config.update(profile_config)
+                    resolved_profile = _resolve_profile_extends(profiles, profile)
+                    base_config.update(resolved_profile)
 
                 pyproject_config = {k.replace("-", "_"): v for k, v in base_config.items()}
-                # Replace US-american spelling if present (ignore if british spelling is present)
                 if (
                     "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
                 ):  # pragma: no cover
@@ -728,12 +767,10 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                 return pyproject_config
 
         if (current_path / ".git").exists():
-            # Stop early if we see a git repository root.
             break
 
         current_path = current_path.parent
 
-    # If profile was requested but no pyproject.toml config was found, raise an error
     if profile:
         msg = f"Profile '{profile}' requested but no [tool.datamodel-codegen] section found in pyproject.toml"
         raise Error(msg)

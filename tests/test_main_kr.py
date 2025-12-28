@@ -15,7 +15,7 @@ from packaging import version
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
-from tests.conftest import create_assert_file_content, freeze_time
+from tests.conftest import assert_error_message, create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
@@ -1827,3 +1827,200 @@ def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -
 
     # Verify list options are formatted correctly
     assert "--strict-types str int" in captured.out
+
+
+@freeze_time("2019-07-26")
+def test_profile_extends_single_parent(output_file: Path, tmp_path: Path) -> None:
+    """Test profile inheritance with single extends."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.10"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles._base]
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles.api]
+extends = "_base"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = '{"type": "object", "properties": {"firstName": {"type": "string"}}}'
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "extends_single.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+@freeze_time("2019-07-26")
+def test_profile_extends_multiple_parents(output_file: Path, tmp_path: Path) -> None:
+    """Test profile inheritance with multiple extends (list)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.10"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles._snake]
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles._constraints]
+field-constraints = true
+
+[tool.datamodel-codegen.profiles.api]
+extends = ["_snake", "_constraints"]
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = '{"type": "object", "properties": {"firstName": {"type": "string", "minLength": 1}}}'
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "extends_multiple.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+@freeze_time("2019-07-26")
+def test_profile_extends_chain(output_file: Path, tmp_path: Path) -> None:
+    """Test profile inheritance chain (a extends b extends c)."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.10"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles._base]
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles._middle]
+extends = "_base"
+field-constraints = true
+
+[tool.datamodel-codegen.profiles.api]
+extends = "_middle"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = '{"type": "object", "properties": {"firstName": {"type": "string", "minLength": 1}}}'
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "extends_chain.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
+
+
+def test_profile_extends_circular_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error when circular extends is detected."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+
+[tool.datamodel-codegen.profiles.a]
+extends = "b"
+
+[tool.datamodel-codegen.profiles.b]
+extends = "a"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text('{"type": "object"}')
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "a"],
+            expected_exit=Exit.ERROR,
+        )
+        assert_error_message(capsys, "Circular extends detected")
+
+
+def test_profile_extends_not_found_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error when extended profile is not found."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+
+[tool.datamodel-codegen.profiles.api]
+extends = "nonexistent"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text('{"type": "object"}')
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
+            expected_exit=Exit.ERROR,
+        )
+        assert_error_message(capsys, "Extended profile 'nonexistent' not found")
+
+
+def test_profile_extends_self_error(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error when profile extends itself."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+
+[tool.datamodel-codegen.profiles.api]
+extends = "api"
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text('{"type": "object"}')
+    output_file = tmp_path / "output.py"
+
+    with chdir(tmp_path):
+        run_main_with_args(
+            ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
+            expected_exit=Exit.ERROR,
+        )
+        assert_error_message(capsys, "cannot extend itself")
+
+
+@freeze_time("2019-07-26")
+def test_profile_extends_child_overrides_parent(output_file: Path, tmp_path: Path) -> None:
+    """Test that child profile settings override parent settings."""
+    pyproject_toml = """
+[tool.datamodel-codegen]
+target-python-version = "3.10"
+enable-version-header = false
+
+[tool.datamodel-codegen.profiles._base]
+snake-case-field = true
+
+[tool.datamodel-codegen.profiles.api]
+extends = "_base"
+snake-case-field = false
+"""
+    (tmp_path / "pyproject.toml").write_text(pyproject_toml)
+
+    input_data = '{"type": "object", "properties": {"firstName": {"type": "string"}}}'
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(input_data)
+
+    with chdir(tmp_path):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file.resolve(),
+            assert_func=assert_file_content,
+            expected_file=EXPECTED_PYPROJECT_PROFILE_PATH / "extends_override.py",
+            extra_args=["--profile", "api", "--disable-timestamp"],
+        )
