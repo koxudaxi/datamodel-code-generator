@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from pydantic import BaseModel, Field
 
@@ -528,6 +528,7 @@ class ParserConfig(BaseModel):
                 effective_dataclass_arguments["frozen"] = True
             if generate_config.keyword_only:
                 effective_dataclass_arguments["kw_only"] = True
+        effective_dataclass_arguments = cast("DataclassArguments", effective_dataclass_arguments)
 
         effective_enum_field_as_literal = generate_config.enum_field_as_literal
         if (

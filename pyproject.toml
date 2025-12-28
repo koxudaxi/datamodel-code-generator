@@ -245,6 +245,7 @@ paths.other = [
 ]
 run.dynamic_context = "none"
 run.omit = [
+  "datamodel_code_generator/_types/*",
   "src/datamodel_code_generator/_types/*",
   "*/datamodel_code_generator/_types/*",
   "*\\datamodel_code_generator\\_types\\*",
@@ -268,6 +269,7 @@ parsable-types.str = [ "int", "float" ]
 [tool.datamodel-codegen.profiles.generate-config-dict]
 enum-field-as-literal = "none"
 use-standard-primitive-types = true
+disable-warnings = true
 type_overrides = { AllExportsCollisionStrategy = "datamodel_code_generator.enums.AllExportsCollisionStrategy", AllExportsScope = "datamodel_code_generator.enums.AllExportsScope", AllOfMergeMode = "datamodel_code_generator.enums.AllOfMergeMode", CollapseRootModelsNameStrategy = "datamodel_code_generator.enums.CollapseRootModelsNameStrategy", DataModelType = "datamodel_code_generator.enums.DataModelType", FieldTypeCollisionStrategy = "datamodel_code_generator.enums.FieldTypeCollisionStrategy", GraphQLScope = "datamodel_code_generator.enums.GraphQLScope", InputFileType = "datamodel_code_generator.enums.InputFileType", ModuleSplitMode = "datamodel_code_generator.enums.ModuleSplitMode", NamingStrategy = "datamodel_code_generator.enums.NamingStrategy", OpenAPIScope = "datamodel_code_generator.enums.OpenAPIScope", ReadOnlyWriteOnlyModelType = "datamodel_code_generator.enums.ReadOnlyWriteOnlyModelType", ReuseScope = "datamodel_code_generator.enums.ReuseScope", TargetPydanticVersion = "datamodel_code_generator.enums.TargetPydanticVersion", DateClassType = "datamodel_code_generator.format.DateClassType", DatetimeClassType = "datamodel_code_generator.format.DatetimeClassType", Formatter = "datamodel_code_generator.format.Formatter", PythonVersion = "datamodel_code_generator.format.PythonVersion", LiteralType = "datamodel_code_generator.parser.LiteralType", StrictTypes = "datamodel_code_generator.types.StrictTypes", UnionMode = "datamodel_code_generator.model.pydantic_v2.UnionMode", "GenerateConfig.union_mode" = "datamodel_code_generator.model.pydantic_v2.UnionMode" }
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
@@ -277,6 +279,7 @@ output = "src/datamodel_code_generator/_types/generate_config_dict.py"
 [tool.datamodel-codegen.profiles.parser-config-dict]
 enum-field-as-literal = "none"
 use-standard-primitive-types = true
+disable-warnings = true
 type_overrides = { AllExportsCollisionStrategy = "datamodel_code_generator.enums.AllExportsCollisionStrategy", AllExportsScope = "datamodel_code_generator.enums.AllExportsScope", AllOfMergeMode = "datamodel_code_generator.enums.AllOfMergeMode", CollapseRootModelsNameStrategy = "datamodel_code_generator.enums.CollapseRootModelsNameStrategy", DataModelType = "datamodel_code_generator.enums.DataModelType", FieldTypeCollisionStrategy = "datamodel_code_generator.enums.FieldTypeCollisionStrategy", GraphQLScope = "datamodel_code_generator.enums.GraphQLScope", InputFileType = "datamodel_code_generator.enums.InputFileType", ModuleSplitMode = "datamodel_code_generator.enums.ModuleSplitMode", NamingStrategy = "datamodel_code_generator.enums.NamingStrategy", OpenAPIScope = "datamodel_code_generator.enums.OpenAPIScope", ReadOnlyWriteOnlyModelType = "datamodel_code_generator.enums.ReadOnlyWriteOnlyModelType", ReuseScope = "datamodel_code_generator.enums.ReuseScope", TargetPydanticVersion = "datamodel_code_generator.enums.TargetPydanticVersion", DateClassType = "datamodel_code_generator.format.DateClassType", DatetimeClassType = "datamodel_code_generator.format.DatetimeClassType", Formatter = "datamodel_code_generator.format.Formatter", PythonVersion = "datamodel_code_generator.format.PythonVersion", LiteralType = "datamodel_code_generator.parser.LiteralType", StrictTypes = "datamodel_code_generator.types.StrictTypes", UnionMode = "datamodel_code_generator.model.pydantic_v2.UnionMode", "ParserConfig.union_mode" = "datamodel_code_generator.model.pydantic_v2.UnionMode" }
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:ParserConfig"
@@ -286,6 +289,7 @@ output = "src/datamodel_code_generator/_types/parser_config_dict.py"
 [tool.datamodel-codegen.profiles.parse-config-dict]
 enum-field-as-literal = "none"
 use-standard-primitive-types = true
+disable-warnings = true
 type_overrides = { AllExportsCollisionStrategy = "datamodel_code_generator.enums.AllExportsCollisionStrategy", AllExportsScope = "datamodel_code_generator.enums.AllExportsScope", ModuleSplitMode = "datamodel_code_generator.enums.ModuleSplitMode" }
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:ParseConfig"
@@ -295,6 +299,7 @@ output = "src/datamodel_code_generator/_types/parse_config_dict.py"
 [tool.datamodel-codegen.profiles.cli-config-dict]
 enum-field-as-literal = "none"
 use-standard-primitive-types = true
+disable-warnings = true
 type_overrides = { AllExportsCollisionStrategy = "datamodel_code_generator.enums.AllExportsCollisionStrategy", AllExportsScope = "datamodel_code_generator.enums.AllExportsScope", AllOfMergeMode = "datamodel_code_generator.enums.AllOfMergeMode", CollapseRootModelsNameStrategy = "datamodel_code_generator.enums.CollapseRootModelsNameStrategy", DataModelType = "datamodel_code_generator.enums.DataModelType", FieldTypeCollisionStrategy = "datamodel_code_generator.enums.FieldTypeCollisionStrategy", GraphQLScope = "datamodel_code_generator.enums.GraphQLScope", InputFileType = "datamodel_code_generator.enums.InputFileType", ModuleSplitMode = "datamodel_code_generator.enums.ModuleSplitMode", NamingStrategy = "datamodel_code_generator.enums.NamingStrategy", OpenAPIScope = "datamodel_code_generator.enums.OpenAPIScope", ReadOnlyWriteOnlyModelType = "datamodel_code_generator.enums.ReadOnlyWriteOnlyModelType", ReuseScope = "datamodel_code_generator.enums.ReuseScope", TargetPydanticVersion = "datamodel_code_generator.enums.TargetPydanticVersion", DateClassType = "datamodel_code_generator.format.DateClassType", DatetimeClassType = "datamodel_code_generator.format.DatetimeClassType", Formatter = "datamodel_code_generator.format.Formatter", PythonVersion = "datamodel_code_generator.format.PythonVersion", LiteralType = "datamodel_code_generator.parser.LiteralType", StrictTypes = "datamodel_code_generator.types.StrictTypes", UnionMode = "datamodel_code_generator.model.pydantic_v2.UnionMode", "CliConfigSchema.union_mode" = "datamodel_code_generator.model.pydantic_v2.UnionMode" }
 formatters = [ "ruff-format", "ruff-check" ]
 input-model = "src/datamodel_code_generator/config.py:CliConfigSchema"
