@@ -9,6 +9,7 @@ from datamodel_code_generator.imports import Import
 
 IMPORT_BASE_MODEL = Import.from_full_path("pydantic.BaseModel")
 IMPORT_CONFIG_DICT = Import.from_full_path("pydantic.ConfigDict")
+IMPORT_ALIAS_CHOICES = Import.from_full_path("pydantic.AliasChoices")
 IMPORT_AWARE_DATETIME = Import.from_full_path("pydantic.AwareDatetime")
 IMPORT_NAIVE_DATETIME = Import.from_full_path("pydantic.NaiveDatetime")
 IMPORT_PAST_DATETIME = Import.from_full_path("pydantic.PastDatetime")

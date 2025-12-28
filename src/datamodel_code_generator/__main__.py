@@ -1401,10 +1401,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 print(f"Unable to load alias mapping: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
-            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+            isinstance(k, str) and (isinstance(v, str) or (isinstance(v, list) and all(isinstance(i, str) for i in v)))
+            for k, v in aliases.items()
         ):
             print(  # noqa: T201
-                'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                "Alias mapping must be a JSON mapping with string keys and string or list of strings values "
+                '(e.g. {"from": "to", "field": ["alias1", "alias2"]})',
                 file=sys.stderr,
             )
             return Exit.ERROR

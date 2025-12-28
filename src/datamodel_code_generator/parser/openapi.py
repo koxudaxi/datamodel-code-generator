@@ -682,7 +682,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
-    def parse_all_parameters(
+    def parse_all_parameters(  # noqa: PLR0912
         self,
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
@@ -751,13 +751,21 @@ class OpenAPIParser(JsonSchemaParser):
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None
+                # Handle multiple aliases (Pydantic v2 AliasChoices)
+                single_alias: str | None = None
+                validation_aliases: list[str] | None = None
+                if isinstance(alias, list):
+                    validation_aliases = alias
+                else:
+                    single_alias = alias
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
                         default=object_schema.default if object_schema else None,
                         data_type=data_type,
                         required=parameter.required,
-                        alias=alias,
+                        alias=single_alias,
+                        validation_aliases=validation_aliases,
                         constraints=model_dump(object_schema, exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,

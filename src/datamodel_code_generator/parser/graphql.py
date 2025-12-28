@@ -559,7 +559,7 @@ class GraphQLParser(Parser):
     def parse_field(
         self,
         field_name: str,
-        alias: str | None,
+        alias: str | list[str] | None,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
     ) -> DataModelFieldBase:
         """Parse a GraphQL field and return a data model field."""
@@ -604,13 +604,21 @@ class GraphQLParser(Parser):
         if field.description is not None:  # pragma: no cover
             extras["description"] = field.description
 
+        # Handle multiple aliases (Pydantic v2 AliasChoices)
+        single_alias: str | None = None
+        validation_aliases: list[str] | None = None
+        if isinstance(alias, list):
+            validation_aliases = alias
+        else:
+            single_alias = alias
         return self.data_model_field_type(
             name=field_name,
             default=default,
             data_type=final_data_type,
             required=required,
             extras=extras,
-            alias=alias,
+            alias=single_alias,
+            validation_aliases=validation_aliases,
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
             use_serialize_as_any=self.use_serialize_as_any,

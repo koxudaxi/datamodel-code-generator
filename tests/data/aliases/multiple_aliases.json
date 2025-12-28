@@ -1,0 +1,4 @@
+{
+  "my_field": ["my-field", "myField"],
+  "User.user_name": ["user-name", "userName"]
+}

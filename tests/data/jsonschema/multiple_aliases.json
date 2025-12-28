@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Root",
+  "type": "object",
+  "properties": {
+    "my_field": {
+      "type": "string"
+    },
+    "other_field": {
+      "type": "integer"
+    },
+    "user": {
+      "title": "User",
+      "type": "object",
+      "properties": {
+        "user_name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}
