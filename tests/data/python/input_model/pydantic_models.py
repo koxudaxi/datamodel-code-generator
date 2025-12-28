@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import FrozenSet, Optional, Set
+from typing import FrozenSet, Optional, Set, Union
 
 from pydantic import BaseModel
 
@@ -32,6 +32,7 @@ class ModelWithPythonTypes(BaseModel):
     tag_obj: Tag
     nested_in_list: list[Set[int]]
     optional_set: Optional[Set[str]]
+    nullable_frozenset: Union[None, FrozenSet[str]]
 
 
 class RecursiveNode(BaseModel):

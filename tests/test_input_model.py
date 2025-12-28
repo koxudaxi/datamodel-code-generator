@@ -559,3 +559,34 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         expected_output_contains=["set[str]", "value:"],
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_optional_set_type(tmp_path: Path) -> None:
+    """Test that Optional[Set[str]] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["set[str] | None", "optional_set:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_optional_set_to_typeddict(tmp_path: Path) -> None:
+    """Test that Optional[Set[str]] works when outputting to TypedDict."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=["TypedDict", "set[str] | None", "optional_set:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_union_none_frozenset(tmp_path: Path) -> None:
+    """Test that Union[None, FrozenSet[str]] is preserved (container not first arg)."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["frozenset[str] | None", "nullable_frozenset:"],
+    )
