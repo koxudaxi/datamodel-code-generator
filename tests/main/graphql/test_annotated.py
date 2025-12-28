@@ -17,9 +17,8 @@ if TYPE_CHECKING:
     options=["--use-annotated"],
     option_description="""Use typing.Annotated for Field() with constraints.
 
-    The `--use-annotated` flag generates Field definitions using typing.Annotated
-    syntax instead of default values. This also enables `--field-constraints`.
-    """,
+The `--use-annotated` flag generates Field definitions using typing.Annotated
+syntax instead of default values. This also enables `--field-constraints`.""",
     input_schema="graphql/annotated.graphql",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
     golden_output="graphql/annotated.py",
@@ -76,10 +75,9 @@ def test_annotated_use_standard_collections_use_union_operator(output_file: Path
     options=["--use-union-operator"],
     option_description="""Use | operator for Union types (PEP 604).
 
-    The `--use-union-operator` flag generates union types using the | operator
-    (e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
-    This is the default behavior.
-    """,
+The `--use-union-operator` flag generates union types using the | operator
+(e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
+This is the default behavior.""",
     input_schema="graphql/annotated.graphql",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated", "--use-union-operator"],
     golden_output="graphql/annotated_use_union_operator.py",

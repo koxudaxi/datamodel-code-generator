@@ -155,10 +155,9 @@ def test_frozen_dataclasses(
     options=["--frozen-dataclasses"],
     option_description="""Generate frozen dataclasses with optional keyword-only fields.
 
-    The `--frozen-dataclasses` flag generates dataclass instances that are immutable
-    (frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
-    keyword-only arguments.
-    """,
+The `--frozen-dataclasses` flag generates dataclass instances that are immutable
+(frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
+keyword-only arguments.""",
     input_schema="jsonschema/simple_frozen_test.json",
     cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"],
     golden_output="frozen_dataclasses.py",
@@ -218,12 +217,11 @@ def test_class_decorators(tmp_path: Path) -> None:
     options=["--class-decorators"],
     option_description="""Add custom decorators to generated model classes.
 
-    The `--class-decorators` option adds custom decorators to all generated model classes.
-    This is useful for integrating with serialization libraries like `dataclasses_json`.
+The `--class-decorators` option adds custom decorators to all generated model classes.
+This is useful for integrating with serialization libraries like `dataclasses_json`.
 
-    Use with `--additional-imports` to add the required imports for the decorators.
-    The `@` prefix is optional and will be added automatically if missing.
-    """,
+Use with `--additional-imports` to add the required imports for the decorators.
+The `@` prefix is optional and will be added automatically if missing.""",
     input_schema="jsonschema/simple_frozen_test.json",
     cli_args=[
         "--output-model-type",
@@ -361,11 +359,10 @@ def test_use_attribute_docstrings(tmp_path: Path) -> None:
     options=["--use-attribute-docstrings"],
     option_description="""Generate field descriptions as attribute docstrings instead of Field descriptions.
 
-    The `--use-attribute-docstrings` flag places field descriptions in Python docstring
-    format (PEP 224 attribute docstrings) rather than in Field(..., description=...).
-    This provides better IDE support for hovering over attributes. Requires
-    `--use-field-description` to be enabled.
-    """,
+The `--use-attribute-docstrings` flag places field descriptions in Python docstring
+format (PEP 224 attribute docstrings) rather than in Field(..., description=...).
+This provides better IDE support for hovering over attributes. Requires
+`--use-field-description` to be enabled.""",
     input_schema="jsonschema/use_attribute_docstrings_test.json",
     cli_args=[
         "--output-model-type",
@@ -743,10 +740,9 @@ def test_skip_root_model(tmp_path: Path) -> None:
     options=["--skip-root-model"],
     option_description="""Skip generation of root model when schema contains nested definitions.
 
-    The `--skip-root-model` flag prevents generating a model for the root schema object
-    when the schema primarily contains reusable definitions. This is useful when the root
-    object is just a container for $defs and not a meaningful model itself.
-    """,
+The `--skip-root-model` flag prevents generating a model for the root schema object
+when the schema primarily contains reusable definitions. This is useful when the root
+object is just a container for $defs and not a meaningful model itself.""",
     input_schema="jsonschema/skip_root_model_test.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
     golden_output="skip_root_model.py",
@@ -772,10 +768,9 @@ def test_skip_root_model_command_line(output_file: Path) -> None:
     options=["--check"],
     option_description="""Verify generated code matches existing output without modifying files.
 
-    The `--check` flag compares the generated output with existing files and exits with
-    a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
-    and generated code stay in sync. Works with both single files and directory outputs.
-    """,
+The `--check` flag compares the generated output with existing files and exits with
+a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
+and generated code stay in sync. Works with both single files and directory outputs.""",
     input_schema="jsonschema/person.json",
     cli_args=["--disable-timestamp", "--check"],
     golden_output="person.py",
@@ -1013,10 +1008,9 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
     options=["--all-exports-scope"],
     option_description="""Generate __all__ exports for child modules in __init__.py files.
 
-    The `--all-exports-scope=children` flag adds __all__ to each __init__.py containing
-    exports from direct child modules. This improves IDE autocomplete and explicit exports.
-    Use 'recursive' to include all descendant exports with collision handling.
-    """,
+The `--all-exports-scope=children` flag adds __all__ to each __init__.py containing
+exports from direct child modules. This improves IDE autocomplete and explicit exports.
+Use 'recursive' to include all descendant exports with collision handling.""",
     input_schema="openapi/modular.yaml",
     cli_args=["--all-exports-scope", "children"],
     golden_output="openapi/modular_all_exports_children",
@@ -1042,11 +1036,10 @@ def test_all_exports_scope_children(output_dir: Path) -> None:
     options=["--all-exports-collision-strategy"],
     option_description="""Handle name collisions when exporting recursive module hierarchies.
 
-    The `--all-exports-collision-strategy` flag determines how to resolve naming conflicts
-    when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds the
-    minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
-    uses the complete module path. Requires `--all-exports-scope=recursive`.
-    """,
+The `--all-exports-collision-strategy` flag determines how to resolve naming conflicts
+when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds the
+minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
+uses the complete module path. Requires `--all-exports-scope=recursive`.""",
     input_schema="openapi/modular.yaml",
     cli_args=["--all-exports-scope", "recursive", "--all-exports-collision-strategy", "minimal-prefix"],
     golden_output="openapi/modular_all_exports_recursive",
@@ -1384,10 +1377,9 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
     options=["--module-split-mode"],
     option_description="""Split generated models into separate files, one per model class.
 
-    The `--module-split-mode=single` flag generates each model class in its own file,
-    named after the class in snake_case. Use with `--all-exports-scope=recursive` to
-    create an __init__.py that re-exports all models for convenient imports.
-    """,
+The `--module-split-mode=single` flag generates each model class in its own file,
+named after the class in snake_case. Use with `--all-exports-scope=recursive` to
+create an __init__.py that re-exports all models for convenient imports.""",
     input_schema="jsonschema/module_split_single/input.json",
     cli_args=["--module-split-mode", "single", "--all-exports-scope", "recursive", "--use-exact-imports"],
     golden_output="jsonschema/module_split_single",
@@ -1420,11 +1412,10 @@ def test_module_split_mode_single(output_dir: Path) -> None:
     options=["--use-standard-primitive-types"],
     option_description="""Use Python standard library types for string formats instead of str.
 
-    The `--use-standard-primitive-types` flag configures the code generation to use
-    Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
-    string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
-    output types. Pydantic already uses these types by default.
-    """,
+The `--use-standard-primitive-types` flag configures the code generation to use
+Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
+string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
+output types. Pydantic already uses these types by default.""",
     input_schema="jsonschema/use_standard_primitive_types.json",
     cli_args=[
         "--output-model-type",

@@ -18,10 +18,9 @@ if TYPE_CHECKING:
     options=["--watch"],
     option_description="""Watch mode cannot be used with --check mode.
 
-    The `--watch` flag enables file watching for automatic regeneration.
-    It cannot be combined with `--check` since check mode requires a single
-    comparison, not continuous watching.
-    """,
+The `--watch` flag enables file watching for automatic regeneration.
+It cannot be combined with `--check` since check mode requires a single
+comparison, not continuous watching.""",
     input_schema="jsonschema/person.json",
     cli_args=["--watch", "--check"],
     expected_stdout="Error: --watch and --check cannot be used together",
@@ -51,9 +50,8 @@ def test_watch_with_check_error(output_file: Path) -> None:
     options=["--watch"],
     option_description="""Watch mode requires a file path input, not a URL.
 
-    The `--watch` flag monitors local files for changes. It cannot be used
-    with `--url` since remote URLs cannot be watched for changes.
-    """,
+The `--watch` flag monitors local files for changes. It cannot be used
+with `--url` since remote URLs cannot be watched for changes.""",
     cli_args=["--watch", "--url", "https://example.com/schema.json"],
     expected_stdout="Error: --watch requires --input file path",
 )
@@ -126,11 +124,10 @@ def test_get_watchfiles_success() -> None:
     options=["--watch", "--watch-delay"],
     option_description="""Watch mode starts file watcher and handles clean exit.
 
-    The `--watch` flag starts a file watcher that monitors the input file
-    or directory for changes. The `--watch-delay` option sets the debounce
-    delay in seconds (default: 0.5) to prevent multiple regenerations for
-    rapid file changes. Press Ctrl+C to stop watching.
-    """,
+The `--watch` flag starts a file watcher that monitors the input file
+or directory for changes. The `--watch-delay` option sets the debounce
+delay in seconds (default: 0.5) to prevent multiple regenerations for
+rapid file changes. Press Ctrl+C to stop watching.""",
     input_schema="jsonschema/person.json",
     cli_args=["--watch", "--watch-delay", "1.5"],
     expected_stdout="Watching",

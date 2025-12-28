@@ -105,8 +105,7 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     options=["--input-model"],
     option_description="""Import a Python type or dict schema from a module.
 
-    Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
-    """,
+Use the format `module:Object` or `path/to/file.py:Object` to specify the type.""",
     cli_args=["--input-model", "mymodule:MyModel"],
     input_model="mymodule:MyModel",
     expected_stdout="",
