@@ -5,6 +5,6 @@ DO NOT EDIT MANUALLY. Run: python scripts/build_prompt_data.py
 
 from __future__ import annotations
 
-# Option descriptions extracted from test docstrings
+# Option descriptions extracted from cli_doc markers
 OPTION_DESCRIPTIONS: dict[str, str] = {
 }
