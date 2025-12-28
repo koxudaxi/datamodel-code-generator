@@ -119,7 +119,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-one-literal-as-default": "Use single literal value as default when enum has only one option.",
     "--use-operation-id-as-name": "Use OpenAPI operationId as the generated function/class name.",
     "--use-pendulum": "Use pendulum types for date/time fields instead of datetime module.",
-    "--use-root-model-type-alias": "Generate RootModel as type alias format for better mypy support (issue #1903).",
+    "--use-root-model-type-alias": "Generate RootModel as type alias format for better mypy support.",
     "--use-schema-description": "Use schema description as class docstring.",
     "--use-serialize-as-any": "Wrap fields with subtypes in Pydantic's SerializeAsAny.",
     "--use-specialized-enum": "Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).",
@@ -133,7 +133,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-union-operator": "Use | operator for Union types (PEP 604).",
     "--use-unique-items-as-set": "Generate set types for arrays with uniqueItems constraint.",
     "--validation": "Enable validation constraints (deprecated, use --field-constraints).",
-    "--watch": "Watch mode cannot be used with --check mode.",
-    "--watch-delay": "Watch mode starts file watcher and handles clean exit.",
+    "--watch": "Watch input file(s) for changes and regenerate output automatically.",
+    "--watch-delay": "Set debounce delay in seconds for watch mode.",
     "--wrap-string-literal": "Wrap long string literals across multiple lines.",
 }

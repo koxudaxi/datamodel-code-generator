@@ -17,8 +17,8 @@
 | [`--ignore-pyproject`](#ignore-pyproject) | Ignore pyproject.toml configuration file. |
 | [`--module-split-mode`](#module-split-mode) | Split generated models into separate files, one per model cl... |
 | [`--shared-module-name`](#shared-module-name) | Customize the name of the shared module for deduplicated mod... |
-| [`--watch`](#watch) | Watch mode cannot be used with --check mode. |
-| [`--watch-delay`](#watch-delay) | Watch mode starts file watcher and handles clean exit. |
+| [`--watch`](#watch) | Watch input file(s) for changes and regenerate output automa... |
+| [`--watch-delay`](#watch-delay) | Set debounce delay in seconds for watch mode. |
 
 ---
 
@@ -1905,11 +1905,12 @@ Note: This option only affects modular output with tree-level model reuse.
 
 ## `--watch` {#watch}
 
-Watch mode cannot be used with --check mode.
+Watch input file(s) for changes and regenerate output automatically.
 
-The `--watch` flag enables file watching for automatic regeneration.
-It cannot be combined with `--check` since check mode requires a single
-comparison, not continuous watching.
+The `--watch` flag enables continuous file monitoring mode. When enabled,
+datamodel-codegen watches the input file or directory for changes and
+automatically regenerates the output whenever changes are detected.
+Press Ctrl+C to stop watching.
 
 !!! tip "Usage"
 
@@ -1918,6 +1919,14 @@ comparison, not continuous watching.
     ```
 
     1. :material-arrow-left: `--watch` - the option documented here
+
+!!! warning "Requires extra dependency"
+
+    The watch feature requires the `watch` extra:
+
+    ```bash
+    pip install 'datamodel-code-generator[watch]'
+    ```
 
 ??? example "Examples"
 
@@ -1972,12 +1981,14 @@ comparison, not continuous watching.
 
 ## `--watch-delay` {#watch-delay}
 
-Watch mode starts file watcher and handles clean exit.
+Set debounce delay in seconds for watch mode.
 
-The `--watch` flag starts a file watcher that monitors the input file
-or directory for changes. The `--watch-delay` option sets the debounce
-delay in seconds (default: 0.5) to prevent multiple regenerations for
-rapid file changes. Press Ctrl+C to stop watching.
+The `--watch-delay` option configures the debounce interval (default: 0.5 seconds)
+for watch mode. This prevents multiple regenerations when files are rapidly
+modified in succession. The delay ensures that after the last file change,
+the generator waits the specified time before regenerating.
+
+**Related:** [`--watch`](general-options.md#watch)
 
 !!! tip "Usage"
 
