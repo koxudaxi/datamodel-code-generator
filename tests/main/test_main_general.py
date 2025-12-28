@@ -2103,3 +2103,15 @@ def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFi
 
     with pytest.raises(Error, match=f"Dict input is not supported for {input_file_type.value}"):
         generate(auto_error_dict, input_file_type=input_file_type)
+
+
+def test_pydantic_v1_deprecation_warning(output_file: Path, mocker: MockerFixture) -> None:
+    """Test that deprecation warning is emitted when running with Pydantic v1."""
+    mocker.patch("datamodel_code_generator.__main__.is_pydantic_v2", return_value=False)
+
+    with pytest.warns(DeprecationWarning, match=r"Pydantic v1 runtime support is deprecated"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
