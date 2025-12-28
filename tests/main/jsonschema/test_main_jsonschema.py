@@ -1423,6 +1423,54 @@ def test_main_all_of_multi_ref_with_property_override(output_file: Path) -> None
         )
 
 
+def test_main_all_of_deep_hierarchy_property_override(output_file: Path) -> None:
+    """Test allOf with deep hierarchy inherits types from grandparent when parent has partial override."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_deep_hierarchy_property_override.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_deep_hierarchy_property_override.py",
+        )
+
+
+def test_main_all_of_very_deep_hierarchy_property_override(output_file: Path) -> None:
+    """Test allOf with 4+ levels of hierarchy inherits types from great-grandparent."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_very_deep_hierarchy_property_override.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_very_deep_hierarchy_property_override.py",
+        )
+
+
+def test_main_all_of_hierarchy_property_not_in_ancestor(output_file: Path) -> None:
+    """Test allOf hierarchy when property override is not found in any ancestor."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_hierarchy_property_not_in_ancestor.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_hierarchy_property_not_in_ancestor.py",
+        )
+
+
+def test_main_all_of_hierarchy_inline_allof(output_file: Path) -> None:
+    """Test allOf hierarchy when parent has inline allOf without $ref."""
+    with chdir(JSON_SCHEMA_DATA_PATH):
+        run_main_and_assert(
+            input_path=Path("all_of_hierarchy_inline_allof.json"),
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="all_of_hierarchy_inline_allof.py",
+        )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] >= "24",
     reason="Installed black doesn't support the old style",

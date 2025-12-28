@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Child",
+  "$defs": {
+    "Parent": {
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" }
+          }
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "status": { "default": "parent-status" }
+      }
+    }
+  },
+  "type": "object",
+  "allOf": [
+    { "$ref": "#/$defs/Parent" }
+  ],
+  "properties": {
+    "status": { "default": "child-status" }
+  }
+}
