@@ -46,7 +46,7 @@ from datamodel_code_generator.format import (
     PythonVersion,
     PythonVersionMin,
 )
-from datamodel_code_generator.imports import IMPORT_ANY
+from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.base import UNDEFINED, get_module_name, sanitize_module_name
@@ -533,6 +533,42 @@ class JsonSchemaParser(Parser):
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
+
+    COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
+        "string": frozenset({"str", "String"}),
+        "integer": frozenset({"int", "Integer"}),
+        "number": frozenset({"float", "int", "Number"}),
+        "boolean": frozenset({"bool", "Boolean"}),
+        "array": frozenset({
+            "list",
+            "List",
+            "set",
+            "Set",
+            "frozenset",
+            "FrozenSet",
+            "Sequence",
+            "MutableSequence",
+            "tuple",
+            "Tuple",
+            "AbstractSet",
+            "MutableSet",
+        }),
+        "object": frozenset({"dict", "Dict", "Mapping", "MutableMapping", "TypedDict"}),
+    }
+
+    PYTHON_TYPE_IMPORTS: ClassVar[dict[str, Import]] = {
+        "Callable": Import.from_full_path("collections.abc.Callable"),
+        "Iterable": Import.from_full_path("collections.abc.Iterable"),
+        "Iterator": Import.from_full_path("collections.abc.Iterator"),
+        "Generator": Import.from_full_path("collections.abc.Generator"),
+        "Awaitable": Import.from_full_path("collections.abc.Awaitable"),
+        "Coroutine": Import.from_full_path("collections.abc.Coroutine"),
+        "AsyncIterable": Import.from_full_path("collections.abc.AsyncIterable"),
+        "AsyncIterator": Import.from_full_path("collections.abc.AsyncIterator"),
+        "AsyncGenerator": Import.from_full_path("collections.abc.AsyncGenerator"),
+        "Pattern": Import.from_full_path("re.Pattern"),
+        "Match": Import.from_full_path("re.Match"),
+    }
 
     def __init__(  # noqa: PLR0913
         self,
@@ -1147,6 +1183,10 @@ class JsonSchemaParser(Parser):
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         """Get the data type for a JSON Schema object."""
+        python_type_override = self._get_python_type_override(obj)
+        if python_type_override:
+            return python_type_override
+
         if obj.type is None:
             if "const" in obj.extras:
                 return self.data_type_manager.get_data_type_from_value(obj.extras["const"])
@@ -1275,6 +1315,38 @@ class JsonSchemaParser(Parser):
                         return type_to_flag[arg_base]
 
         return {}
+
+    def _get_python_type_base(self, python_type: str) -> str:  # noqa: PLR6301
+        """Extract base type from a Python type annotation string."""
+        if "." in python_type.split("[", maxsplit=1)[0]:
+            base = python_type.split("[", maxsplit=1)[0].rsplit(".", 1)[-1]
+        else:
+            base = python_type.split("[", maxsplit=1)[0].strip()
+        return base
+
+    def _is_compatible_python_type(self, schema_type: str | None, python_type: str) -> bool:
+        """Check if x-python-type is compatible with the JSON Schema type."""
+        if schema_type is None:
+            return True
+        base_type = self._get_python_type_base(python_type)
+        if base_type in {"Union", "Optional"}:
+            return True
+        compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
+        return base_type in compatible
+
+    def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
+        """Get DataType from x-python-type if it's incompatible with schema type."""
+        x_python_type = obj.extras.get("x-python-type")
+        if not x_python_type or not isinstance(x_python_type, str):
+            return None
+
+        schema_type = obj.type if isinstance(obj.type, str) else None
+        if self._is_compatible_python_type(schema_type, x_python_type):
+            return None
+
+        base_type = self._get_python_type_base(x_python_type)
+        import_ = self.PYTHON_TYPE_IMPORTS.get(base_type)
+        return self.data_type(type=x_python_type, import_=import_)
 
     def _apply_title_as_name(self, name: str, obj: JsonSchemaObject) -> str:
         """Apply title as name if use_title_as_name is enabled."""

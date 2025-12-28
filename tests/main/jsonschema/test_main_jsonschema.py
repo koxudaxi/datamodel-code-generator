@@ -6965,3 +6965,118 @@ def test_main_jsonschema_ref_to_json_list_file() -> None:
             input_=JSON_SCHEMA_DATA_PATH / "ref_to_json_list" / "main.json",
             input_file_type=InputFileType.JsonSchema,
         )
+
+
+def test_x_python_type_callable(tmp_path: Path) -> None:
+    """Test x-python-type with Callable preserves the Callable type."""
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "callback": {
+                "type": "string",
+                "x-python-type": "Callable[[str], str]",
+            }
+        },
+    })
+    output_file = tmp_path / "output.py"
+    generate(
+        schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.TypingTypedDict,
+    )
+    content = output_file.read_text()
+    assert "Callable[[str], str]" in content
+    assert "from collections.abc import Callable" in content
+
+
+def test_x_python_type_callable_in_anyof(tmp_path: Path) -> None:
+    """Test x-python-type in anyOf preserves the Callable type."""
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "callback": {
+                "anyOf": [
+                    {"type": "string", "x-python-type": "Callable[[str], str]"},
+                    {"type": "null"},
+                ],
+            }
+        },
+    })
+    output_file = tmp_path / "output.py"
+    generate(
+        schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.TypingTypedDict,
+    )
+    content = output_file.read_text()
+    assert "Callable[[str], str] | None" in content
+    assert "from collections.abc import Callable" in content
+
+
+def test_x_python_type_compatible_type_uses_flags(tmp_path: Path) -> None:
+    """Test x-python-type with compatible type (Set) uses existing flag logic."""
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "items": {
+                "type": "array",
+                "items": {"type": "string"},
+                "x-python-type": "Set[str]",
+            }
+        },
+    })
+    output_file = tmp_path / "output.py"
+    generate(
+        schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.TypingTypedDict,
+    )
+    content = output_file.read_text()
+    assert "set[str]" in content
+
+
+def test_x_python_type_fully_qualified_path(tmp_path: Path) -> None:
+    """Test x-python-type with fully qualified path (e.g., collections.abc.Callable)."""
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "callback": {
+                "type": "string",
+                "x-python-type": "collections.abc.Callable[[str], str]",
+            }
+        },
+    })
+    output_file = tmp_path / "output.py"
+    generate(
+        schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.TypingTypedDict,
+    )
+    content = output_file.read_text()
+    assert "collections.abc.Callable[[str], str]" in content
+    assert "from collections.abc import Callable" in content
+
+
+def test_x_python_type_no_schema_type(tmp_path: Path) -> None:
+    """Test x-python-type when schema type is not specified."""
+    schema = json.dumps({
+        "type": "object",
+        "properties": {
+            "callback": {
+                "x-python-type": "Callable[[str], str]",
+            }
+        },
+    })
+    output_file = tmp_path / "output.py"
+    generate(
+        schema,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.TypingTypedDict,
+    )
+    content = output_file.read_text()
+    assert "Any" in content
