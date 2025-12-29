@@ -1222,8 +1222,17 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string."""
-        reference = self.model_resolver.add_ref(ref)
         ref_schema = self._load_ref_schema_object(ref)
+        x_python_import = ref_schema.extras.get("x-python-import")
+        if isinstance(x_python_import, dict):
+            module = x_python_import.get("module")
+            type_name = x_python_import.get("name")
+            if module and type_name:  # pragma: no branch
+                full_path = f"{module}.{type_name}"
+                import_ = Import.from_full_path(full_path)
+                self.imports.append(import_)
+                return self.data_type.from_import(import_)
+        reference = self.model_resolver.add_ref(ref)
         is_optional = ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True)
         return self.data_type(reference=reference, is_optional=is_optional)
 
@@ -3524,8 +3533,19 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
+        if isinstance(raw, dict) and "x-python-import" in raw:
+            self._handle_python_import(name, path)
+            return
         obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
+
+    def _handle_python_import(
+        self,
+        name: str,
+        path: list[str],
+    ) -> None:
+        """Mark x-python-import reference as loaded to skip model generation."""
+        self.model_resolver.add(path, name, class_name=True, loaded=True)
 
     def parse_obj(  # noqa: PLR0912
         self,
