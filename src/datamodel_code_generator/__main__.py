@@ -59,6 +59,7 @@ from datamodel_code_generator import (
     Error,
     FieldTypeCollisionStrategy,
     InputFileType,
+    InputModelRefStrategy,
     InvalidClassNameError,
     ModuleSplitMode,
     NamingStrategy,
@@ -443,6 +444,7 @@ class Config(BaseModel):
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[str] = None  # noqa: UP045
+    input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
@@ -682,7 +684,7 @@ def _simple_type_name(tp: type) -> str:
 
 
 def _collect_nested_models(model: type, visited: set[type] | None = None) -> dict[str, type]:
-    """Collect all nested BaseModel subclasses from a model's fields."""
+    """Collect all nested types (BaseModel, Enum, dataclass) from a model's fields."""
     if visited is None:
         visited = set()
 
@@ -691,24 +693,32 @@ def _collect_nested_models(model: type, visited: set[type] | None = None) -> dic
     visited.add(model)
 
     result: dict[str, type] = {}
-    model_fields = getattr(model, "model_fields", None)
-    if model_fields is None:  # pragma: no cover
-        return result
 
-    for field_info in model_fields.values():
-        tp = field_info.annotation
-        _find_models_in_type(tp, result, visited)
+    model_fields = getattr(model, "model_fields", None)
+    if model_fields is not None:
+        for field_info in model_fields.values():
+            tp = field_info.annotation
+            _find_models_in_type(tp, result, visited)
+    else:
+        type_hints = _get_type_hints_safe(model)
+        for tp in type_hints.values():
+            _find_models_in_type(tp, result, visited)
 
     return result
 
 
 def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
-    """Recursively find BaseModel subclasses in a type annotation."""
+    """Recursively find BaseModel subclasses, Enums, and dataclasses in a type annotation."""
+    from dataclasses import is_dataclass  # noqa: PLC0415
+    from enum import Enum as PyEnum  # noqa: PLC0415
     from typing import get_args  # noqa: PLC0415
 
-    if isinstance(tp, type) and issubclass(tp, BaseModel) and tp not in visited:
-        result[tp.__name__] = tp
-        result.update(_collect_nested_models(tp, visited))
+    if isinstance(tp, type) and tp not in visited:
+        if issubclass(tp, BaseModel):
+            result[tp.__name__] = tp
+            result.update(_collect_nested_models(tp, visited))
+        elif issubclass(tp, PyEnum) or is_dataclass(tp):
+            result[tp.__name__] = tp
 
     for arg in get_args(tp):
         _find_models_in_type(arg, result, visited)
@@ -776,15 +786,87 @@ def _add_python_type_info_generic(schema: dict[str, Any], obj: type) -> dict[str
     return schema
 
 
-def _load_model_schema(  # noqa: PLR0912, PLR0915
+_TYPE_FAMILY_ENUM = "enum"
+_TYPE_FAMILY_PYDANTIC = "pydantic"
+_TYPE_FAMILY_DATACLASS = "dataclass"
+_TYPE_FAMILY_TYPEDDICT = "typeddict"
+_TYPE_FAMILY_OTHER = "other"
+
+
+def _get_type_family(tp: type) -> str:
+    """Determine the type family of a Python type."""
+    from dataclasses import is_dataclass  # noqa: PLC0415
+    from enum import Enum as PyEnum  # noqa: PLC0415
+
+    if isinstance(tp, type) and issubclass(tp, PyEnum):
+        return _TYPE_FAMILY_ENUM
+
+    if isinstance(tp, type) and issubclass(tp, BaseModel):
+        return _TYPE_FAMILY_PYDANTIC
+
+    if hasattr(tp, "__pydantic_fields__") and is_dataclass(tp):  # pragma: no cover
+        return _TYPE_FAMILY_PYDANTIC
+
+    if is_dataclass(tp):
+        return _TYPE_FAMILY_DATACLASS
+
+    if isinstance(tp, type) and hasattr(tp, "__required_keys__"):
+        return _TYPE_FAMILY_TYPEDDICT
+
+    return _TYPE_FAMILY_OTHER  # pragma: no cover
+
+
+def _filter_defs_by_strategy(
+    schema: dict[str, Any],
+    nested_models: dict[str, type],
+    input_model_family: str,
+    strategy: InputModelRefStrategy,
+) -> dict[str, Any]:
+    """Filter $defs based on ref strategy, marking reused types with x-python-import."""
+    if strategy == InputModelRefStrategy.RegenerateAll:  # pragma: no cover
+        return schema
+
+    if "$defs" not in schema:  # pragma: no cover
+        return schema
+
+    new_defs: dict[str, Any] = {}
+
+    for def_name, def_schema in schema["$defs"].items():
+        if def_name not in nested_models:  # pragma: no cover
+            new_defs[def_name] = def_schema
+            continue
+
+        nested_type = nested_models[def_name]
+        type_family = _get_type_family(nested_type)
+
+        should_reuse = strategy == InputModelRefStrategy.ReuseAll or (
+            strategy == InputModelRefStrategy.ReuseForeign and type_family != input_model_family
+        )
+
+        if should_reuse:
+            new_defs[def_name] = {
+                "x-python-import": {
+                    "module": nested_type.__module__,
+                    "name": nested_type.__name__,
+                },
+            }
+        else:
+            new_defs[def_name] = def_schema
+
+    return {**schema, "$defs": new_defs}
+
+
+def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     input_model: str,
     input_file_type: InputFileType,
+    ref_strategy: InputModelRefStrategy | None = None,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
 
     Args:
         input_model: Import path in 'module.path:ObjectName' format
         input_file_type: Current input file type setting for validation
+        ref_strategy: Strategy for handling referenced types
 
     Returns:
         Schema dict
@@ -856,7 +938,17 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
         schema = obj.model_json_schema()
-        return _add_python_type_info(schema, obj)
+        schema = _add_python_type_info(schema, obj)
+
+        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+            nested_models = _collect_nested_models(obj)
+            model_name = getattr(obj, "__name__", None)
+            if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover
+                nested_models[model_name] = obj
+            input_family = _get_type_family(obj)
+            schema = _filter_defs_by_strategy(schema, nested_models, input_family, ref_strategy)
+
+        return schema
 
     # Check for dataclass or TypedDict - use TypeAdapter
     from dataclasses import is_dataclass  # noqa: PLC0415
@@ -874,10 +966,21 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
             from pydantic import TypeAdapter  # noqa: PLC0415
 
             schema = TypeAdapter(obj).json_schema()
-            return _add_python_type_info_generic(schema, cast("type", obj))
+            schema = _add_python_type_info_generic(schema, cast("type", obj))
+
+            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+                obj_type = cast("type", obj)
+                nested_models = _collect_nested_models(obj_type)
+                obj_name = getattr(obj, "__name__", None)
+                if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
+                    nested_models[obj_name] = obj_type
+                input_family = _get_type_family(obj_type)
+                schema = _filter_defs_by_strategy(schema, nested_models, input_family, ref_strategy)
         except ImportError as e:
             msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
             raise Error(msg) from e
+
+        return schema
 
     msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
     raise Error(msg)
@@ -1466,7 +1569,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     try:
         input_: Path | str | ParseResult
         if config.input_model:
-            schema = _load_model_schema(config.input_model, config.input_file_type)
+            schema = _load_model_schema(
+                config.input_model,
+                config.input_file_type,
+                config.input_model_ref_strategy,
+            )
             input_ = json.dumps(schema)
             if config.input_file_type == InputFileType.Auto:
                 config.input_file_type = InputFileType.JsonSchema

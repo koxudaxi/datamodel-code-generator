@@ -23,6 +23,7 @@ from datamodel_code_generator.enums import (
     DataModelType,
     FieldTypeCollisionStrategy,
     InputFileType,
+    InputModelRefStrategy,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
@@ -162,6 +163,16 @@ base_options.add_argument(
     "For dict input, --input-file-type is required. "
     "Cannot be used with --input or --url.",
     metavar="MODULE:NAME",
+)
+base_options.add_argument(
+    "--input-model-ref-strategy",
+    help="Strategy for referenced types in --input-model. "
+    "'regenerate-all': Regenerate all types. "
+    "'reuse-foreign': Reuse types from different families (Enum, etc.), regenerate same-family. "
+    "'reuse-all': Reuse all referenced types via import. "
+    "If not specified, defaults to regenerate-all behavior.",
+    choices=[s.value for s in InputModelRefStrategy],
+    default=None,
 )
 
 # ======================================================================================
