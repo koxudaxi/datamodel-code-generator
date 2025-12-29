@@ -14,23 +14,35 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import (
         AllOfMergeMode,
         CollapseRootModelsNameStrategy,
-        DataclassArguments,
         FieldTypeCollisionStrategy,
         NamingStrategy,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
+        StrictTypes,
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.parser import LiteralType
-    from datamodel_code_generator.types import StrictTypes
+
+
+class DataclassArguments(TypedDict):
+    init: NotRequired[bool]
+    repr: NotRequired[bool]
+    eq: NotRequired[bool]
+    order: NotRequired[bool]
+    unsafe_hash: NotRequired[bool]
+    frozen: NotRequired[bool]
+    match_args: NotRequired[bool]
+    kw_only: NotRequired[bool]
+    slots: NotRequired[bool]
+    weakref_slot: NotRequired[bool]
 
 
 class ParserConfigDict(TypedDict):
-    data_model_type: NotRequired[Any]
-    data_model_root_type: NotRequired[Any]
-    data_type_manager_type: NotRequired[Any]
-    data_model_field_type: NotRequired[Any]
+    data_model_type: NotRequired[type[datamodel_code_generator.model.base.DataModel]]
+    data_model_root_type: NotRequired[type[datamodel_code_generator.model.base.DataModel]]
+    data_type_manager_type: NotRequired[type[datamodel_code_generator.types.DataTypeManager]]
+    data_model_field_type: NotRequired[type[datamodel_code_generator.model.base.DataModelFieldBase]]
     base_class: NotRequired[str | None]
     base_class_map: NotRequired[dict[str, str] | None]
     additional_imports: NotRequired[list[str] | None]
@@ -72,7 +84,7 @@ class ParserConfigDict(TypedDict):
     strict_nullable: NotRequired[bool]
     use_generic_container_types: NotRequired[bool]
     enable_faux_immutability: NotRequired[bool]
-    remote_text_cache: NotRequired[dict[str, Any] | None]
+    remote_text_cache: NotRequired[DefaultPutDict[str, str] | None]
     disable_appending_item_suffix: NotRequired[bool]
     strict_types: NotRequired[Sequence[StrictTypes] | None]
     empty_enum_field_name: NotRequired[str | None]
