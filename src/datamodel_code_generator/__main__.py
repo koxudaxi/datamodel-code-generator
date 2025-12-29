@@ -599,6 +599,220 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
 # Types that are lost during JSON Schema conversion and need to be preserved
 _PRESERVED_TYPE_ORIGINS: dict[type, str] = {}
 
+# Marker for types that Pydantic cannot serialize to JSON Schema
+_UNSERIALIZABLE_MARKER = "x-python-unserializable"
+
+
+def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
+    """Serialize ANY Python type to its string representation.
+
+    Handles:
+    - Basic types: str, int, bool, etc.
+    - Generic types: List[str], Dict[str, int], etc.
+    - Callable: Callable[[str], str], Callable[..., Any]
+    - Union types: str | int, Optional[str]
+    - Type: Type[BaseModel]
+    - Custom classes: mymodule.MyClass
+    - Nested generics: List[Callable[[str], str]]
+    """
+    import types  # noqa: PLC0415
+    from typing import Union, get_args, get_origin  # noqa: PLC0415
+
+    if tp is type(None):  # pragma: no cover
+        return "None"
+
+    if tp is ...:  # pragma: no cover
+        return "..."
+
+    origin = get_origin(tp)
+    args = get_args(tp)
+
+    if origin is None:
+        module = getattr(tp, "__module__", "")
+        name = getattr(tp, "__name__", None) or getattr(tp, "__qualname__", None)
+
+        if name is None:
+            return str(tp).replace("typing.", "")
+
+        if module and module not in {"builtins", "typing", "collections.abc"}:
+            return f"{module}.{name}"
+        return name
+
+    if _is_callable_origin(origin):
+        return _serialize_callable(args)
+
+    if origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType):  # pragma: no cover
+        parts = [_serialize_python_type_full(arg) for arg in args]
+        return " | ".join(parts)
+
+    if origin is type:
+        if args:
+            return f"Type[{_serialize_python_type_full(args[0])}]"
+        return "Type"  # pragma: no cover
+
+    origin_name = _get_origin_name(origin)
+    if args:
+        args_str = ", ".join(_serialize_python_type_full(arg) for arg in args)
+        return f"{origin_name}[{args_str}]"
+
+    return origin_name  # pragma: no cover
+
+
+def _is_callable_origin(origin: type | None) -> bool:
+    """Check if origin is Callable."""
+    if origin is None:  # pragma: no cover
+        return False
+    from collections.abc import Callable as ABCCallable  # noqa: PLC0415
+
+    if origin is ABCCallable:
+        return True
+    origin_str = str(origin)
+    return "Callable" in origin_str or "callable" in origin_str
+
+
+def _serialize_callable(args: tuple[type, ...]) -> str:
+    """Serialize Callable type."""
+    if not args:  # pragma: no cover
+        return "Callable"
+
+    params = args[:-1]
+    ret = args[-1]
+
+    if len(params) == 1 and params[0] is ...:
+        return f"Callable[..., {_serialize_python_type_full(ret)}]"
+
+    if len(params) == 1 and isinstance(params[0], (list, tuple)):  # pragma: no cover
+        params = tuple(params[0])
+
+    params_str = ", ".join(_serialize_python_type_full(p) for p in params)
+    return f"Callable[[{params_str}], {_serialize_python_type_full(ret)}]"
+
+
+def _get_origin_name(origin: type) -> str:
+    """Get the name of a generic origin."""
+    name = getattr(origin, "__name__", None)
+    if name:
+        return name
+
+    # Fallback for origins without __name__ (rare edge case)
+    origin_str = str(origin)  # pragma: no cover
+    if "typing." in origin_str:  # pragma: no cover
+        return origin_str.replace("typing.", "")
+
+    return origin_str  # pragma: no cover
+
+
+def _get_input_model_json_schema_class() -> type:
+    """Get the InputModelJsonSchema class (lazy import to avoid Pydantic v1 issues)."""
+    from pydantic.json_schema import GenerateJsonSchema  # noqa: PLC0415
+
+    class InputModelJsonSchema(GenerateJsonSchema):
+        """Custom schema generator that handles ALL unserializable types."""
+
+        def handle_invalid_for_json_schema(  # noqa: PLR6301
+            self,
+            schema: Any,  # noqa: ARG002
+            error_info: Any,  # noqa: ARG002
+        ) -> dict[str, Any]:
+            """Catch ALL types that Pydantic can't serialize to JSON Schema."""
+            return {
+                "type": "object",
+                _UNSERIALIZABLE_MARKER: True,
+            }
+
+        def callable_schema(  # noqa: PLR6301
+            self,
+            schema: Any,  # noqa: ARG002
+        ) -> dict[str, Any]:
+            """Handle Callable types - these raise before handle_invalid_for_json_schema."""
+            return {
+                "type": "string",
+                _UNSERIALIZABLE_MARKER: True,
+            }
+
+    return InputModelJsonSchema
+
+
+def _is_type_origin(annotation: type) -> bool:
+    """Check if annotation is Type[X]."""
+    from typing import get_origin  # noqa: PLC0415
+
+    origin = get_origin(annotation)
+    return origin is type
+
+
+def _process_unserializable_property(prop: dict[str, Any], annotation: type) -> None:
+    """Process a single property, handling anyOf/oneOf/items structures."""
+    if "anyOf" in prop:
+        for item in prop["anyOf"]:
+            if item.get(_UNSERIALIZABLE_MARKER):
+                _set_python_type_for_unserializable(item, annotation)
+    elif "oneOf" in prop:  # pragma: no cover
+        for item in prop["oneOf"]:
+            if item.get(_UNSERIALIZABLE_MARKER):
+                _set_python_type_for_unserializable(item, annotation)
+    elif prop.get(_UNSERIALIZABLE_MARKER):
+        _set_python_type_for_unserializable(prop, annotation)
+    elif "items" in prop and prop["items"].get(_UNSERIALIZABLE_MARKER):
+        prop["x-python-type"] = _serialize_python_type_full(annotation)
+        prop["items"].pop(_UNSERIALIZABLE_MARKER, None)
+    elif _is_type_origin(annotation):
+        prop["x-python-type"] = _serialize_python_type_full(annotation)
+
+
+def _set_python_type_for_unserializable(item: dict[str, Any], annotation: type) -> None:
+    """Set x-python-type and clean up markers."""
+    from typing import Union, get_args, get_origin  # noqa: PLC0415
+
+    origin = get_origin(annotation)
+    actual_type = annotation
+
+    if origin is Union:
+        for arg in get_args(annotation):  # pragma: no branch
+            if arg is not type(None):  # pragma: no branch
+                actual_type = arg
+                break
+
+    item["x-python-type"] = _serialize_python_type_full(actual_type)
+    item.pop(_UNSERIALIZABLE_MARKER, None)
+
+
+def _add_python_type_for_unserializable(
+    schema: dict[str, Any],
+    model: type,
+    visited_defs: set[str] | None = None,
+) -> dict[str, Any]:
+    """Add x-python-type to ALL fields marked as unserializable.
+
+    Handles:
+    - Top-level properties
+    - Nested in anyOf/oneOf/allOf
+    - $defs definitions
+    """
+    if visited_defs is None:
+        visited_defs = set()
+
+    if "properties" in schema:
+        model_fields = getattr(model, "model_fields", {})
+        for field_name, prop in schema["properties"].items():
+            if field_name in model_fields:  # pragma: no branch
+                annotation = model_fields[field_name].annotation
+                _process_unserializable_property(prop, annotation)
+
+    if "$defs" in schema:
+        nested_models = _collect_nested_models(model)
+        model_name = getattr(model, "__name__", None)
+        if model_name:  # pragma: no branch
+            nested_models[model_name] = model
+        for def_name, def_schema in schema["$defs"].items():
+            if def_name in visited_defs:  # pragma: no cover
+                continue
+            visited_defs.add(def_name)
+            if def_name in nested_models:  # pragma: no branch
+                _add_python_type_for_unserializable(def_schema, nested_models[def_name], visited_defs)
+
+    return schema
+
 
 def _init_preserved_type_origins() -> dict[type, str]:
     """Initialize preserved type origins mapping (lazy initialization)."""
@@ -937,7 +1151,9 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
-        schema = obj.model_json_schema()
+        schema_generator = _get_input_model_json_schema_class()
+        schema = obj.model_json_schema(schema_generator=schema_generator)
+        schema = _add_python_type_for_unserializable(schema, obj)
         schema = _add_python_type_info(schema, obj)
 
         if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:

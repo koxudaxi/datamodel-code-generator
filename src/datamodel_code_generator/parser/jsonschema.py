@@ -569,7 +569,14 @@ class JsonSchemaParser(Parser):
         "AsyncGenerator": Import.from_full_path("collections.abc.AsyncGenerator"),
         "Pattern": Import.from_full_path("re.Pattern"),
         "Match": Import.from_full_path("re.Match"),
+        "Type": Import.from_full_path("typing.Type"),
     }
+
+    # Types that require x-python-type override regardless of schema type
+    PYTHON_TYPE_OVERRIDE_ALWAYS: ClassVar[frozenset[str]] = frozenset({
+        "Callable",
+        "Type",
+    })
 
     def __init__(  # noqa: PLR0913
         self,
@@ -1346,9 +1353,14 @@ class JsonSchemaParser(Parser):
 
     def _is_compatible_python_type(self, schema_type: str | None, python_type: str) -> bool:
         """Check if x-python-type is compatible with the JSON Schema type."""
+        base_type = self._get_python_type_base(python_type)
+        if base_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
+            return False
+        all_type_names = self._extract_all_type_names(python_type)
+        if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
+            return False
         if schema_type is None:
             return True
-        base_type = self._get_python_type_base(python_type)
         if base_type in {"Union", "Optional"}:
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
@@ -2717,7 +2729,7 @@ class JsonSchemaParser(Parser):
             dict_key=key_type,
         )
 
-    def parse_item(  # noqa: PLR0911, PLR0912
+    def parse_item(  # noqa: PLR0911, PLR0912, PLR0914
         self,
         name: str,
         item: JsonSchemaObject,
@@ -2726,6 +2738,9 @@ class JsonSchemaParser(Parser):
         parent: JsonSchemaObject | None = None,
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
+        python_type_override = self._get_python_type_override(item)
+        if python_type_override:
+            return python_type_override
         if self.use_title_as_name and item.title:
             name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
