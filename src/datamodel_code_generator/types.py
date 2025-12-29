@@ -354,6 +354,54 @@ class DataType(_BaseModel):
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
 
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> DataType:
+        """Handle circular references during deepcopy.
+
+        The parent and children fields can create circular references that cause
+        infinite recursion during deepcopy. This method excludes them from deep
+        copying while properly copying all other fields.
+        """
+        from copy import deepcopy  # noqa: PLC0415
+
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
+
+        if memo is None:
+            memo = {}
+
+        # Check if we've already copied this object
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+
+        # Access model_fields from the class (v2) or __fields__ (v1)
+        cls = self.__class__
+        model_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__  # type: ignore[attr-defined]
+
+        # First pass: collect shallow values and excluded fields
+        shallow_kwargs: dict[str, Any] = {}
+        for field_name in model_fields:
+            value = getattr(self, field_name)
+            if field_name in self._exclude_fields:
+                shallow_kwargs[field_name] = None
+            else:
+                shallow_kwargs[field_name] = value
+
+        # Create the new instance and add to memo BEFORE deepcopying nested objects
+        # This prevents infinite recursion when data_types reference back to this object
+        new_obj = (
+            cls.model_construct(**shallow_kwargs) if is_pydantic_v2() else cls.construct(**shallow_kwargs)  # type: ignore[attr-defined]
+        )
+        memo[obj_id] = new_obj
+
+        # Second pass: deepcopy non-excluded fields and update the object
+        for field_name in model_fields:
+            if field_name not in self._exclude_fields:
+                value = getattr(self, field_name)
+                copied_value = deepcopy(value, memo)
+                object.__setattr__(new_obj, field_name, copied_value)
+
+        return new_obj
+
     @classmethod
     def from_import(  # noqa: PLR0913
         cls: builtins.type[DataTypeT],
