@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
@@ -355,29 +356,17 @@ class DataType(_BaseModel):
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
 
     def __deepcopy__(self, memo: dict[int, Any] | None = None) -> DataType:
-        """Handle circular references during deepcopy.
-
-        The parent and children fields can create circular references that cause
-        infinite recursion during deepcopy. This method excludes them from deep
-        copying while properly copying all other fields.
-        """
-        from copy import deepcopy  # noqa: PLC0415
-
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
-
+        """Create a deep copy handling circular references in parent/children fields."""
         if memo is None:
             memo = {}
 
-        # Check if we've already copied this object
         obj_id = id(self)
         if obj_id in memo:
             return memo[obj_id]
 
-        # Access model_fields from the class (v2) or __fields__ (v1)
         cls = self.__class__
-        model_fields = cls.model_fields if is_pydantic_v2() else cls.__fields__  # type: ignore[attr-defined]
+        model_fields = getattr(cls, "model_fields" if is_pydantic_v2() else "__fields__")
 
-        # First pass: collect shallow values and excluded fields
         shallow_kwargs: dict[str, Any] = {}
         for field_name in model_fields:
             value = getattr(self, field_name)
@@ -386,14 +375,10 @@ class DataType(_BaseModel):
             else:
                 shallow_kwargs[field_name] = value
 
-        # Create the new instance and add to memo BEFORE deepcopying nested objects
-        # This prevents infinite recursion when data_types reference back to this object
-        new_obj = (
-            cls.model_construct(**shallow_kwargs) if is_pydantic_v2() else cls.construct(**shallow_kwargs)  # type: ignore[attr-defined]
-        )
+        constructor = getattr(cls, "model_construct" if is_pydantic_v2() else "construct")
+        new_obj: DataType = constructor(**shallow_kwargs)
         memo[obj_id] = new_obj
 
-        # Second pass: deepcopy non-excluded fields and update the object
         for field_name in model_fields:
             if field_name not in self._exclude_fields:
                 value = getattr(self, field_name)
