@@ -196,6 +196,20 @@ class UnionMode(Enum):
     left_to_right = "left_to_right"
 
 
+class InputModelRefStrategy(Enum):
+    """Strategy for handling referenced types in --input-model.
+
+    RegenerateAll: Regenerate all referenced types into target output type.
+    ReuseForeign: Reuse types from different model families via import,
+                  regenerate same-family types into target output type.
+    ReuseAll: Reuse all referenced types via import, no regeneration.
+    """
+
+    RegenerateAll = "regenerate-all"
+    ReuseForeign = "reuse-foreign"
+    ReuseAll = "reuse-all"
+
+
 class StrictTypes(Enum):
     """Strict type options for generated models."""
 
@@ -219,6 +233,7 @@ __all__ = [
     "FieldTypeCollisionStrategy",
     "GraphQLScope",
     "InputFileType",
+    "InputModelRefStrategy",
     "ModuleSplitMode",
     "NamingStrategy",
     "OpenAPIScope",

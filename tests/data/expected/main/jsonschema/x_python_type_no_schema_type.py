@@ -4,10 +4,11 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from collections.abc import Callable
+from typing import TypedDict
 
 from typing_extensions import NotRequired
 
 
 class Model(TypedDict):
-    callback: NotRequired[Any]
+    callback: NotRequired[Callable[[str], str]]

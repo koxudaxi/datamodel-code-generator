@@ -569,7 +569,14 @@ class JsonSchemaParser(Parser):
         "AsyncGenerator": Import.from_full_path("collections.abc.AsyncGenerator"),
         "Pattern": Import.from_full_path("re.Pattern"),
         "Match": Import.from_full_path("re.Match"),
+        "Type": Import.from_full_path("typing.Type"),
     }
+
+    # Types that require x-python-type override regardless of schema type
+    PYTHON_TYPE_OVERRIDE_ALWAYS: ClassVar[frozenset[str]] = frozenset({
+        "Callable",
+        "Type",
+    })
 
     def __init__(  # noqa: PLR0913
         self,
@@ -1222,8 +1229,17 @@ class JsonSchemaParser(Parser):
 
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string."""
-        reference = self.model_resolver.add_ref(ref)
         ref_schema = self._load_ref_schema_object(ref)
+        x_python_import = ref_schema.extras.get("x-python-import")
+        if isinstance(x_python_import, dict):
+            module = x_python_import.get("module")
+            type_name = x_python_import.get("name")
+            if module and type_name:  # pragma: no branch
+                full_path = f"{module}.{type_name}"
+                import_ = Import.from_full_path(full_path)
+                self.imports.append(import_)
+                return self.data_type.from_import(import_)
+        reference = self.model_resolver.add_ref(ref)
         is_optional = ref_schema.type == "null" or (self.strict_nullable and ref_schema.nullable is True)
         return self.data_type(reference=reference, is_optional=is_optional)
 
@@ -1337,9 +1353,14 @@ class JsonSchemaParser(Parser):
 
     def _is_compatible_python_type(self, schema_type: str | None, python_type: str) -> bool:
         """Check if x-python-type is compatible with the JSON Schema type."""
+        base_type = self._get_python_type_base(python_type)
+        if base_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
+            return False
+        all_type_names = self._extract_all_type_names(python_type)
+        if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
+            return False
         if schema_type is None:
             return True
-        base_type = self._get_python_type_base(python_type)
         if base_type in {"Union", "Optional"}:
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
@@ -2708,7 +2729,7 @@ class JsonSchemaParser(Parser):
             dict_key=key_type,
         )
 
-    def parse_item(  # noqa: PLR0911, PLR0912
+    def parse_item(  # noqa: PLR0911, PLR0912, PLR0914
         self,
         name: str,
         item: JsonSchemaObject,
@@ -2717,6 +2738,9 @@ class JsonSchemaParser(Parser):
         parent: JsonSchemaObject | None = None,
     ) -> DataType:
         """Parse a single JSON Schema item into a data type."""
+        python_type_override = self._get_python_type_override(item)
+        if python_type_override:
+            return python_type_override
         if self.use_title_as_name and item.title:
             name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
@@ -3524,8 +3548,19 @@ class JsonSchemaParser(Parser):
         path: list[str],
     ) -> None:
         """Parse a raw dictionary into a JsonSchemaObject and process it."""
+        if isinstance(raw, dict) and "x-python-import" in raw:
+            self._handle_python_import(name, path)
+            return
         obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
+
+    def _handle_python_import(
+        self,
+        name: str,
+        path: list[str],
+    ) -> None:
+        """Mark x-python-import reference as loaded to skip model generation."""
+        self.model_resolver.add(path, name, class_name=True, loaded=True)
 
     def parse_obj(  # noqa: PLR0912
         self,

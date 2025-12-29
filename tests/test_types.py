@@ -152,3 +152,124 @@ def test_remove_none_from_union(type_str: str, use_union_operator: bool, expecte
 def test_remove_none_from_union_short_strings(type_str: str, use_union_operator: bool, expected: str) -> None:
     """Test _remove_none_from_union with short strings to verify index bounds safety."""
     assert _remove_none_from_union(type_str, use_union_operator=use_union_operator) == expected
+
+
+def test_datatype_deepcopy_with_circular_references() -> None:
+    """Test that DataType.__deepcopy__ handles circular references via parent/children.
+
+    This test verifies the fix for the recursion error that occurred when deepcopying
+    DataType objects with circular references through parent and children fields.
+    """
+    from copy import deepcopy
+
+    # Import DataModelFieldBase first to trigger model_rebuild
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+    from datamodel_code_generator.types import DataType
+
+    # Create parent and child DataTypes with circular references
+    parent = DataType(type="ParentType")
+    child1 = DataType(type="ChildType1", parent=parent)
+    child2 = DataType(type="ChildType2", parent=parent)
+    parent.children = [child1, child2]
+
+    # This should not cause infinite recursion
+    copied_parent = deepcopy(parent)
+
+    # Verify the copy was successful
+    assert copied_parent.type == "ParentType"
+    # parent and children should be None in the copy (excluded from deepcopy)
+    assert copied_parent.parent is None
+    assert copied_parent.children is None
+
+
+def test_datatype_deepcopy_with_nested_data_types() -> None:
+    """Test that DataType.__deepcopy__ properly copies nested data_types."""
+    from copy import deepcopy
+
+    # Import DataModelFieldBase first to trigger model_rebuild
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+    from datamodel_code_generator.types import DataType
+
+    # Create nested DataTypes
+    inner = DataType(type="InnerType", is_optional=True)
+    outer = DataType(type="OuterType", data_types=[inner], is_list=True)
+
+    # Deepcopy should work and create independent copies
+    copied_outer = deepcopy(outer)
+
+    # Verify the structure is preserved
+    assert copied_outer.type == "OuterType"
+    assert copied_outer.is_list is True
+    assert len(copied_outer.data_types) == 1
+    assert copied_outer.data_types[0].type == "InnerType"
+    assert copied_outer.data_types[0].is_optional is True
+
+    # Verify it's a deep copy (modifying original doesn't affect copy)
+    inner.type = "ModifiedInnerType"
+    assert copied_outer.data_types[0].type == "InnerType"
+
+
+def test_datatype_deepcopy_memo_prevents_duplicate_copies() -> None:
+    """Test that the memo dictionary prevents duplicate copies of the same object."""
+    from copy import deepcopy
+
+    # Import DataModelFieldBase first to trigger model_rebuild
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+    from datamodel_code_generator.types import DataType
+
+    # Create a shared DataType referenced by multiple parents
+    shared = DataType(type="SharedType")
+    container1 = DataType(type="Container1", data_types=[shared])
+    container2 = DataType(type="Container2", data_types=[shared])
+    root = DataType(type="Root", data_types=[container1, container2])
+
+    # Deepcopy should handle the shared reference
+    copied_root = deepcopy(root)
+
+    # Verify structure is correct
+    assert copied_root.type == "Root"
+    assert len(copied_root.data_types) == 2
+    assert copied_root.data_types[0].type == "Container1"
+    assert copied_root.data_types[1].type == "Container2"
+
+    # Both containers should have copies of the shared type
+    assert copied_root.data_types[0].data_types[0].type == "SharedType"
+    assert copied_root.data_types[1].data_types[0].type == "SharedType"
+
+    # Verify that the same object is returned from memo (memoization behavior)
+    assert copied_root.data_types[0].data_types[0] is copied_root.data_types[1].data_types[0]
+
+
+def test_datatype_deepcopy_with_none_memo() -> None:
+    """Test __deepcopy__ when called with memo=None (covers memo initialization)."""
+    # Import DataModelFieldBase first to trigger model_rebuild
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+    from datamodel_code_generator.types import DataType
+
+    data_type = DataType(type="TestType", is_optional=True)
+
+    # Call __deepcopy__ directly with None memo to cover the `if memo is None` branch
+    copied = data_type.__deepcopy__(None)  # noqa: PLC2801
+
+    assert copied.type == "TestType"
+    assert copied.is_optional is True
+    assert copied is not data_type
+
+
+def test_datatype_deepcopy_memo_cache_hit() -> None:
+    """Test that memo cache returns the same object for repeated references."""
+    # Import DataModelFieldBase first to trigger model_rebuild
+    from datamodel_code_generator.model.base import DataModelFieldBase  # noqa: F401
+    from datamodel_code_generator.types import DataType
+
+    data_type = DataType(type="TestType")
+    memo: dict[int, DataType] = {}
+
+    # First call - should create new object and store in memo
+    copied1 = data_type.__deepcopy__(memo)  # noqa: PLC2801
+    assert copied1 is not data_type
+    assert id(data_type) in memo
+
+    # Second call with same memo - should return cached object (covers memo hit branch)
+    copied2 = data_type.__deepcopy__(memo)  # noqa: PLC2801
+    assert copied2 is copied1  # Same object from memo
