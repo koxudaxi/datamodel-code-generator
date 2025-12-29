@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
-from typing import FrozenSet, Optional, Set, Union
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any, FrozenSet, Optional, Set, Type, Union
 
 from pydantic import BaseModel
 
@@ -41,3 +41,48 @@ class RecursiveNode(BaseModel):
 
     value: Set[str]
     children: Optional[list[RecursiveNode]] = None
+
+
+class ModelWithCallableTypes(BaseModel):
+    """Model with Callable and other unserializable types."""
+
+    callback: Callable[[str], str]
+    multi_param_callback: Callable[[int, int], bool]
+    variadic_callback: Callable[..., Any]
+    no_param_callback: Callable[[], None]
+    optional_callback: Callable[[str], str] | None
+    type_field: Type[BaseModel]
+    nested_callable: list[Callable[[str], int]]
+
+
+class NestedCallableModel(BaseModel):
+    """Model with nested Callable types for $defs coverage."""
+
+    handler: Callable[[str], int]
+
+
+class ModelWithNestedCallable(BaseModel):
+    """Model referencing another model with Callable to test $defs processing."""
+
+    nested: NestedCallableModel
+    own_callback: Callable[[int], str]
+
+
+class CustomClass:
+    """Custom class for testing handle_invalid_for_json_schema."""
+
+    pass
+
+
+class ModelWithCustomClass(BaseModel):
+    """Model with a custom class that triggers handle_invalid_for_json_schema."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    custom_obj: CustomClass
+
+
+class ModelWithUnionCallable(BaseModel):
+    """Model with Union of Callable and other types to test Union serialization."""
+
+    union_callback: Union[Callable[[str], str], int]
+    raw_callable: Callable  # Callable without type args

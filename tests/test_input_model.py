@@ -607,6 +607,123 @@ def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
 
 
 # ============================================================================
+# Callable and unserializable type tests
+# ============================================================================
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_callable_basic(tmp_path: Path) -> None:
+    """Test that Callable[[str], str] is preserved when converting Pydantic model."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Callable[[str], str]", "callback:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_callable_multi_param(tmp_path: Path) -> None:
+    """Test that Callable[[int, int], bool] is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Callable[[int, int], bool]", "multi_param_callback:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_callable_variadic(tmp_path: Path) -> None:
+    """Test that Callable[..., Any] is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Callable[..., Any]", "variadic_callback:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_callable_no_param(tmp_path: Path) -> None:
+    """Test that Callable[[], None] is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Callable[[], None]", "no_param_callback:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_callable_optional(tmp_path: Path) -> None:
+    """Test that Callable[[str], str] | None is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Callable[[str], str] | None", "optional_callback:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_type_field(tmp_path: Path) -> None:
+    """Test that Type[BaseModel] is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["Type[pydantic.main.BaseModel]", "type_field:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_nested_callable(tmp_path: Path) -> None:
+    """Test that list[Callable[[str], int]] is preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=["list[Callable[[str], int]]", "nested_callable:"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_nested_model_with_callable(tmp_path: Path) -> None:
+    """Test that nested models with Callable types in $defs are processed."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithNestedCallable",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=[
+            "Callable[[str], int]",
+            "Callable[[int], str]",
+            "NestedCallableModel",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_custom_class(tmp_path: Path) -> None:
+    """Test that custom classes trigger handle_invalid_for_json_schema."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCustomClass",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=[
+            "CustomClass",
+            "custom_obj:",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_union_callable(tmp_path: Path) -> None:
+    """Test that Union[Callable, int] and raw Callable are preserved."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithUnionCallable",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=[
+            "Callable[[str], str] | int",
+            "union_callback:",
+            "Callable",
+            "raw_callable:",
+        ],
+    )
+
+
+# ============================================================================
 # --input-model-ref-strategy tests
 # ============================================================================
 
