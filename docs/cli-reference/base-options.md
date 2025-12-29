@@ -8,6 +8,7 @@
 | [`--input`](#input) | Specify the input schema file path. |
 | [`--input-file-type`](#input-file-type) | Specify the input file type for code generation. |
 | [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
+| [`--input-model-ref-strategy`](#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
@@ -234,6 +235,30 @@ Use the format `module:Object` or `path/to/file.py:Object` to specify the type.
     ```
 
     1. :material-arrow-left: `--input-model` - the option documented here
+
+??? example "Examples"
+
+    **Output:**
+
+---
+
+## `--input-model-ref-strategy` {#input-model-ref-strategy}
+
+Strategy for referenced types when using --input-model.
+
+The `--input-model-ref-strategy` option determines whether to regenerate or import
+referenced types. Use `regenerate-all` (default) to regenerate all types,
+`reuse-foreign` to import types from different families (like enums when generating
+dataclasses) while regenerating same-family types, or `reuse-all` to import all
+referenced types directly.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --input-model-ref-strategy reuse-foreign # (1)!
+    ```
+
+    1. :material-arrow-left: `--input-model-ref-strategy` - the option documented here
 
 ??? example "Examples"
 

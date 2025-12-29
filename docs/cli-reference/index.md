@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 6 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 26 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
@@ -107,6 +107,7 @@ This documentation is auto-generated from test cases.
 - [`--input`](base-options.md#input)
 - [`--input-file-type`](base-options.md#input-file-type)
 - [`--input-model`](base-options.md#input-model)
+- [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
 
 ### K {#k}
 
