@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
@@ -353,6 +354,38 @@ class DataType(_BaseModel):
 
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> DataType:
+        """Create a deep copy handling circular references in parent/children fields."""
+        if memo is None:
+            memo = {}
+
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+
+        cls = self.__class__
+        model_fields = getattr(cls, "model_fields" if is_pydantic_v2() else "__fields__")
+
+        shallow_kwargs: dict[str, Any] = {}
+        for field_name in model_fields:
+            value = getattr(self, field_name)
+            if field_name in self._exclude_fields:
+                shallow_kwargs[field_name] = None
+            else:
+                shallow_kwargs[field_name] = value
+
+        constructor = getattr(cls, "model_construct" if is_pydantic_v2() else "construct")
+        new_obj: DataType = constructor(**shallow_kwargs)
+        memo[obj_id] = new_obj
+
+        for field_name in model_fields:
+            if field_name not in self._exclude_fields:
+                value = getattr(self, field_name)
+                copied_value = deepcopy(value, memo)
+                object.__setattr__(new_obj, field_name, copied_value)
+
+        return new_obj
 
     @classmethod
     def from_import(  # noqa: PLR0913
