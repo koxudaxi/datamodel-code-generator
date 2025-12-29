@@ -94,7 +94,8 @@ class ObjectNoPropsDatatype(BaseModel):
     pass
 
 
-RefToObjectNoPropsAllOf = ObjectNoPropsDatatype
+class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
+    pass
 
 
 class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
@@ -109,7 +110,8 @@ class NestedAllOfDatatype(BaseModel):
     pass
 
 
-RefToNestedAllOfAllOf = NestedAllOfDatatype
+class RefToNestedAllOfAllOf(NestedAllOfDatatype):
+    pass
 
 
 class ConstraintsOnlyDatatype(RootModel[Any]):
