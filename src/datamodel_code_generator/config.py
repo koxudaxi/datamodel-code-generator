@@ -64,7 +64,7 @@ elif is_pydantic_v2():
     DefaultPutDictSchema = Annotated[
         DefaultPutDict[str, str], WithJsonSchema({"type": "object", "x-python-type": "DefaultPutDict[str, str]"})
     ]
-else:
+else:  # pragma: no cover
     CallableSchema = Callable[[str], str]
     DumpResolveReferenceAction = Callable[[Iterable[str]], str]
     DefaultPutDictSchema = DefaultPutDict[str, str]
@@ -75,7 +75,7 @@ class GenerateConfig(BaseModel):
 
     if is_pydantic_v2():
         model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:
+    else:  # pragma: no cover
 
         class Config:
             """Pydantic v1 model config."""
@@ -210,7 +210,7 @@ class ParserConfig(BaseModel):
 
     if is_pydantic_v2():
         model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:
+    else:  # pragma: no cover
 
         class Config:
             """Pydantic v1 model config."""
@@ -335,7 +335,7 @@ class ParseConfig(BaseModel):
 
     if is_pydantic_v2():
         model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:
+    else:  # pragma: no cover
 
         class Config:
             """Pydantic v1 model config."""

@@ -1992,3 +1992,28 @@ def test_generate_with_config_object(output_file: Path) -> None:
     content = output_file.read_text(encoding="utf-8")
     assert "class Model" in content
     assert "user_name" in content
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_with_config_object_extra_template_data_override(output_file: Path) -> None:
+    """Test generate() with extra_template_data passed directly, overriding config."""
+    from collections import defaultdict
+
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import StrictTypes
+
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    config = GenerateConfig(
+        input_filename="test.json",
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        extra_template_data={"Model": {"config_key": "config_value"}},
+    )
+    # Pass extra_template_data directly - this should override config value
+    generate(
+        input_='{"type": "object", "properties": {"name": {"type": "string"}}}',
+        output=output_file,
+        config=config,
+        extra_template_data=defaultdict(dict, {"Model": {"direct_key": "direct_value"}}),
+    )
+    content = output_file.read_text(encoding="utf-8")
+    assert "class Model" in content

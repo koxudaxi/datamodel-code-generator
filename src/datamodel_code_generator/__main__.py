@@ -787,7 +787,7 @@ def _try_rebuild_model(obj: type) -> None:
 
         try:
             from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-        except ImportError:
+        except ImportError:  # pragma: no cover
             from typing import Any  # noqa: PLC0415
 
             runtime_union_mode = Any
@@ -886,7 +886,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
-        if hasattr(obj, "model_rebuild"):
+        if hasattr(obj, "model_rebuild"):  # pragma: no branch
             _try_rebuild_model(obj)
         schema = obj.model_json_schema()
         return _add_python_type_info(schema, obj)
