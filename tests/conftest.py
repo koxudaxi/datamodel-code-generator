@@ -470,7 +470,8 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
             msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
     else:
-        assert expected == normalized_content  # pragma: no cover
+        # we need to normalize the external_file object's content as well
+        assert _normalize_line_endings(expected._load_value()) == normalized_content  # pragma: no cover
 
 
 class AssertFileContent(Protocol):
