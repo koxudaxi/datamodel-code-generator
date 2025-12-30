@@ -121,7 +121,7 @@ class ParameterObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
 
 
 class HeaderObject(BaseModel):
@@ -133,14 +133,14 @@ class HeaderObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
 
 
 class RequestBodyObject(BaseModel):
     """Represent an OpenAPI request body object."""
 
     description: Optional[str] = None  # noqa: UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
     required: bool = False
 
 
@@ -148,31 +148,31 @@ class ResponseObject(BaseModel):
     """Represent an OpenAPI response object."""
 
     description: Optional[str] = None  # noqa: UP045
-    headers: dict[str, ParameterObject] = {}  # noqa: RUF012
-    content: dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP007
+    headers: dict[str, ParameterObject] = Field(default_factory=dict)
+    content: dict[Union[str, int], MediaObject] = Field(default_factory=dict)  # noqa: UP007
 
 
 class Operation(BaseModel):
     """Represent an OpenAPI operation object."""
 
-    tags: list[str] = []  # noqa: RUF012
+    tags: list[str] = Field(default_factory=list)
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     operationId: Optional[str] = None  # noqa: N815, UP045
-    parameters: list[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012, UP007
+    parameters: list[Union[ReferenceObject, ParameterObject]] = Field(default_factory=list)  # noqa: UP007
     requestBody: Optional[Union[ReferenceObject, RequestBodyObject]] = None  # noqa: N815, UP007, UP045
-    responses: dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
+    responses: dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = Field(default_factory=dict)  # noqa: UP007
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
     """Represent an OpenAPI components object."""
 
-    schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP007
-    responses: dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
-    examples: dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP007
-    requestBodies: dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012, UP007
-    headers: dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012, UP007
+    schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = Field(default_factory=dict)  # noqa: UP007
+    responses: dict[str, Union[ReferenceObject, ResponseObject]] = Field(default_factory=dict)  # noqa: UP007
+    examples: dict[str, Union[ReferenceObject, ExampleObject]] = Field(default_factory=dict)  # noqa: UP007
+    requestBodies: dict[str, Union[ReferenceObject, RequestBodyObject]] = Field(default_factory=dict)  # noqa: N815, UP007
+    headers: dict[str, Union[ReferenceObject, HeaderObject]] = Field(default_factory=dict)  # noqa: UP007
 
 
 @snooper_to_methods()
