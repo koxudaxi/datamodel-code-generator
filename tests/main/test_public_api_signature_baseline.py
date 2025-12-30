@@ -314,3 +314,73 @@ def test_parser_signature_matches_baseline() -> None:
     assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
     for name, param in _kwonly_by_name(expected).items():
         assert _kwonly_by_name(actual)[name].annotation == param.annotation
+
+
+def test_generate_config_dict_fields_match_generate_config() -> None:
+    """Ensure GenerateConfigDict has same field names as GenerateConfig."""
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator._types import GenerateConfigDict
+
+    config_fields = set(GenerateConfig.model_fields.keys())
+    dict_fields = set(GenerateConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+def _normalize_type_str(type_str: str) -> str:
+    """Normalize type string for comparison."""
+    import re
+
+    # Remove ForwardRef wrapper and extract inner type
+    match = re.match(r"ForwardRef\('(.+?)'", type_str)
+    if match:
+        type_str = match.group(1)
+    # Remove NotRequired wrapper
+    type_str = re.sub(r"^NotRequired\[(.+)\]$", r"\1", type_str)
+    # Normalize module prefixes
+    type_str = type_str.replace("typing.", "")
+    type_str = type_str.replace("collections.abc.", "")
+    type_str = type_str.replace("pathlib.", "")
+    type_str = type_str.replace("datamodel_code_generator.enums.", "")
+    type_str = type_str.replace("datamodel_code_generator.format.", "")
+    type_str = type_str.replace("datamodel_code_generator.parser.", "")
+    type_str = type_str.replace("datamodel_code_generator.types.", "")
+    type_str = type_str.replace("datamodel_code_generator.model.base.", "")
+    type_str = type_str.replace("datamodel_code_generator.model.pydantic_v2.", "")
+    # Normalize enum representation
+    type_str = re.sub(r"<enum '(\w+)'>", r"\1", type_str)
+    # Normalize class representation
+    type_str = re.sub(r"<class '([\w.]+)'>", r"\1", type_str)
+    return type_str
+
+
+def test_generate_config_dict_types_match_generate_config() -> None:
+    """Ensure GenerateConfigDict field types match GenerateConfig."""
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator._types import GenerateConfigDict
+
+    for field_name, field_info in GenerateConfig.model_fields.items():
+        config_type = _normalize_type_str(str(field_info.annotation))
+        dict_type = _normalize_type_str(str(GenerateConfigDict.__annotations__[field_name]))
+        assert config_type == dict_type, (
+            f"Type mismatch for {field_name}: Config={config_type}, Dict={dict_type}"
+        )
+
+
+def test_parser_config_dict_fields_match_parser_config() -> None:
+    """Ensure ParserConfigDict has same field names as ParserConfig."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator._types import ParserConfigDict
+
+    config_fields = set(ParserConfig.model_fields.keys())
+    dict_fields = set(ParserConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+def test_parse_config_dict_fields_match_parse_config() -> None:
+    """Ensure ParseConfigDict has same field names as ParseConfig."""
+    from datamodel_code_generator.config import ParseConfig
+    from datamodel_code_generator._types import ParseConfigDict
+
+    config_fields = set(ParseConfig.model_fields.keys())
+    dict_fields = set(ParseConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
