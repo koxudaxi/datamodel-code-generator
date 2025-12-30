@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
 
 import pytest
+from typing_extensions import NotRequired
 
 from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
@@ -300,6 +301,73 @@ def _kwonly_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter
     return {param.name: param for param in _kwonly_params(signature)}
 
 
+def _type_to_str(tp: Any) -> str:
+    """Convert type to normalized string."""
+    if tp is type(None):
+        return "None"
+    if isinstance(tp, type):
+        return tp.__name__
+    if isinstance(tp, str):
+        return tp
+    return (
+        str(tp)
+        .replace("collections.abc.", "")
+        .replace("collections.", "")
+        .replace("typing.", "")
+        .replace("pathlib.", "")
+    )
+
+
+def _normalize_union_str(type_str: str) -> str:
+    """Normalize a union type string by sorting its components."""
+    if " | " in type_str:
+        parts = [p.strip() for p in type_str.split(" | ")]
+        return " | ".join(sorted(parts))
+    return type_str
+
+
+def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
+    """Normalize type for comparison between Config and TypedDict."""
+    if tp is None or tp is type(None):
+        return "None"
+
+    if isinstance(tp, str):
+        return _normalize_union_str(tp)
+
+    if isinstance(tp, ForwardRef):
+        arg = tp.__forward_arg__
+        if arg.startswith("NotRequired[") and arg.endswith("]"):
+            arg = arg[12:-1]
+        return _normalize_union_str(arg)
+
+    if isinstance(tp, list):
+        return f"[{', '.join(_normalize_type(t) for t in tp)}]"
+
+    origin = get_origin(tp)
+    args = get_args(tp)
+
+    if origin in {Annotated, NotRequired}:
+        return _normalize_type(args[0]) if args else _type_to_str(tp)
+
+    if origin is Union:
+        normalized_args = sorted(_normalize_type(a) for a in args)
+        return _type_to_str(" | ".join(normalized_args))
+
+    if origin is not None:
+        if args:
+            normalized_args = [_normalize_type(a) for a in args]
+            origin_name = getattr(origin, "__name__", str(origin))
+            return _type_to_str(f"{origin_name}[{', '.join(normalized_args)}]")
+        return _type_to_str(origin)
+
+    return _type_to_str(tp)
+
+
+def _types_match(config_type: Any, dict_type: Any) -> bool:
+    """Check if Config type and TypedDict type are equivalent."""
+    return _normalize_type(config_type) == _normalize_type(dict_type)
+
+
 def test_generate_signature_matches_baseline() -> None:
     """Ensure generate keeps the origin/main kw-only args and annotations."""
     expected = inspect.signature(_baseline_generate)
@@ -328,12 +396,18 @@ def test_generate_config_dict_fields_match_generate_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
-def test_generate_config_dict_fields_count_match() -> None:
-    """Ensure GenerateConfigDict has same number of fields as GenerateConfig."""
+def test_generate_config_dict_types_match_generate_config() -> None:
+    """Ensure GenerateConfigDict field types match GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
 
-    assert len(GenerateConfig.model_fields) == len(GenerateConfigDict.__annotations__)
+    for field_name, field_info in GenerateConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = GenerateConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: "
+            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
 
 
 def test_parser_config_dict_fields_match_parser_config() -> None:
@@ -356,20 +430,32 @@ def test_parse_config_dict_fields_match_parse_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
-def test_parser_config_dict_fields_count_match() -> None:
-    """Ensure ParserConfigDict has same number of fields as ParserConfig."""
+def test_parser_config_dict_types_match_parser_config() -> None:
+    """Ensure ParserConfigDict field types match ParserConfig."""
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
 
-    assert len(ParserConfig.model_fields) == len(ParserConfigDict.__annotations__)
+    for field_name, field_info in ParserConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = ParserConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: "
+            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
 
 
-def test_parse_config_dict_fields_count_match() -> None:
-    """Ensure ParseConfigDict has same number of fields as ParseConfig."""
+def test_parse_config_dict_types_match_parse_config() -> None:
+    """Ensure ParseConfigDict field types match ParseConfig."""
     from datamodel_code_generator._types import ParseConfigDict
     from datamodel_code_generator.config import ParseConfig
 
-    assert len(ParseConfig.model_fields) == len(ParseConfigDict.__annotations__)
+    for field_name, field_info in ParseConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = ParseConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: "
+            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
 
 
 def test_generate_config_defaults_match_generate_signature() -> None:
