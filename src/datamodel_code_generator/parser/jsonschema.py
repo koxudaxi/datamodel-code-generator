@@ -353,14 +353,14 @@ class JsonSchemaObject(BaseModel):
     unevaluatedProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     patternProperties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: N815, UP007, UP045
     propertyNames: Optional[JsonSchemaObject] = None  # noqa: N815, UP045
-    oneOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    anyOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    allOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    enum: list[Any] = []  # noqa: RUF012
+    oneOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    anyOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    allOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    enum: list[Any] = Field(default_factory=list)
     writeOnly: Optional[bool] = None  # noqa: N815, UP045
     readOnly: Optional[bool] = None  # noqa: N815, UP045
     properties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
-    required: list[str] = []  # noqa: RUF012
+    required: list[str] = Field(default_factory=list)
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
     nullable: Optional[bool] = None  # noqa: UP045
     x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
@@ -631,6 +631,12 @@ class JsonSchemaParser(Parser):
     PYTHON_TYPE_OVERRIDE_ALWAYS: ClassVar[frozenset[str]] = frozenset({
         "Callable",
         "Type",
+        # collections types that have no JSON Schema equivalent
+        "defaultdict",
+        "OrderedDict",
+        "Counter",
+        "deque",
+        "ChainMap",
     })
 
     def __init__(  # noqa: PLR0913
@@ -1260,9 +1266,10 @@ class JsonSchemaParser(Parser):
         if python_type_override:
             return python_type_override
 
+        if "const" in obj.extras:
+            return self.data_type(literals=[obj.extras["const"]])
+
         if obj.type is None:
-            if "const" in obj.extras:
-                return self.data_type_manager.get_data_type_from_value(obj.extras["const"])
             return self.data_type_manager.get_data_type(
                 Types.any,
             )
@@ -1403,11 +1410,16 @@ class JsonSchemaParser(Parser):
         return base_type in compatible
 
     def _extract_all_type_names(self, type_str: str) -> list[str]:  # noqa: PLR6301
-        """Extract all type names from a type annotation string."""
-        # Match type names: word characters starting with uppercase, not preceded by a dot
-        # This handles cases like Callable[[Iterable[str]], str]
-        pattern = r"(?<![.\w])([A-Z]\w*)"
-        return re.findall(pattern, type_str)
+        """Extract all type names from a type annotation string using AST parsing."""
+        import ast  # noqa: PLC0415
+
+        try:
+            tree = ast.parse(type_str, mode="eval")
+            return [node.id for node in ast.walk(tree) if isinstance(node, ast.Name)]
+        except SyntaxError:  # pragma: no cover
+            # Fallback to regex for non-standard type strings
+            pattern = r"(?<![.\w])([A-Za-z_]\w*)"
+            return re.findall(pattern, type_str)
 
     @staticmethod
     @lru_cache(maxsize=256)

@@ -12,5 +12,5 @@ from .artificial_folder import type_1
 
 
 class Type2(BaseModel):
-    type_: Literal['b'] = Field(..., const=True, title='Type ')
+    type_: Literal['b'] = Field('b', const=True, title='Type ')
     ref_type: type_1.Type1 | None = Field(None, description='A referenced type.')
