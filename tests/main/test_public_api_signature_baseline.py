@@ -292,6 +292,18 @@ class _BaselineParser:
     ) -> None:
         raise NotImplementedError
 
+    def parse(
+        self,
+        with_import: bool | None = True,
+        format_: bool | None = True,
+        settings_path: Path | None = None,
+        disable_future_imports: bool = False,
+        all_exports_scope: AllExportsScope | None = None,
+        all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+        module_split_mode: ModuleSplitMode | None = None,
+    ) -> str | dict[tuple[str, ...], Any]:
+        raise NotImplementedError
+
 
 def _kwonly_params(signature: inspect.Signature) -> list[inspect.Parameter]:
     return [param for param in signature.parameters.values() if param.kind is inspect.Parameter.KEYWORD_ONLY]
@@ -299,6 +311,14 @@ def _kwonly_params(signature: inspect.Signature) -> list[inspect.Parameter]:
 
 def _kwonly_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter]:
     return {param.name: param for param in _kwonly_params(signature)}
+
+
+def _params_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter]:
+    return {
+        name: param
+        for name, param in signature.parameters.items()
+        if name != "self" and param.kind in {inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
+    }
 
 
 def _type_to_str(tp: Any) -> str:
@@ -511,6 +531,63 @@ def test_generate_config_defaults_match_generate_signature() -> None:
 
         assert config_default == param.default, (
             f"Default mismatch for {field_name}: Config={config_default}, generate()={param.default}"
+        )
+
+
+def test_parser_config_defaults_match_parser_signature() -> None:
+    """Ensure ParserConfig default values match Parser.__init__ signature defaults."""
+    import pydantic
+
+    if pydantic.VERSION < "2.0.0":
+        pytest.skip("ParserConfig requires Pydantic v2")
+
+    from datamodel_code_generator.config import ParserConfig
+
+    expected_sig = inspect.signature(_BaselineParser.__init__)
+    expected_params = _kwonly_by_name(expected_sig)
+
+    for field_name, field_info in ParserConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        if param.default is inspect.Parameter.empty:
+            continue
+
+        if callable(param.default) and config_default is None:
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, Parser.__init__()={param.default}"
+        )
+
+
+def test_parse_config_defaults_match_parse_signature() -> None:
+    """Ensure ParseConfig default values match Parser.parse() signature defaults."""
+    import pydantic
+
+    if pydantic.VERSION < "2.0.0":
+        pytest.skip("ParseConfig requires Pydantic v2")
+
+    from datamodel_code_generator.config import ParseConfig
+
+    expected_sig = inspect.signature(_BaselineParser.parse)
+    expected_params = _params_by_name(expected_sig)
+
+    for field_name, field_info in ParseConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        if param.default is inspect.Parameter.empty:
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, Parser.parse()={param.default}"
         )
 
 
