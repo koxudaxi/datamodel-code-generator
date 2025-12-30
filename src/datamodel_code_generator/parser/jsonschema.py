@@ -6,6 +6,7 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 
 from __future__ import annotations
 
+import ast
 import enum as _enum
 import json
 import re
@@ -1373,6 +1374,39 @@ class JsonSchemaParser(Parser):
         pattern = r"(?<![.\w])([A-Z]\w*)"
         return re.findall(pattern, type_str)
 
+    def _extract_qualified_names(self, type_str: str) -> list[str]:  # noqa: PLR6301
+        """Extract all fully qualified names from a type annotation string.
+
+        Uses AST parsing to find patterns like 'module.path.ClassName'.
+        """
+        try:
+            tree = ast.parse(type_str, mode="eval")
+        except SyntaxError:
+            return []
+
+        qualified_names: list[str] = []
+        visited: set[int] = set()
+
+        def get_full_name(node: ast.expr) -> str | None:
+            parts: list[str] = []
+            current: ast.expr = node
+            while isinstance(current, ast.Attribute):
+                visited.add(id(current))
+                parts.append(current.attr)
+                current = current.value
+            if isinstance(current, ast.Name):
+                parts.append(current.id)
+                return ".".join(reversed(parts))
+            return None
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Attribute) and id(node) not in visited:
+                name = get_full_name(node)
+                if name and "." in name:
+                    qualified_names.append(name)
+
+        return qualified_names
+
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
         x_python_type = obj.extras.get("x-python-type")
@@ -1396,8 +1430,15 @@ class JsonSchemaParser(Parser):
                 # If not in predefined imports, create import from the full path
                 import_ = Import.from_full_path(prefix)
 
-        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
+        # Collect imports for qualified names (e.g., module.path.ClassName)
         nested_imports: list[DataType] = []
+        for qualified_name in self._extract_qualified_names(type_str):
+            class_name = qualified_name.rsplit(".", 1)[-1]
+            nested_import = Import.from_full_path(qualified_name)
+            nested_imports.append(self.data_type(import_=nested_import))
+            type_str = type_str.replace(qualified_name, class_name)
+
+        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
             if type_name != base_type:
                 nested_import = self.PYTHON_TYPE_IMPORTS.get(type_name)
