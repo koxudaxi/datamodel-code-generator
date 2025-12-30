@@ -629,6 +629,12 @@ class JsonSchemaParser(Parser):
     PYTHON_TYPE_OVERRIDE_ALWAYS: ClassVar[frozenset[str]] = frozenset({
         "Callable",
         "Type",
+        # collections types that have no JSON Schema equivalent
+        "defaultdict",
+        "OrderedDict",
+        "Counter",
+        "deque",
+        "ChainMap",
     })
 
     def __init__(  # noqa: PLR0913
@@ -1391,6 +1397,10 @@ class JsonSchemaParser(Parser):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
+        # Check for lowercase types in PYTHON_TYPE_OVERRIDE_ALWAYS (e.g., defaultdict, deque)
+        for override_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
+            if override_type[0].islower() and override_type in python_type:
+                return False
         if schema_type is None:
             return True
         if base_type in {"Union", "Optional"}:
@@ -1470,6 +1480,13 @@ class JsonSchemaParser(Parser):
                 nested_import = self._resolve_type_import(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))
+
+        # Collect imports for lowercase types in PYTHON_TYPE_OVERRIDE_ALWAYS (e.g., defaultdict, deque)
+        for override_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
+            if override_type[0].islower() and override_type in type_str and override_type != base_type:
+                override_import = self._resolve_type_import(override_type)
+                if override_import:
+                    nested_imports.append(self.data_type(import_=override_import))
 
         result = self.data_type(type=type_str, import_=import_)
         if nested_imports:

@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, Field, WithJsonSchema
+from pydantic import BaseModel, Field
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -48,10 +48,12 @@ if TYPE_CHECKING:
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 DefaultPutDictSchema = DefaultPutDict[str, str]
-ExtraTemplateDataType = Annotated[
-    defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]],
-    WithJsonSchema({"type": "object", "x-python-type": "defaultdict[str, dict[str, Any]]"}),
-]
+if TYPE_CHECKING:
+    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
+elif is_pydantic_v2():
+    ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
+else:
+    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 
 
 class GenerateConfig(BaseModel):
