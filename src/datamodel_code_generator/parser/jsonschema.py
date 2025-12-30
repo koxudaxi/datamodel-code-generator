@@ -1483,7 +1483,11 @@ class JsonSchemaParser(Parser):
 
         # Collect imports for lowercase types in PYTHON_TYPE_OVERRIDE_ALWAYS (e.g., defaultdict, deque)
         for override_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
-            if override_type[0].islower() and override_type != base_type and re.search(rf"\b{re.escape(override_type)}\b", type_str):
+            if (
+                override_type[0].islower()
+                and override_type != base_type
+                and re.search(rf"\b{re.escape(override_type)}\b", type_str)
+            ):
                 override_import = self._resolve_type_import(override_type)
                 if override_import:
                     nested_imports.append(self.data_type(import_=override_import))
