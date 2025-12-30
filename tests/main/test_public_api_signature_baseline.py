@@ -405,8 +405,7 @@ def test_generate_config_dict_types_match_generate_config() -> None:
         config_type = field_info.annotation
         dict_type = GenerateConfigDict.__annotations__[field_name]
         assert _types_match(config_type, dict_type), (
-            f"Type mismatch for {field_name}: "
-            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
         )
 
 
@@ -439,8 +438,7 @@ def test_parser_config_dict_types_match_parser_config() -> None:
         config_type = field_info.annotation
         dict_type = ParserConfigDict.__annotations__[field_name]
         assert _types_match(config_type, dict_type), (
-            f"Type mismatch for {field_name}: "
-            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
         )
 
 
@@ -453,8 +451,7 @@ def test_parse_config_dict_types_match_parse_config() -> None:
         config_type = field_info.annotation
         dict_type = ParseConfigDict.__annotations__[field_name]
         assert _types_match(config_type, dict_type), (
-            f"Type mismatch for {field_name}: "
-            f"Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
         )
 
 
