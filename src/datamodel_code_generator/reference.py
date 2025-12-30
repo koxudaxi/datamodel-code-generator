@@ -526,7 +526,7 @@ class ModelResolver:  # noqa: PLR0904
         duplicate_name_suffix: str | None = None,
         base_url: str | None = None,
         singular_name_suffix: str | None = None,
-        aliases: Mapping[str, str] | None = None,
+        aliases: Mapping[str, str | list[str]] | None = None,
         snake_case_field: bool = False,  # noqa: FBT001, FBT002
         empty_field_name: str | None = None,
         custom_class_name_generator: Callable[[str], str] | None = None,
