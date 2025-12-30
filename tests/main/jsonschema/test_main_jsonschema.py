@@ -6362,12 +6362,11 @@ even in multiple inheritance scenarios where two parent schemas define the same 
 )
 @pytest.mark.benchmark
 def test_main_allof_class_hierarchy(output_file: Path) -> None:
-    """Merge constraints from root model references in allOf schemas.
+    """Control how allOf schemas are represented in the generated class hierarchy.
 
-    The `--allof-merge-mode constraints` merges only constraint properties
-    (minLength, maximum, etc.) from parent schemas referenced in allOf.
-    This ensures child schemas inherit validation constraints while keeping
-    other properties separate.
+    The `--allof-class-hierarchy` option configures whether the generator preserves
+    parent classes for allOf schemas (even when there are property conflicts) or
+    falls back to merging properties into a single class.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_class_hierarchy.json",
