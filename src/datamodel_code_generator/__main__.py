@@ -856,7 +856,7 @@ def _get_preserved_type_origins() -> dict[type, str]:
     return _PRESERVED_TYPE_ORIGINS
 
 
-def _serialize_python_type(tp: type) -> str | None:
+def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     """Serialize Python type to a string for x-python-type field.
 
     Returns None if the type doesn't need to be preserved (e.g., standard dict, list).
@@ -884,6 +884,14 @@ def _serialize_python_type(tp: type) -> str | None:
                 return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
 
+    # Handle Annotated types - extract the base type and ignore metadata
+    from typing import Annotated  # noqa: PLC0415
+
+    if origin is Annotated:
+        if args:
+            return _serialize_python_type(args[0]) or _simple_type_name(args[0])
+        return None  # pragma: no cover
+
     type_name: str | None = None
     if origin is not None:
         type_name = preserved_origins.get(origin)
@@ -907,8 +915,13 @@ def _serialize_python_type(tp: type) -> str | None:
 
 def _simple_type_name(tp: type) -> str:
     """Get a simple string representation of a type."""
+    from typing import get_origin  # noqa: PLC0415
+
     if tp is type(None):
         return "None"
+    # For generic types (e.g., dict[str, Any]), use full string representation
+    if get_origin(tp) is not None:
+        return str(tp).replace("typing.", "")
     if hasattr(tp, "__name__"):
         return tp.__name__
     return str(tp).replace("typing.", "")  # pragma: no cover

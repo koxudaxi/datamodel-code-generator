@@ -9,13 +9,6 @@ from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, Field
 
-from datamodel_code_generator.util import is_pydantic_v2
-
-if is_pydantic_v2():
-    from pydantic import WithJsonSchema
-else:
-    WithJsonSchema = None  # type: ignore[misc,assignment]
-
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
@@ -55,13 +48,12 @@ if TYPE_CHECKING:
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 DefaultPutDictSchema = DefaultPutDict[str, str]
-if TYPE_CHECKING or is_pydantic_v2():
-    ExtraTemplateDataType = Annotated[
-        defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]],
-        WithJsonSchema({"type": "object", "x-python-type": "defaultdict[str, dict[str, Any]]"}),  # type: ignore[misc]
-    ]
+if TYPE_CHECKING:
+    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
+elif is_pydantic_v2():
+    ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
 else:
-    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]  # type: ignore[misc]
+    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 
 
 class GenerateConfig(BaseModel):

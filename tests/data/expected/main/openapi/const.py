@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
 class Namespace(BaseModel):
-    apiVersion: str = Field('v1', const=True)
-    kind: str = Field('Namespace', const=True)
+    apiVersion: Literal['v1'] = Field('v1', const=True)
+    kind: Literal['Namespace'] = Field('Namespace', const=True)
