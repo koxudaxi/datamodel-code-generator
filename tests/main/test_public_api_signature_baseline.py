@@ -72,7 +72,7 @@ def _baseline_generate(
     field_constraints: bool = False,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
-    aliases: Mapping[str, str] | None = None,
+    aliases: Mapping[str, str | list[str]] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     enable_command_header: bool = False,
@@ -202,7 +202,7 @@ class _BaselineParser:
         field_constraints: bool = False,
         snake_case_field: bool = False,
         strip_default_none: bool = False,
-        aliases: Mapping[str, str] | None = None,
+        aliases: Mapping[str, str | list[str]] | None = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
         allow_extra_fields: bool = False,
@@ -452,12 +452,52 @@ def _types_match(config_type: Any, dict_type: Any) -> bool:
 
 
 def test_generate_signature_matches_baseline() -> None:
-    """Ensure generate keeps the origin/main kw-only args and annotations."""
+    """Ensure generate keeps backward compatibility via GenerateConfigDict.
+
+    The new signature uses **options: Unpack[GenerateConfigDict], so we verify
+    that GenerateConfigDict has all the same keys as the baseline function's
+    keyword-only arguments (except 'config'), matching types and default values.
+    """
+    from datamodel_code_generator._types import GenerateConfigDict
+
     expected = inspect.signature(_baseline_generate)
-    actual = inspect.signature(generate)
-    assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
-    for name, param in _kwonly_by_name(expected).items():
-        assert _kwonly_by_name(actual)[name].annotation == param.annotation
+    baseline_params = {k: v for k, v in _kwonly_by_name(expected).items() if k != "config"}
+    dict_annotations = GenerateConfigDict.__annotations__
+
+    # 1. Verify all baseline kwargs are in GenerateConfigDict (key names)
+    baseline_kwargs = set(baseline_params.keys())
+    dict_keys = set(dict_annotations.keys())
+    assert baseline_kwargs == dict_keys, (
+        f"Mismatch between baseline args and GenerateConfigDict keys:\n"
+        f"  In baseline but not in dict: {baseline_kwargs - dict_keys}\n"
+        f"  In dict but not in baseline: {dict_keys - baseline_kwargs}"
+    )
+
+    # 2. Verify types match between baseline and GenerateConfigDict
+    for name, param in baseline_params.items():
+        baseline_type = param.annotation
+        dict_type = dict_annotations[name]
+        assert _types_match(baseline_type, dict_type), (
+            f"Type mismatch for '{name}':\n"
+            f"  Baseline: {_normalize_type(baseline_type)}\n"
+            f"  TypedDict: {_normalize_type(dict_type)}"
+        )
+
+    # 3. Verify default values match between baseline and GenerateConfig (Pydantic v2 only)
+    if is_pydantic_v2():
+        from datamodel_code_generator.config import GenerateConfig
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode
+        from datamodel_code_generator.types import StrictTypes
+
+        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+
+        for name, param in baseline_params.items():
+            if param.default is inspect.Parameter.empty:
+                continue
+            config_default = GenerateConfig.model_fields[name].default
+            assert config_default == param.default, (
+                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
+            )
 
 
 def test_parser_signature_matches_baseline() -> None:
@@ -648,11 +688,11 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
 
     # Generate with config
     config = GenerateConfig(
+        output=output_config,
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
     generate(
         input_=schema,
-        output=output_config,
         config=config,
     )
 

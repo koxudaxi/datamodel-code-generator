@@ -47,7 +47,7 @@ class ParserConfigDict(TypedDict):
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
-    aliases: NotRequired[Mapping[str, str] | None]
+    aliases: NotRequired[Mapping[str, str | list[str]] | None]
     allow_population_by_field_name: NotRequired[bool]
     apply_default_values_for_required_fields: NotRequired[bool]
     allow_extra_fields: NotRequired[bool]
