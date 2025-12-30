@@ -456,20 +456,48 @@ def test_generate_signature_matches_baseline() -> None:
 
     The new signature uses **options: Unpack[GenerateConfigDict], so we verify
     that GenerateConfigDict has all the same keys as the baseline function's
-    keyword-only arguments (except 'config').
+    keyword-only arguments (except 'config'), matching types and default values.
     """
     from datamodel_code_generator._types import GenerateConfigDict
 
     expected = inspect.signature(_baseline_generate)
-    baseline_kwargs = {k for k in _kwonly_by_name(expected) if k != "config"}
-    dict_keys = set(GenerateConfigDict.__annotations__.keys())
+    baseline_params = {k: v for k, v in _kwonly_by_name(expected).items() if k != "config"}
+    dict_annotations = GenerateConfigDict.__annotations__
 
-    # Verify all baseline kwargs are in GenerateConfigDict
+    # 1. Verify all baseline kwargs are in GenerateConfigDict (key names)
+    baseline_kwargs = set(baseline_params.keys())
+    dict_keys = set(dict_annotations.keys())
     assert baseline_kwargs == dict_keys, (
         f"Mismatch between baseline args and GenerateConfigDict keys:\n"
         f"  In baseline but not in dict: {baseline_kwargs - dict_keys}\n"
         f"  In dict but not in baseline: {dict_keys - baseline_kwargs}"
     )
+
+    # 2. Verify types match between baseline and GenerateConfigDict
+    for name, param in baseline_params.items():
+        baseline_type = param.annotation
+        dict_type = dict_annotations[name]
+        assert _types_match(baseline_type, dict_type), (
+            f"Type mismatch for '{name}':\n"
+            f"  Baseline: {_normalize_type(baseline_type)}\n"
+            f"  TypedDict: {_normalize_type(dict_type)}"
+        )
+
+    # 3. Verify default values match between baseline and GenerateConfig (Pydantic v2 only)
+    if is_pydantic_v2():
+        from datamodel_code_generator.config import GenerateConfig
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode
+        from datamodel_code_generator.types import StrictTypes
+
+        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+
+        for name, param in baseline_params.items():
+            if param.default is inspect.Parameter.empty:
+                continue
+            config_default = GenerateConfig.model_fields[name].default
+            assert config_default == param.default, (
+                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
+            )
 
 
 def test_parser_signature_matches_baseline() -> None:
