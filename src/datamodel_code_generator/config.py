@@ -227,12 +227,8 @@ class ParserConfig(BaseModel):
         # For Pydantic v1, use construct() to skip validation (forward refs not resolved)
         defaults: dict[str, Any] = {}
         for field_name, field in cls.__fields__.items():  # type: ignore[attr-defined]
-            if field.default is not None:
-                defaults[field_name] = field.default
-            elif field.default_factory is not None:
-                defaults[field_name] = field.default_factory()  # type: ignore[misc]
-            else:
-                defaults[field_name] = None
+            # Note: ParserConfig fields don't use default_factory, so we only handle static defaults
+            defaults[field_name] = field.default
         defaults.update(options)
         return cls.construct(**defaults)  # type: ignore[return-value]
 
