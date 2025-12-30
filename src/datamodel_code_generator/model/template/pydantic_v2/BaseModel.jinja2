@@ -1,11 +1,3 @@
-{% if base_class != "BaseModel" and "," not in base_class and not fields and not config and not description -%}
-
-{# if this is just going to be `class Foo(Bar): pass`, then might as well just make Foo
-an alias for Bar: every pydantic model class consumes considerable memory. #}
-{{ class_name }} = {{ base_class }}
-
-{% else -%}
-
 {% for decorator in decorators -%}
 {{ decorator }}
 {% endfor -%}
@@ -53,5 +45,3 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ method }}
 {%- endfor -%}
 {%- endfor -%}
-
-{%- endif %}

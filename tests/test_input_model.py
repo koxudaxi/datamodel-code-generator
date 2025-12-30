@@ -778,7 +778,7 @@ def test_input_model_ref_strategy_regenerate_all_explicit(tmp_path: Path) -> Non
 
 @SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign(tmp_path: Path) -> None:
-    """Test reuse-foreign strategy imports enums and dataclasses."""
+    """Test reuse-foreign imports enum (always) and same-family types."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.nested_models:User",
         output_path=tmp_path / "output.py",
@@ -789,9 +789,8 @@ def test_input_model_ref_strategy_reuse_foreign(tmp_path: Path) -> None:
             "reuse-foreign",
         ],
         expected_output_contains=[
-            "from tests.data.python.input_model.nested_models import",
-            "Metadata",
-            "Status",
+            "from tests.data.python.input_model.nested_models import Status",
+            "class Metadata",
             "class Address",
             "class User",
         ],
@@ -800,7 +799,7 @@ def test_input_model_ref_strategy_reuse_foreign(tmp_path: Path) -> None:
 
 @SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_no_regeneration(tmp_path: Path) -> None:
-    """Test reuse-foreign strategy does not regenerate foreign types."""
+    """Test reuse-foreign imports only types compatible with output (enum always, same family)."""
     output_path = tmp_path / "output.py"
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.nested_models:User",
@@ -812,12 +811,13 @@ def test_input_model_ref_strategy_reuse_foreign_no_regeneration(tmp_path: Path) 
             "reuse-foreign",
         ],
         expected_output_contains=[
-            "from tests.data.python.input_model.nested_models import",
+            "from tests.data.python.input_model.nested_models import Status",
+            "class Metadata",
+            "class Address",
         ],
     )
     content = output_path.read_text(encoding="utf-8")
     assert "Status: TypeAlias" not in content
-    assert "class Metadata" not in content
 
 
 @SKIP_PYDANTIC_V1
@@ -960,6 +960,141 @@ def test_input_model_ref_strategy_typeddict_reuse_foreign(tmp_path: Path) -> Non
             "from tests.data.python.input_model.typeddict_nested import Role",
             "class Member",
             "class Profile",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_same_family_typeddict(tmp_path: Path) -> None:
+    """Test reuse-foreign imports TypedDict when output is TypedDict (same family)."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithTypedDict",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import",
+            "Category",
+            "NestedTypedDict",
+        ],
+    )
+    content = output_path.read_text(encoding="utf-8")
+    assert "class NestedTypedDict" not in content
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_different_family_regenerate(tmp_path: Path) -> None:
+    """Test reuse-foreign regenerates Pydantic model when output is TypedDict."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithPydantic",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import Category",
+            "class NestedPydantic",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_same_family_dataclass(tmp_path: Path) -> None:
+    """Test reuse-foreign imports dataclass when output is dataclass (same family)."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithDataclass",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import",
+            "Category",
+            "NestedDataclass",
+        ],
+    )
+    content = output_path.read_text(encoding="utf-8")
+    assert "class NestedDataclass" not in content
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_mixed_types(tmp_path: Path) -> None:
+    """Test reuse-foreign with mixed nested types (TypedDict, Pydantic, dataclass)."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithMixed",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import",
+            "Category",
+            "NestedTypedDict",
+            "class NestedPydantic",
+            "class NestedDataclass",
+        ],
+    )
+    content = output_path.read_text(encoding="utf-8")
+    assert "class NestedTypedDict" not in content
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_pydantic_output(tmp_path: Path) -> None:
+    """Test reuse-foreign imports Pydantic when output is Pydantic (same family)."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithPydantic",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "pydantic.BaseModel",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import",
+            "Category",
+            "NestedPydantic",
+        ],
+    )
+    content = output_path.read_text(encoding="utf-8")
+    assert "class NestedPydantic" not in content
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_ref_strategy_reuse_foreign_msgspec_output(tmp_path: Path) -> None:
+    """Test reuse-foreign regenerates non-msgspec types when output is msgspec."""
+    output_path = tmp_path / "output.py"
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.mixed_nested:ModelWithPydantic",
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "from tests.data.python.input_model.mixed_nested import Category",
+            "class NestedPydantic",
+            "class ModelWithPydantic",
         ],
     )
 

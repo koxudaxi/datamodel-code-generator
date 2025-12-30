@@ -922,7 +922,7 @@ def _collect_nested_models(model: type, visited: set[type] | None = None) -> dic
 
 
 def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) -> None:
-    """Recursively find BaseModel subclasses, Enums, and dataclasses in a type annotation."""
+    """Recursively find BaseModel, Enum, dataclass, TypedDict, and msgspec in a type annotation."""
     from dataclasses import is_dataclass  # noqa: PLC0415
     from enum import Enum as PyEnum  # noqa: PLC0415
     from typing import get_args  # noqa: PLC0415
@@ -931,7 +931,12 @@ def _find_models_in_type(tp: type, result: dict[str, type], visited: set[type]) 
         if issubclass(tp, BaseModel):
             result[tp.__name__] = tp
             result.update(_collect_nested_models(tp, visited))
-        elif issubclass(tp, PyEnum) or is_dataclass(tp):
+        elif (
+            issubclass(tp, PyEnum)
+            or is_dataclass(tp)
+            or hasattr(tp, "__required_keys__")
+            or hasattr(tp, "__struct_fields__")
+        ):
             result[tp.__name__] = tp
 
     for arg in get_args(tp):
@@ -1004,10 +1009,11 @@ _TYPE_FAMILY_ENUM = "enum"
 _TYPE_FAMILY_PYDANTIC = "pydantic"
 _TYPE_FAMILY_DATACLASS = "dataclass"
 _TYPE_FAMILY_TYPEDDICT = "typeddict"
+_TYPE_FAMILY_MSGSPEC = "msgspec"
 _TYPE_FAMILY_OTHER = "other"
 
 
-def _get_type_family(tp: type) -> str:
+def _get_type_family(tp: type) -> str:  # noqa: PLR0911
     """Determine the type family of a Python type."""
     from dataclasses import is_dataclass  # noqa: PLC0415
     from enum import Enum as PyEnum  # noqa: PLC0415
@@ -1027,13 +1033,45 @@ def _get_type_family(tp: type) -> str:
     if isinstance(tp, type) and hasattr(tp, "__required_keys__"):
         return _TYPE_FAMILY_TYPEDDICT
 
+    if isinstance(tp, type) and hasattr(tp, "__struct_fields__"):  # pragma: no cover
+        return _TYPE_FAMILY_MSGSPEC
+
     return _TYPE_FAMILY_OTHER  # pragma: no cover
+
+
+def _get_output_family(output_model_type: DataModelType) -> str:
+    """Get the type family corresponding to a DataModelType."""
+    pydantic_types = {
+        DataModelType.PydanticBaseModel,
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
+    }
+    if output_model_type in pydantic_types:
+        return _TYPE_FAMILY_PYDANTIC
+    if output_model_type == DataModelType.DataclassesDataclass:
+        return _TYPE_FAMILY_DATACLASS
+    if output_model_type == DataModelType.TypingTypedDict:
+        return _TYPE_FAMILY_TYPEDDICT
+    if output_model_type == DataModelType.MsgspecStruct:
+        return _TYPE_FAMILY_MSGSPEC
+    return _TYPE_FAMILY_OTHER  # pragma: no cover
+
+
+def _should_reuse_type(source_family: str, output_family: str) -> bool:
+    """Determine if a source type can be reused without conversion.
+
+    Returns True if the source type should be imported and reused,
+    False if it needs to be regenerated into the output type.
+    """
+    if source_family == _TYPE_FAMILY_ENUM:
+        return True
+    return source_family == output_family
 
 
 def _filter_defs_by_strategy(
     schema: dict[str, Any],
     nested_models: dict[str, type],
-    input_model_family: str,
+    output_model_type: DataModelType,
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
@@ -1043,6 +1081,7 @@ def _filter_defs_by_strategy(
     if "$defs" not in schema:  # pragma: no cover
         return schema
 
+    output_family = _get_output_family(output_model_type)
     new_defs: dict[str, Any] = {}
 
     for def_name, def_schema in schema["$defs"].items():
@@ -1054,7 +1093,7 @@ def _filter_defs_by_strategy(
         type_family = _get_type_family(nested_type)
 
         should_reuse = strategy == InputModelRefStrategy.ReuseAll or (
-            strategy == InputModelRefStrategy.ReuseForeign and type_family != input_model_family
+            strategy == InputModelRefStrategy.ReuseForeign and _should_reuse_type(type_family, output_family)
         )
 
         if should_reuse:
@@ -1105,6 +1144,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     input_model: str,
     input_file_type: InputFileType,
     ref_strategy: InputModelRefStrategy | None = None,
+    output_model_type: DataModelType = DataModelType.PydanticBaseModel,
 ) -> dict[str, object]:
     """Load schema from a Python import path.
 
@@ -1112,6 +1152,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         input_model: Import path in 'module.path:ObjectName' format
         input_file_type: Current input file type setting for validation
         ref_strategy: Strategy for handling referenced types
+        output_model_type: Target output model type for reuse-foreign strategy
 
     Returns:
         Schema dict
@@ -1194,8 +1235,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             model_name = getattr(obj, "__name__", None)
             if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover
                 nested_models[model_name] = obj
-            input_family = _get_type_family(obj)
-            schema = _filter_defs_by_strategy(schema, nested_models, input_family, ref_strategy)
+            schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
         return schema
 
@@ -1223,8 +1263,7 @@ def _load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 obj_name = getattr(obj, "__name__", None)
                 if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
                     nested_models[obj_name] = obj_type
-                input_family = _get_type_family(obj_type)
-                schema = _filter_defs_by_strategy(schema, nested_models, input_family, ref_strategy)
+                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
         except ImportError as e:
             msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
             raise Error(msg) from e
@@ -1822,6 +1861,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 config.input_model,
                 config.input_file_type,
                 config.input_model_ref_strategy,
+                config.output_model_type,
             )
             input_ = json.dumps(schema)
             if config.input_file_type == InputFileType.Auto:
