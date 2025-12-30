@@ -689,9 +689,16 @@ def _serialize_callable(args: tuple[type, ...]) -> str:
 
 
 def _get_origin_name(origin: type) -> str:
-    """Get the name of a generic origin."""
+    """Get the fully qualified name of a generic origin.
+
+    For types from builtins, typing, or collections.abc, returns just the name.
+    For other types (custom generics), returns module.name format.
+    """
     name = getattr(origin, "__name__", None)
     if name:
+        module = getattr(origin, "__module__", "")
+        if module and module not in {"builtins", "typing", "collections.abc"}:
+            return f"{module}.{name}"
         return name
 
     # Fallback for origins without __name__ (rare edge case)
