@@ -105,3 +105,15 @@ class ModelWithCustomGeneric(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
     custom_dict: CustomGenericDict[str, int]
     optional_custom_dict: CustomGenericDict[str, str] | None
+
+
+# Import DefaultPutDict for testing real-world generic type import
+from datamodel_code_generator.parser import DefaultPutDict  # noqa: E402
+
+
+class ModelWithDefaultPutDict(BaseModel):
+    """Model with DefaultPutDict to test generic type import from parser module."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    cache: DefaultPutDict[str, str]
+    optional_cache: DefaultPutDict[str, int] | None
