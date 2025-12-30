@@ -1397,10 +1397,6 @@ class JsonSchemaParser(Parser):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
-        # Check for lowercase types in PYTHON_TYPE_OVERRIDE_ALWAYS (e.g., defaultdict, deque)
-        for override_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
-            if override_type[0].islower() and re.search(rf"\b{re.escape(override_type)}\b", python_type):
-                return False
         if schema_type is None:
             return True
         if base_type in {"Union", "Optional"}:
@@ -1409,11 +1405,16 @@ class JsonSchemaParser(Parser):
         return base_type in compatible
 
     def _extract_all_type_names(self, type_str: str) -> list[str]:  # noqa: PLR6301
-        """Extract all type names from a type annotation string."""
-        # Match type names: word characters starting with uppercase, not preceded by a dot
-        # This handles cases like Callable[[Iterable[str]], str]
-        pattern = r"(?<![.\w])([A-Z]\w*)"
-        return re.findall(pattern, type_str)
+        """Extract all type names from a type annotation string using AST parsing."""
+        import ast  # noqa: PLC0415
+
+        try:
+            tree = ast.parse(type_str, mode="eval")
+            return [node.id for node in ast.walk(tree) if isinstance(node, ast.Name)]
+        except SyntaxError:  # pragma: no cover
+            # Fallback to regex for non-standard type strings
+            pattern = r"(?<![.\w])([A-Za-z_]\w*)"
+            return re.findall(pattern, type_str)
 
     @staticmethod
     @lru_cache(maxsize=256)
@@ -1480,17 +1481,6 @@ class JsonSchemaParser(Parser):
                 nested_import = self._resolve_type_import(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))
-
-        # Collect imports for lowercase types in PYTHON_TYPE_OVERRIDE_ALWAYS (e.g., defaultdict, deque)
-        for override_type in self.PYTHON_TYPE_OVERRIDE_ALWAYS:
-            if (
-                override_type[0].islower()
-                and override_type != base_type
-                and re.search(rf"\b{re.escape(override_type)}\b", type_str)
-            ):
-                override_import = self._resolve_type_import(override_type)
-                if override_import:
-                    nested_imports.append(self.data_type(import_=override_import))
 
         result = self.data_type(type=type_str, import_=import_)
         if nested_imports:
