@@ -632,12 +632,12 @@ class JsonSchemaParser(Parser):
         source: str | Path | list[Path] | ParseResult,
         *,
         config: ParserConfig | None = None,
-        **kwargs: Unpack[ParserConfigDict],
+        **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
-        if config is None and kwargs.get("target_datetime_class") is None:
-            kwargs["target_datetime_class"] = DatetimeClassType.Awaredatetime
-        super().__init__(source=source, config=config, **kwargs)
+        if config is None and options.get("target_datetime_class") is None:
+            options["target_datetime_class"] = DatetimeClassType.Awaredatetime
+        super().__init__(source=source, config=config, **options)
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}

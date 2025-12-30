@@ -97,16 +97,16 @@ class GraphQLParser(Parser):
         config: ParserConfig | None = None,
         data_model_scalar_type: type[DataModel] = DataTypeScalar,
         data_model_union_type: type[DataModel] = DataTypeUnion,
-        **kwargs: Unpack[ParserConfigDict],
+        **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
-        if config is None and kwargs.get("target_datetime_class") is None:
-            kwargs["target_datetime_class"] = DatetimeClassType.Datetime
+        if config is None and options.get("target_datetime_class") is None:
+            options["target_datetime_class"] = DatetimeClassType.Datetime
         use_standard_collections = (
-            config.use_standard_collections if config else kwargs.get("use_standard_collections", False)
+            config.use_standard_collections if config else options.get("use_standard_collections", False)
         )
-        use_union_operator = config.use_union_operator if config else kwargs.get("use_union_operator", False)
-        super().__init__(source=source, config=config, **kwargs)
+        use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
+        super().__init__(source=source, config=config, **options)
 
         self.data_model_scalar_type = data_model_scalar_type
         self.data_model_union_type = data_model_union_type

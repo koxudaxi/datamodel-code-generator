@@ -174,12 +174,12 @@ class OpenAPIParser(JsonSchemaParser):
         openapi_scopes: list[OpenAPIScope] | None = None,
         include_path_parameters: bool = False,
         use_status_code_in_response_name: bool = False,
-        **kwargs: Unpack[ParserConfigDict],
+        **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
-        if config is None and kwargs.get("wrap_string_literal") is None:
-            kwargs["wrap_string_literal"] = False
-        super().__init__(source=source, config=config, **kwargs)
+        if config is None and options.get("wrap_string_literal") is None:
+            options["wrap_string_literal"] = False
+        super().__init__(source=source, config=config, **options)
         self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = include_path_parameters
         self.use_status_code_in_response_name: bool = use_status_code_in_response_name
