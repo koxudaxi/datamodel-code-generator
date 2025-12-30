@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import types
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
 
 import pytest
@@ -372,7 +373,9 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
     if origin in {Annotated, NotRequired}:
         return _normalize_type(args[0]) if args else _type_to_str(tp)
 
-    if origin is Union:
+    if origin is Union or isinstance(tp, types.UnionType):
+        if isinstance(tp, types.UnionType):
+            args = get_args(tp)
         normalized_args = sorted(_normalize_type(a) for a in args)
         return _type_to_str(" | ".join(normalized_args))
 
