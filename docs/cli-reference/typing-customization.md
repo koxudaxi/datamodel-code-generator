@@ -293,14 +293,14 @@ even in multiple inheritance scenarios where two parent schemas define the same 
         
         
         class Thing(Entity):
-            type: str
-            type_list: list[str]
+            type: str | None = 'playground:Thing'
+            type_list: list[str] | None = ['playground:Thing']
             name: constr(min_length=1) = Field(..., description='The things name')
         
         
         class Location(Entity2):
-            type: str
-            type_list: list[str]
+            type: str | None = 'playground:Location'
+            type_list: list[str] | None = ['playground:Location']
             address: constr(min_length=5) = Field(
                 ..., description='The address of the location'
             )
@@ -308,8 +308,8 @@ even in multiple inheritance scenarios where two parent schemas define the same 
         
         class Person(Thing, Location):
             name: constr(min_length=1) | None = Field(None, description="The person's name")
-            type: str
-            type_list: list[str]
+            type: str | None = 'playground:Person'
+            type_list: list[str] | None = ['playground:Person']
         ```
 
     === "Without Option"
@@ -328,8 +328,12 @@ even in multiple inheritance scenarios where two parent schemas define the same 
         
         class Person(BaseModel):
             name: constr(min_length=1) = Field(..., description='The things name')
-            type: Any
-            type_list: list[Any]
+            type: Any | None = 'playground:Location'
+            type_list: list[Any] | None = [
+                'playground:Person',
+                'playground:Thing',
+                'playground:Location',
+            ]
             address: constr(min_length=5) = Field(
                 ..., description='The address of the location'
             )
@@ -346,14 +350,14 @@ even in multiple inheritance scenarios where two parent schemas define the same 
         
         
         class Thing(Entity):
-            type: str
-            type_list: list[str]
+            type: str | None = 'playground:Thing'
+            type_list: list[str] | None = ['playground:Thing']
             name: constr(min_length=1) = Field(..., description='The things name')
         
         
         class Location(Entity2):
-            type: str
-            type_list: list[str]
+            type: str | None = 'playground:Location'
+            type_list: list[str] | None = ['playground:Location']
             address: constr(min_length=5) = Field(
                 ..., description='The address of the location'
             )
