@@ -632,10 +632,37 @@ class JsonSchemaParser(Parser):
         **options: Any,
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
-        if options.get("target_datetime_class") is None and (config is None or config.target_datetime_class is None):
-            options["target_datetime_class"] = DatetimeClassType.Awaredatetime
+        from datamodel_code_generator.config import ParserConfig as ParserConfigClass
+        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+        from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-        super().__init__(source=source, config=config, **options)
+        # Rebuild the model to resolve forward references before validation
+        ParserConfigClass.model_rebuild(
+            _types_namespace={
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
+                "StrictTypes": StrictTypes,
+            }
+        )
+
+        if config is None:
+            config = ParserConfigClass.model_validate(options)
+            options = {}  # Clear options since they're now in config
+        elif options:
+            # Merge options into config (options take precedence)
+            config_dict = config.model_dump()
+            config_dict.update(options)
+            config = ParserConfigClass.model_validate(config_dict)
+            options = {}  # Clear options since they're now in config
+
+        if config.target_datetime_class is None:
+            # Create a new config with the default datetime class
+            config_dict = config.model_dump()
+            config_dict["target_datetime_class"] = DatetimeClassType.Awaredatetime
+            config = ParserConfigClass.model_validate(config_dict)
+
+        super().__init__(source=source, config=config)
 
         self.remote_object_cache: DefaultPutDict[str, dict[str, YamlValue]] = DefaultPutDict()
         self.raw_obj: dict[str, YamlValue] = {}

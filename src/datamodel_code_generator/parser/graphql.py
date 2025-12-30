@@ -25,7 +25,6 @@ from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
     Source,
-    _get_option,
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
@@ -94,21 +93,43 @@ class GraphQLParser(Parser):
         **options: Any,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
-        # Extract GraphQL-specific options
-        data_model_scalar_type = _get_option(options, "data_model_scalar_type", config, default=DataTypeScalar)
-        data_model_union_type = _get_option(options, "data_model_union_type", config, default=DataTypeUnion)
-        use_standard_collections = _get_option(options, "use_standard_collections", config, default=False)
-        use_union_operator = _get_option(options, "use_union_operator", config, default=False)
+        from datamodel_code_generator.config import GraphQLParserConfig as GraphQLParserConfigClass
+        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+        from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-        if options.get("target_datetime_class") is None and (config is None or config.target_datetime_class is None):
-            options["target_datetime_class"] = DatetimeClassType.Datetime
+        # Rebuild the model to resolve forward references before validation
+        GraphQLParserConfigClass.model_rebuild(
+            _types_namespace={
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
+                "StrictTypes": StrictTypes,
+            }
+        )
 
-        super().__init__(source=source, config=config, **options)
+        if config is None:
+            config = GraphQLParserConfigClass.model_validate(options)
+            options = {}  # Clear options since they're now in config
+        elif options:
+            # Merge options into config (options take precedence)
+            config_dict = config.model_dump()
+            config_dict.update(options)
+            config = GraphQLParserConfigClass.model_validate(config_dict)
+            options = {}  # Clear options since they're now in config
 
-        self.data_model_scalar_type = data_model_scalar_type
-        self.data_model_union_type = data_model_union_type
-        self.use_standard_collections = use_standard_collections
-        self.use_union_operator = use_union_operator
+        if config.target_datetime_class is None:
+            # Create a new config with the default datetime class for GraphQL
+            config_dict = config.model_dump()
+            config_dict["target_datetime_class"] = DatetimeClassType.Datetime
+            config = GraphQLParserConfigClass.model_validate(config_dict)
+
+        super().__init__(source=source, config=config)
+
+        self.data_model_scalar_type = config.data_model_scalar_type or DataTypeScalar
+        self.data_model_union_type = config.data_model_union_type or DataTypeUnion
+        # GraphQL parser overrides these from base Parser for explicit use in parse_field
+        self.use_standard_collections = config.use_standard_collections
+        self.use_union_operator = config.use_union_operator
 
     def _get_context_source_path_parts(self) -> Iterator[tuple[Source, list[str]]]:
         # TODO (denisart): Temporarily this method duplicates

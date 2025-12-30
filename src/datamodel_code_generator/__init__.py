@@ -469,7 +469,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     field_constraints: bool = False,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
-    aliases: Mapping[str, str] | None = None,
+    aliases: Mapping[str, str | list[str]] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     enable_command_header: bool = False,

@@ -25,7 +25,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.format import DatetimeClassType
-from datamodel_code_generator.parser.base import _get_option, get_special_path
+from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
@@ -170,21 +170,41 @@ class OpenAPIParser(JsonSchemaParser):
         **options: Any,
     ) -> None:
         """Initialize the OpenAPI parser with configuration options."""
-        # Extract OpenAPI-specific options
-        openapi_scopes = _get_option(options, "openapi_scopes", config, default=None)
-        include_path_parameters = _get_option(options, "include_path_parameters", config, default=False)
-        use_status_code_in_response_name = _get_option(
-            options, "use_status_code_in_response_name", config, default=False
+        from datamodel_code_generator.config import OpenAPIParserConfig as OpenAPIParserConfigClass
+        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+        from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+        # Rebuild the model to resolve forward references before validation
+        OpenAPIParserConfigClass.model_rebuild(
+            _types_namespace={
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
+                "StrictTypes": StrictTypes,
+            }
         )
 
-        if options.get("target_datetime_class") is None and (config is None or config.target_datetime_class is None):
-            options["target_datetime_class"] = DatetimeClassType.Awaredatetime
+        if config is None:
+            config = OpenAPIParserConfigClass.model_validate(options)
+            options = {}  # Clear options since they're now in config
+        elif options:
+            # Merge options into config (options take precedence)
+            config_dict = config.model_dump()
+            config_dict.update(options)
+            config = OpenAPIParserConfigClass.model_validate(config_dict)
+            options = {}  # Clear options since they're now in config
 
-        super().__init__(source=source, config=config, **options)
+        if config.target_datetime_class is None:
+            # Create a new config with the default datetime class
+            config_dict = config.model_dump()
+            config_dict["target_datetime_class"] = DatetimeClassType.Awaredatetime
+            config = OpenAPIParserConfigClass.model_validate(config_dict)
 
-        self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
-        self.include_path_parameters: bool = include_path_parameters
-        self.use_status_code_in_response_name: bool = use_status_code_in_response_name
+        super().__init__(source=source, config=config)
+
+        self.open_api_scopes: list[OpenAPIScope] = config.openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = config.include_path_parameters
+        self.use_status_code_in_response_name: bool = config.use_status_code_in_response_name
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
