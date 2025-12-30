@@ -6,12 +6,10 @@ objects, interfaces, enums, scalars, inputs, and union types.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
 )
-from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -41,7 +39,6 @@ from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
-    Source,
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
@@ -56,7 +53,9 @@ except ImportError as exc:  # pragma: no cover
 
 if TYPE_CHECKING:
     from collections import defaultdict
-    from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+    from collections.abc import Callable, Iterable, Mapping, Sequence
+    from pathlib import Path
+    from urllib.parse import ParseResult
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
