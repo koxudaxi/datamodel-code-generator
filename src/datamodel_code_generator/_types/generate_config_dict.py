@@ -16,6 +16,7 @@ if TYPE_CHECKING:
         AllExportsScope,
         AllOfMergeMode,
         CollapseRootModelsNameStrategy,
+        DataclassArguments,
         DataModelType,
         FieldTypeCollisionStrategy,
         GraphQLScope,
@@ -31,19 +32,6 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.parser import LiteralType
-
-
-class DataclassArguments(TypedDict):
-    init: NotRequired[bool]
-    repr: NotRequired[bool]
-    eq: NotRequired[bool]
-    order: NotRequired[bool]
-    unsafe_hash: NotRequired[bool]
-    frozen: NotRequired[bool]
-    match_args: NotRequired[bool]
-    kw_only: NotRequired[bool]
-    slots: NotRequired[bool]
-    weakref_slot: NotRequired[bool]
 
 
 class GenerateConfigDict(TypedDict):
