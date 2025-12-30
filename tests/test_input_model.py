@@ -663,11 +663,15 @@ def test_input_model_callable_optional(tmp_path: Path) -> None:
 
 @SKIP_PYDANTIC_V1
 def test_input_model_type_field(tmp_path: Path) -> None:
-    """Test that Type[BaseModel] is preserved."""
+    """Test that Type[BaseModel] is preserved with proper import."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
         output_path=tmp_path / "output.py",
-        expected_output_contains=["Type[pydantic.main.BaseModel]", "type_field:"],
+        expected_output_contains=[
+            "Type[BaseModel]",
+            "type_field:",
+            "from pydantic.main import BaseModel",
+        ],
     )
 
 
