@@ -28,7 +28,7 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from pydantic import Field, StrictBool, StrictInt, StrictStr, create_model
 from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
@@ -428,7 +428,7 @@ class DataType(_BaseModel):
 
     type: Optional[str] = None  # noqa: UP045
     reference: Optional[Reference] = None  # noqa: UP045
-    data_types: list[DataType] = []  # noqa: RUF012
+    data_types: list[DataType] = Field(default_factory=list)
     is_func: bool = False
     kwargs: Optional[dict[str, Any]] = None  # noqa: UP045
     import_: Optional[Import] = None  # noqa: UP045
@@ -442,14 +442,14 @@ class DataType(_BaseModel):
     is_sequence: bool = False
     is_tuple: bool = False
     is_custom_type: bool = False
-    literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
-    enum_member_literals: list[tuple[str, str]] = []  # noqa: RUF012  # [(EnumClassName, member_name), ...]
+    literals: list[Union[StrictBool, StrictInt, StrictStr]] = Field(default_factory=list)  # noqa: UP007
+    enum_member_literals: list[tuple[str, str]] = Field(default_factory=list)  # [(EnumClassName, member_name), ...]
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
-    children: list[DataType] = []  # noqa: RUF012
+    children: list[DataType] = Field(default_factory=list)
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
