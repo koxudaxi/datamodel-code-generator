@@ -2089,13 +2089,13 @@ def test_jsonschema_parser_with_config_object() -> None:
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_openapi_parser_with_config_object() -> None:
-    """Test OpenAPIParser with ParserConfig object to cover config is not None branch."""
-    from datamodel_code_generator.config import ParserConfig
+    """Test OpenAPIParser with OpenAPIParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import OpenAPIParserConfig
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser.openapi import OpenAPIParser
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-    ParserConfig.model_rebuild(
+    OpenAPIParserConfig.model_rebuild(
         _types_namespace={
             "StrictTypes": StrictTypes,
             "DataModel": DataModel,
@@ -2103,7 +2103,7 @@ def test_openapi_parser_with_config_object() -> None:
             "DataTypeManager": DataTypeManager,
         }
     )
-    config = ParserConfig(wrap_string_literal=True)
+    config = OpenAPIParserConfig(wrap_string_literal=True)
     parser = OpenAPIParser(
         source='{"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0"}, "paths": {}}',
         config=config,
@@ -2113,14 +2113,14 @@ def test_openapi_parser_with_config_object() -> None:
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_graphql_parser_with_config_object() -> None:
-    """Test GraphQLParser with ParserConfig object to cover config is not None branch."""
-    from datamodel_code_generator.config import ParserConfig
+    """Test GraphQLParser with GraphQLParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import GraphQLParserConfig
     from datamodel_code_generator.format import DatetimeClassType
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser.graphql import GraphQLParser
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-    ParserConfig.model_rebuild(
+    GraphQLParserConfig.model_rebuild(
         _types_namespace={
             "StrictTypes": StrictTypes,
             "DataModel": DataModel,
@@ -2128,6 +2128,6 @@ def test_graphql_parser_with_config_object() -> None:
             "DataTypeManager": DataTypeManager,
         }
     )
-    config = ParserConfig(target_datetime_class=DatetimeClassType.Awaredatetime)
+    config = GraphQLParserConfig(target_datetime_class=DatetimeClassType.Awaredatetime)
     parser = GraphQLParser(source="type Query { id: ID }", config=config)
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime

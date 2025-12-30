@@ -85,8 +85,8 @@ if is_pydantic_v2():
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
 
-    from datamodel_code_generator._types import ParserConfigDict
-    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator._types import JSONSchemaParserConfigDict
+    from datamodel_code_generator.config import JSONSchemaParserConfig
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -523,7 +523,7 @@ EXCLUDE_FIELD_KEYS = (
 
 
 @snooper_to_methods()  # noqa: PLR0904
-class JsonSchemaParser(Parser):
+class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     """Parser for JSON Schema, JSON, YAML, Dict, and CSV formats."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
@@ -627,12 +627,39 @@ class JsonSchemaParser(Parser):
         "ChainMap",
     })
 
+    @classmethod
+    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:
+        """Create a JSONSchemaParserConfig from options."""
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            JSONSchemaParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return JSONSchemaParserConfig.model_validate(options)
+        JSONSchemaParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}
+        defaults.update(options)
+        return JSONSchemaParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+
     def __init__(
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
-        config: ParserConfig | None = None,
-        **options: Unpack[ParserConfigDict],
+        config: JSONSchemaParserConfig | None = None,
+        **options: Unpack[JSONSchemaParserConfigDict],
     ) -> None:
         """Initialize the JSON Schema parser with configuration options."""
         if config is None and options.get("target_datetime_class") is None:

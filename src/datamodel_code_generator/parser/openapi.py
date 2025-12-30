@@ -41,8 +41,8 @@ from datamodel_code_generator.util import BaseModel, model_dump, model_validate
 if TYPE_CHECKING:
     from urllib.parse import ParseResult
 
-    from datamodel_code_generator._types import ParserConfigDict
-    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator._types import OpenAPIParserConfigDict
+    from datamodel_code_generator.config import OpenAPIParserConfig
     from datamodel_code_generator.model import DataModelFieldBase
 
 
@@ -166,23 +166,48 @@ class OpenAPIParser(JsonSchemaParser):
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
 
+    @classmethod
+    def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:
+        """Create an OpenAPIParserConfig from options."""
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            OpenAPIParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return OpenAPIParserConfig.model_validate(options)
+        OpenAPIParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in OpenAPIParserConfig.__fields__.items()}
+        defaults.update(options)
+        return OpenAPIParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+
     def __init__(
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
-        config: ParserConfig | None = None,
-        openapi_scopes: list[OpenAPIScope] | None = None,
-        include_path_parameters: bool = False,
-        use_status_code_in_response_name: bool = False,
-        **options: Unpack[ParserConfigDict],
+        config: OpenAPIParserConfig | None = None,
+        **options: Unpack[OpenAPIParserConfigDict],
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
         if config is None and options.get("wrap_string_literal") is None:
             options["wrap_string_literal"] = False
-        super().__init__(source=source, config=config, **options)
-        self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
-        self.include_path_parameters: bool = include_path_parameters
-        self.use_status_code_in_response_name: bool = use_status_code_in_response_name
+        super().__init__(source=source, config=config, **options)  # type: ignore[arg-type]
+        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = self.config.include_path_parameters
+        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
