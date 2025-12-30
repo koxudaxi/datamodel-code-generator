@@ -1,0 +1,144 @@
+{
+    "$defs": {
+        "Entity": {
+            "title": "Entity",
+            "type": "object",
+            "required": [
+                "type"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "default": "playground:Entity"
+                },
+                "type_list": {
+                    "type": "array",
+                    "default": [
+                        "playground:Entity"
+                    ],
+                    "items": {
+                        "type": "string",
+                        "options": {
+                            "hidden": true
+                        }
+                    }
+                },
+            }
+        },
+        "Entity2": {
+            "title": "Entity2",
+            "type": "object",
+            "required": [
+                "type",
+                "type_list"
+            ],
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "default": "playground:Entity2"
+                },
+                "type_list": {
+                    "type": "array",
+                    "default": [
+                        "playground:Entity2"
+                    ],
+                    "items": {
+                        "type": "string",
+                        "options": {
+                            "hidden": true
+                        }
+                    }
+                },
+            }
+        },
+        "Thing": {
+            "allOf": [
+                {
+                    "$ref": "#/$defs/Entity"
+                }
+            ],
+            "title": "Thing",
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "type": {
+                    "default": "playground:Thing",
+                    "options": {
+                        "hidden": true
+                    }
+                },
+                "type_list": {
+                    "default": [
+                        "playground:Thing"
+                    ],
+                    "items": {
+                        "title": "Some other title"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "description": "The things name",
+                    "minLength": 1,
+                    "default": "A Thing"
+                }
+            }
+        },
+        "Location": {
+            "allOf": [
+                {
+                    "$ref": "#/$defs/Entity2"
+                }
+            ],
+            "title": "Location",
+            "type": "object",
+            "required": [
+                "address"
+            ],
+            "properties": {
+                "type": {
+                    "default": "playground:Location"
+                },
+                "type_list": {
+                    "default": [
+                        "playground:Location"
+                    ],
+                    "items": {
+                        "title": "Some other title"
+                    }
+                },
+                "address": {
+                    "type": "string",
+                    "description": "The address of the location",
+                    "minLength": 5,
+                    "default": "123 Main St"
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/$defs/Thing"
+        },
+        {
+            "$ref": "#/$defs/Location"
+        }
+    ],
+    "title": "Person",
+    "type": "object",
+    "properties": {
+        "name": {
+            "description": "The person's name"
+        },
+        "type": {
+            "$comment": "Already defined in playground:Thing -> we override just the default",
+            "default": "playground:Person"
+        },
+        "type_list": {
+            "default": [
+                "playground:Person"
+            ]
+        }
+    }
+}

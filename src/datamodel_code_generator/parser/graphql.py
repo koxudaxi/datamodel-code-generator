@@ -15,6 +15,7 @@ from urllib.parse import ParseResult
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -166,6 +167,7 @@ class GraphQLParser(Parser):
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+        allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         http_timeout: float | None = None,
@@ -282,6 +284,7 @@ class GraphQLParser(Parser):
             use_unique_items_as_set=use_unique_items_as_set,
             use_tuple_for_fixed_items=use_tuple_for_fixed_items,
             allof_merge_mode=allof_merge_mode,
+            allof_class_hierarchy=allof_class_hierarchy,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             http_timeout=http_timeout,

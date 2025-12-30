@@ -25,6 +25,7 @@ from pydantic import (
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -704,6 +705,7 @@ class JsonSchemaParser(Parser):
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+        allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         http_timeout: float | None = None,
@@ -819,6 +821,7 @@ class JsonSchemaParser(Parser):
             use_unique_items_as_set=use_unique_items_as_set,
             use_tuple_for_fixed_items=use_tuple_for_fixed_items,
             allof_merge_mode=allof_merge_mode,
+            allof_class_hierarchy=allof_class_hierarchy,
             http_headers=http_headers,
             http_ignore_tls=http_ignore_tls,
             http_timeout=http_timeout,
@@ -2031,6 +2034,10 @@ class JsonSchemaParser(Parser):
         Continue merging when multiple $refs have conflicting property definitions to avoid MRO issues.
         Child property overrides (obj.properties) are not considered conflicts.
         """
+        if self.allof_class_hierarchy == AllOfClassHierarchy.Always:
+            # Skip merging when always inherit from the base classes
+            return None
+
         ref_count = sum(1 for item in obj.allOf if item.ref)
         if ref_count == 1:
             return None

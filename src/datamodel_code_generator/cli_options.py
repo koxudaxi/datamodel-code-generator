@@ -198,6 +198,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
+    "--allof-class-hierarchy": CLIOptionMeta(name="--allof-class-hierarchy", category=OptionCategory.TYPING),
     # ==========================================================================
     # Template Customization
     # ==========================================================================

@@ -152,6 +152,13 @@ class AllOfMergeMode(Enum):
     NoMerge = "none"
 
 
+class AllOfClassHierarchy(Enum):
+    """How to map allOf references to class hierarchies."""
+
+    IfNoConflict = "if-no-conflict"
+    Always = "always"
+
+
 class GraphQLScope(Enum):
     """Scopes for GraphQL model generation."""
 

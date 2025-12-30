@@ -32,6 +32,7 @@ from datamodel_code_generator.enums import (
     MIN_VERSION,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -521,6 +522,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
     use_unique_items_as_set: bool = False,
     use_tuple_for_fixed_items: bool = False,
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     http_timeout: float | None = None,
@@ -684,6 +686,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_tuple_for_fixed_items = use_tuple_for_fixed_items or config.use_tuple_for_fixed_items
         allof_merge_mode = (
             config.allof_merge_mode if allof_merge_mode == AllOfMergeMode.Constraints else allof_merge_mode
+        )
+        allof_class_hierarchy = (
+            config.allof_class_hierarchy
+            if allof_class_hierarchy == AllOfClassHierarchy.IfNoConflict
+            else allof_class_hierarchy
         )
         http_headers = config.http_headers if http_headers is None else http_headers
         http_ignore_tls = http_ignore_tls or config.http_ignore_tls
@@ -1019,6 +1026,7 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         use_unique_items_as_set=use_unique_items_as_set,
         use_tuple_for_fixed_items=use_tuple_for_fixed_items,
         allof_merge_mode=allof_merge_mode,
+        allof_class_hierarchy=allof_class_hierarchy,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         http_timeout=http_timeout,

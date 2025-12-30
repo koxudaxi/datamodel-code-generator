@@ -17,6 +17,7 @@ from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -577,6 +578,14 @@ typing_options.add_argument(
     "'all': merge constraints plus annotations (default, examples) from parent. "
     "'none': do not merge any fields from parent properties.",
     choices=[m.value for m in AllOfMergeMode],
+    default=None,
+)
+typing_options.add_argument(
+    "--allof-class-hierarchy",
+    help="How to map allOf references to class hierarchies. "
+    "'if-no-conflict': only create subclasses when parent class has no conflicting property definition. "
+    "'always': always create subclasses. ",
+    choices=[m.value for m in AllOfClassHierarchy],
     default=None,
 )
 typing_options.add_argument(
