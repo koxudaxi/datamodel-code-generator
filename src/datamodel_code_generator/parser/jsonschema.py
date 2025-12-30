@@ -351,14 +351,14 @@ class JsonSchemaObject(BaseModel):
     unevaluatedProperties: Optional[Union[JsonSchemaObject, bool]] = None  # noqa: N815, UP007, UP045
     patternProperties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: N815, UP007, UP045
     propertyNames: Optional[JsonSchemaObject] = None  # noqa: N815, UP045
-    oneOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    anyOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    allOf: list[JsonSchemaObject] = []  # noqa: N815, RUF012
-    enum: list[Any] = []  # noqa: RUF012
+    oneOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    anyOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    allOf: list[JsonSchemaObject] = Field(default_factory=list)  # noqa: N815
+    enum: list[Any] = Field(default_factory=list)
     writeOnly: Optional[bool] = None  # noqa: N815, UP045
     readOnly: Optional[bool] = None  # noqa: N815, UP045
     properties: Optional[dict[str, Union[JsonSchemaObject, bool]]] = None  # noqa: UP007, UP045
-    required: list[str] = []  # noqa: RUF012
+    required: list[str] = Field(default_factory=list)
     ref: Optional[str] = Field(default=None, alias="$ref")  # noqa: UP045
     nullable: Optional[bool] = None  # noqa: UP045
     x_enum_varnames: list[str] = Field(default_factory=list, alias="x-enum-varnames")
