@@ -23,14 +23,16 @@ if TYPE_CHECKING:
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
-    from datamodel_code_generator.parser import LiteralType
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+    from datamodel_code_generator.types import DataTypeManager
 
 
 class ParserConfigDict(TypedDict):
-    data_model_type: NotRequired[type[datamodel_code_generator.model.base.DataModel]]
-    data_model_root_type: NotRequired[type[datamodel_code_generator.model.base.DataModel]]
-    data_type_manager_type: NotRequired[type[datamodel_code_generator.types.DataTypeManager]]
-    data_model_field_type: NotRequired[type[datamodel_code_generator.model.base.DataModelFieldBase]]
+    data_model_type: NotRequired[type[DataModel]]
+    data_model_root_type: NotRequired[type[DataModel]]
+    data_type_manager_type: NotRequired[type[DataTypeManager]]
+    data_model_field_type: NotRequired[type[DataModelFieldBase]]
     base_class: NotRequired[str | None]
     base_class_map: NotRequired[dict[str, str] | None]
     additional_imports: NotRequired[list[str] | None]

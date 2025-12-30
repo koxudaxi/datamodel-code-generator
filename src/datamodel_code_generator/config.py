@@ -44,30 +44,9 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
 
-if TYPE_CHECKING:
-    CallableSchema = Callable[[str], str]
-    DumpResolveReferenceAction = Callable[[Iterable[str]], str]
-    DefaultPutDictSchema = DefaultPutDict[str, str]
-elif is_pydantic_v2():
-    from typing import Annotated
-
-    from pydantic import WithJsonSchema
-
-    CallableSchema = Annotated[
-        Callable[[str], str],
-        WithJsonSchema({"type": "string", "x-python-type": "Callable[[str], str]"}),
-    ]
-    DumpResolveReferenceAction = Annotated[
-        Callable[[Iterable[str]], str],
-        WithJsonSchema({"type": "string", "x-python-type": "Callable[[Iterable[str]], str]"}),
-    ]
-    DefaultPutDictSchema = Annotated[
-        DefaultPutDict[str, str], WithJsonSchema({"type": "object", "x-python-type": "DefaultPutDict[str, str]"})
-    ]
-else:  # pragma: no cover
-    CallableSchema = Callable[[str], str]
-    DumpResolveReferenceAction = Callable[[Iterable[str]], str]
-    DefaultPutDictSchema = DefaultPutDict[str, str]
+CallableSchema = Callable[[str], str]
+DumpResolveReferenceAction = Callable[[Iterable[str]], str]
+DefaultPutDictSchema = DefaultPutDict[str, str]
 
 
 class GenerateConfig(BaseModel):
