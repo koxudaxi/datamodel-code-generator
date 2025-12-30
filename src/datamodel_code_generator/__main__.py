@@ -887,7 +887,7 @@ def _serialize_python_type(tp: type) -> str | None:
     type_name: str | None = None
     if origin is not None:
         type_name = preserved_origins.get(origin)
-        if type_name is None and getattr(origin, "__module__", None) == "collections":
+        if type_name is None and getattr(origin, "__module__", None) == "collections":  # pragma: no cover
             type_name = _simple_type_name(origin)
     if type_name is not None:
         if args:
