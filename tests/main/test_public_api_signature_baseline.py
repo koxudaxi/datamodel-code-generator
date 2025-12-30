@@ -449,12 +449,24 @@ def _types_match(config_type: Any, dict_type: Any) -> bool:
 
 
 def test_generate_signature_matches_baseline() -> None:
-    """Ensure generate keeps the origin/main kw-only args and annotations."""
+    """Ensure generate keeps backward compatibility via GenerateConfigDict.
+
+    The new signature uses **options: Unpack[GenerateConfigDict], so we verify
+    that GenerateConfigDict has all the same keys as the baseline function's
+    keyword-only arguments (except 'config').
+    """
+    from datamodel_code_generator._types import GenerateConfigDict
+
     expected = inspect.signature(_baseline_generate)
-    actual = inspect.signature(generate)
-    assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
-    for name, param in _kwonly_by_name(expected).items():
-        assert _kwonly_by_name(actual)[name].annotation == param.annotation
+    baseline_kwargs = {k for k in _kwonly_by_name(expected) if k != "config"}
+    dict_keys = set(GenerateConfigDict.__annotations__.keys())
+
+    # Verify all baseline kwargs are in GenerateConfigDict
+    assert baseline_kwargs == dict_keys, (
+        f"Mismatch between baseline args and GenerateConfigDict keys:\n"
+        f"  In baseline but not in dict: {baseline_kwargs - dict_keys}\n"
+        f"  In dict but not in baseline: {dict_keys - baseline_kwargs}"
+    )
 
 
 def test_parser_signature_matches_baseline() -> None:
@@ -645,11 +657,11 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
 
     # Generate with config
     config = GenerateConfig(
+        output=output_config,
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
     generate(
         input_=schema,
-        output=output_config,
         config=config,
     )
 
