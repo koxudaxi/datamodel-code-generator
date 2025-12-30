@@ -66,7 +66,7 @@ def _baseline_generate(
     field_constraints: bool = False,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
-    aliases: Mapping[str, str] | None = None,
+    aliases: Mapping[str, str | list[str]] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     enable_command_header: bool = False,
@@ -230,12 +230,88 @@ def _type_to_str(tp: Any) -> str:
     )
 
 
-def _normalize_union_str(type_str: str) -> str:
-    """Normalize a union type string by sorting its components."""
-    if " | " in type_str:
-        parts = [p.strip() for p in type_str.split(" | ")]
-        return " | ".join(sorted(parts))
-    return type_str
+def _normalize_union_str(type_str: str) -> str:  # noqa: PLR0912
+    """Normalize a union type string by sorting its components recursively.
+
+    Handles both top-level unions and unions inside generics.
+    """
+    # First, recursively normalize any generics (inside brackets)
+    result = []
+    i = 0
+    while i < len(type_str):
+        if type_str[i] == "[":
+            # Find matching bracket
+            depth = 1
+            start = i + 1
+            i += 1
+            while i < len(type_str) and depth > 0:
+                if type_str[i] == "[":
+                    depth += 1
+                elif type_str[i] == "]":
+                    depth -= 1
+                i += 1
+            # Recursively normalize the content inside brackets
+            inner = type_str[start : i - 1]
+            # Split on comma at top level for generic args
+            args = _split_generic_args(inner)
+            normalized_args = ", ".join(_normalize_union_str(arg.strip()) for arg in args)
+            result.append("[" + normalized_args + "]")
+        else:
+            result.append(type_str[i])
+            i += 1
+
+    type_str = "".join(result)
+
+    # Then handle top-level union
+    if " | " not in type_str:
+        return type_str
+
+    parts = []
+    current_part = []
+    depth = 0
+    i = 0
+    while i < len(type_str):
+        char = type_str[i]
+        if char == "[":
+            depth += 1
+            current_part.append(char)
+        elif char == "]":
+            depth -= 1
+            current_part.append(char)
+        elif type_str[i : i + 3] == " | " and depth == 0:
+            parts.append("".join(current_part).strip())
+            current_part = []
+            i += 3
+            continue
+        else:
+            current_part.append(char)
+        i += 1
+    if current_part:
+        parts.append("".join(current_part).strip())
+
+    return " | ".join(sorted(parts))
+
+
+def _split_generic_args(args_str: str) -> list[str]:
+    """Split generic args on comma, respecting bracket nesting."""
+    parts = []
+    current_part = []
+    depth = 0
+    for char in args_str:
+        if char == "[":
+            depth += 1
+            current_part.append(char)
+        elif char == "]":
+            depth -= 1
+            current_part.append(char)
+        elif char == "," and depth == 0:
+            parts.append("".join(current_part).strip())
+            current_part = []
+        else:
+            current_part.append(char)
+    if current_part:
+        parts.append("".join(current_part).strip())
+    return parts
 
 
 def _normalize_type(tp: Any) -> str:  # noqa: PLR0911

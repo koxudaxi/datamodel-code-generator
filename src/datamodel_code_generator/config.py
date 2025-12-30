@@ -8,6 +8,7 @@ from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, Field
+from typing_extensions import Self
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -201,8 +202,39 @@ class ParserConfig(BaseModel):
         class Config:
             """Pydantic v1 model config."""
 
-            extra = "forbid"
+            extra = "allow"
             arbitrary_types_allowed = True
+
+    @classmethod
+    def from_options(cls, options: dict[str, Any]) -> Self:
+        """Create a ParserConfig from options dict with version-compatible validation."""
+        if is_pydantic_v2():
+            from datamodel_code_generator.model.base import (  # noqa: PLC0415
+                DataModel,
+                DataModelFieldBase,
+            )
+            from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: PLC0415
+
+            cls.model_rebuild(
+                _types_namespace={
+                    "DataModel": DataModel,
+                    "DataModelFieldBase": DataModelFieldBase,
+                    "DataTypeManager": DataTypeManager,
+                    "StrictTypes": StrictTypes,
+                }
+            )
+            return cls.model_validate(options)
+        # For Pydantic v1, use construct() to skip validation (forward refs not resolved)
+        defaults: dict[str, Any] = {}
+        for field_name, field in cls.__fields__.items():  # type: ignore[attr-defined]
+            if field.default is not None:
+                defaults[field_name] = field.default
+            elif field.default_factory is not None:
+                defaults[field_name] = field.default_factory()  # type: ignore[misc]
+            else:
+                defaults[field_name] = None
+        defaults.update(options)
+        return cls.construct(**defaults)  # type: ignore[return-value]
 
     data_model_type: type[DataModel] = pydantic_model.BaseModel
     data_model_root_type: type[DataModel] = pydantic_model.CustomRootType

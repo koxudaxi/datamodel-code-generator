@@ -23,7 +23,6 @@ from warnings import warn
 from pydantic import BaseModel
 
 from datamodel_code_generator import (
-    DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
     AllOfMergeMode,
@@ -36,11 +35,9 @@ from datamodel_code_generator import (
     YamlValue,
 )
 from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
     CodeFormatter,
     Formatter,
     PythonVersion,
-    PythonVersionMin,
 )
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
@@ -690,27 +687,15 @@ class Parser(ABC):
         **options: Any,
     ) -> None:
         """Initialize the Parser with configuration options."""
-        from datamodel_code_generator.config import ParserConfig
-        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
-        from datamodel_code_generator.types import DataTypeManager, StrictTypes
-
-        # Rebuild the model to resolve forward references before validation
-        ParserConfig.model_rebuild(
-            _types_namespace={
-                "DataModel": DataModel,
-                "DataModelFieldBase": DataModelFieldBase,
-                "DataTypeManager": DataTypeManager,
-                "StrictTypes": StrictTypes,
-            }
-        )
+        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.util import model_dump  # noqa: PLC0415
 
         if config is None:
-            config = ParserConfig.model_validate(options)
+            config = ParserConfig.from_options(options)
         elif options:
-            # Merge options into config (options take precedence)
-            config_dict = config.model_dump()
+            config_dict = model_dump(config)
             config_dict.update(options)
-            config = ParserConfig.model_validate(config_dict)
+            config = ParserConfig.from_options(config_dict)
 
         extra_template_data: defaultdict[str, Any] | None = config.extra_template_data
         if extra_template_data is not None and not isinstance(extra_template_data, defaultdict):
@@ -868,7 +853,9 @@ class Parser(ABC):
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
             raise Exception(msg)  # noqa: TRY002
         self.use_serialize_as_any: bool = config.use_serialize_as_any
-        self.use_non_positive_negative_number_constrained_types = config.use_non_positive_negative_number_constrained_types
+        self.use_non_positive_negative_number_constrained_types = (
+            config.use_non_positive_negative_number_constrained_types
+        )
         self.use_double_quotes = config.use_double_quotes
         self.allow_responses_without_content = config.allow_responses_without_content
         self.collapse_root_models = config.collapse_root_models
@@ -894,7 +881,9 @@ class Parser(ABC):
         }
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = config.read_only_write_only_model_type
         self.use_frozen_field: bool = config.use_frozen_field
-        self.use_default_factory_for_optional_nested_models: bool = config.use_default_factory_for_optional_nested_models
+        self.use_default_factory_for_optional_nested_models: bool = (
+            config.use_default_factory_for_optional_nested_models
+        )
         self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
 
     @property

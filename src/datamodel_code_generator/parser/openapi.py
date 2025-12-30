@@ -170,35 +170,22 @@ class OpenAPIParser(JsonSchemaParser):
         **options: Any,
     ) -> None:
         """Initialize the OpenAPI parser with configuration options."""
-        from datamodel_code_generator.config import OpenAPIParserConfig as OpenAPIParserConfigClass
-        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
-        from datamodel_code_generator.types import DataTypeManager, StrictTypes
-
-        # Rebuild the model to resolve forward references before validation
-        OpenAPIParserConfigClass.model_rebuild(
-            _types_namespace={
-                "DataModel": DataModel,
-                "DataModelFieldBase": DataModelFieldBase,
-                "DataTypeManager": DataTypeManager,
-                "StrictTypes": StrictTypes,
-            }
+        from datamodel_code_generator.config import (  # noqa: PLC0415
+            OpenAPIParserConfig as OpenAPIParserConfigClass,
         )
+        from datamodel_code_generator.util import model_dump  # noqa: PLC0415
 
         if config is None:
-            config = OpenAPIParserConfigClass.model_validate(options)
-            options = {}  # Clear options since they're now in config
+            config = OpenAPIParserConfigClass.from_options(options)
         elif options:
-            # Merge options into config (options take precedence)
-            config_dict = config.model_dump()
+            config_dict = model_dump(config)
             config_dict.update(options)
-            config = OpenAPIParserConfigClass.model_validate(config_dict)
-            options = {}  # Clear options since they're now in config
+            config = OpenAPIParserConfigClass.from_options(config_dict)
 
         if config.target_datetime_class is None:
-            # Create a new config with the default datetime class
-            config_dict = config.model_dump()
+            config_dict = model_dump(config)
             config_dict["target_datetime_class"] = DatetimeClassType.Awaredatetime
-            config = OpenAPIParserConfigClass.model_validate(config_dict)
+            config = OpenAPIParserConfigClass.from_options(config_dict)
 
         super().__init__(source=source, config=config)
 
