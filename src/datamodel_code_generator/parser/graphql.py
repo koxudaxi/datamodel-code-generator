@@ -11,38 +11,23 @@ from typing import (
     Any,
 )
 
+from typing_extensions import Unpack
+
 from datamodel_code_generator import (
-    DEFAULT_SHARED_MODULE_NAME,
-    AllOfClassHierarchy,
-    AllOfMergeMode,
-    CollapseRootModelsNameStrategy,
-    DataclassArguments,
-    DefaultPutDict,
-    FieldTypeCollisionStrategy,
     LiteralType,
-    NamingStrategy,
-    PythonVersion,
-    PythonVersionMin,
-    ReadOnlyWriteOnlyModelType,
-    ReuseScope,
-    TargetPydanticVersion,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
-from datamodel_code_generator.model.scalar import DataTypeScalar
-from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
-from datamodel_code_generator.types import DataTypeManager, StrictTypes, Types
+from datamodel_code_generator.types import Types
 
 try:
     import graphql
@@ -52,10 +37,12 @@ except ImportError as exc:  # pragma: no cover
 
 
 if TYPE_CHECKING:
-    from collections import defaultdict
-    from collections.abc import Callable, Iterable, Mapping, Sequence
     from pathlib import Path
     from urllib.parse import ParseResult
+
+    from datamodel_code_generator._types import GraphQLParserConfigDict
+    from datamodel_code_generator.config import GraphQLParserConfig
+    from datamodel_code_generator.model import DataModel, DataModelFieldBase
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
@@ -72,7 +59,7 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 
 @snooper_to_methods()
-class GraphQLParser(Parser):
+class GraphQLParser(Parser["GraphQLParserConfig"]):
     """Parser for GraphQL schema files."""
 
     # raw graphql schema as `graphql-core` object
@@ -99,242 +86,52 @@ class GraphQLParser(Parser):
         graphql.type.introspection.TypeKind.UNION,
     ]
 
-    def __init__(  # noqa: PLR0913
+    @classmethod
+    def _create_default_config(cls, options: GraphQLParserConfigDict) -> GraphQLParserConfig:  # type: ignore[override]
+        """Create a GraphQLParserConfig from options."""
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            GraphQLParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return GraphQLParserConfig.model_validate(options)
+        GraphQLParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}
+        defaults.update(options)
+        return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+
+    def __init__(
         self,
         source: str | Path | ParseResult,
         *,
-        data_model_type: type[DataModel] = pydantic_model.BaseModel,
-        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_model_scalar_type: type[DataModel] = DataTypeScalar,
-        data_model_union_type: type[DataModel] = DataTypeUnion,
-        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
-        base_class: str | None = None,
-        base_class_map: dict[str, str] | None = None,
-        additional_imports: list[str] | None = None,
-        class_decorators: list[str] | None = None,
-        custom_template_dir: Path | None = None,
-        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersionMin,
-        dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
-        validation: bool = False,
-        field_constraints: bool = False,
-        snake_case_field: bool = False,
-        strip_default_none: bool = False,
-        aliases: Mapping[str, str | list[str]] | None = None,
-        allow_population_by_field_name: bool = False,
-        apply_default_values_for_required_fields: bool = False,
-        allow_extra_fields: bool = False,
-        extra_fields: str | None = None,
-        use_generic_base_class: bool = False,
-        force_optional_for_required_fields: bool = False,
-        class_name: str | None = None,
-        use_standard_collections: bool = False,
-        base_path: Path | None = None,
-        use_schema_description: bool = False,
-        use_field_description: bool = False,
-        use_field_description_example: bool = False,
-        use_attribute_docstrings: bool = False,
-        use_inline_field_description: bool = False,
-        use_default_kwarg: bool = False,
-        reuse_model: bool = False,
-        reuse_scope: ReuseScope | None = None,
-        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
-        encoding: str = "utf-8",
-        enum_field_as_literal: LiteralType | None = None,
-        enum_field_as_literal_map: dict[str, str] | None = None,
-        ignore_enum_constraints: bool = False,
-        set_default_enum_member: bool = False,
-        use_subclass_enum: bool = False,
-        use_specialized_enum: bool = True,
-        strict_nullable: bool = False,
-        use_generic_container_types: bool = False,
-        enable_faux_immutability: bool = False,
-        remote_text_cache: DefaultPutDict[str, str] | None = None,
-        disable_appending_item_suffix: bool = False,
-        strict_types: Sequence[StrictTypes] | None = None,
-        empty_enum_field_name: str | None = None,
-        custom_class_name_generator: Callable[[str], str] | None = None,
-        field_extra_keys: set[str] | None = None,
-        field_include_all_keys: bool = False,
-        field_extra_keys_without_x_prefix: set[str] | None = None,
-        model_extra_keys: set[str] | None = None,
-        model_extra_keys_without_x_prefix: set[str] | None = None,
-        wrap_string_literal: bool | None = None,
-        use_title_as_name: bool = False,
-        use_operation_id_as_name: bool = False,
-        use_unique_items_as_set: bool = False,
-        use_tuple_for_fixed_items: bool = False,
-        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
-        allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
-        http_headers: Sequence[tuple[str, str]] | None = None,
-        http_ignore_tls: bool = False,
-        http_timeout: float | None = None,
-        use_annotated: bool = False,
-        use_non_positive_negative_number_constrained_types: bool = False,
-        use_decimal_for_multiple_of: bool = False,
-        original_field_name_delimiter: str | None = None,
-        use_double_quotes: bool = False,
-        use_union_operator: bool = False,
-        allow_responses_without_content: bool = False,
-        collapse_root_models: bool = False,
-        collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
-        collapse_reuse_models: bool = False,
-        skip_root_model: bool = False,
-        use_type_alias: bool = False,
-        special_field_name_prefix: str | None = None,
-        remove_special_field_name_prefix: bool = False,
-        capitalise_enum_members: bool = False,
-        keep_model_order: bool = False,
-        use_one_literal_as_default: bool = False,
-        use_enum_values_in_discriminator: bool = False,
-        known_third_party: list[str] | None = None,
-        custom_formatters: list[str] | None = None,
-        custom_formatters_kwargs: dict[str, Any] | None = None,
-        use_pendulum: bool = False,
-        use_standard_primitive_types: bool = False,
-        http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dot_as_module: bool | None = None,
-        use_exact_imports: bool = False,
-        default_field_extras: dict[str, Any] | None = None,
-        target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
-        target_date_class: DateClassType | None = None,
-        keyword_only: bool = False,
-        frozen_dataclasses: bool = False,
-        no_alias: bool = False,
-        formatters: list[Formatter] = DEFAULT_FORMATTERS,
-        defer_formatting: bool = False,
-        parent_scoped_naming: bool = False,
-        naming_strategy: NamingStrategy | None = None,
-        duplicate_name_suffix: dict[str, str] | None = None,
-        dataclass_arguments: DataclassArguments | None = None,
-        type_mappings: list[str] | None = None,
-        type_overrides: dict[str, str] | None = None,
-        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
-        use_serialize_as_any: bool = False,
-        use_frozen_field: bool = False,
-        use_default_factory_for_optional_nested_models: bool = False,
-        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
-        target_pydantic_version: TargetPydanticVersion | None = None,
+        config: GraphQLParserConfig | None = None,
+        **options: Unpack[GraphQLParserConfigDict],
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
-        super().__init__(
-            source=source,
-            data_model_type=data_model_type,
-            data_model_root_type=data_model_root_type,
-            data_type_manager_type=data_type_manager_type,
-            data_model_field_type=data_model_field_type,
-            base_class=base_class,
-            base_class_map=base_class_map,
-            additional_imports=additional_imports,
-            class_decorators=class_decorators,
-            custom_template_dir=custom_template_dir,
-            extra_template_data=extra_template_data,
-            target_python_version=target_python_version,
-            dump_resolve_reference_action=dump_resolve_reference_action,
-            validation=validation,
-            field_constraints=field_constraints,
-            snake_case_field=snake_case_field,
-            strip_default_none=strip_default_none,
-            aliases=aliases,
-            allow_population_by_field_name=allow_population_by_field_name,
-            allow_extra_fields=allow_extra_fields,
-            extra_fields=extra_fields,
-            use_generic_base_class=use_generic_base_class,
-            apply_default_values_for_required_fields=apply_default_values_for_required_fields,
-            force_optional_for_required_fields=force_optional_for_required_fields,
-            class_name=class_name,
-            use_standard_collections=use_standard_collections,
-            base_path=base_path,
-            use_schema_description=use_schema_description,
-            use_field_description=use_field_description,
-            use_field_description_example=use_field_description_example,
-            use_attribute_docstrings=use_attribute_docstrings,
-            use_inline_field_description=use_inline_field_description,
-            use_default_kwarg=use_default_kwarg,
-            reuse_model=reuse_model,
-            reuse_scope=reuse_scope,
-            shared_module_name=shared_module_name,
-            encoding=encoding,
-            enum_field_as_literal=enum_field_as_literal,
-            enum_field_as_literal_map=enum_field_as_literal_map,
-            ignore_enum_constraints=ignore_enum_constraints,
-            use_one_literal_as_default=use_one_literal_as_default,
-            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
-            set_default_enum_member=set_default_enum_member,
-            use_subclass_enum=use_subclass_enum,
-            use_specialized_enum=use_specialized_enum,
-            strict_nullable=strict_nullable,
-            use_generic_container_types=use_generic_container_types,
-            enable_faux_immutability=enable_faux_immutability,
-            remote_text_cache=remote_text_cache,
-            disable_appending_item_suffix=disable_appending_item_suffix,
-            strict_types=strict_types,
-            empty_enum_field_name=empty_enum_field_name,
-            custom_class_name_generator=custom_class_name_generator,
-            field_extra_keys=field_extra_keys,
-            field_include_all_keys=field_include_all_keys,
-            field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
-            model_extra_keys=model_extra_keys,
-            model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
-            wrap_string_literal=wrap_string_literal,
-            use_title_as_name=use_title_as_name,
-            use_operation_id_as_name=use_operation_id_as_name,
-            use_unique_items_as_set=use_unique_items_as_set,
-            use_tuple_for_fixed_items=use_tuple_for_fixed_items,
-            allof_merge_mode=allof_merge_mode,
-            allof_class_hierarchy=allof_class_hierarchy,
-            http_headers=http_headers,
-            http_ignore_tls=http_ignore_tls,
-            http_timeout=http_timeout,
-            use_annotated=use_annotated,
-            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-            original_field_name_delimiter=original_field_name_delimiter,
-            use_double_quotes=use_double_quotes,
-            use_union_operator=use_union_operator,
-            allow_responses_without_content=allow_responses_without_content,
-            collapse_root_models=collapse_root_models,
-            collapse_root_models_name_strategy=collapse_root_models_name_strategy,
-            collapse_reuse_models=collapse_reuse_models,
-            skip_root_model=skip_root_model,
-            use_type_alias=use_type_alias,
-            special_field_name_prefix=special_field_name_prefix,
-            remove_special_field_name_prefix=remove_special_field_name_prefix,
-            capitalise_enum_members=capitalise_enum_members,
-            keep_model_order=keep_model_order,
-            known_third_party=known_third_party,
-            custom_formatters=custom_formatters,
-            custom_formatters_kwargs=custom_formatters_kwargs,
-            use_pendulum=use_pendulum,
-            use_standard_primitive_types=use_standard_primitive_types,
-            http_query_parameters=http_query_parameters,
-            treat_dot_as_module=treat_dot_as_module,
-            use_exact_imports=use_exact_imports,
-            default_field_extras=default_field_extras,
-            target_datetime_class=target_datetime_class,
-            target_date_class=target_date_class,
-            keyword_only=keyword_only,
-            frozen_dataclasses=frozen_dataclasses,
-            no_alias=no_alias,
-            formatters=formatters,
-            defer_formatting=defer_formatting,
-            parent_scoped_naming=parent_scoped_naming,
-            naming_strategy=naming_strategy,
-            duplicate_name_suffix=duplicate_name_suffix,
-            dataclass_arguments=dataclass_arguments,
-            type_mappings=type_mappings,
-            type_overrides=type_overrides,
-            read_only_write_only_model_type=read_only_write_only_model_type,
-            use_serialize_as_any=use_serialize_as_any,
-            use_frozen_field=use_frozen_field,
-            use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-            field_type_collision_strategy=field_type_collision_strategy,
-            target_pydantic_version=target_pydantic_version,
+        if config is None and options.get("target_datetime_class") is None:
+            options["target_datetime_class"] = DatetimeClassType.Datetime
+        use_standard_collections = (
+            config.use_standard_collections if config else options.get("use_standard_collections", False)
         )
+        use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
+        super().__init__(source=source, config=config, **options)
 
-        self.data_model_scalar_type = data_model_scalar_type
-        self.data_model_union_type = data_model_union_type
+        self.data_model_scalar_type = self.config.data_model_scalar_type
+        self.data_model_union_type = self.config.data_model_union_type
         self.use_standard_collections = use_standard_collections
         self.use_union_operator = use_union_operator
 

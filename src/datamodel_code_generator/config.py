@@ -37,13 +37,18 @@ from datamodel_code_generator.format import (
     PythonVersionMin,
 )
 from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydantic at runtime
+    DataModel,
+    DataModelFieldBase,
+)
+from datamodel_code_generator.model.scalar import DataTypeScalar
+from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 
 if TYPE_CHECKING:
-    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
-    from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
 
 CallableSchema = Callable[[str], str]
@@ -317,6 +322,25 @@ class ParserConfig(BaseModel):
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     target_pydantic_version: TargetPydanticVersion | None = None
+
+
+class GraphQLParserConfig(ParserConfig):
+    """Configuration model for GraphQLParser.__init__()."""
+
+    data_model_scalar_type: type[DataModel] = DataTypeScalar
+    data_model_union_type: type[DataModel] = DataTypeUnion
+
+
+class JSONSchemaParserConfig(ParserConfig):
+    """Configuration model for JsonSchemaParser.__init__()."""
+
+
+class OpenAPIParserConfig(JSONSchemaParserConfig):
+    """Configuration model for OpenAPIParser.__init__()."""
+
+    openapi_scopes: list[OpenAPIScope] | None = None
+    include_path_parameters: bool = False
+    use_status_code_in_response_name: bool = False
 
 
 class ParseConfig(BaseModel):

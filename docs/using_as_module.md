@@ -17,7 +17,7 @@ pip install 'datamodel-code-generator[http]'
 When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
 
 ```python
-from datamodel_code_generator import InputFileType, generate, DataModelType
+from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType
 
 json_schema: str = """{
     "type": "object",
@@ -30,12 +30,12 @@ json_schema: str = """{
     }
 }"""
 
-result = generate(
-    json_schema,
+config = GenerateConfig(
     input_file_type=InputFileType.JsonSchema,
     input_filename="example.json",
     output_model_type=DataModelType.PydanticV2BaseModel,
 )
+result = generate(json_schema, config=config)
 print(result)
 ```
 
@@ -44,13 +44,16 @@ print(result)
 When the schema generates multiple modules, `generate()` returns a `GeneratedModules` dictionary mapping module path tuples to generated code:
 
 ```python
-from datamodel_code_generator import InputFileType, generate, GeneratedModules
+from datamodel_code_generator import InputFileType, generate, GenerateConfig, GeneratedModules
+
+# Your OpenAPI specification (string, Path, or dict)
+openapi_spec: str = "..."  # Replace with your actual OpenAPI spec
 
 # Schema that generates multiple modules (e.g., with $ref to other files)
-result: str | GeneratedModules = generate(
-    openapi_spec,
+config = GenerateConfig(
     input_file_type=InputFileType.OpenAPI,
 )
+result: str | GeneratedModules = generate(openapi_spec, config=config)
 
 if isinstance(result, dict):
     for module_path, content in result.items():
@@ -63,13 +66,12 @@ else:
 
 ### 📝 Writing to Files
 
-To write generated code to the file system, provide a `Path` to the `output` parameter:
+To write generated code to the file system, provide a `Path` to the `output` parameter in the config:
 
 ```python
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from datamodel_code_generator import InputFileType, generate
-from datamodel_code_generator import DataModelType
+from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType
 
 json_schema: str = """{
     "type": "object",
@@ -85,14 +87,14 @@ json_schema: str = """{
 with TemporaryDirectory() as temporary_directory_name:
     temporary_directory = Path(temporary_directory_name)
     output = Path(temporary_directory / 'model.py')
-    generate(
-        json_schema,
+    config = GenerateConfig(
         input_file_type=InputFileType.JsonSchema,
         input_filename="example.json",
         output=output,
         # set up the output model types
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
+    generate(json_schema, config=config)
     model: str = output.read_text()
 print(model)
 ```
@@ -127,7 +129,44 @@ class Model(BaseModel):
 
 ## 🔧 Using the Parser Directly
 
-You can also call the parser directly for more control:
+You can also call the parser directly for more control. Parser classes also support the `config` parameter similar to `generate()`.
+
+### Using `config` Parameter (Recommended)
+
+```python
+from datamodel_code_generator import DataModelType, PythonVersion
+from datamodel_code_generator.config import JSONSchemaParserConfig
+from datamodel_code_generator.model import get_data_model_types
+from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+json_schema: str = """{
+    "type": "object",
+    "properties": {
+        "number": {"type": "number"},
+        "street_name": {"type": "string"},
+        "street_type": {"type": "string",
+                        "enum": ["Street", "Avenue", "Boulevard"]
+                        }
+    }
+}"""
+
+data_model_types = get_data_model_types(
+    DataModelType.PydanticV2BaseModel,
+    target_python_version=PythonVersion.PY_311
+)
+config = JSONSchemaParserConfig(
+    data_model_type=data_model_types.data_model,
+    data_model_root_type=data_model_types.root_model,
+    data_model_field_type=data_model_types.field_model,
+    data_type_manager_type=data_model_types.data_type_manager,
+    dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
+)
+parser = JsonSchemaParser(json_schema, config=config)
+result = parser.parse()
+print(result)
+```
+
+### Using Keyword Arguments (Backward Compatible)
 
 ```python
 from datamodel_code_generator import DataModelType, PythonVersion
@@ -145,7 +184,6 @@ json_schema: str = """{
     }
 }"""
 
-
 data_model_types = get_data_model_types(
     DataModelType.PydanticV2BaseModel,
     target_python_version=PythonVersion.PY_311
@@ -161,6 +199,18 @@ parser = JsonSchemaParser(
 result = parser.parse()
 print(result)
 ```
+
+### Available Parser Config Classes
+
+Each parser type has its own config class:
+
+| Parser | Config Class |
+|--------|-------------|
+| `JsonSchemaParser` | `JSONSchemaParserConfig` |
+| `OpenAPIParser` | `OpenAPIParserConfig` |
+| `GraphQLParser` | `GraphQLParserConfig` |
+
+All config classes inherit from `ParserConfig` and include additional parser-specific options.
 
 **✨ Output:**
 ```python
