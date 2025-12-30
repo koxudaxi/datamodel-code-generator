@@ -2011,4 +2011,26 @@ def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None
             input_='{"type": "object", "properties": {"name": {"type": "string"}}}',
             output=output_file,
             config=config,
+            field_constraints=True,
         )
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_parser_with_config_and_options_raises_error() -> None:
+    """Test Parser raises error when both config and options are provided."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig()
+    with pytest.raises(ValueError, match="Cannot specify both 'config' and keyword arguments"):
+        JsonSchemaParser(source="{}", config=config, field_constraints=True)
