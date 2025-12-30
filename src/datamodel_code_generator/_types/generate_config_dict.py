@@ -13,9 +13,9 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.enums import (
-        AllOfClassHierarchy,
         AllExportsCollisionStrategy,
         AllExportsScope,
+        AllOfClassHierarchy,
         AllOfMergeMode,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
