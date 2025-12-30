@@ -547,10 +547,6 @@ def test_parser_signature_matches_baseline() -> None:
         )
 
         for name, param in baseline_params.items():
-            if param.default is inspect.Parameter.empty:
-                continue
-            if name not in ParserConfig.model_fields:
-                continue
             config_default = ParserConfig.model_fields[name].default
             if callable(param.default) and config_default is None:
                 continue
