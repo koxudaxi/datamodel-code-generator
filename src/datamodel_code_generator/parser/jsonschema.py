@@ -1265,9 +1265,10 @@ class JsonSchemaParser(Parser):
         if python_type_override:
             return python_type_override
 
+        if "const" in obj.extras:
+            return self.data_type(literals=[obj.extras["const"]])
+
         if obj.type is None:
-            if "const" in obj.extras:
-                return self.data_type_manager.get_data_type_from_value(obj.extras["const"])
             return self.data_type_manager.get_data_type(
                 Types.any,
             )
