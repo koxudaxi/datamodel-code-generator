@@ -383,6 +383,8 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
         if args:
             normalized_args = [_normalize_type(a) for a in args]
             origin_name = getattr(origin, "__name__", str(origin))
+            if origin_name == "defaultdict":
+                origin_name = "dict"
             return _type_to_str(f"{origin_name}[{', '.join(normalized_args)}]")
         return _type_to_str(origin)
 
