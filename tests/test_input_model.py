@@ -741,6 +741,20 @@ def test_input_model_custom_generic_type_import(tmp_path: Path) -> None:
     )
 
 
+@SKIP_PYDANTIC_V1
+def test_input_model_default_put_dict_import(tmp_path: Path) -> None:
+    """Test that DefaultPutDict generic type is properly imported from parser module."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithDefaultPutDict",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=[
+            "from datamodel_code_generator.parser import DefaultPutDict",
+            "DefaultPutDict[str, str]",
+            "DefaultPutDict[str, int] | None",
+        ],
+    )
+
+
 # ============================================================================
 # --input-model-ref-strategy tests
 # ============================================================================
