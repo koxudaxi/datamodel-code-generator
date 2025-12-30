@@ -32,7 +32,7 @@ from datamodel_code_generator.format import PythonVersionMin
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.pydantic import BaseModel
-from datamodel_code_generator.parser.base import Parser, YamlValue, title_to_class_name
+from datamodel_code_generator.parser.base import YamlValue, title_to_class_name
 from datamodel_code_generator.util import is_pydantic_v2
 
 PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
@@ -501,26 +501,33 @@ def test_generate_signature_matches_baseline() -> None:
 
 
 def test_parser_signature_matches_baseline() -> None:
-    """Ensure Parser.__init__ keeps the origin/main kw-only args, types, and default values."""
+    """Ensure Parser.__init__ keeps backward compatibility via ParserConfigDict.
+
+    The new signature uses **options: Unpack[ParserConfigDict], so we verify
+    that ParserConfigDict has all the same keys as the baseline function's
+    keyword-only arguments (except 'config'), matching types and default values.
+    """
+    from datamodel_code_generator._types import ParserConfigDict
+
     expected = inspect.signature(_BaselineParser.__init__)
-    actual = inspect.signature(Parser.__init__)
+    baseline_params = {k: v for k, v in _kwonly_by_name(expected).items() if k != "config"}
+    dict_annotations = ParserConfigDict.__annotations__
 
-    baseline_params = _kwonly_by_name(expected)
-    actual_params = _kwonly_by_name(actual)
-
-    assert actual_params.keys() == baseline_params.keys(), (
-        f"Mismatch between baseline args and Parser.__init__ args:\n"
-        f"  In baseline but not in actual: {baseline_params.keys() - actual_params.keys()}\n"
-        f"  In actual but not in baseline: {actual_params.keys() - baseline_params.keys()}"
+    baseline_kwargs = set(baseline_params.keys())
+    dict_keys = set(dict_annotations.keys())
+    assert baseline_kwargs == dict_keys, (
+        f"Mismatch between baseline args and ParserConfigDict keys:\n"
+        f"  In baseline but not in dict: {baseline_kwargs - dict_keys}\n"
+        f"  In dict but not in baseline: {dict_keys - baseline_kwargs}"
     )
 
     for name, param in baseline_params.items():
         baseline_type = param.annotation
-        actual_type = actual_params[name].annotation
-        assert _types_match(baseline_type, actual_type), (
+        dict_type = dict_annotations[name]
+        assert _types_match(baseline_type, dict_type), (
             f"Type mismatch for '{name}':\n"
             f"  Baseline: {_normalize_type(baseline_type)}\n"
-            f"  Actual: {_normalize_type(actual_type)}"
+            f"  TypedDict: {_normalize_type(dict_type)}"
         )
 
     if is_pydantic_v2():
