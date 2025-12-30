@@ -1421,10 +1421,12 @@ class JsonSchemaParser(Parser):
             "re",
         )
         for module_name in modules_to_check:
-            with suppress(ImportError):
+            try:
                 module = importlib.import_module(module_name)
                 if hasattr(module, type_name):
                     return Import.from_full_path(f"{module_name}.{type_name}")
+            except ImportError:  # noqa: PERF203
+                pass
         return None
 
     def _resolve_type_import(self, type_name: str) -> Import | None:
