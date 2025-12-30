@@ -573,6 +573,8 @@ class JsonSchemaParser(Parser):
         "Pattern": Import.from_full_path("re.Pattern"),
         "Match": Import.from_full_path("re.Match"),
         "Type": Import.from_full_path("typing.Type"),
+        "defaultdict": Import.from_full_path("collections.defaultdict"),
+        "Any": Import.from_full_path("typing.Any"),
     }
 
     # Types that require x-python-type override regardless of schema type
