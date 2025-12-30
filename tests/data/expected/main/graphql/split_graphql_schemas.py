@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
+from typing import Literal, TypeAlias
 
 from pydantic import BaseModel, Field
-from typing_extensions import TypeAlias
 
 Boolean: TypeAlias = bool
 """
@@ -29,19 +28,19 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Baz(BaseModel):
     quux: Int
-    typename__: Optional[Literal['Baz']] = Field('Baz', alias='__typename')
+    typename__: Literal['Baz'] | None = Field('Baz', alias='__typename')
 
 
 class Bar(BaseModel):
     eggs: String
     foo: Foo
-    typename__: Optional[Literal['Bar']] = Field('Bar', alias='__typename')
+    typename__: Literal['Bar'] | None = Field('Bar', alias='__typename')
 
 
 class Foo(BaseModel):
     baz: Bar
     id: Int
-    typename__: Optional[Literal['Foo']] = Field('Foo', alias='__typename')
+    typename__: Literal['Foo'] | None = Field('Foo', alias='__typename')
 
 
 Bar.update_forward_refs()
