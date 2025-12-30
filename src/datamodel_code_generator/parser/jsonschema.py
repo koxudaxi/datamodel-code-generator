@@ -1834,19 +1834,23 @@ class JsonSchemaParser(Parser):
             except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
 
+            result: DataType | None = None
             if parent_schema.properties:
                 prop_schema = parent_schema.properties.get(prop_name)
                 if isinstance(prop_schema, JsonSchemaObject):
                     result = self._build_lightweight_type(prop_schema)
-                    if result is not None:
-                        return result
+            # In case of a missing type, continue searching up the inheritance chain
+            if result is not None and not (result.type == ANY or self._is_list_with_any_item_type(result)):
+                return result
 
+            parent_result: DataType | None = None
             if parent_schema.allOf:
                 grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
                 if grandparent_refs:
-                    result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
-                    if result is not None:
-                        return result
+                    parent_result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
+                    if parent_result is not None:
+                        return parent_result
+                    return result
 
         return None
 
