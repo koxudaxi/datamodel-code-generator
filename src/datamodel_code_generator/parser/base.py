@@ -684,18 +684,15 @@ class Parser(ABC):
         source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
         config: ParserConfig | None = None,
-        **options: Any,
+        **options: Any,  # NOTE: Subclasses handle config+options merging, so options is typically empty here
     ) -> None:
         """Initialize the Parser with configuration options."""
         from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.util import model_dump  # noqa: PLC0415
 
+        # Subclasses are expected to merge config+options before calling super().__init__()
+        # This branch handles the case when Parser is used directly (e.g., for testing)
         if config is None:
             config = ParserConfig.from_options(options)
-        elif options:
-            config_dict = model_dump(config)
-            config_dict.update(options)
-            config = ParserConfig.from_options(config_dict)
 
         extra_template_data: defaultdict[str, Any] | None = config.extra_template_data
         if extra_template_data is not None and not isinstance(extra_template_data, defaultdict):

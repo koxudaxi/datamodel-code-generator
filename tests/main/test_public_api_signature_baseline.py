@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import inspect
 import types
+from collections import defaultdict
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
 
 import pytest
@@ -33,7 +34,6 @@ from datamodel_code_generator.util import is_pydantic_v2
 PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
-    from collections import defaultdict
     from collections.abc import Callable, Mapping, Sequence
     from pathlib import Path
     from urllib.parse import ParseResult
@@ -698,3 +698,168 @@ def test_graphql_parser_with_config() -> None:
     assert parser.snake_case_field is True
     assert parser.data_model_scalar_type is DataTypeScalar
     assert parser.data_model_union_type is DataTypeUnion
+
+
+@PYDANTIC_V2_SKIP
+def test_jsonschema_parser_with_config_and_options() -> None:
+    """Test that JsonSchemaParser correctly merges config with options (options take precedence)."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    # Config sets validation=True, snake_case_field=True
+    config = ParserConfig(
+        validation=True,
+        snake_case_field=True,
+        use_schema_description=False,
+    )
+
+    # Options override snake_case_field to False and set use_schema_description=True
+    parser = JsonSchemaParser(
+        source='{"type": "object", "properties": {"testField": {"type": "string"}}}',
+        config=config,
+        snake_case_field=False,
+        use_schema_description=True,
+    )
+
+    # validation from config, snake_case_field overridden by options, use_schema_description from options
+    assert parser.validation is True
+    assert parser.snake_case_field is False
+    assert parser.use_schema_description is True
+
+
+@PYDANTIC_V2_SKIP
+def test_openapi_parser_with_config_and_options() -> None:
+    """Test that OpenAPIParser correctly merges config with options (options take precedence)."""
+    from datamodel_code_generator.config import OpenAPIParserConfig
+    from datamodel_code_generator.enums import OpenAPIScope
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    OpenAPIParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    config = OpenAPIParserConfig(
+        validation=True,
+        snake_case_field=True,
+        openapi_scopes=[OpenAPIScope.Schemas],
+    )
+
+    openapi_spec = """{
+        "openapi": "3.0.0",
+        "info": {"title": "Test", "version": "1.0.0"},
+        "paths": {},
+        "components": {"schemas": {"Test": {"type": "object"}}}
+    }"""
+
+    # Options override snake_case_field and openapi_scopes
+    parser = OpenAPIParser(
+        source=openapi_spec,
+        config=config,
+        snake_case_field=False,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
+    )
+
+    assert parser.validation is True
+    assert parser.snake_case_field is False
+    assert parser.open_api_scopes == [OpenAPIScope.Schemas, OpenAPIScope.Paths]
+
+
+@PYDANTIC_V2_SKIP
+def test_graphql_parser_with_config_and_options() -> None:
+    """Test that GraphQLParser correctly merges config with options (options take precedence)."""
+    from datamodel_code_generator.config import GraphQLParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model.scalar import DataTypeScalar
+    from datamodel_code_generator.model.union import DataTypeUnion
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    GraphQLParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    config = GraphQLParserConfig(
+        validation=True,
+        snake_case_field=True,
+        data_model_scalar_type=DataTypeScalar,
+    )
+
+    graphql_schema = """
+    type Query {
+        test: String
+    }
+    """
+
+    # Options override snake_case_field and add data_model_union_type
+    parser = GraphQLParser(
+        source=graphql_schema,
+        config=config,
+        snake_case_field=False,
+        data_model_union_type=DataTypeUnion,
+    )
+
+    assert parser.validation is True
+    assert parser.snake_case_field is False
+    assert parser.data_model_scalar_type is DataTypeScalar
+    assert parser.data_model_union_type is DataTypeUnion
+
+
+@PYDANTIC_V2_SKIP
+def test_parser_with_extra_template_data_as_regular_dict() -> None:
+    """Test that Parser correctly converts extra_template_data from dict to defaultdict."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    # Pass extra_template_data as a regular dict (not defaultdict)
+    extra_data: dict[str, dict[str, Any]] = {"TestModel": {"custom_key": "custom_value"}}
+
+    config = ParserConfig(
+        validation=True,
+        extra_template_data=extra_data,  # type: ignore[arg-type]
+    )
+
+    parser = JsonSchemaParser(
+        source='{"type": "object", "properties": {"testField": {"type": "string"}}}',
+        config=config,
+    )
+
+    # Verify the extra_template_data was converted to defaultdict and is accessible
+    assert parser.extra_template_data is not None
+    assert isinstance(parser.extra_template_data, defaultdict)
+    assert parser.extra_template_data["TestModel"]["custom_key"] == "custom_value"
+    # Verify defaultdict behavior - accessing non-existent key returns empty dict
+    assert parser.extra_template_data["NonExistentModel"] == {}
