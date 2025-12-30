@@ -76,6 +76,7 @@ from datamodel_code_generator.types import (
     StrictTypes,
     Types,
     UnionIntFloat,
+    extract_qualified_names,
     get_subscript_args,
     get_type_base_name,
 )
@@ -1377,8 +1378,15 @@ class JsonSchemaParser(Parser):
                 # If not in predefined imports, create import from the full path
                 import_ = Import.from_full_path(prefix)
 
-        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
+        # Collect imports for qualified names (e.g., module.path.ClassName)
         nested_imports: list[DataType] = []
+        for qualified_name in extract_qualified_names(type_str):
+            class_name = qualified_name.rsplit(".", 1)[-1]
+            nested_import = Import.from_full_path(qualified_name)
+            nested_imports.append(self.data_type(import_=nested_import))
+            type_str = type_str.replace(qualified_name, class_name)
+
+        # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
             if type_name != base_type:
                 nested_import = self.PYTHON_TYPE_IMPORTS.get(type_name)
