@@ -7162,3 +7162,14 @@ def test_x_python_type_nested_unknown_type(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=["--output-model-type", "typing.TypedDict"],
     )
+
+
+def test_x_python_type_dynamic_resolve(output_file: Path) -> None:
+    """Test x-python-type with types resolved dynamically (not in static PYTHON_TYPE_IMPORTS)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_dynamic_resolve.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+    )
