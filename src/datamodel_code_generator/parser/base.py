@@ -16,7 +16,18 @@ from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Callable, Hashable, Sequence
 from itertools import groupby
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional, Protocol, TypeAlias, TypeVar, cast, runtime_checkable
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Generic,
+    NamedTuple,
+    Optional,
+    Protocol,
+    TypeAlias,
+    TypeVar,
+    cast,
+    runtime_checkable,
+)
 from urllib.parse import ParseResult
 from warnings import warn
 
@@ -78,6 +89,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+
+ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
 
 @runtime_checkable
@@ -675,18 +688,48 @@ class Source(BaseModel):
         return cls(path=Path(), raw_data=data)
 
 
-class Parser(ABC):
+class Parser(ABC, Generic[ParserConfigT]):
     """Abstract base class for schema parsers.
 
     Provides the parsing algorithm and code generation. Subclasses implement
     parse_raw() to handle specific schema formats.
     """
 
-    def __init__(  # noqa: PLR0912, PLR0914, PLR0915
+    @classmethod
+    def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:
+        """Create a default config from options.
+
+        Subclasses can override this to return their own config type.
+        """
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            ParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return ParserConfig.model_validate(options)  # type: ignore[return-value]
+        ParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in ParserConfig.__fields__.items()}
+        defaults.update(options)
+        return ParserConfig.construct(**defaults)  # type: ignore[return-value]
+
+    def __init__(  # noqa: PLR0912, PLR0915
         self,
         source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
-        config: ParserConfig | None = None,
+        config: ParserConfigT | None = None,
         **options: Unpack[ParserConfigDict],
     ) -> None:
         """Initialize the Parser with configuration options.
@@ -699,330 +742,198 @@ class Parser(ABC):
         Raises:
             ValueError: If both config and **options are provided.
         """
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
-
         if config is not None and options:
             msg = "Cannot specify both 'config' and keyword arguments. Use one or the other."
             raise ValueError(msg)
 
         if config is None:
-            from datamodel_code_generator import types as types_module  # noqa: PLC0415
-            from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+            config = self._create_default_config(options)
 
-            if is_pydantic_v2():
-                ParserConfig.model_rebuild(
-                    _types_namespace={
-                        "StrictTypes": types_module.StrictTypes,
-                        "DataModel": model_base.DataModel,
-                        "DataModelFieldBase": model_base.DataModelFieldBase,
-                        "DataTypeManager": types_module.DataTypeManager,
-                    }
-                )
-                config = ParserConfig.model_validate(options)
-            else:
-                ParserConfig.update_forward_refs(
-                    StrictTypes=types_module.StrictTypes,
-                    DataModel=model_base.DataModel,
-                    DataModelFieldBase=model_base.DataModelFieldBase,
-                    DataTypeManager=types_module.DataTypeManager,
-                )
-                defaults = {name: field.default for name, field in ParserConfig.__fields__.items()}
-                defaults.update(options)
-                config = ParserConfig.construct(**defaults)
-
-        data_model_type = config.data_model_type
-        data_model_root_type = config.data_model_root_type
-        data_type_manager_type = config.data_type_manager_type
-        data_model_field_type = config.data_model_field_type
-        base_class = config.base_class
-        base_class_map = config.base_class_map
-        additional_imports = config.additional_imports
-        class_decorators = config.class_decorators
-        custom_template_dir = config.custom_template_dir
-        extra_template_data = config.extra_template_data
-        target_python_version = config.target_python_version
-        dump_resolve_reference_action = config.dump_resolve_reference_action
-        validation = config.validation
-        field_constraints = config.field_constraints
-        snake_case_field = config.snake_case_field
-        strip_default_none = config.strip_default_none
-        aliases = config.aliases
-        allow_population_by_field_name = config.allow_population_by_field_name
-        apply_default_values_for_required_fields = config.apply_default_values_for_required_fields
-        allow_extra_fields = config.allow_extra_fields
-        extra_fields = config.extra_fields
-        use_generic_base_class = config.use_generic_base_class
-        force_optional_for_required_fields = config.force_optional_for_required_fields
-        class_name = config.class_name
-        use_standard_collections = config.use_standard_collections
-        base_path = config.base_path
-        use_schema_description = config.use_schema_description
-        use_field_description = config.use_field_description
-        use_field_description_example = config.use_field_description_example
-        use_attribute_docstrings = config.use_attribute_docstrings
-        use_inline_field_description = config.use_inline_field_description
-        use_default_kwarg = config.use_default_kwarg
-        reuse_model = config.reuse_model
-        reuse_scope = config.reuse_scope
-        shared_module_name = config.shared_module_name
-        encoding = config.encoding
-        enum_field_as_literal = config.enum_field_as_literal
-        enum_field_as_literal_map = config.enum_field_as_literal_map
-        ignore_enum_constraints = config.ignore_enum_constraints
-        set_default_enum_member = config.set_default_enum_member
-        use_subclass_enum = config.use_subclass_enum
-        use_specialized_enum = config.use_specialized_enum
-        strict_nullable = config.strict_nullable
-        use_generic_container_types = config.use_generic_container_types
-        enable_faux_immutability = config.enable_faux_immutability
-        remote_text_cache = config.remote_text_cache
-        disable_appending_item_suffix = config.disable_appending_item_suffix
-        strict_types = config.strict_types
-        empty_enum_field_name = config.empty_enum_field_name
-        custom_class_name_generator = config.custom_class_name_generator
-        field_extra_keys = config.field_extra_keys
-        field_include_all_keys = config.field_include_all_keys
-        field_extra_keys_without_x_prefix = config.field_extra_keys_without_x_prefix
-        model_extra_keys = config.model_extra_keys
-        model_extra_keys_without_x_prefix = config.model_extra_keys_without_x_prefix
-        wrap_string_literal = config.wrap_string_literal
-        use_title_as_name = config.use_title_as_name
-        use_operation_id_as_name = config.use_operation_id_as_name
-        use_unique_items_as_set = config.use_unique_items_as_set
-        use_tuple_for_fixed_items = config.use_tuple_for_fixed_items
-        allof_merge_mode = config.allof_merge_mode
-        allof_class_hierarchy = config.allof_class_hierarchy
-        http_headers = config.http_headers
-        http_ignore_tls = config.http_ignore_tls
-        http_timeout = config.http_timeout
-        use_annotated = config.use_annotated
-        use_serialize_as_any = config.use_serialize_as_any
-        use_non_positive_negative_number_constrained_types = config.use_non_positive_negative_number_constrained_types
-        use_decimal_for_multiple_of = config.use_decimal_for_multiple_of
-        original_field_name_delimiter = config.original_field_name_delimiter
-        use_double_quotes = config.use_double_quotes
-        use_union_operator = config.use_union_operator
-        allow_responses_without_content = config.allow_responses_without_content
-        collapse_root_models = config.collapse_root_models
-        collapse_root_models_name_strategy = config.collapse_root_models_name_strategy
-        collapse_reuse_models = config.collapse_reuse_models
-        skip_root_model = config.skip_root_model
-        use_type_alias = config.use_type_alias
-        special_field_name_prefix = config.special_field_name_prefix
-        remove_special_field_name_prefix = config.remove_special_field_name_prefix
-        capitalise_enum_members = config.capitalise_enum_members
-        keep_model_order = config.keep_model_order
-        use_one_literal_as_default = config.use_one_literal_as_default
-        use_enum_values_in_discriminator = config.use_enum_values_in_discriminator
-        known_third_party = config.known_third_party
-        custom_formatters = config.custom_formatters
-        custom_formatters_kwargs = config.custom_formatters_kwargs
-        use_pendulum = config.use_pendulum
-        use_standard_primitive_types = config.use_standard_primitive_types
-        http_query_parameters = config.http_query_parameters
-        treat_dot_as_module = config.treat_dot_as_module
-        use_exact_imports = config.use_exact_imports
-        default_field_extras = config.default_field_extras
-        target_datetime_class = config.target_datetime_class
-        target_date_class = config.target_date_class
-        keyword_only = config.keyword_only
-        frozen_dataclasses = config.frozen_dataclasses
-        no_alias = config.no_alias
-        use_frozen_field = config.use_frozen_field
-        use_default_factory_for_optional_nested_models = config.use_default_factory_for_optional_nested_models
-        formatters = config.formatters
-        defer_formatting = config.defer_formatting
-        parent_scoped_naming = config.parent_scoped_naming
-        naming_strategy = config.naming_strategy
-        duplicate_name_suffix = config.duplicate_name_suffix
-        dataclass_arguments = config.dataclass_arguments
-        type_mappings = config.type_mappings
-        type_overrides = config.type_overrides
-        read_only_write_only_model_type = config.read_only_write_only_model_type
-        field_type_collision_strategy = config.field_type_collision_strategy
-        target_pydantic_version = config.target_pydantic_version
-
-        self.keyword_only = keyword_only
-        self.target_pydantic_version = target_pydantic_version
-        self.frozen_dataclasses = frozen_dataclasses
-        self.data_type_manager: DataTypeManager = data_type_manager_type(
-            python_version=target_python_version,
-            use_standard_collections=use_standard_collections,
-            use_generic_container_types=use_generic_container_types,
-            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-            strict_types=strict_types,
-            use_union_operator=use_union_operator,
-            use_pendulum=use_pendulum,
-            use_standard_primitive_types=use_standard_primitive_types,
-            target_datetime_class=target_datetime_class,
-            target_date_class=target_date_class,
-            treat_dot_as_module=treat_dot_as_module or False,
-            use_serialize_as_any=use_serialize_as_any,
+        self.keyword_only = config.keyword_only
+        self.target_pydantic_version = config.target_pydantic_version
+        self.frozen_dataclasses = config.frozen_dataclasses
+        self.data_type_manager: DataTypeManager = config.data_type_manager_type(
+            python_version=config.target_python_version,
+            use_standard_collections=config.use_standard_collections,
+            use_generic_container_types=config.use_generic_container_types,
+            use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+            use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
+            strict_types=config.strict_types,
+            use_union_operator=config.use_union_operator,
+            use_pendulum=config.use_pendulum,
+            use_standard_primitive_types=config.use_standard_primitive_types,
+            target_datetime_class=config.target_datetime_class,
+            target_date_class=config.target_date_class,
+            treat_dot_as_module=config.treat_dot_as_module or False,
+            use_serialize_as_any=config.use_serialize_as_any,
         )
-        self.data_model_type: type[DataModel] = data_model_type
-        self.data_model_root_type: type[DataModel] = data_model_root_type
-        self.data_model_field_type: type[DataModelFieldBase] = data_model_field_type
+        self.data_model_type: type[DataModel] = config.data_model_type
+        self.data_model_root_type: type[DataModel] = config.data_model_root_type
+        self.data_model_field_type: type[DataModelFieldBase] = config.data_model_field_type
 
-        self.imports: Imports = Imports(use_exact_imports)
-        self.use_exact_imports: bool = use_exact_imports
-        self._append_additional_imports(additional_imports=additional_imports)
-        self.class_decorators: list[str] = class_decorators or []
+        self.imports: Imports = Imports(config.use_exact_imports)
+        self.use_exact_imports: bool = config.use_exact_imports
+        self._append_additional_imports(additional_imports=config.additional_imports)
+        self.class_decorators: list[str] = config.class_decorators or []
 
-        self.base_class: str | None = base_class
-        self.base_class_map: dict[str, str] | None = base_class_map
-        self.target_python_version: PythonVersion = target_python_version
+        self.base_class: str | None = config.base_class
+        self.base_class_map: dict[str, str] | None = config.base_class_map
+        self.target_python_version: PythonVersion = config.target_python_version
         self.results: list[DataModel] = []
-        self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = dump_resolve_reference_action
-        self.validation: bool = validation
-        self.field_constraints: bool = field_constraints
-        self.snake_case_field: bool = snake_case_field
-        self.strip_default_none: bool = strip_default_none
-        self.apply_default_values_for_required_fields: bool = apply_default_values_for_required_fields
-        self.force_optional_for_required_fields: bool = force_optional_for_required_fields
-        self.use_schema_description: bool = use_schema_description
-        self.use_field_description: bool = use_field_description
-        self.use_field_description_example: bool = use_field_description_example
-        self.use_inline_field_description: bool = use_inline_field_description
-        self.use_default_kwarg: bool = use_default_kwarg
-        self.reuse_model: bool = reuse_model
-        self.reuse_scope: ReuseScope | None = reuse_scope
-        self.shared_module_name: str = shared_module_name
-        self.encoding: str = encoding
-        self.enum_field_as_literal: LiteralType | None = enum_field_as_literal
-        self.enum_field_as_literal_map: dict[str, str] = enum_field_as_literal_map or {}
-        self.ignore_enum_constraints: bool = ignore_enum_constraints
-        self.set_default_enum_member: bool = set_default_enum_member
-        self.use_subclass_enum: bool = use_subclass_enum
-        self.use_specialized_enum: bool = use_specialized_enum
-        self.strict_nullable: bool = strict_nullable
-        self.use_generic_container_types: bool = use_generic_container_types
-        self.use_union_operator: bool = use_union_operator
-        self.enable_faux_immutability: bool = enable_faux_immutability
-        self.custom_class_name_generator: Callable[[str], str] | None = custom_class_name_generator
-        self.field_extra_keys: set[str] = field_extra_keys or set()
-        self.field_extra_keys_without_x_prefix: set[str] = field_extra_keys_without_x_prefix or set()
-        self.model_extra_keys: set[str] = model_extra_keys or set()
-        self.model_extra_keys_without_x_prefix: set[str] = model_extra_keys_without_x_prefix or set()
-        self.field_include_all_keys: bool = field_include_all_keys
+        self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
+        self.validation: bool = config.validation
+        self.field_constraints: bool = config.field_constraints
+        self.snake_case_field: bool = config.snake_case_field
+        self.strip_default_none: bool = config.strip_default_none
+        self.apply_default_values_for_required_fields: bool = config.apply_default_values_for_required_fields
+        self.force_optional_for_required_fields: bool = config.force_optional_for_required_fields
+        self.use_schema_description: bool = config.use_schema_description
+        self.use_field_description: bool = config.use_field_description
+        self.use_field_description_example: bool = config.use_field_description_example
+        self.use_inline_field_description: bool = config.use_inline_field_description
+        self.use_default_kwarg: bool = config.use_default_kwarg
+        self.reuse_model: bool = config.reuse_model
+        self.reuse_scope: ReuseScope | None = config.reuse_scope
+        self.shared_module_name: str = config.shared_module_name
+        self.encoding: str = config.encoding
+        self.enum_field_as_literal: LiteralType | None = config.enum_field_as_literal
+        self.enum_field_as_literal_map: dict[str, str] = config.enum_field_as_literal_map or {}
+        self.ignore_enum_constraints: bool = config.ignore_enum_constraints
+        self.set_default_enum_member: bool = config.set_default_enum_member
+        self.use_subclass_enum: bool = config.use_subclass_enum
+        self.use_specialized_enum: bool = config.use_specialized_enum
+        self.strict_nullable: bool = config.strict_nullable
+        self.use_generic_container_types: bool = config.use_generic_container_types
+        self.use_union_operator: bool = config.use_union_operator
+        self.enable_faux_immutability: bool = config.enable_faux_immutability
+        self.custom_class_name_generator: Callable[[str], str] | None = config.custom_class_name_generator
+        self.field_extra_keys: set[str] = config.field_extra_keys or set()
+        self.field_extra_keys_without_x_prefix: set[str] = config.field_extra_keys_without_x_prefix or set()
+        self.model_extra_keys: set[str] = config.model_extra_keys or set()
+        self.model_extra_keys_without_x_prefix: set[str] = config.model_extra_keys_without_x_prefix or set()
+        self.field_include_all_keys: bool = config.field_include_all_keys
 
-        self.remote_text_cache: DefaultPutDict[str, str] = remote_text_cache or DefaultPutDict()
+        self.remote_text_cache: DefaultPutDict[str, str] = config.remote_text_cache or DefaultPutDict()
         self.current_source_path: Path | None = None
-        self.use_title_as_name: bool = use_title_as_name
-        self.use_operation_id_as_name: bool = use_operation_id_as_name
-        self.use_unique_items_as_set: bool = use_unique_items_as_set
-        self.use_tuple_for_fixed_items: bool = use_tuple_for_fixed_items
-        self.allof_merge_mode: AllOfMergeMode = allof_merge_mode
-        self.allof_class_hierarchy: AllOfClassHierarchy = allof_class_hierarchy
-        self.dataclass_arguments = dataclass_arguments
+        self.use_title_as_name: bool = config.use_title_as_name
+        self.use_operation_id_as_name: bool = config.use_operation_id_as_name
+        self.use_unique_items_as_set: bool = config.use_unique_items_as_set
+        self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
+        self.allof_merge_mode: AllOfMergeMode = config.allof_merge_mode
+        self.allof_class_hierarchy: AllOfClassHierarchy = config.allof_class_hierarchy
+        self.dataclass_arguments = config.dataclass_arguments
 
-        if base_path:
-            self.base_path = base_path
+        if config.base_path:
+            self.base_path = config.base_path
         elif isinstance(source, Path):
             self.base_path = source.absolute() if source.is_dir() else source.absolute().parent
         else:
             self.base_path = Path.cwd()
 
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
-        self.custom_template_dir = custom_template_dir
-        self.extra_template_data: defaultdict[str, Any] = extra_template_data or defaultdict(dict)
+        self.custom_template_dir = config.custom_template_dir
+        self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
 
-        self.use_generic_base_class: bool = use_generic_base_class
+        self.use_generic_base_class: bool = config.use_generic_base_class
         self.generic_base_class_config: dict[str, Any] = {}
 
-        if allow_population_by_field_name:
-            if use_generic_base_class:
+        if config.allow_population_by_field_name:
+            if config.use_generic_base_class:
                 self.generic_base_class_config["allow_population_by_field_name"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["allow_population_by_field_name"] = True
 
-        if allow_extra_fields:
-            if use_generic_base_class:
+        if config.allow_extra_fields:
+            if config.use_generic_base_class:
                 self.generic_base_class_config["allow_extra_fields"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["allow_extra_fields"] = True
 
-        if extra_fields:
-            if use_generic_base_class:
-                self.generic_base_class_config["extra_fields"] = extra_fields
+        if config.extra_fields:
+            if config.use_generic_base_class:
+                self.generic_base_class_config["extra_fields"] = config.extra_fields
             else:
-                self.extra_template_data[ALL_MODEL]["extra_fields"] = extra_fields
+                self.extra_template_data[ALL_MODEL]["extra_fields"] = config.extra_fields
 
-        if enable_faux_immutability:
-            if use_generic_base_class:
+        if config.enable_faux_immutability:
+            if config.use_generic_base_class:
                 self.generic_base_class_config["allow_mutation"] = False
             else:
                 self.extra_template_data[ALL_MODEL]["allow_mutation"] = False
 
-        if use_attribute_docstrings:
-            if use_generic_base_class:
+        if config.use_attribute_docstrings:
+            if config.use_generic_base_class:
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
 
-        if target_pydantic_version:
-            if use_generic_base_class:
-                self.generic_base_class_config["target_pydantic_version"] = target_pydantic_version
+        if config.target_pydantic_version:
+            if config.use_generic_base_class:
+                self.generic_base_class_config["target_pydantic_version"] = config.target_pydantic_version
             else:
-                self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = target_pydantic_version
+                self.extra_template_data[ALL_MODEL]["target_pydantic_version"] = config.target_pydantic_version
 
         self.model_resolver = ModelResolver(
             base_url=source.geturl() if isinstance(source, ParseResult) else None,
-            singular_name_suffix="" if disable_appending_item_suffix else None,
-            aliases=aliases,
-            empty_field_name=empty_enum_field_name,
-            snake_case_field=snake_case_field,
-            custom_class_name_generator=custom_class_name_generator,
+            singular_name_suffix="" if config.disable_appending_item_suffix else None,
+            aliases=config.aliases,
+            empty_field_name=config.empty_enum_field_name,
+            snake_case_field=config.snake_case_field,
+            custom_class_name_generator=config.custom_class_name_generator,
             base_path=self.base_path,
-            original_field_name_delimiter=original_field_name_delimiter,
-            special_field_name_prefix=special_field_name_prefix,
-            remove_special_field_name_prefix=remove_special_field_name_prefix,
-            capitalise_enum_members=capitalise_enum_members,
-            no_alias=no_alias,
-            parent_scoped_naming=parent_scoped_naming,
-            treat_dot_as_module=treat_dot_as_module,
-            naming_strategy=naming_strategy,
-            duplicate_name_suffix_map=duplicate_name_suffix,
+            original_field_name_delimiter=config.original_field_name_delimiter,
+            special_field_name_prefix=config.special_field_name_prefix,
+            remove_special_field_name_prefix=config.remove_special_field_name_prefix,
+            capitalise_enum_members=config.capitalise_enum_members,
+            no_alias=config.no_alias,
+            parent_scoped_naming=config.parent_scoped_naming,
+            treat_dot_as_module=config.treat_dot_as_module,
+            naming_strategy=config.naming_strategy,
+            duplicate_name_suffix_map=config.duplicate_name_suffix,
         )
-        self.class_name: str | None = class_name
-        self.wrap_string_literal: bool | None = wrap_string_literal
-        self.http_headers: Sequence[tuple[str, str]] | None = http_headers
-        self.http_query_parameters: Sequence[tuple[str, str]] | None = http_query_parameters
-        self.http_ignore_tls: bool = http_ignore_tls
-        self.http_timeout: float | None = http_timeout
-        self.use_annotated: bool = use_annotated
+        self.class_name: str | None = config.class_name
+        self.wrap_string_literal: bool | None = config.wrap_string_literal
+        self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
+        self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
+        self.http_ignore_tls: bool = config.http_ignore_tls
+        self.http_timeout: float | None = config.http_timeout
+        self.use_annotated: bool = config.use_annotated
         if self.use_annotated and not self.field_constraints:  # pragma: no cover
             msg = "`use_annotated=True` has to be used with `field_constraints=True`"
             raise Exception(msg)  # noqa: TRY002
-        self.use_serialize_as_any: bool = use_serialize_as_any
-        self.use_non_positive_negative_number_constrained_types = use_non_positive_negative_number_constrained_types
-        self.use_double_quotes = use_double_quotes
-        self.allow_responses_without_content = allow_responses_without_content
-        self.collapse_root_models = collapse_root_models
-        self.collapse_root_models_name_strategy = collapse_root_models_name_strategy
-        self.collapse_reuse_models = collapse_reuse_models
-        self.skip_root_model = skip_root_model
-        self.use_type_alias = use_type_alias
-        self.capitalise_enum_members = capitalise_enum_members
-        self.keep_model_order = keep_model_order
-        self.use_one_literal_as_default = use_one_literal_as_default
-        self.use_enum_values_in_discriminator = use_enum_values_in_discriminator
-        self.known_third_party = known_third_party
-        self.custom_formatter = custom_formatters
-        self.custom_formatters_kwargs = custom_formatters_kwargs
-        self.treat_dot_as_module = treat_dot_as_module
-        self.default_field_extras: dict[str, Any] | None = default_field_extras
-        self.formatters: list[Formatter] = formatters
-        self.defer_formatting: bool = defer_formatting
-        self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(type_mappings)
-        self.type_overrides: dict[str, str] = type_overrides or {}
+        self.use_serialize_as_any: bool = config.use_serialize_as_any
+        self.use_non_positive_negative_number_constrained_types = (
+            config.use_non_positive_negative_number_constrained_types
+        )
+        self.use_double_quotes = config.use_double_quotes
+        self.allow_responses_without_content = config.allow_responses_without_content
+        self.collapse_root_models = config.collapse_root_models
+        self.collapse_root_models_name_strategy = config.collapse_root_models_name_strategy
+        self.collapse_reuse_models = config.collapse_reuse_models
+        self.skip_root_model = config.skip_root_model
+        self.use_type_alias = config.use_type_alias
+        self.capitalise_enum_members = config.capitalise_enum_members
+        self.keep_model_order = config.keep_model_order
+        self.use_one_literal_as_default = config.use_one_literal_as_default
+        self.use_enum_values_in_discriminator = config.use_enum_values_in_discriminator
+        self.known_third_party = config.known_third_party
+        self.custom_formatter = config.custom_formatters
+        self.custom_formatters_kwargs = config.custom_formatters_kwargs
+        self.treat_dot_as_module = config.treat_dot_as_module
+        self.default_field_extras: dict[str, Any] | None = config.default_field_extras
+        self.formatters: list[Formatter] = config.formatters
+        self.defer_formatting: bool = config.defer_formatting
+        self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(config.type_mappings)
+        self.type_overrides: dict[str, str] = config.type_overrides or {}
         self._type_override_imports: dict[str, Import] = {
             key: Import.from_full_path(value) for key, value in self.type_overrides.items()
         }
-        self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = read_only_write_only_model_type
-        self.use_frozen_field: bool = use_frozen_field
-        self.use_default_factory_for_optional_nested_models: bool = use_default_factory_for_optional_nested_models
-        self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = field_type_collision_strategy
+        self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = config.read_only_write_only_model_type
+        self.use_frozen_field: bool = config.use_frozen_field
+        self.use_default_factory_for_optional_nested_models: bool = (
+            config.use_default_factory_for_optional_nested_models
+        )
+        self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
 
     @property
     def field_name_model_type(self) -> ModelType:

@@ -63,7 +63,7 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 
 @snooper_to_methods()
-class GraphQLParser(Parser):
+class GraphQLParser(Parser["ParserConfig"]):
     """Parser for GraphQL schema files."""
 
     # raw graphql schema as `graphql-core` object

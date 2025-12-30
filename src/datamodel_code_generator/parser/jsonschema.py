@@ -523,7 +523,7 @@ EXCLUDE_FIELD_KEYS = (
 
 
 @snooper_to_methods()  # noqa: PLR0904
-class JsonSchemaParser(Parser):
+class JsonSchemaParser(Parser["ParserConfig"]):
     """Parser for JSON Schema, JSON, YAML, Dict, and CSV formats."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]

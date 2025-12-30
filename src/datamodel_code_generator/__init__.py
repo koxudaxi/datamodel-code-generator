@@ -493,129 +493,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             GenerateConfig.update_forward_refs(StrictTypes=StrictTypes, UnionMode=UnionMode)
             config = GenerateConfig(**options)
 
-    # Extract config values to local variables for use throughout the function
+    # Variables that may be modified during processing
     input_filename = config.input_filename
     input_file_type = config.input_file_type
-    output = config.output
-    output_model_type = config.output_model_type
-    target_python_version = config.target_python_version
-    target_pydantic_version = config.target_pydantic_version
-    base_class = config.base_class
-    base_class_map = config.base_class_map
-    additional_imports = config.additional_imports
-    class_decorators = config.class_decorators
-    custom_template_dir = config.custom_template_dir
     extra_template_data: defaultdict[str, dict[str, Any]] | None = None
     if config.extra_template_data is not None:
         extra_template_data = defaultdict(dict, config.extra_template_data)
-    validation = config.validation
-    field_constraints = config.field_constraints
-    snake_case_field = config.snake_case_field
-    strip_default_none = config.strip_default_none
-    aliases = config.aliases
-    disable_timestamp = config.disable_timestamp
-    enable_version_header = config.enable_version_header
-    enable_command_header = config.enable_command_header
-    command_line = config.command_line
-    allow_population_by_field_name = config.allow_population_by_field_name
-    allow_extra_fields = config.allow_extra_fields
-    extra_fields = config.extra_fields
-    use_generic_base_class = config.use_generic_base_class
-    apply_default_values_for_required_fields = config.apply_default_values_for_required_fields
-    force_optional_for_required_fields = config.force_optional_for_required_fields
-    class_name = config.class_name
-    use_standard_collections = config.use_standard_collections
-    use_schema_description = config.use_schema_description
-    use_field_description = config.use_field_description
-    use_field_description_example = config.use_field_description_example
-    use_attribute_docstrings = config.use_attribute_docstrings
-    use_inline_field_description = config.use_inline_field_description
-    use_default_kwarg = config.use_default_kwarg
-    reuse_model = config.reuse_model
-    reuse_scope = config.reuse_scope
-    shared_module_name = config.shared_module_name
-    encoding = config.encoding
-    enum_field_as_literal = config.enum_field_as_literal
-    enum_field_as_literal_map = config.enum_field_as_literal_map
-    ignore_enum_constraints = config.ignore_enum_constraints
-    use_one_literal_as_default = config.use_one_literal_as_default
-    use_enum_values_in_discriminator = config.use_enum_values_in_discriminator
-    set_default_enum_member = config.set_default_enum_member
-    use_subclass_enum = config.use_subclass_enum
-    use_specialized_enum = config.use_specialized_enum
-    strict_nullable = config.strict_nullable
-    use_generic_container_types = config.use_generic_container_types
-    enable_faux_immutability = config.enable_faux_immutability
-    disable_appending_item_suffix = config.disable_appending_item_suffix
-    strict_types = config.strict_types
-    empty_enum_field_name = config.empty_enum_field_name
-    custom_class_name_generator = config.custom_class_name_generator
-    field_extra_keys = config.field_extra_keys
-    field_include_all_keys = config.field_include_all_keys
-    field_extra_keys_without_x_prefix = config.field_extra_keys_without_x_prefix
-    model_extra_keys = config.model_extra_keys
-    model_extra_keys_without_x_prefix = config.model_extra_keys_without_x_prefix
-    openapi_scopes = config.openapi_scopes
-    include_path_parameters = config.include_path_parameters
-    wrap_string_literal = config.wrap_string_literal
-    use_title_as_name = config.use_title_as_name
-    use_operation_id_as_name = config.use_operation_id_as_name
-    use_unique_items_as_set = config.use_unique_items_as_set
-    use_tuple_for_fixed_items = config.use_tuple_for_fixed_items
-    allof_merge_mode = config.allof_merge_mode
-    allof_class_hierarchy = config.allof_class_hierarchy
-    http_headers = config.http_headers
-    http_ignore_tls = config.http_ignore_tls
-    http_timeout = config.http_timeout
-    use_annotated = config.use_annotated
-    use_serialize_as_any = config.use_serialize_as_any
-    use_non_positive_negative_number_constrained_types = config.use_non_positive_negative_number_constrained_types
-    use_decimal_for_multiple_of = config.use_decimal_for_multiple_of
-    original_field_name_delimiter = config.original_field_name_delimiter
-    use_double_quotes = config.use_double_quotes
-    use_union_operator = config.use_union_operator
-    collapse_root_models = config.collapse_root_models
-    collapse_root_models_name_strategy = config.collapse_root_models_name_strategy
-    collapse_reuse_models = config.collapse_reuse_models
-    skip_root_model = config.skip_root_model
-    use_type_alias = config.use_type_alias
-    use_root_model_type_alias = config.use_root_model_type_alias
-    special_field_name_prefix = config.special_field_name_prefix
-    remove_special_field_name_prefix = config.remove_special_field_name_prefix
-    capitalise_enum_members = config.capitalise_enum_members
-    keep_model_order = config.keep_model_order
-    custom_file_header = config.custom_file_header
-    custom_file_header_path = config.custom_file_header_path
-    custom_formatters = config.custom_formatters
-    custom_formatters_kwargs = config.custom_formatters_kwargs
-    use_pendulum = config.use_pendulum
-    use_standard_primitive_types = config.use_standard_primitive_types
-    http_query_parameters = config.http_query_parameters
-    treat_dot_as_module = config.treat_dot_as_module
-    use_exact_imports = config.use_exact_imports
-    union_mode = config.union_mode
-    output_datetime_class = config.output_datetime_class
-    output_date_class = config.output_date_class
-    keyword_only = config.keyword_only
-    frozen_dataclasses = config.frozen_dataclasses
-    no_alias = config.no_alias
-    use_frozen_field = config.use_frozen_field
-    use_default_factory_for_optional_nested_models = config.use_default_factory_for_optional_nested_models
-    formatters = config.formatters
-    settings_path = config.settings_path
-    parent_scoped_naming = config.parent_scoped_naming
-    naming_strategy = config.naming_strategy
-    duplicate_name_suffix = config.duplicate_name_suffix
     dataclass_arguments = config.dataclass_arguments
-    disable_future_imports = config.disable_future_imports
-    type_mappings = config.type_mappings
-    type_overrides = config.type_overrides
-    read_only_write_only_model_type = config.read_only_write_only_model_type
-    use_status_code_in_response_name = config.use_status_code_in_response_name
-    all_exports_scope = config.all_exports_scope
-    all_exports_collision_strategy = config.all_exports_collision_strategy
-    field_type_collision_strategy = config.field_type_collision_strategy
-    module_split_mode = config.module_split_mode
+    custom_file_header = config.custom_file_header
 
     remote_text_cache: DefaultPutDict[str, str] = DefaultPutDict()
     match input_:
@@ -624,11 +509,15 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         case ParseResult():
             from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415
 
-            timeout = http_timeout if http_timeout is not None else DEFAULT_HTTP_TIMEOUT
+            timeout = config.http_timeout if config.http_timeout is not None else DEFAULT_HTTP_TIMEOUT
             input_text = remote_text_cache.get_or_put(
                 input_.geturl(),
                 default_factory=lambda url: get_body(
-                    url, http_headers, http_ignore_tls, http_query_parameters, timeout
+                    url,
+                    config.http_headers,
+                    config.http_ignore_tls,
+                    config.http_query_parameters,
+                    timeout,
                 ),
             )
         case _:
@@ -636,9 +525,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     if dataclass_arguments is None:
         dataclass_arguments = DataclassArguments()
-        if frozen_dataclasses:
+        if config.frozen_dataclasses:
             dataclass_arguments["frozen"] = True
-        if keyword_only:
+        if config.keyword_only:
             dataclass_arguments["kw_only"] = True
 
     if isinstance(input_, Path) and not input_.is_absolute():
@@ -669,7 +558,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     if input_file_type == InputFileType.Auto:
         try:
             input_text_ = (
-                get_first_file(input_).read_text(encoding=encoding) if isinstance(input_, Path) else input_text
+                get_first_file(input_).read_text(encoding=config.encoding) if isinstance(input_, Path) else input_text
             )
         except FileNotFoundError as exc:
             msg = "File not found"
@@ -695,9 +584,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
         parser_class: type[Parser] = OpenAPIParser
-        kwargs["openapi_scopes"] = openapi_scopes
-        kwargs["include_path_parameters"] = include_path_parameters
-        kwargs["use_status_code_in_response_name"] = use_status_code_in_response_name
+        kwargs["openapi_scopes"] = config.openapi_scopes
+        kwargs["include_path_parameters"] = config.include_path_parameters
+        kwargs["use_status_code_in_response_name"] = config.use_status_code_in_response_name
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -724,7 +613,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                         return dict(zip(csv_reader.fieldnames, next(csv_reader), strict=False))
 
                     if isinstance(input_, Path):
-                        with input_.open(encoding=encoding) as f:
+                        with input_.open(encoding=config.encoding) as f:
                             obj = get_header_and_first_line(f)
                     else:
                         import io  # noqa: PLC0415
@@ -732,13 +621,13 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
                         obj = get_header_and_first_line(io.StringIO(input_text))
                 elif input_file_type == InputFileType.Yaml:
                     if isinstance(input_, Path):
-                        obj = load_yaml_dict(input_.read_text(encoding=encoding))
+                        obj = load_yaml_dict(input_.read_text(encoding=config.encoding))
                     else:  # pragma: no cover
                         assert input_text is not None
                         obj = load_yaml_dict(input_text)
                 elif input_file_type == InputFileType.Json:
                     if isinstance(input_, Path):
-                        obj = json.loads(input_.read_text(encoding=encoding))
+                        obj = json.loads(input_.read_text(encoding=config.encoding))
                     else:
                         assert input_text is not None
                         obj = json.loads(input_text)
@@ -747,7 +636,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
                     # Input can be a dict object stored in a python file
                     obj = (
-                        ast.literal_eval(input_.read_text(encoding=encoding))
+                        ast.literal_eval(input_.read_text(encoding=config.encoding))
                         if isinstance(input_, Path)
                         else cast("dict[str, Any]", input_)
                     )
@@ -768,9 +657,9 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     if isinstance(input_, ParseResult) and input_file_type not in RAW_DATA_TYPES:
         input_text = None
 
-    if union_mode is not None:
-        if output_model_type == DataModelType.PydanticV2BaseModel:
-            default_field_extras = {"union_mode": union_mode}
+    if config.union_mode is not None:
+        if config.output_model_type == DataModelType.PydanticV2BaseModel:
+            default_field_extras = {"union_mode": config.union_mode}
         else:  # pragma: no cover
             msg = "union_mode is only supported for pydantic_v2.BaseModel"
             raise Error(msg)
@@ -780,10 +669,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     from datamodel_code_generator.model import get_data_model_types  # noqa: PLC0415
 
     data_model_types = get_data_model_types(
-        output_model_type,
-        target_python_version,
-        use_type_alias=use_type_alias,
-        use_root_model_type_alias=use_root_model_type_alias,
+        config.output_model_type,
+        config.target_python_version,
+        use_type_alias=config.use_type_alias,
+        use_root_model_type_alias=config.use_root_model_type_alias,
     )
 
     # Add GraphQL-specific model types if needed
@@ -797,7 +686,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         source = input_text or input_
         assert not isinstance(source, Mapping)
 
-    defer_formatting = output is not None and not output.suffix
+    defer_formatting = config.output is not None and not config.output.suffix
 
     parser = parser_class(
         source=source,
@@ -805,126 +694,126 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         data_model_root_type=data_model_types.root_model,
         data_model_field_type=data_model_types.field_model,
         data_type_manager_type=data_model_types.data_type_manager,
-        base_class=base_class,
-        base_class_map=base_class_map,
-        additional_imports=additional_imports,
-        class_decorators=class_decorators,
-        custom_template_dir=custom_template_dir,
+        base_class=config.base_class,
+        base_class_map=config.base_class_map,
+        additional_imports=config.additional_imports,
+        class_decorators=config.class_decorators,
+        custom_template_dir=config.custom_template_dir,
         extra_template_data=extra_template_data,
-        target_python_version=target_python_version,
+        target_python_version=config.target_python_version,
         dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
-        validation=validation,
-        field_constraints=field_constraints,
-        snake_case_field=snake_case_field,
-        strip_default_none=strip_default_none,
-        aliases=aliases,
-        allow_population_by_field_name=allow_population_by_field_name,
-        allow_extra_fields=allow_extra_fields,
-        extra_fields=extra_fields,
-        use_generic_base_class=use_generic_base_class,
-        apply_default_values_for_required_fields=apply_default_values_for_required_fields,
-        force_optional_for_required_fields=force_optional_for_required_fields,
-        class_name=class_name,
-        use_standard_collections=use_standard_collections,
+        validation=config.validation,
+        field_constraints=config.field_constraints,
+        snake_case_field=config.snake_case_field,
+        strip_default_none=config.strip_default_none,
+        aliases=config.aliases,
+        allow_population_by_field_name=config.allow_population_by_field_name,
+        allow_extra_fields=config.allow_extra_fields,
+        extra_fields=config.extra_fields,
+        use_generic_base_class=config.use_generic_base_class,
+        apply_default_values_for_required_fields=config.apply_default_values_for_required_fields,
+        force_optional_for_required_fields=config.force_optional_for_required_fields,
+        class_name=config.class_name,
+        use_standard_collections=config.use_standard_collections,
         base_path=input_.parent if isinstance(input_, Path) and input_.is_file() else None,
-        use_schema_description=use_schema_description,
-        use_field_description=use_field_description,
-        use_field_description_example=use_field_description_example,
-        use_attribute_docstrings=use_attribute_docstrings,
-        use_inline_field_description=use_inline_field_description,
-        use_default_kwarg=use_default_kwarg,
-        reuse_model=reuse_model,
-        reuse_scope=reuse_scope,
-        shared_module_name=shared_module_name,
-        enum_field_as_literal=enum_field_as_literal
-        if enum_field_as_literal is not None
-        else (LiteralType.All if output_model_type == DataModelType.TypingTypedDict else None),
-        enum_field_as_literal_map=enum_field_as_literal_map,
-        ignore_enum_constraints=ignore_enum_constraints,
-        use_one_literal_as_default=use_one_literal_as_default,
-        use_enum_values_in_discriminator=use_enum_values_in_discriminator,
+        use_schema_description=config.use_schema_description,
+        use_field_description=config.use_field_description,
+        use_field_description_example=config.use_field_description_example,
+        use_attribute_docstrings=config.use_attribute_docstrings,
+        use_inline_field_description=config.use_inline_field_description,
+        use_default_kwarg=config.use_default_kwarg,
+        reuse_model=config.reuse_model,
+        reuse_scope=config.reuse_scope,
+        shared_module_name=config.shared_module_name,
+        enum_field_as_literal=config.enum_field_as_literal
+        if config.enum_field_as_literal is not None
+        else (LiteralType.All if config.output_model_type == DataModelType.TypingTypedDict else None),
+        enum_field_as_literal_map=config.enum_field_as_literal_map,
+        ignore_enum_constraints=config.ignore_enum_constraints,
+        use_one_literal_as_default=config.use_one_literal_as_default,
+        use_enum_values_in_discriminator=config.use_enum_values_in_discriminator,
         set_default_enum_member=True
-        if output_model_type == DataModelType.DataclassesDataclass
-        else set_default_enum_member,
-        use_subclass_enum=use_subclass_enum,
-        use_specialized_enum=use_specialized_enum,
-        strict_nullable=strict_nullable,
-        use_generic_container_types=use_generic_container_types,
-        enable_faux_immutability=enable_faux_immutability,
+        if config.output_model_type == DataModelType.DataclassesDataclass
+        else config.set_default_enum_member,
+        use_subclass_enum=config.use_subclass_enum,
+        use_specialized_enum=config.use_specialized_enum,
+        strict_nullable=config.strict_nullable,
+        use_generic_container_types=config.use_generic_container_types,
+        enable_faux_immutability=config.enable_faux_immutability,
         remote_text_cache=remote_text_cache,
-        disable_appending_item_suffix=disable_appending_item_suffix,
-        strict_types=strict_types,
-        empty_enum_field_name=empty_enum_field_name,
-        custom_class_name_generator=custom_class_name_generator,
-        field_extra_keys=field_extra_keys,
-        field_include_all_keys=field_include_all_keys,
-        field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
-        model_extra_keys=model_extra_keys,
-        model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
-        wrap_string_literal=wrap_string_literal,
-        use_title_as_name=use_title_as_name,
-        use_operation_id_as_name=use_operation_id_as_name,
-        use_unique_items_as_set=use_unique_items_as_set,
-        use_tuple_for_fixed_items=use_tuple_for_fixed_items,
-        allof_merge_mode=allof_merge_mode,
-        allof_class_hierarchy=allof_class_hierarchy,
-        http_headers=http_headers,
-        http_ignore_tls=http_ignore_tls,
-        http_timeout=http_timeout,
-        use_annotated=use_annotated,
-        use_serialize_as_any=use_serialize_as_any,
-        use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-        use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-        original_field_name_delimiter=original_field_name_delimiter,
-        use_double_quotes=use_double_quotes,
-        use_union_operator=use_union_operator,
-        collapse_root_models=collapse_root_models,
-        collapse_root_models_name_strategy=collapse_root_models_name_strategy,
-        collapse_reuse_models=collapse_reuse_models,
-        skip_root_model=skip_root_model,
-        use_type_alias=use_type_alias,
-        special_field_name_prefix=special_field_name_prefix,
-        remove_special_field_name_prefix=remove_special_field_name_prefix,
-        capitalise_enum_members=capitalise_enum_members,
-        keep_model_order=keep_model_order,
+        disable_appending_item_suffix=config.disable_appending_item_suffix,
+        strict_types=config.strict_types,
+        empty_enum_field_name=config.empty_enum_field_name,
+        custom_class_name_generator=config.custom_class_name_generator,
+        field_extra_keys=config.field_extra_keys,
+        field_include_all_keys=config.field_include_all_keys,
+        field_extra_keys_without_x_prefix=config.field_extra_keys_without_x_prefix,
+        model_extra_keys=config.model_extra_keys,
+        model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
+        wrap_string_literal=config.wrap_string_literal,
+        use_title_as_name=config.use_title_as_name,
+        use_operation_id_as_name=config.use_operation_id_as_name,
+        use_unique_items_as_set=config.use_unique_items_as_set,
+        use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
+        allof_merge_mode=config.allof_merge_mode,
+        allof_class_hierarchy=config.allof_class_hierarchy,
+        http_headers=config.http_headers,
+        http_ignore_tls=config.http_ignore_tls,
+        http_timeout=config.http_timeout,
+        use_annotated=config.use_annotated,
+        use_serialize_as_any=config.use_serialize_as_any,
+        use_non_positive_negative_number_constrained_types=config.use_non_positive_negative_number_constrained_types,
+        use_decimal_for_multiple_of=config.use_decimal_for_multiple_of,
+        original_field_name_delimiter=config.original_field_name_delimiter,
+        use_double_quotes=config.use_double_quotes,
+        use_union_operator=config.use_union_operator,
+        collapse_root_models=config.collapse_root_models,
+        collapse_root_models_name_strategy=config.collapse_root_models_name_strategy,
+        collapse_reuse_models=config.collapse_reuse_models,
+        skip_root_model=config.skip_root_model,
+        use_type_alias=config.use_type_alias,
+        special_field_name_prefix=config.special_field_name_prefix,
+        remove_special_field_name_prefix=config.remove_special_field_name_prefix,
+        capitalise_enum_members=config.capitalise_enum_members,
+        keep_model_order=config.keep_model_order,
         known_third_party=data_model_types.known_third_party,
-        custom_formatters=custom_formatters,
-        custom_formatters_kwargs=custom_formatters_kwargs,
-        use_pendulum=use_pendulum,
-        use_standard_primitive_types=use_standard_primitive_types,
-        http_query_parameters=http_query_parameters,
-        treat_dot_as_module=treat_dot_as_module,
-        use_exact_imports=use_exact_imports,
+        custom_formatters=config.custom_formatters,
+        custom_formatters_kwargs=config.custom_formatters_kwargs,
+        use_pendulum=config.use_pendulum,
+        use_standard_primitive_types=config.use_standard_primitive_types,
+        http_query_parameters=config.http_query_parameters,
+        treat_dot_as_module=config.treat_dot_as_module,
+        use_exact_imports=config.use_exact_imports,
         default_field_extras=default_field_extras,
-        target_datetime_class=output_datetime_class,
-        target_date_class=output_date_class,
-        keyword_only=keyword_only,
-        frozen_dataclasses=frozen_dataclasses,
-        no_alias=no_alias,
-        use_frozen_field=use_frozen_field,
-        use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-        formatters=formatters,
+        target_datetime_class=config.output_datetime_class,
+        target_date_class=config.output_date_class,
+        keyword_only=config.keyword_only,
+        frozen_dataclasses=config.frozen_dataclasses,
+        no_alias=config.no_alias,
+        use_frozen_field=config.use_frozen_field,
+        use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
+        formatters=config.formatters,
         defer_formatting=defer_formatting,
-        encoding=encoding,
-        parent_scoped_naming=parent_scoped_naming,
-        naming_strategy=naming_strategy,
-        duplicate_name_suffix=duplicate_name_suffix,
+        encoding=config.encoding,
+        parent_scoped_naming=config.parent_scoped_naming,
+        naming_strategy=config.naming_strategy,
+        duplicate_name_suffix=config.duplicate_name_suffix,
         dataclass_arguments=dataclass_arguments,
-        type_mappings=type_mappings,
-        type_overrides=type_overrides,
-        read_only_write_only_model_type=read_only_write_only_model_type,
-        field_type_collision_strategy=field_type_collision_strategy,
-        target_pydantic_version=target_pydantic_version,
+        type_mappings=config.type_mappings,
+        type_overrides=config.type_overrides,
+        read_only_write_only_model_type=config.read_only_write_only_model_type,
+        field_type_collision_strategy=config.field_type_collision_strategy,
+        target_pydantic_version=config.target_pydantic_version,
         **kwargs,
     )
 
-    with chdir(output):
+    with chdir(config.output):
         results = parser.parse(
-            settings_path=settings_path,
-            disable_future_imports=disable_future_imports,
-            all_exports_scope=all_exports_scope,
-            all_exports_collision_strategy=all_exports_collision_strategy,
-            module_split_mode=module_split_mode,
+            settings_path=config.settings_path,
+            disable_future_imports=config.disable_future_imports,
+            all_exports_scope=config.all_exports_scope,
+            all_exports_collision_strategy=config.all_exports_collision_strategy,
+            module_split_mode=config.module_split_mode,
         )
     if not input_filename:  # pragma: no cover
         match input_:
@@ -942,22 +831,22 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         raise Error(msg)
     timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
-    if custom_file_header is None and custom_file_header_path:
-        custom_file_header = custom_file_header_path.read_text(encoding=encoding)
+    if custom_file_header is None and config.custom_file_header_path:
+        custom_file_header = config.custom_file_header_path.read_text(encoding=config.encoding)
 
     header = """\
 # generated by datamodel-codegen:
 #   filename:  {}"""
-    if not disable_timestamp:
+    if not config.disable_timestamp:
         header += f"\n#   timestamp: {timestamp}"
-    if enable_version_header:
+    if config.enable_version_header:
         header += f"\n#   version:   {get_version()}"
-    if enable_command_header and command_line:
-        safe_command_line = command_line.replace("\n", " ").replace("\r", " ")
+    if config.enable_command_header and config.command_line:
+        safe_command_line = config.command_line.replace("\n", " ").replace("\r", " ")
         header += f"\n#   command:   {safe_command_line}"
 
     # When output is None, return generated code as string(s) instead of writing to files
-    if output is None:
+    if config.output is None:
         if isinstance(results, str):
             # Single-file output: return str
             safe_filename = input_filename.replace("\n", " ").replace("\r", " ") if input_filename else ""
@@ -973,6 +862,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         return generated
 
     # When output is a Path, write to file system
+    output = config.output
     if isinstance(results, str):
         # Single-file output: body already contains future imports
         body = results
@@ -995,7 +885,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     for path, (body, future_imports, filename) in modules.items():
         if not path.parent.exists():
             path.parent.mkdir(parents=True)
-        file = path.open("wt", encoding=encoding)
+        file = path.open("wt", encoding=config.encoding)
 
         safe_filename = filename.replace("\n", " ").replace("\r", " ") if filename else ""
         effective_header = custom_file_header or header.format(safe_filename)
@@ -1037,17 +927,17 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
         file.close()
 
-    if defer_formatting and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters):
+    if defer_formatting and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters):
         code_formatter = CodeFormatter(
-            target_python_version,
-            settings_path,
-            wrap_string_literal,
-            skip_string_normalization=not use_double_quotes,
+            config.target_python_version,
+            config.settings_path,
+            config.wrap_string_literal,
+            skip_string_normalization=not config.use_double_quotes,
             known_third_party=data_model_types.known_third_party,
-            custom_formatters=custom_formatters,
-            custom_formatters_kwargs=custom_formatters_kwargs,
-            encoding=encoding,
-            formatters=formatters,
+            custom_formatters=config.custom_formatters,
+            custom_formatters_kwargs=config.custom_formatters_kwargs,
+            encoding=config.encoding,
+            formatters=config.formatters,
         )
         code_formatter.format_directory(output)
 
