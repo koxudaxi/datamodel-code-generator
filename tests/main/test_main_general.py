@@ -2063,3 +2063,71 @@ def test_graphql_parser_with_explicit_target_datetime_class() -> None:
 
     parser = GraphQLParser(source="type Query { id: ID }", target_datetime_class=DatetimeClassType.Awaredatetime)
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_jsonschema_parser_with_config_object() -> None:
+    """Test JsonSchemaParser with ParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig(target_datetime_class=DatetimeClassType.Datetime)
+    parser = JsonSchemaParser(source="{}", config=config)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_openapi_parser_with_config_object() -> None:
+    """Test OpenAPIParser with ParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig(wrap_string_literal=True)
+    parser = OpenAPIParser(
+        source='{"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0"}, "paths": {}}',
+        config=config,
+    )
+    assert parser.wrap_string_literal is True
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_graphql_parser_with_config_object() -> None:
+    """Test GraphQLParser with ParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig(target_datetime_class=DatetimeClassType.Awaredatetime)
+    parser = GraphQLParser(source="type Query { id: ID }", config=config)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
