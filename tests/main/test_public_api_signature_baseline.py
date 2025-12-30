@@ -30,6 +30,9 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, YamlValue, title_to_class_name
+from datamodel_code_generator.util import is_pydantic_v2
+
+PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -406,13 +409,9 @@ def test_parser_signature_matches_baseline() -> None:
         assert _kwonly_by_name(actual)[name].annotation == param.annotation
 
 
+@PYDANTIC_V2_SKIP
 def test_generate_config_dict_fields_match_generate_config() -> None:
     """Ensure GenerateConfigDict has same field names as GenerateConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("GenerateConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
 
@@ -421,13 +420,9 @@ def test_generate_config_dict_fields_match_generate_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
+@PYDANTIC_V2_SKIP
 def test_generate_config_dict_types_match_generate_config() -> None:
     """Ensure GenerateConfigDict field types match GenerateConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("GenerateConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig
 
@@ -439,13 +434,9 @@ def test_generate_config_dict_types_match_generate_config() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_parser_config_dict_fields_match_parser_config() -> None:
     """Ensure ParserConfigDict has same field names as ParserConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParserConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
 
@@ -454,13 +445,9 @@ def test_parser_config_dict_fields_match_parser_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
+@PYDANTIC_V2_SKIP
 def test_parse_config_dict_fields_match_parse_config() -> None:
     """Ensure ParseConfigDict has same field names as ParseConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParseConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import ParseConfigDict
     from datamodel_code_generator.config import ParseConfig
 
@@ -469,13 +456,9 @@ def test_parse_config_dict_fields_match_parse_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
+@PYDANTIC_V2_SKIP
 def test_parser_config_dict_types_match_parser_config() -> None:
     """Ensure ParserConfigDict field types match ParserConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParserConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
 
@@ -487,13 +470,9 @@ def test_parser_config_dict_types_match_parser_config() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_parse_config_dict_types_match_parse_config() -> None:
     """Ensure ParseConfigDict field types match ParseConfig."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParseConfig requires Pydantic v2")
-
     from datamodel_code_generator._types import ParseConfigDict
     from datamodel_code_generator.config import ParseConfig
 
@@ -505,13 +484,9 @@ def test_parse_config_dict_types_match_parse_config() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_generate_config_defaults_match_generate_signature() -> None:
     """Ensure GenerateConfig default values match generate() signature defaults."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("GenerateConfig requires Pydantic v2")
-
     from datamodel_code_generator.config import GenerateConfig
 
     expected_sig = inspect.signature(_baseline_generate)
@@ -534,13 +509,9 @@ def test_generate_config_defaults_match_generate_signature() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_parser_config_defaults_match_parser_signature() -> None:
     """Ensure ParserConfig default values match Parser.__init__ signature defaults."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParserConfig requires Pydantic v2")
-
     from datamodel_code_generator.config import ParserConfig
 
     expected_sig = inspect.signature(_BaselineParser.__init__)
@@ -564,13 +535,9 @@ def test_parser_config_defaults_match_parser_signature() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_parse_config_defaults_match_parse_signature() -> None:
     """Ensure ParseConfig default values match Parser.parse() signature defaults."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("ParseConfig requires Pydantic v2")
-
     from datamodel_code_generator.config import ParseConfig
 
     expected_sig = inspect.signature(_BaselineParser.parse)
@@ -591,13 +558,9 @@ def test_parse_config_defaults_match_parse_signature() -> None:
         )
 
 
+@PYDANTIC_V2_SKIP
 def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> None:
     """Ensure generate() with GenerateConfig produces same result as kwargs."""
-    import pydantic
-
-    if pydantic.VERSION < "2.0.0":
-        pytest.skip("GenerateConfig requires Pydantic v2")
-
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.enums import DataModelType
     from datamodel_code_generator.types import StrictTypes
