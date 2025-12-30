@@ -2553,11 +2553,15 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     from __future__ import annotations
     
+    from typing import Literal
+    
     from pydantic import BaseModel, Field, confloat
     
     
     class MapState1(BaseModel):
-        map_view_mode: str = Field("MODE_2D", alias="mapViewMode", const=True)
+        map_view_mode: Literal["MODE_2D"] = Field(
+            "MODE_2D", alias="mapViewMode", const=True
+        )
     
     
     class MapState2(BaseModel):
@@ -2567,8 +2571,10 @@ helps maintain consistency with codebases that prefer double-quote formatting.
         bearing: Bearing | None = None
         pitch: Pitch
         drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
-        map_split_mode: str = Field("SWIPE_COMPARE", alias="mapSplitMode", const=True)
-        is_split: bool = Field(True, alias="isSplit", const=True)
+        map_split_mode: Literal["SWIPE_COMPARE"] = Field(
+            "SWIPE_COMPARE", alias="mapSplitMode", const=True
+        )
+        is_split: Literal[True] = Field(True, alias="isSplit", const=True)
     
     
     class MapState3(BaseModel):

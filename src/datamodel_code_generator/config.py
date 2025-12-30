@@ -13,6 +13,7 @@ from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -85,7 +86,7 @@ class GenerateConfig(BaseModel):
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Mapping[str, str] | None = None
+    aliases: Mapping[str, str | list[str]] | None = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
@@ -137,6 +138,7 @@ class GenerateConfig(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
@@ -220,7 +222,7 @@ class ParserConfig(BaseModel):
     field_constraints: bool = False
     snake_case_field: bool = False
     strip_default_none: bool = False
-    aliases: Mapping[str, str] | None = None
+    aliases: Mapping[str, str | list[str]] | None = None
     allow_population_by_field_name: bool = False
     apply_default_values_for_required_fields: bool = False
     allow_extra_fields: bool = False
@@ -265,6 +267,7 @@ class ParserConfig(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None

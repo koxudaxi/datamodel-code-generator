@@ -1978,6 +1978,7 @@ def test_generate_with_config_object(output_file: Path) -> None:
     GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
     config = GenerateConfig(
         input_filename="test.json",
+        output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
         use_schema_description=True,
         snake_case_field=True,
@@ -1986,7 +1987,6 @@ def test_generate_with_config_object(output_file: Path) -> None:
     )
     generate(
         input_='{"type": "object", "properties": {"userName": {"type": "string"}}}',
-        output=output_file,
         config=config,
     )
     content = output_file.read_text(encoding="utf-8")
@@ -1995,10 +1995,8 @@ def test_generate_with_config_object(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
-def test_generate_with_config_object_extra_template_data_override(output_file: Path) -> None:
-    """Test generate() with extra_template_data passed directly, overriding config."""
-    from collections import defaultdict
-
+def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
+    """Test generate() raises error when both config and kwargs are provided."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import StrictTypes
 
@@ -2006,14 +2004,11 @@ def test_generate_with_config_object_extra_template_data_override(output_file: P
     config = GenerateConfig(
         input_filename="test.json",
         output_model_type=DataModelType.PydanticV2BaseModel,
-        extra_template_data={"Model": {"config_key": "config_value"}},
     )
-    # Pass extra_template_data directly - this should override config value
-    generate(
-        input_='{"type": "object", "properties": {"name": {"type": "string"}}}',
-        output=output_file,
-        config=config,
-        extra_template_data=defaultdict(dict, {"Model": {"direct_key": "direct_value"}}),
-    )
-    content = output_file.read_text(encoding="utf-8")
-    assert "class Model" in content
+    # Passing both config and kwargs should raise ValueError
+    with pytest.raises(ValueError, match="Cannot specify both 'config' and keyword arguments"):
+        generate(
+            input_='{"type": "object", "properties": {"name": {"type": "string"}}}',
+            output=output_file,
+            config=config,
+        )

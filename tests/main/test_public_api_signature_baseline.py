@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import inspect
 import types
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
@@ -13,6 +14,7 @@ from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_N
 from datamodel_code_generator.enums import (
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataModelType,
@@ -70,7 +72,7 @@ def _baseline_generate(
     field_constraints: bool = False,
     snake_case_field: bool = False,
     strip_default_none: bool = False,
-    aliases: Mapping[str, str] | None = None,
+    aliases: Mapping[str, str | list[str]] | None = None,
     disable_timestamp: bool = False,
     enable_version_header: bool = False,
     enable_command_header: bool = False,
@@ -122,6 +124,7 @@ def _baseline_generate(
     use_unique_items_as_set: bool = False,
     use_tuple_for_fixed_items: bool = False,
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
     http_headers: Sequence[tuple[str, str]] | None = None,
     http_ignore_tls: bool = False,
     http_timeout: float | None = None,
@@ -199,7 +202,7 @@ class _BaselineParser:
         field_constraints: bool = False,
         snake_case_field: bool = False,
         strip_default_none: bool = False,
-        aliases: Mapping[str, str] | None = None,
+        aliases: Mapping[str, str | list[str]] | None = None,
         allow_population_by_field_name: bool = False,
         apply_default_values_for_required_fields: bool = False,
         allow_extra_fields: bool = False,
@@ -244,6 +247,7 @@ class _BaselineParser:
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+        allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         http_timeout: float | None = None,
@@ -343,11 +347,64 @@ def _type_to_str(tp: Any) -> str:
 
 
 def _normalize_union_str(type_str: str) -> str:
-    """Normalize a union type string by sorting its components."""
-    if " | " in type_str:
-        parts = [p.strip() for p in type_str.split(" | ")]
-        return " | ".join(sorted(parts))
-    return type_str
+    """Normalize a union type string by sorting its components recursively."""
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:  # pragma: no cover
+        return type_str
+
+    def normalize_node(node: ast.expr) -> str:
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+
+            def collect_union_parts(n: ast.expr) -> list[str]:
+                if isinstance(n, ast.BinOp) and isinstance(n.op, ast.BitOr):
+                    return collect_union_parts(n.left) + collect_union_parts(n.right)
+                return [normalize_node(n)]
+
+            parts = collect_union_parts(node)
+            return " | ".join(sorted(parts))
+        if isinstance(node, ast.Subscript):
+            value = ast.unparse(node.value)
+            if isinstance(node.slice, ast.Tuple):
+                args = [normalize_node(elt) for elt in node.slice.elts]
+                return f"{value}[{', '.join(args)}]"
+            return f"{value}[{normalize_node(node.slice)}]"
+        return ast.unparse(node)
+
+    return normalize_node(tree.body)
+
+
+@pytest.mark.parametrize(
+    ("input_str", "expected"),
+    [
+        ("str | int", "int | str"),
+        ("str | int | None", "None | int | str"),
+        ("int", "int"),
+        ("Mapping[str, str]", "Mapping[str, str]"),
+        ("Mapping[str, str | list[str]]", "Mapping[str, list[str] | str]"),
+        ("Mapping[str, list[str] | str]", "Mapping[str, list[str] | str]"),
+        ("Mapping[str, str | list[str]] | None", "Mapping[str, list[str] | str] | None"),
+        ("dict[str, int | str | None]", "dict[str, None | int | str]"),
+        ("list[str | int]", "list[int | str]"),
+        ("tuple[str | int, bool | None]", "tuple[int | str, None | bool]"),
+    ],
+)
+def test_normalize_union_str(input_str: str, expected: str) -> None:
+    """Test _normalize_union_str correctly normalizes union types recursively."""
+    assert _normalize_union_str(input_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("type_a", "type_b"),
+    [
+        ("Mapping[str, str | list[str]]", "Mapping[str, list[str] | str]"),
+        ("str | int | None", "None | str | int"),
+        ("dict[str, int | str]", "dict[str, str | int]"),
+    ],
+)
+def test_normalize_union_str_equivalence(type_a: str, type_b: str) -> None:
+    """Test that different orderings of the same union type normalize to the same string."""
+    assert _normalize_union_str(type_a) == _normalize_union_str(type_b)
 
 
 def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
@@ -395,12 +452,52 @@ def _types_match(config_type: Any, dict_type: Any) -> bool:
 
 
 def test_generate_signature_matches_baseline() -> None:
-    """Ensure generate keeps the origin/main kw-only args and annotations."""
+    """Ensure generate keeps backward compatibility via GenerateConfigDict.
+
+    The new signature uses **options: Unpack[GenerateConfigDict], so we verify
+    that GenerateConfigDict has all the same keys as the baseline function's
+    keyword-only arguments (except 'config'), matching types and default values.
+    """
+    from datamodel_code_generator._types import GenerateConfigDict
+
     expected = inspect.signature(_baseline_generate)
-    actual = inspect.signature(generate)
-    assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
-    for name, param in _kwonly_by_name(expected).items():
-        assert _kwonly_by_name(actual)[name].annotation == param.annotation
+    baseline_params = {k: v for k, v in _kwonly_by_name(expected).items() if k != "config"}
+    dict_annotations = GenerateConfigDict.__annotations__
+
+    # 1. Verify all baseline kwargs are in GenerateConfigDict (key names)
+    baseline_kwargs = set(baseline_params.keys())
+    dict_keys = set(dict_annotations.keys())
+    assert baseline_kwargs == dict_keys, (
+        f"Mismatch between baseline args and GenerateConfigDict keys:\n"
+        f"  In baseline but not in dict: {baseline_kwargs - dict_keys}\n"
+        f"  In dict but not in baseline: {dict_keys - baseline_kwargs}"
+    )
+
+    # 2. Verify types match between baseline and GenerateConfigDict
+    for name, param in baseline_params.items():
+        baseline_type = param.annotation
+        dict_type = dict_annotations[name]
+        assert _types_match(baseline_type, dict_type), (
+            f"Type mismatch for '{name}':\n"
+            f"  Baseline: {_normalize_type(baseline_type)}\n"
+            f"  TypedDict: {_normalize_type(dict_type)}"
+        )
+
+    # 3. Verify default values match between baseline and GenerateConfig (Pydantic v2 only)
+    if is_pydantic_v2():
+        from datamodel_code_generator.config import GenerateConfig
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode
+        from datamodel_code_generator.types import StrictTypes
+
+        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+
+        for name, param in baseline_params.items():
+            if param.default is inspect.Parameter.empty:
+                continue
+            config_default = GenerateConfig.model_fields[name].default
+            assert config_default == param.default, (
+                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
+            )
 
 
 def test_parser_signature_matches_baseline() -> None:
@@ -591,11 +688,11 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
 
     # Generate with config
     config = GenerateConfig(
+        output=output_config,
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
     generate(
         input_=schema,
-        output=output_config,
         config=config,
     )
 

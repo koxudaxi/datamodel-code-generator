@@ -4,6 +4,7 @@
 
 | Option | Description |
 |--------|-------------|
+| [`--allof-class-hierarchy`](#allof-class-hierarchy) | Controls how allOf schemas are represented in the generated ... |
 | [`--allof-merge-mode`](#allof-merge-mode) | Merge constraints from root model references in allOf schema... |
 | [`--disable-future-imports`](#disable-future-imports) | Prevent automatic addition of __future__ imports in generate... |
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
@@ -30,6 +31,337 @@
 | [`--use-type-alias`](#use-type-alias) | Use TypeAlias instead of root models for type definitions (e... |
 | [`--use-union-operator`](#use-union-operator) | Use | operator for Union types (PEP 604). |
 | [`--use-unique-items-as-set`](#use-unique-items-as-set) | Generate set types for arrays with uniqueItems constraint. |
+
+---
+
+## `--allof-class-hierarchy` {#allof-class-hierarchy}
+
+Controls how allOf schemas are represented in the generated class hierarchy.
+`--allof-class-hierarchy if-no-conflict` (default) creates parent classes for allOf schemas
+only when there are no property conflicts between parent schemas. Otherwise, properties are merged into the child class
+which is then decoupled from the parent classes and no longer inherits from them.
+`--allof-class-hierarchy always` keeps class hierarchy for allOf schemas,
+even in multiple inheritance scenarios where two parent schemas define the same property.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --allof-class-hierarchy always # (1)!
+    ```
+
+    1. :material-arrow-left: `--allof-class-hierarchy` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "StringDatatype": {
+          "description": "A base string type.",
+          "type": "string",
+          "pattern": "^\\S(.*\\S)?$"
+        },
+        "ConstrainedStringDatatype": {
+          "description": "A constrained string.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "type": "string", "minLength": 1, "pattern": "^[A-Z].*" }
+          ]
+        },
+        "IntegerDatatype": {
+          "description": "A whole number.",
+          "type": "integer"
+        },
+        "NonNegativeIntegerDatatype": {
+          "description": "Non-negative integer.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "minimum": 0 }
+          ]
+        },
+        "BoundedIntegerDatatype": {
+          "description": "Integer between 0 and 100.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "minimum": 0, "maximum": 100 }
+          ]
+        },
+        "EmailDatatype": {
+          "description": "Email with format.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "format": "email" }
+          ]
+        },
+        "FormattedStringDatatype": {
+          "description": "A string with email format.",
+          "type": "string",
+          "format": "email"
+        },
+        "ObjectBase": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "integer" }
+          }
+        },
+        "ObjectWithAllOf": {
+          "description": "Object inheritance - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ObjectBase" },
+            { "type": "object", "properties": { "name": { "type": "string" } } }
+          ]
+        },
+        "MultiRefAllOf": {
+          "description": "Multiple refs - not handled by new code.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "$ref": "#/definitions/IntegerDatatype" }
+          ]
+        },
+        "NoConstraintAllOf": {
+          "description": "No constraints added.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" }
+          ]
+        },
+        "IncompatibleTypeAllOf": {
+          "description": "Incompatible types.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "type": "boolean" }
+          ]
+        },
+        "ConstraintWithProperties": {
+          "description": "Constraint item has properties.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "properties": { "extra": { "type": "string" } } }
+          ]
+        },
+        "ConstraintWithItems": {
+          "description": "Constraint item has items.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "items": { "type": "string" } }
+          ]
+        },
+        "NumberIntegerCompatible": {
+          "description": "Number and integer are compatible.",
+          "allOf": [
+            { "$ref": "#/definitions/IntegerDatatype" },
+            { "type": "number", "minimum": 0 }
+          ]
+        },
+        "RefWithSchemaKeywords": {
+          "description": "Ref with additional schema keywords.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype", "minLength": 5 },
+            { "maxLength": 100 }
+          ]
+        },
+        "ArrayDatatype": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "RefToArrayAllOf": {
+          "description": "Ref to array - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ArrayDatatype" },
+            { "minItems": 1 }
+          ]
+        },
+        "ObjectNoPropsDatatype": {
+          "type": "object"
+        },
+        "RefToObjectNoPropsAllOf": {
+          "description": "Ref to object without properties - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/ObjectNoPropsDatatype" },
+            { "minProperties": 1 }
+          ]
+        },
+        "PatternPropsDatatype": {
+          "patternProperties": {
+            "^S_": { "type": "string" }
+          }
+        },
+        "RefToPatternPropsAllOf": {
+          "description": "Ref to patternProperties - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/PatternPropsDatatype" },
+            { "minProperties": 1 }
+          ]
+        },
+        "NestedAllOfDatatype": {
+          "allOf": [
+            { "type": "string" },
+            { "minLength": 1 }
+          ]
+        },
+        "RefToNestedAllOfAllOf": {
+          "description": "Ref to nested allOf - not a root model.",
+          "allOf": [
+            { "$ref": "#/definitions/NestedAllOfDatatype" },
+            { "maxLength": 100 }
+          ]
+        },
+        "ConstraintsOnlyDatatype": {
+          "description": "Constraints only, no type.",
+          "minLength": 1,
+          "pattern": "^[A-Z]"
+        },
+        "RefToConstraintsOnlyAllOf": {
+          "description": "Ref to constraints-only schema.",
+          "allOf": [
+            { "$ref": "#/definitions/ConstraintsOnlyDatatype" },
+            { "maxLength": 100 }
+          ]
+        },
+        "NoDescriptionAllOf": {
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            { "minLength": 5 }
+          ]
+        },
+        "EmptyConstraintItemAllOf": {
+          "description": "AllOf with empty constraint item.",
+          "allOf": [
+            { "$ref": "#/definitions/StringDatatype" },
+            {},
+            { "maxLength": 50 }
+          ]
+        },
+        "ConflictingFormatAllOf": {
+          "description": "Conflicting formats - falls back to existing behavior.",
+          "allOf": [
+            { "$ref": "#/definitions/FormattedStringDatatype" },
+            { "format": "date-time" }
+          ]
+        }
+      },
+      "type": "object",
+      "properties": {
+        "name": { "$ref": "#/definitions/ConstrainedStringDatatype" },
+        "count": { "$ref": "#/definitions/NonNegativeIntegerDatatype" },
+        "percentage": { "$ref": "#/definitions/BoundedIntegerDatatype" },
+        "email": { "$ref": "#/definitions/EmailDatatype" },
+        "obj": { "$ref": "#/definitions/ObjectWithAllOf" },
+        "multi": { "$ref": "#/definitions/MultiRefAllOf" },
+        "noconstraint": { "$ref": "#/definitions/NoConstraintAllOf" },
+        "incompatible": { "$ref": "#/definitions/IncompatibleTypeAllOf" },
+        "withprops": { "$ref": "#/definitions/ConstraintWithProperties" },
+        "withitems": { "$ref": "#/definitions/ConstraintWithItems" },
+        "numint": { "$ref": "#/definitions/NumberIntegerCompatible" },
+        "refwithkw": { "$ref": "#/definitions/RefWithSchemaKeywords" },
+        "refarr": { "$ref": "#/definitions/RefToArrayAllOf" },
+        "refobjnoprops": { "$ref": "#/definitions/RefToObjectNoPropsAllOf" },
+        "refpatternprops": { "$ref": "#/definitions/RefToPatternPropsAllOf" },
+        "refnestedallof": { "$ref": "#/definitions/RefToNestedAllOfAllOf" },
+        "refconstraintsonly": { "$ref": "#/definitions/RefToConstraintsOnlyAllOf" },
+        "nodescription": { "$ref": "#/definitions/NoDescriptionAllOf" },
+        "emptyconstraint": { "$ref": "#/definitions/EmptyConstraintItemAllOf" },
+        "conflictingformat": { "$ref": "#/definitions/ConflictingFormatAllOf" }
+      }
+    }
+    ```
+
+    **Output:**
+
+    === "With Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  allof_class_hierarchy.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from pydantic import BaseModel, Field, constr
+        
+        
+        class Entity(BaseModel):
+            type: str
+            type_list: list[str] | None = ['playground:Entity']
+        
+        
+        class Entity2(BaseModel):
+            type: str
+            type_list: list[str]
+        
+        
+        class Thing(Entity):
+            type: str | None = 'playground:Thing'
+            type_list: list[str] | None = ['playground:Thing']
+            name: constr(min_length=1) = Field(..., description='The things name')
+        
+        
+        class Location(Entity2):
+            type: str | None = 'playground:Location'
+            type_list: list[str] | None = ['playground:Location']
+            address: constr(min_length=5) = Field(
+                ..., description='The address of the location'
+            )
+        
+        
+        class Person(Thing, Location):
+            name: constr(min_length=1) | None = Field(None, description="The person's name")
+            type: str | None = 'playground:Person'
+            type_list: list[str] | None = ['playground:Person']
+        ```
+
+    === "Without Option"
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  allof_class_hierarchy.json
+        #   timestamp: 2019-07-26T00:00:00+00:00
+        
+        from __future__ import annotations
+        
+        from typing import Any
+        
+        from pydantic import BaseModel, Field, constr
+        
+        
+        class Person(BaseModel):
+            name: constr(min_length=1) = Field(..., description='The things name')
+            type: Any | None = 'playground:Location'
+            type_list: list[Any] | None = [
+                'playground:Person',
+                'playground:Thing',
+                'playground:Location',
+            ]
+            address: constr(min_length=5) = Field(
+                ..., description='The address of the location'
+            )
+        
+        
+        class Entity(BaseModel):
+            type: str
+            type_list: list[str] | None = ['playground:Entity']
+        
+        
+        class Entity2(BaseModel):
+            type: str
+            type_list: list[str]
+        
+        
+        class Thing(Entity):
+            type: str | None = 'playground:Thing'
+            type_list: list[str] | None = ['playground:Thing']
+            name: constr(min_length=1) = Field(..., description='The things name')
+        
+        
+        class Location(Entity2):
+            type: str | None = 'playground:Location'
+            type_list: list[str] | None = ['playground:Location']
+            address: constr(min_length=5) = Field(
+                ..., description='The address of the location'
+            )
+        ```
 
 ---
 

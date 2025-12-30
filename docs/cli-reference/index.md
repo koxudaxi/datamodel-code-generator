@@ -9,7 +9,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 26 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
@@ -28,6 +28,7 @@ This documentation is auto-generated from test cases.
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
+- [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)

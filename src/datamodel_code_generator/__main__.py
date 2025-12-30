@@ -52,6 +52,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -514,6 +515,7 @@ class Config(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     http_timeout: Optional[float] = None  # noqa: UP045
@@ -1595,6 +1597,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_unique_items_as_set=config.use_unique_items_as_set,
         use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
         allof_merge_mode=config.allof_merge_mode,
+        allof_class_hierarchy=config.allof_class_hierarchy,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
         http_timeout=config.http_timeout,

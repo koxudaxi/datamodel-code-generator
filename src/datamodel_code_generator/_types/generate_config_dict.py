@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import (
         AllExportsCollisionStrategy,
         AllExportsScope,
+        AllOfClassHierarchy,
         AllOfMergeMode,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
@@ -52,7 +53,7 @@ class GenerateConfigDict(TypedDict):
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
-    aliases: NotRequired[Mapping[str, str] | None]
+    aliases: NotRequired[Mapping[str, str | list[str]] | None]
     disable_timestamp: NotRequired[bool]
     enable_version_header: NotRequired[bool]
     enable_command_header: NotRequired[bool]
@@ -104,6 +105,7 @@ class GenerateConfigDict(TypedDict):
     use_unique_items_as_set: NotRequired[bool]
     use_tuple_for_fixed_items: NotRequired[bool]
     allof_merge_mode: NotRequired[AllOfMergeMode]
+    allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_ignore_tls: NotRequired[bool]
     http_timeout: NotRequired[float | None]
