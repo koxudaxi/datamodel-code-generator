@@ -82,7 +82,7 @@ from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import DataType, DataTypeManager
-from datamodel_code_generator.util import camel_to_snake, is_pydantic_v2, model_copy, model_dump
+from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -699,11 +699,12 @@ class Parser(ABC, Generic[ParserConfigT]):
     def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:
         """Create a default config from options.
 
-        Subclasses can override this to return their own config type.
+        Subclasses should override this to return their own config type.
         """
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
         from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
         if is_pydantic_v2():
             ParserConfig.model_rebuild(
@@ -748,6 +749,8 @@ class Parser(ABC, Generic[ParserConfigT]):
 
         if config is None:
             config = self._create_default_config(options)
+
+        self.config = config
 
         self.keyword_only = config.keyword_only
         self.target_pydantic_version = config.target_pydantic_version

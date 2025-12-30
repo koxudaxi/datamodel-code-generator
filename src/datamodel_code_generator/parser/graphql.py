@@ -23,8 +23,6 @@ from datamodel_code_generator.format import DatetimeClassType
 from datamodel_code_generator.model.dataclass import DataClass
 from datamodel_code_generator.model.enum import SPECIALIZED_ENUM_TYPE_MATCH, Enum
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
-from datamodel_code_generator.model.scalar import DataTypeScalar
-from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
@@ -44,8 +42,8 @@ except ImportError as exc:  # pragma: no cover
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from datamodel_code_generator._types import ParserConfigDict
-    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator._types import GraphQLParserConfigDict
+    from datamodel_code_generator.config import GraphQLParserConfig
     from datamodel_code_generator.model import DataModel, DataModelFieldBase
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
@@ -63,7 +61,7 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 
 @snooper_to_methods()
-class GraphQLParser(Parser["ParserConfig"]):
+class GraphQLParser(Parser["GraphQLParserConfig"]):
     """Parser for GraphQL schema files."""
 
     # raw graphql schema as `graphql-core` object
@@ -90,14 +88,40 @@ class GraphQLParser(Parser["ParserConfig"]):
         graphql.type.introspection.TypeKind.UNION,
     ]
 
+    @classmethod
+    def _create_default_config(cls, options: GraphQLParserConfigDict) -> GraphQLParserConfig:  # type: ignore[override]
+        """Create a GraphQLParserConfig from options."""
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            GraphQLParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return GraphQLParserConfig.model_validate(options)
+        GraphQLParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}
+        defaults.update(options)
+        return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+
     def __init__(
         self,
         source: str | Path | ParseResult,
         *,
-        config: ParserConfig | None = None,
-        data_model_scalar_type: type[DataModel] = DataTypeScalar,
-        data_model_union_type: type[DataModel] = DataTypeUnion,
-        **options: Unpack[ParserConfigDict],
+        config: GraphQLParserConfig | None = None,
+        **options: Unpack[GraphQLParserConfigDict],
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
         if config is None and options.get("target_datetime_class") is None:
@@ -108,8 +132,8 @@ class GraphQLParser(Parser["ParserConfig"]):
         use_union_operator = config.use_union_operator if config else options.get("use_union_operator", False)
         super().__init__(source=source, config=config, **options)
 
-        self.data_model_scalar_type = data_model_scalar_type
-        self.data_model_union_type = data_model_union_type
+        self.data_model_scalar_type = self.config.data_model_scalar_type
+        self.data_model_union_type = self.config.data_model_union_type
         self.use_standard_collections = use_standard_collections
         self.use_union_operator = use_union_operator
 
