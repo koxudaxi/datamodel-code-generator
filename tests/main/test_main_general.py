@@ -2034,3 +2034,32 @@ def test_parser_with_config_and_options_raises_error() -> None:
     config = ParserConfig()
     with pytest.raises(ValueError, match="Cannot specify both 'config' and keyword arguments"):
         JsonSchemaParser(source="{}", config=config, field_constraints=True)
+
+
+def test_jsonschema_parser_with_explicit_target_datetime_class() -> None:
+    """Test JsonSchemaParser with explicit target_datetime_class option."""
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(source="{}", target_datetime_class=DatetimeClassType.Datetime)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
+
+
+def test_openapi_parser_with_explicit_wrap_string_literal() -> None:
+    """Test OpenAPIParser with explicit wrap_string_literal option."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        source='{"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0"}, "paths": {}}',
+        wrap_string_literal=True,
+    )
+    assert parser.wrap_string_literal is True
+
+
+def test_graphql_parser_with_explicit_target_datetime_class() -> None:
+    """Test GraphQLParser with explicit target_datetime_class option."""
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+
+    parser = GraphQLParser(source="type Query { id: ID }", target_datetime_class=DatetimeClassType.Awaredatetime)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
