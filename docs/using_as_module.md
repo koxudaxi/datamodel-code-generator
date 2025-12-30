@@ -6,56 +6,6 @@ datamodel-code-generator is a CLI tool, but it can also be used as a Python modu
 
 You can generate models with `datamodel_code_generator.generate` using parameters that match the [CLI arguments](./index.md).
 
-## 🆕 Configuration via `config` Parameter (Recommended)
-
-Starting from recent versions, both `generate()` and Parser classes support a new `config` parameter that accepts a configuration object (`GenerateConfig` or `ParserConfig`). This is now the **recommended** way to pass options.
-
-### Why Use `config`?
-
-- **Type Safety**: Configuration objects are Pydantic BaseModels with full type validation
-- **Structured Configuration**: All options are grouped in a single, organized object
-- **IDE Support**: Better autocomplete and type hints in your IDE
-- **Validation**: Invalid options are caught at configuration time, not during generation
-
-### Two Ways to Pass Options
-
-You can pass options in two ways (but **not both at the same time**):
-
-1. **Using `config` parameter (Recommended)**:
-```python
-from datamodel_code_generator import generate, GenerateConfig, InputFileType
-
-json_schema: str = '{"type": "object", "properties": {"name": {"type": "string"}}}'
-
-config = GenerateConfig(
-    input_file_type=InputFileType.JsonSchema,
-    input_filename="example.json",
-)
-result = generate(json_schema, config=config)
-```
-
-2. **Using keyword arguments (Backward compatible)**:
-```python
-from datamodel_code_generator import generate, InputFileType
-
-json_schema: str = '{"type": "object", "properties": {"name": {"type": "string"}}}'
-
-result = generate(
-    json_schema,
-    input_file_type=InputFileType.JsonSchema,
-    input_filename="example.json",
-)
-```
-
-Both methods accept the **same options** because `GenerateConfigDict` (used for type hints on keyword arguments) is auto-generated from `GenerateConfig`. However, using the `config` parameter is recommended for new code.
-
-!!! warning "Cannot Mix Both Methods"
-    You cannot use both `config` and keyword arguments at the same time. This will raise a `ValueError`:
-    ```python
-    # This will raise ValueError!
-    generate(json_schema, config=config, input_filename="example.json")
-    ```
-
 ### 📦 Installation
 
 ```bash
