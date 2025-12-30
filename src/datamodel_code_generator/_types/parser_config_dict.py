@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, TypedDict
 from typing_extensions import NotRequired
 
 if TYPE_CHECKING:
+    from collections import defaultdict
     from collections.abc import Callable, Iterable, Mapping, Sequence
     from pathlib import Path
 
@@ -38,7 +39,7 @@ class ParserConfigDict(TypedDict):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
-    extra_template_data: NotRequired[dict[str, dict[str, Any]] | None]
+    extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
     target_python_version: NotRequired[PythonVersion]
     dump_resolve_reference_action: NotRequired[Callable[[Iterable[str]], str] | None]
     validation: NotRequired[bool]

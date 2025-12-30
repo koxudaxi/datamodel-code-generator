@@ -338,9 +338,45 @@ def _normalize_type_str(type_str: str) -> str:
         type_str = match.group(1)
     # Remove NotRequired wrapper
     type_str = re.sub(r"^NotRequired\[(.+)\]$", r"\1", type_str)
+    # Extract first type from Annotated[T, ...] - handle nested brackets
+    while "Annotated[" in type_str:
+        # Find Annotated and extract first type argument
+        start = type_str.find("Annotated[")
+        if start == -1:
+            break
+        # Find matching bracket for the type argument
+        depth = 0
+        first_arg_end = -1
+        for i, c in enumerate(type_str[start + 10:], start + 10):
+            if c == "[":
+                depth += 1
+            elif c == "]":
+                if depth == 0:
+                    first_arg_end = i
+                    break
+                depth -= 1
+            elif c == "," and depth == 0:
+                first_arg_end = i
+                break
+        if first_arg_end == -1:
+            break
+        first_arg = type_str[start + 10 : first_arg_end]
+        # Find the end of Annotated[...]
+        depth = 1
+        end = start + 10
+        for i, c in enumerate(type_str[start + 10:], start + 10):
+            if c == "[":
+                depth += 1
+            elif c == "]":
+                depth -= 1
+                if depth == 0:
+                    end = i + 1
+                    break
+        type_str = type_str[:start] + first_arg + type_str[end:]
     # Normalize module prefixes
     type_str = type_str.replace("typing.", "")
     type_str = type_str.replace("collections.abc.", "")
+    type_str = type_str.replace("collections.", "")
     type_str = type_str.replace("pathlib.", "")
     type_str = type_str.replace("datamodel_code_generator.enums.", "")
     type_str = type_str.replace("datamodel_code_generator.format.", "")

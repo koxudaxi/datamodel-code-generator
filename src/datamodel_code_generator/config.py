@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, WithJsonSchema
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -47,6 +48,10 @@ if TYPE_CHECKING:
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 DefaultPutDictSchema = DefaultPutDict[str, str]
+ExtraTemplateDataType = Annotated[
+    defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]],
+    WithJsonSchema({"type": "object", "x-python-type": "defaultdict[str, dict[str, Any]]"}),
+]
 
 
 class GenerateConfig(BaseModel):
@@ -73,7 +78,7 @@ class GenerateConfig(BaseModel):
     additional_imports: list[str] | None = None
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
-    extra_template_data: dict[str, dict[str, Any]] | None = None
+    extra_template_data: ExtraTemplateDataType | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -206,7 +211,7 @@ class ParserConfig(BaseModel):
     additional_imports: list[str] | None = None
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
-    extra_template_data: dict[str, dict[str, Any]] | None = None
+    extra_template_data: ExtraTemplateDataType | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False
