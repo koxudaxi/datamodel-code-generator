@@ -33,6 +33,7 @@ from datamodel_code_generator.enums import (
     MIN_VERSION,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -562,6 +563,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     use_unique_items_as_set = config.use_unique_items_as_set
     use_tuple_for_fixed_items = config.use_tuple_for_fixed_items
     allof_merge_mode = config.allof_merge_mode
+    allof_class_hierarchy = config.allof_class_hierarchy
     http_headers = config.http_headers
     http_ignore_tls = config.http_ignore_tls
     http_timeout = config.http_timeout
@@ -865,6 +867,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         use_unique_items_as_set=use_unique_items_as_set,
         use_tuple_for_fixed_items=use_tuple_for_fixed_items,
         allof_merge_mode=allof_merge_mode,
+        allof_class_hierarchy=allof_class_hierarchy,
         http_headers=http_headers,
         http_ignore_tls=http_ignore_tls,
         http_timeout=http_timeout,
@@ -1084,6 +1087,7 @@ __all__ = [
     "MIN_VERSION",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
+    "AllOfClassHierarchy",
     "AllOfMergeMode",
     "CollapseRootModelsNameStrategy",
     "DateClassType",

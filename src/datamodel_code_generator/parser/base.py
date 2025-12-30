@@ -26,6 +26,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     Error,
@@ -751,6 +752,7 @@ class Parser(ABC):
         use_unique_items_as_set: bool = False,
         use_tuple_for_fixed_items: bool = False,
         allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
+        allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict,
         http_headers: Sequence[tuple[str, str]] | None = None,
         http_ignore_tls: bool = False,
         http_timeout: float | None = None,
@@ -873,6 +875,7 @@ class Parser(ABC):
         self.use_unique_items_as_set: bool = use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = use_tuple_for_fixed_items
         self.allof_merge_mode: AllOfMergeMode = allof_merge_mode
+        self.allof_class_hierarchy: AllOfClassHierarchy = allof_class_hierarchy
         self.dataclass_arguments = dataclass_arguments
 
         if base_path:

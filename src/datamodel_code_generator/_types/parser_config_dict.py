@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.enums import (
+        AllOfClassHierarchy,
         AllOfMergeMode,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
@@ -91,6 +92,7 @@ class ParserConfigDict(TypedDict):
     use_unique_items_as_set: NotRequired[bool]
     use_tuple_for_fixed_items: NotRequired[bool]
     allof_merge_mode: NotRequired[AllOfMergeMode]
+    allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_ignore_tls: NotRequired[bool]
     http_timeout: NotRequired[float | None]

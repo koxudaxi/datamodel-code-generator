@@ -11,6 +11,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--aliases": "Apply custom field and class name aliases from JSON file.",
     "--all-exports-collision-strategy": "Handle name collisions when exporting recursive module hierarchies.",
     "--all-exports-scope": "Generate __all__ exports for child modules in __init__.py files.",
+    "--allof-class-hierarchy": "Controls how allOf schemas are represented in the generated class hierarchy.",
     "--allof-merge-mode": "Merge constraints from root model references in allOf schemas.",
     "--allow-extra-fields": "Allow extra fields in generated Pydantic models (extra='allow').",
     "--allow-population-by-field-name": "Allow Pydantic model population by field name (not just alias).",

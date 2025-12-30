@@ -13,6 +13,7 @@ from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -137,6 +138,7 @@ class GenerateConfig(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
@@ -265,6 +267,7 @@ class ParserConfig(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
