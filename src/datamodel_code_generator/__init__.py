@@ -557,9 +557,10 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
     if input_file_type == InputFileType.Auto:
         try:
-            input_text_ = (
-                get_first_file(input_).read_text(encoding=config.encoding) if isinstance(input_, Path) else input_text
-            )
+            if isinstance(input_, Path):
+                input_text_ = get_first_file(input_).read_text(encoding=config.encoding)
+            else:
+                input_text_ = input_text
         except FileNotFoundError as exc:
             msg = "File not found"
             raise Error(msg) from exc
