@@ -2,10 +2,21 @@
 
 from __future__ import annotations
 
+from collections import UserDict
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, FrozenSet, Optional, Set, Type, Union
+from typing import Any, FrozenSet, Generic, Optional, Set, Type, TypeVar, Union
 
 from pydantic import BaseModel
+
+# Custom generic type for testing generic type import
+TK = TypeVar("TK")
+TV = TypeVar("TV")
+
+
+class CustomGenericDict(UserDict[TK, TV], Generic[TK, TV]):
+    """Custom generic dict for testing generic type import."""
+
+    pass
 
 
 class User(BaseModel):
@@ -86,3 +97,11 @@ class ModelWithUnionCallable(BaseModel):
 
     union_callback: Union[Callable[[str], str], int]
     raw_callable: Callable  # Callable without type args
+
+
+class ModelWithCustomGeneric(BaseModel):
+    """Model with custom generic type that requires module import."""
+
+    model_config = {"arbitrary_types_allowed": True}
+    custom_dict: CustomGenericDict[str, int]
+    optional_custom_dict: CustomGenericDict[str, str] | None
