@@ -915,8 +915,13 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
 def _simple_type_name(tp: type) -> str:
     """Get a simple string representation of a type."""
+    from typing import get_origin  # noqa: PLC0415
+
     if tp is type(None):
         return "None"
+    # For generic types (e.g., dict[str, Any]), use full string representation
+    if get_origin(tp) is not None:
+        return str(tp).replace("typing.", "")
     if hasattr(tp, "__name__"):
         return tp.__name__
     return str(tp).replace("typing.", "")  # pragma: no cover
