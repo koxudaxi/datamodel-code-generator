@@ -76,6 +76,8 @@ from datamodel_code_generator.types import (
     StrictTypes,
     Types,
     UnionIntFloat,
+    get_subscript_args,
+    get_type_base_name,
 )
 from datamodel_code_generator.util import (
     BaseModel,
@@ -1314,42 +1316,21 @@ class JsonSchemaParser(Parser):
             "MutableSet": {"is_set": True},
         }
 
-        base_type = x_python_type.split("[")[0].strip()
+        base_type = get_type_base_name(x_python_type)
         if base_type in type_to_flag:
             return type_to_flag[base_type]
 
-        if base_type in {"Union", "Optional"}:
-            bracket_start = x_python_type.find("[")
-            if bracket_start != -1:
-                inner = x_python_type[bracket_start + 1 : -1]
-                depth = 0
-                current = ""
-                for char in inner:
-                    if char == "[":
-                        depth += 1
-                    elif char == "]":
-                        depth -= 1
-                    if char == "," and depth == 0:
-                        arg_base = current.strip().split("[")[0]
-                        if arg_base in type_to_flag:
-                            return type_to_flag[arg_base]
-                        current = ""
-                    else:
-                        current += char
-                if current.strip():
-                    arg_base = current.strip().split("[")[0]
-                    if arg_base in type_to_flag:
-                        return type_to_flag[arg_base]
+        if base_type in {"Union", "Optional"} or " | " in x_python_type:
+            for arg in get_subscript_args(x_python_type):
+                arg_base = get_type_base_name(arg)
+                if arg_base in type_to_flag:
+                    return type_to_flag[arg_base]
 
         return {}
 
     def _get_python_type_base(self, python_type: str) -> str:  # noqa: PLR6301
         """Extract base type from a Python type annotation string."""
-        if "." in python_type.split("[", maxsplit=1)[0]:
-            base = python_type.split("[", maxsplit=1)[0].rsplit(".", 1)[-1]
-        else:
-            base = python_type.split("[", maxsplit=1)[0].strip()
-        return base
+        return get_type_base_name(python_type)
 
     def _is_compatible_python_type(self, schema_type: str | None, python_type: str) -> bool:
         """Check if x-python-type is compatible with the JSON Schema type."""

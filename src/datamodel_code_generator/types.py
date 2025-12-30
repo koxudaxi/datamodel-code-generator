@@ -7,6 +7,7 @@ utilities for handling unions, optionals, and type hints.
 
 from __future__ import annotations
 
+import ast
 import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
@@ -189,6 +190,108 @@ def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     if len(iterables) == 2:  # noqa: PLR2004
         return (*iterables[0], *iterables[1])
     return tuple(chain(*iterables))
+
+
+def get_type_base_name(type_str: str) -> str:
+    """Extract base type name from a type annotation string using AST.
+
+    Examples:
+        "List[str]" -> "List"
+        "foo.bar.Baz" -> "Baz"
+        "Optional[int]" -> "Optional"
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+
+    body = tree.body
+    if isinstance(body, ast.Subscript):
+        body = body.value
+
+    if isinstance(body, ast.Attribute):
+        return body.attr
+    if isinstance(body, ast.Name):
+        return body.id
+    return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+
+
+def get_subscript_args(type_str: str) -> list[str]:
+    """Extract type arguments from a subscripted type using AST.
+
+    Examples:
+        "List[str]" -> ["str"]
+        "Dict[str, int]" -> ["str", "int"]
+        "Union[str, int, None]" -> ["str", "int", "None"]
+        "str | int | None" -> ["str", "int", "None"]
+        "str" -> []
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return []
+
+    body = tree.body
+
+    if isinstance(body, ast.BinOp) and isinstance(body.op, ast.BitOr):
+        args: list[str] = []
+
+        def collect_union_args(node: ast.expr) -> None:
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+                collect_union_args(node.left)
+                collect_union_args(node.right)
+            else:
+                args.append(ast.unparse(node))
+
+        collect_union_args(body)
+        return args
+
+    if isinstance(body, ast.Subscript):
+        slice_node = body.slice
+        if isinstance(slice_node, ast.Tuple):
+            return [ast.unparse(elt) for elt in slice_node.elts]
+        return [ast.unparse(slice_node)]
+
+    return []
+
+
+def extract_qualified_names(type_str: str) -> list[str]:
+    """Extract all fully qualified names from a type annotation string using AST.
+
+    Finds patterns like 'module.path.ClassName' where the name contains dots.
+
+    Examples:
+        "type[foo.bar.Baz]" -> ["foo.bar.Baz"]
+        "Dict[a.B, c.D]" -> ["a.B", "c.D"]
+        "str" -> []
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return []
+
+    qualified_names: list[str] = []
+    visited: set[int] = set()
+
+    def get_full_name(node: ast.expr) -> str | None:
+        parts: list[str] = []
+        current: ast.expr = node
+        while isinstance(current, ast.Attribute):
+            visited.add(id(current))
+            parts.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            parts.append(current.id)
+            return ".".join(reversed(parts))
+        return None
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and id(node) not in visited:
+            name = get_full_name(node)
+            if name and "." in name:
+                qualified_names.append(name)
+
+    return qualified_names
 
 
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
