@@ -692,9 +692,9 @@ def _get_origin_name(origin: type) -> str:
     """Get the fully qualified name of a generic origin.
 
     For types from builtins, typing, or collections.abc, returns just the name.
-    For other types (custom generics), returns module.name format.
+    For other types (custom generics), returns module.qualname format.
     """
-    name = getattr(origin, "__name__", None)
+    name = getattr(origin, "__qualname__", None) or getattr(origin, "__name__", None)
     if name:
         module = getattr(origin, "__module__", "")
         if module and module not in {"builtins", "typing", "collections.abc"}:
