@@ -487,10 +487,10 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
 
     if hasattr(GenerateConfig, "model_rebuild"):
         try:
-            from datamodel_code_generator.model.pydantic_v2 import UnionMode
+            from datamodel_code_generator.model.pydantic_v2 import UnionMode as union_mode_type
         except ImportError:
-            UnionMode = None
-        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+            union_mode_type = None
+        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": union_mode_type})
 
     schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     output_kwargs = tmp_path / "output_kwargs.py"
