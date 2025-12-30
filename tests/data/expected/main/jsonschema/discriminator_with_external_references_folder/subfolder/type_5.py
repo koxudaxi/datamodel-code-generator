@@ -10,4 +10,4 @@ from pydantic import BaseModel, Field
 
 
 class Type5(BaseModel):
-    type_: Literal['e'] = Field(..., const=True, title='Type ')
+    type_: Literal['e'] = Field('e', const=True, title='Type ')
