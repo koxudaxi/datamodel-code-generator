@@ -501,12 +501,55 @@ def test_generate_signature_matches_baseline() -> None:
 
 
 def test_parser_signature_matches_baseline() -> None:
-    """Ensure Parser.__init__ keeps the origin/main kw-only args and annotations."""
+    """Ensure Parser.__init__ keeps the origin/main kw-only args, types, and default values."""
     expected = inspect.signature(_BaselineParser.__init__)
     actual = inspect.signature(Parser.__init__)
-    assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
-    for name, param in _kwonly_by_name(expected).items():
-        assert _kwonly_by_name(actual)[name].annotation == param.annotation
+
+    baseline_params = _kwonly_by_name(expected)
+    actual_params = _kwonly_by_name(actual)
+
+    assert actual_params.keys() == baseline_params.keys(), (
+        f"Mismatch between baseline args and Parser.__init__ args:\n"
+        f"  In baseline but not in actual: {baseline_params.keys() - actual_params.keys()}\n"
+        f"  In actual but not in baseline: {actual_params.keys() - baseline_params.keys()}"
+    )
+
+    for name, param in baseline_params.items():
+        baseline_type = param.annotation
+        actual_type = actual_params[name].annotation
+        assert _types_match(baseline_type, actual_type), (
+            f"Type mismatch for '{name}':\n"
+            f"  Baseline: {_normalize_type(baseline_type)}\n"
+            f"  Actual: {_normalize_type(actual_type)}"
+        )
+
+    if is_pydantic_v2():
+        from datamodel_code_generator.config import ParserConfig
+        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+        from datamodel_code_generator.model.pydantic_v2 import UnionMode
+        from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+        ParserConfig.model_rebuild(
+            _types_namespace={
+                "StrictTypes": StrictTypes,
+                "UnionMode": UnionMode,
+                "DataModel": DataModel,
+                "DataModelFieldBase": DataModelFieldBase,
+                "DataTypeManager": DataTypeManager,
+            }
+        )
+
+        for name, param in baseline_params.items():
+            if param.default is inspect.Parameter.empty:
+                continue
+            if name not in ParserConfig.model_fields:
+                continue
+            config_default = ParserConfig.model_fields[name].default
+            if callable(param.default) and config_default is None:
+                continue
+            assert config_default == param.default, (
+                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  ParserConfig: {config_default!r}"
+            )
 
 
 @PYDANTIC_V2_SKIP
