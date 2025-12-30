@@ -825,6 +825,7 @@ def _add_python_type_for_unserializable(
 
 def _init_preserved_type_origins() -> dict[type, str]:
     """Initialize preserved type origins mapping (lazy initialization)."""
+    from collections import ChainMap, Counter, OrderedDict, defaultdict, deque  # noqa: PLC0415
     from collections.abc import Mapping as ABCMapping  # noqa: PLC0415
     from collections.abc import MutableMapping as ABCMutableMapping  # noqa: PLC0415
     from collections.abc import MutableSequence as ABCMutableSequence  # noqa: PLC0415
@@ -835,6 +836,11 @@ def _init_preserved_type_origins() -> dict[type, str]:
     return {
         set: "set",
         frozenset: "frozenset",
+        defaultdict: "defaultdict",
+        OrderedDict: "OrderedDict",
+        Counter: "Counter",
+        deque: "deque",
+        ChainMap: "ChainMap",
         AbstractSet: "AbstractSet",
         ABCMutableSet: "MutableSet",
         ABCMapping: "Mapping",
@@ -852,7 +858,7 @@ def _get_preserved_type_origins() -> dict[type, str]:
     return _PRESERVED_TYPE_ORIGINS
 
 
-def _serialize_python_type(tp: type) -> str | None:
+def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     """Serialize Python type to a string for x-python-type field.
 
     Returns None if the type doesn't need to be preserved (e.g., standard dict, list).
@@ -880,8 +886,20 @@ def _serialize_python_type(tp: type) -> str | None:
                 return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
 
-    if origin in preserved_origins:
-        type_name = preserved_origins[origin]
+    # Handle Annotated types - extract the base type and ignore metadata
+    from typing import Annotated  # noqa: PLC0415
+
+    if origin is Annotated:
+        if args:
+            return _serialize_python_type(args[0]) or _simple_type_name(args[0])
+        return None  # pragma: no cover
+
+    type_name: str | None = None
+    if origin is not None:
+        type_name = preserved_origins.get(origin)
+        if type_name is None and getattr(origin, "__module__", None) == "collections":  # pragma: no cover
+            type_name = _simple_type_name(origin)
+    if type_name is not None:
         if args:
             args_str = ", ".join(_serialize_python_type(a) or _simple_type_name(a) for a in args)
             return f"{type_name}[{args_str}]"
@@ -899,8 +917,13 @@ def _serialize_python_type(tp: type) -> str | None:
 
 def _simple_type_name(tp: type) -> str:
     """Get a simple string representation of a type."""
+    from typing import get_origin  # noqa: PLC0415
+
     if tp is type(None):
         return "None"
+    # For generic types (e.g., dict[str, Any]), use full string representation
+    if get_origin(tp) is not None:
+        return str(tp).replace("typing.", "")
     if hasattr(tp, "__name__"):
         return tp.__name__
     return str(tp).replace("typing.", "")  # pragma: no cover
