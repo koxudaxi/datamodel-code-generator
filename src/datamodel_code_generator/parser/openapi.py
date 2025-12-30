@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Mapping, Sequence
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator.config import OpenAPIParserConfig
     from datamodel_code_generator.parser import DefaultPutDict
 
 
@@ -185,6 +186,7 @@ class OpenAPIParser(JsonSchemaParser):
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
+        config: OpenAPIParserConfig | None = None,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -300,9 +302,17 @@ class OpenAPIParser(JsonSchemaParser):
         target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
+        if config is not None:
+            openapi_scopes = config.openapi_scopes if openapi_scopes is None else openapi_scopes
+            include_path_parameters = include_path_parameters or config.include_path_parameters
+            use_status_code_in_response_name = (
+                use_status_code_in_response_name or config.use_status_code_in_response_name
+            )
+
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
         super().__init__(
             source=source,
+            config=config,
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
             data_type_manager_type=data_type_manager_type,

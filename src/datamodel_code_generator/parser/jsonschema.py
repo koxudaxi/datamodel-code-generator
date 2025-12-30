@@ -98,6 +98,8 @@ if is_pydantic_v2():
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator, Mapping, Sequence
 
+    from datamodel_code_generator.config import ParserConfig
+
 
 def unescape_json_pointer_segment(segment: str) -> str:
     """Unescape JSON pointer segment by converting escape sequences and percent-encoding."""
@@ -635,6 +637,7 @@ class JsonSchemaParser(Parser):
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
+        config: ParserConfig | None = None,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -750,6 +753,7 @@ class JsonSchemaParser(Parser):
         target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
         super().__init__(
             source=source,
+            config=config,
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
             data_type_manager_type=data_type_manager_type,

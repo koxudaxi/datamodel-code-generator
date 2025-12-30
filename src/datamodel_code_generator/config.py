@@ -314,6 +314,21 @@ class ParserConfig(BaseModel):
     target_pydantic_version: TargetPydanticVersion | None = None
 
 
+class OpenAPIParserConfig(ParserConfig):
+    """Configuration model for OpenAPIParser.__init__()."""
+
+    openapi_scopes: list[OpenAPIScope] | None = None
+    include_path_parameters: bool = False
+    use_status_code_in_response_name: bool = False
+
+
+class GraphQLParserConfig(ParserConfig):
+    """Configuration model for GraphQLParser.__init__()."""
+
+    data_model_scalar_type: type[DataModel] | None = None
+    data_model_union_type: type[DataModel] | None = None
+
+
 class ParseConfig(BaseModel):
     """Configuration model for Parser.parse()."""
 

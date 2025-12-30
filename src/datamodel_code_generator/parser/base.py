@@ -82,6 +82,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator import DataclassArguments
+    from datamodel_code_generator.config import ParserConfig
 
 
 @runtime_checkable
@@ -686,10 +687,11 @@ class Parser(ABC):
     parse_raw() to handle specific schema formats.
     """
 
-    def __init__(  # noqa: PLR0912, PLR0913, PLR0915
+    def __init__(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         self,
         source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
+        config: ParserConfig | None = None,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -802,6 +804,200 @@ class Parser(ABC):
         target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the Parser with configuration options."""
+        if config is not None:
+            data_model_type = config.data_model_type if data_model_type is pydantic_model.BaseModel else data_model_type
+            data_model_root_type = (
+                config.data_model_root_type
+                if data_model_root_type is pydantic_model.CustomRootType
+                else data_model_root_type
+            )
+            data_type_manager_type = (
+                config.data_type_manager_type
+                if data_type_manager_type is pydantic_model.DataTypeManager
+                else data_type_manager_type
+            )
+            data_model_field_type = (
+                config.data_model_field_type
+                if data_model_field_type is pydantic_model.DataModelField
+                else data_model_field_type
+            )
+            base_class = config.base_class if base_class is None else base_class
+            base_class_map = config.base_class_map if base_class_map is None else base_class_map
+            additional_imports = config.additional_imports if additional_imports is None else additional_imports
+            class_decorators = config.class_decorators if class_decorators is None else class_decorators
+            custom_template_dir = config.custom_template_dir if custom_template_dir is None else custom_template_dir
+            if extra_template_data is None and config.extra_template_data is not None:
+                extra_template_data = defaultdict(dict, config.extra_template_data)
+            target_python_version = (
+                config.target_python_version if target_python_version == PythonVersionMin else target_python_version
+            )
+            dump_resolve_reference_action = (
+                config.dump_resolve_reference_action
+                if dump_resolve_reference_action is None
+                else dump_resolve_reference_action
+            )
+            validation = validation or config.validation
+            field_constraints = field_constraints or config.field_constraints
+            snake_case_field = snake_case_field or config.snake_case_field
+            strip_default_none = strip_default_none or config.strip_default_none
+            aliases = config.aliases if aliases is None else aliases
+            allow_population_by_field_name = allow_population_by_field_name or config.allow_population_by_field_name
+            apply_default_values_for_required_fields = (
+                apply_default_values_for_required_fields or config.apply_default_values_for_required_fields
+            )
+            allow_extra_fields = allow_extra_fields or config.allow_extra_fields
+            extra_fields = config.extra_fields if extra_fields is None else extra_fields
+            use_generic_base_class = use_generic_base_class or config.use_generic_base_class
+            force_optional_for_required_fields = (
+                force_optional_for_required_fields or config.force_optional_for_required_fields
+            )
+            class_name = config.class_name if class_name is None else class_name
+            use_standard_collections = use_standard_collections or config.use_standard_collections
+            base_path = config.base_path if base_path is None else base_path
+            use_schema_description = use_schema_description or config.use_schema_description
+            use_field_description = use_field_description or config.use_field_description
+            use_field_description_example = use_field_description_example or config.use_field_description_example
+            use_attribute_docstrings = use_attribute_docstrings or config.use_attribute_docstrings
+            use_inline_field_description = use_inline_field_description or config.use_inline_field_description
+            use_default_kwarg = use_default_kwarg or config.use_default_kwarg
+            reuse_model = reuse_model or config.reuse_model
+            reuse_scope = config.reuse_scope if reuse_scope is None else reuse_scope
+            shared_module_name = (
+                config.shared_module_name if shared_module_name == DEFAULT_SHARED_MODULE_NAME else shared_module_name
+            )
+            encoding = config.encoding if encoding == "utf-8" else encoding
+            enum_field_as_literal = (
+                config.enum_field_as_literal if enum_field_as_literal is None else enum_field_as_literal
+            )
+            enum_field_as_literal_map = (
+                config.enum_field_as_literal_map if enum_field_as_literal_map is None else enum_field_as_literal_map
+            )
+            ignore_enum_constraints = ignore_enum_constraints or config.ignore_enum_constraints
+            set_default_enum_member = set_default_enum_member or config.set_default_enum_member
+            use_subclass_enum = use_subclass_enum or config.use_subclass_enum
+            use_specialized_enum = config.use_specialized_enum if use_specialized_enum else False
+            strict_nullable = strict_nullable or config.strict_nullable
+            use_generic_container_types = use_generic_container_types or config.use_generic_container_types
+            enable_faux_immutability = enable_faux_immutability or config.enable_faux_immutability
+            remote_text_cache = config.remote_text_cache if remote_text_cache is None else remote_text_cache
+            disable_appending_item_suffix = disable_appending_item_suffix or config.disable_appending_item_suffix
+            strict_types = config.strict_types if strict_types is None else strict_types
+            empty_enum_field_name = (
+                config.empty_enum_field_name if empty_enum_field_name is None else empty_enum_field_name
+            )
+            custom_class_name_generator = (
+                config.custom_class_name_generator
+                if custom_class_name_generator is title_to_class_name
+                else custom_class_name_generator
+            )
+            field_extra_keys = config.field_extra_keys if field_extra_keys is None else field_extra_keys
+            field_include_all_keys = field_include_all_keys or config.field_include_all_keys
+            field_extra_keys_without_x_prefix = (
+                config.field_extra_keys_without_x_prefix
+                if field_extra_keys_without_x_prefix is None
+                else field_extra_keys_without_x_prefix
+            )
+            model_extra_keys = config.model_extra_keys if model_extra_keys is None else model_extra_keys
+            model_extra_keys_without_x_prefix = (
+                config.model_extra_keys_without_x_prefix
+                if model_extra_keys_without_x_prefix is None
+                else model_extra_keys_without_x_prefix
+            )
+            wrap_string_literal = config.wrap_string_literal if wrap_string_literal is None else wrap_string_literal
+            use_title_as_name = use_title_as_name or config.use_title_as_name
+            use_operation_id_as_name = use_operation_id_as_name or config.use_operation_id_as_name
+            use_unique_items_as_set = use_unique_items_as_set or config.use_unique_items_as_set
+            use_tuple_for_fixed_items = use_tuple_for_fixed_items or config.use_tuple_for_fixed_items
+            allof_merge_mode = (
+                config.allof_merge_mode if allof_merge_mode == AllOfMergeMode.Constraints else allof_merge_mode
+            )
+            http_headers = config.http_headers if http_headers is None else http_headers
+            http_ignore_tls = http_ignore_tls or config.http_ignore_tls
+            http_timeout = config.http_timeout if http_timeout is None else http_timeout
+            use_annotated = use_annotated or config.use_annotated
+            use_serialize_as_any = use_serialize_as_any or config.use_serialize_as_any
+            use_non_positive_negative_number_constrained_types = (
+                use_non_positive_negative_number_constrained_types
+                or config.use_non_positive_negative_number_constrained_types
+            )
+            use_decimal_for_multiple_of = use_decimal_for_multiple_of or config.use_decimal_for_multiple_of
+            original_field_name_delimiter = (
+                config.original_field_name_delimiter
+                if original_field_name_delimiter is None
+                else original_field_name_delimiter
+            )
+            use_double_quotes = use_double_quotes or config.use_double_quotes
+            use_union_operator = use_union_operator or config.use_union_operator
+            allow_responses_without_content = allow_responses_without_content or config.allow_responses_without_content
+            collapse_root_models = collapse_root_models or config.collapse_root_models
+            collapse_root_models_name_strategy = (
+                config.collapse_root_models_name_strategy
+                if collapse_root_models_name_strategy is None
+                else collapse_root_models_name_strategy
+            )
+            collapse_reuse_models = collapse_reuse_models or config.collapse_reuse_models
+            skip_root_model = skip_root_model or config.skip_root_model
+            use_type_alias = use_type_alias or config.use_type_alias
+            special_field_name_prefix = (
+                config.special_field_name_prefix if special_field_name_prefix is None else special_field_name_prefix
+            )
+            remove_special_field_name_prefix = (
+                remove_special_field_name_prefix or config.remove_special_field_name_prefix
+            )
+            capitalise_enum_members = capitalise_enum_members or config.capitalise_enum_members
+            keep_model_order = keep_model_order or config.keep_model_order
+            use_one_literal_as_default = use_one_literal_as_default or config.use_one_literal_as_default
+            use_enum_values_in_discriminator = (
+                use_enum_values_in_discriminator or config.use_enum_values_in_discriminator
+            )
+            known_third_party = config.known_third_party if known_third_party is None else known_third_party
+            custom_formatters = config.custom_formatters if custom_formatters is None else custom_formatters
+            custom_formatters_kwargs = (
+                config.custom_formatters_kwargs if custom_formatters_kwargs is None else custom_formatters_kwargs
+            )
+            use_pendulum = use_pendulum or config.use_pendulum
+            use_standard_primitive_types = use_standard_primitive_types or config.use_standard_primitive_types
+            http_query_parameters = (
+                config.http_query_parameters if http_query_parameters is None else http_query_parameters
+            )
+            treat_dot_as_module = config.treat_dot_as_module if treat_dot_as_module is None else treat_dot_as_module
+            use_exact_imports = use_exact_imports or config.use_exact_imports
+            default_field_extras = config.default_field_extras if default_field_extras is None else default_field_extras
+            target_datetime_class = (
+                config.target_datetime_class if target_datetime_class is None else target_datetime_class
+            )
+            target_date_class = config.target_date_class if target_date_class is None else target_date_class
+            keyword_only = keyword_only or config.keyword_only
+            frozen_dataclasses = frozen_dataclasses or config.frozen_dataclasses
+            no_alias = no_alias or config.no_alias
+            use_frozen_field = use_frozen_field or config.use_frozen_field
+            use_default_factory_for_optional_nested_models = (
+                use_default_factory_for_optional_nested_models or config.use_default_factory_for_optional_nested_models
+            )
+            formatters = config.formatters if formatters == DEFAULT_FORMATTERS else formatters
+            defer_formatting = defer_formatting or config.defer_formatting
+            parent_scoped_naming = parent_scoped_naming or config.parent_scoped_naming
+            naming_strategy = config.naming_strategy if naming_strategy is None else naming_strategy
+            duplicate_name_suffix = (
+                config.duplicate_name_suffix if duplicate_name_suffix is None else duplicate_name_suffix
+            )
+            dataclass_arguments = config.dataclass_arguments if dataclass_arguments is None else dataclass_arguments
+            type_mappings = config.type_mappings if type_mappings is None else type_mappings
+            type_overrides = config.type_overrides if type_overrides is None else type_overrides
+            read_only_write_only_model_type = (
+                config.read_only_write_only_model_type
+                if read_only_write_only_model_type is None
+                else read_only_write_only_model_type
+            )
+            field_type_collision_strategy = (
+                config.field_type_collision_strategy
+                if field_type_collision_strategy is None
+                else field_type_collision_strategy
+            )
+            target_pydantic_version = (
+                config.target_pydantic_version if target_pydantic_version is None else target_pydantic_version
+            )
+
         self.keyword_only = keyword_only
         self.target_pydantic_version = target_pydantic_version
         self.frozen_dataclasses = frozen_dataclasses

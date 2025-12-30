@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
-    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.config import GenerateConfig, ParserConfig
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic import DataTypeManager
@@ -183,6 +183,7 @@ class _BaselineParser:
         self,
         source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
+        config: ParserConfig | None = None,
         data_model_type: type[DataModel] = BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
         data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
@@ -603,3 +604,134 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
     kwargs_content = output_kwargs.read_text(encoding="utf-8")
     config_content = output_config.read_text(encoding="utf-8")
     assert kwargs_content == config_content, "Output differs between kwargs and config"
+
+
+@PYDANTIC_V2_SKIP
+def test_jsonschema_parser_with_config() -> None:
+    """Test that JsonSchemaParser works correctly with ParserConfig."""
+    from collections import defaultdict
+
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    extra_data: defaultdict[str, dict[str, Any]] = defaultdict(dict)
+    extra_data["TestModel"]["custom_key"] = "custom_value"
+
+    config = ParserConfig(
+        validation=True,
+        snake_case_field=True,
+        use_schema_description=True,
+        reuse_model=True,
+        extra_template_data=extra_data,
+    )
+
+    parser = JsonSchemaParser(
+        source='{"type": "object", "properties": {"testField": {"type": "string"}}}',
+        config=config,
+    )
+
+    assert parser.validation is True
+    assert parser.snake_case_field is True
+    assert parser.use_schema_description is True
+    assert parser.reuse_model is True
+    assert parser.extra_template_data is not None
+    assert parser.extra_template_data["TestModel"]["custom_key"] == "custom_value"
+
+
+@PYDANTIC_V2_SKIP
+def test_openapi_parser_with_config() -> None:
+    """Test that OpenAPIParser works correctly with OpenAPIParserConfig."""
+    from datamodel_code_generator.config import OpenAPIParserConfig
+    from datamodel_code_generator.enums import OpenAPIScope
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    OpenAPIParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    config = OpenAPIParserConfig(
+        validation=True,
+        snake_case_field=True,
+        openapi_scopes=[OpenAPIScope.Schemas, OpenAPIScope.Paths],
+        include_path_parameters=True,
+        use_status_code_in_response_name=True,
+    )
+
+    openapi_spec = """{
+        "openapi": "3.0.0",
+        "info": {"title": "Test", "version": "1.0.0"},
+        "paths": {},
+        "components": {"schemas": {"Test": {"type": "object"}}}
+    }"""
+
+    parser = OpenAPIParser(
+        source=openapi_spec,
+        config=config,
+    )
+
+    assert parser.validation is True
+    assert parser.snake_case_field is True
+    assert parser.open_api_scopes == [OpenAPIScope.Schemas, OpenAPIScope.Paths]
+    assert parser.include_path_parameters is True
+    assert parser.use_status_code_in_response_name is True
+
+
+@PYDANTIC_V2_SKIP
+def test_graphql_parser_with_config() -> None:
+    """Test that GraphQLParser works correctly with GraphQLParserConfig."""
+    from datamodel_code_generator.config import GraphQLParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model.scalar import DataTypeScalar
+    from datamodel_code_generator.model.union import DataTypeUnion
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    GraphQLParserConfig.model_rebuild(
+        _types_namespace={
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+            "StrictTypes": StrictTypes,
+        }
+    )
+
+    config = GraphQLParserConfig(
+        validation=True,
+        snake_case_field=True,
+        data_model_scalar_type=DataTypeScalar,
+        data_model_union_type=DataTypeUnion,
+    )
+
+    graphql_schema = """
+    type Query {
+        test: String
+    }
+    """
+
+    parser = GraphQLParser(
+        source=graphql_schema,
+        config=config,
+    )
+
+    assert parser.validation is True
+    assert parser.snake_case_field is True
+    assert parser.data_model_scalar_type is DataTypeScalar
+    assert parser.data_model_union_type is DataTypeUnion

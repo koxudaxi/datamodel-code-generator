@@ -57,6 +57,8 @@ if TYPE_CHECKING:
     from collections import defaultdict
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
+    from datamodel_code_generator.config import GraphQLParserConfig
+
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
 try:  # graphql-core < 3.2.7
@@ -103,6 +105,7 @@ class GraphQLParser(Parser):
         self,
         source: str | Path | ParseResult,
         *,
+        config: GraphQLParserConfig | None = None,
         data_model_type: type[DataModel] = pydantic_model.BaseModel,
         data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
         data_model_scalar_type: type[DataModel] = DataTypeScalar,
@@ -217,8 +220,15 @@ class GraphQLParser(Parser):
         target_pydantic_version: TargetPydanticVersion | None = None,
     ) -> None:
         """Initialize the GraphQL parser with configuration options."""
+        if config is not None:
+            if config.data_model_scalar_type is not None and data_model_scalar_type is DataTypeScalar:
+                data_model_scalar_type = config.data_model_scalar_type
+            if config.data_model_union_type is not None and data_model_union_type is DataTypeUnion:
+                data_model_union_type = config.data_model_union_type
+
         super().__init__(
             source=source,
+            config=config,
             data_model_type=data_model_type,
             data_model_root_type=data_model_root_type,
             data_type_manager_type=data_type_manager_type,
