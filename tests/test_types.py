@@ -4,7 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from datamodel_code_generator.types import _remove_none_from_union, get_optional_type
+from datamodel_code_generator.types import (
+    _remove_none_from_union,
+    extract_qualified_names,
+    get_optional_type,
+    get_subscript_args,
+    get_type_base_name,
+)
 
 
 @pytest.mark.parametrize(
@@ -273,3 +279,104 @@ def test_datatype_deepcopy_memo_cache_hit() -> None:
     # Second call with same memo - should return cached object (covers memo hit branch)
     copied2 = data_type.__deepcopy__(memo)  # noqa: PLC2801
     assert copied2 is copied1  # Same object from memo
+
+
+@pytest.mark.parametrize(
+    ("type_str", "expected"),
+    [
+        # Simple types
+        ("str", "str"),
+        ("int", "int"),
+        ("List", "List"),
+        # Subscripted types
+        ("List[str]", "List"),
+        ("Dict[str, int]", "Dict"),
+        ("Optional[int]", "Optional"),
+        ("Union[str, int]", "Union"),
+        # Qualified names
+        ("foo.bar.Baz", "Baz"),
+        ("datamodel_code_generator.model.base.DataModel", "DataModel"),
+        # Subscripted with qualified names
+        ("type[foo.bar.Baz]", "type"),
+        ("List[foo.Bar]", "List"),
+        # Invalid syntax (fallback to string parsing)
+        ("List[", "List"),
+        ("[invalid", ""),  # splits on "[" giving empty string
+    ],
+)
+def test_get_type_base_name(type_str: str, expected: str) -> None:
+    """Test get_type_base_name extracts base type correctly."""
+    assert get_type_base_name(type_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("type_str", "expected"),
+    [
+        # Simple types (no subscript)
+        ("str", []),
+        ("int", []),
+        # Single argument
+        ("List[str]", ["str"]),
+        ("Optional[int]", ["int"]),
+        ("type[Foo]", ["Foo"]),
+        # Multiple arguments
+        ("Dict[str, int]", ["str", "int"]),
+        ("Union[str, int, None]", ["str", "int", "None"]),
+        ("Tuple[int, str, float]", ["int", "str", "float"]),
+        # Union operator syntax
+        ("str | int", ["str", "int"]),
+        ("str | int | None", ["str", "int", "None"]),
+        ("List[str] | None", ["List[str]", "None"]),
+        # Complex nested types
+        ("Dict[str, List[int]]", ["str", "List[int]"]),
+        ("Union[List[str], Dict[str, int]]", ["List[str]", "Dict[str, int]"]),
+        # Qualified names in arguments
+        ("type[foo.bar.Baz]", ["foo.bar.Baz"]),
+        ("Dict[a.B, c.D]", ["a.B", "c.D"]),
+        # Invalid syntax
+        ("List[", []),
+        ("[invalid", []),
+    ],
+)
+def test_get_subscript_args(type_str: str, expected: list[str]) -> None:
+    """Test get_subscript_args extracts type arguments correctly."""
+    assert get_subscript_args(type_str) == expected
+
+
+@pytest.mark.parametrize(
+    ("type_str", "expected"),
+    [
+        # No qualified names
+        ("str", []),
+        ("List[str]", []),
+        ("Union[str, int]", []),
+        # Single qualified name
+        ("foo.Bar", ["foo.Bar"]),
+        ("foo.bar.Baz", ["foo.bar.Baz"]),
+        ("datamodel_code_generator.model.base.DataModel", ["datamodel_code_generator.model.base.DataModel"]),
+        # Qualified names in subscript
+        ("type[foo.bar.Baz]", ["foo.bar.Baz"]),
+        ("List[foo.Bar]", ["foo.Bar"]),
+        ("Optional[a.b.C]", ["a.b.C"]),
+        # Multiple qualified names
+        ("Dict[a.B, c.D]", ["a.B", "c.D"]),
+        ("Union[foo.Bar, baz.Qux]", ["foo.Bar", "baz.Qux"]),
+        # Mixed with simple types
+        ("Dict[str, foo.Bar]", ["foo.Bar"]),
+        ("Union[int, a.B, None]", ["a.B"]),
+        # Union operator syntax
+        ("foo.Bar | None", ["foo.Bar"]),
+        ("a.B | c.D", ["a.B", "c.D"]),
+        # Complex nested
+        ("Dict[str, List[foo.Bar]]", ["foo.Bar"]),
+        ("type[datamodel_code_generator.types.DataTypeManager]", ["datamodel_code_generator.types.DataTypeManager"]),
+        # Attribute on non-Name (function call result) - should not extract
+        ("foo().bar", []),
+        ("func().attr.name", []),
+        # Invalid syntax
+        ("foo.Bar[", []),
+    ],
+)
+def test_extract_qualified_names(type_str: str, expected: list[str]) -> None:
+    """Test extract_qualified_names finds all fully qualified names."""
+    assert extract_qualified_names(type_str) == expected

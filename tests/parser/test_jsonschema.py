@@ -1181,3 +1181,45 @@ def test_timestamp_with_time_zone_format() -> None:
 
     # Verify the format is mapped correctly
     assert json_schema_data_formats["string"]["timestamp with time zone"] == Types.date_time
+
+
+@pytest.mark.parametrize(
+    ("x_python_type", "expected"),
+    [
+        # Direct matches for special container types
+        ("Set[str]", {"is_set": True}),
+        ("set[int]", {"is_set": True}),
+        ("FrozenSet[int]", {"is_frozen_set": True}),
+        ("frozenset[str]", {"is_frozen_set": True}),
+        ("Sequence[str]", {"is_sequence": True}),
+        ("MutableSequence[int]", {"is_sequence": True}),
+        ("Mapping[str, int]", {"is_mapping": True}),
+        ("MutableMapping[str, int]", {"is_mapping": True}),
+        ("AbstractSet[str]", {"is_frozen_set": True}),
+        ("MutableSet[int]", {"is_set": True}),
+        # Union with special container type
+        ("Union[Set[str], None]", {"is_set": True}),
+        ("Optional[FrozenSet[int]]", {"is_frozen_set": True}),
+        ("Set[int] | None", {"is_set": True}),
+        ("Sequence[str] | int", {"is_sequence": True}),
+        # Union without special container type (loop completes without match)
+        ("Union[str, int]", {}),
+        ("str | int", {}),
+        ("Optional[str]", {}),
+        ("Union[str, int, float]", {}),
+        ("Union[List[str], None]", {}),  # List is not a special container
+        ("Optional[Dict[str, int]]", {}),  # Dict is not a special container
+        # Non-special container types
+        ("List[str]", {}),
+        ("Dict[str, int]", {}),
+        ("str", {}),
+        ("int", {}),
+        ("CustomType", {}),
+    ],
+)
+def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) -> None:
+    """Test _get_python_type_flags extracts collection flags correctly."""
+    parser = JsonSchemaParser("")
+    obj = model_validate(JsonSchemaObject, {"x-python-type": x_python_type})
+    result = parser._get_python_type_flags(obj)
+    assert result == expected
