@@ -823,6 +823,7 @@ def _add_python_type_for_unserializable(
 
 def _init_preserved_type_origins() -> dict[type, str]:
     """Initialize preserved type origins mapping (lazy initialization)."""
+    from collections import ChainMap, Counter, OrderedDict, defaultdict, deque  # noqa: PLC0415
     from collections.abc import Mapping as ABCMapping  # noqa: PLC0415
     from collections.abc import MutableMapping as ABCMutableMapping  # noqa: PLC0415
     from collections.abc import MutableSequence as ABCMutableSequence  # noqa: PLC0415
@@ -833,6 +834,11 @@ def _init_preserved_type_origins() -> dict[type, str]:
     return {
         set: "set",
         frozenset: "frozenset",
+        defaultdict: "defaultdict",
+        OrderedDict: "OrderedDict",
+        Counter: "Counter",
+        deque: "deque",
+        ChainMap: "ChainMap",
         AbstractSet: "AbstractSet",
         ABCMutableSet: "MutableSet",
         ABCMapping: "Mapping",
@@ -878,8 +884,12 @@ def _serialize_python_type(tp: type) -> str | None:
                 return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
 
-    if origin in preserved_origins:
-        type_name = preserved_origins[origin]
+    type_name: str | None = None
+    if origin is not None:
+        type_name = preserved_origins.get(origin)
+        if type_name is None and getattr(origin, "__module__", None) == "collections":  # pragma: no cover
+            type_name = _simple_type_name(origin)
+    if type_name is not None:
         if args:
             args_str = ", ".join(_serialize_python_type(a) or _simple_type_name(a) for a in args)
             return f"{type_name}[{args_str}]"
