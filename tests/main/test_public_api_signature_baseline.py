@@ -5,6 +5,8 @@ from __future__ import annotations
 import inspect
 from typing import TYPE_CHECKING, Any
 
+import pytest
+
 from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
     AllExportsCollisionStrategy,
@@ -384,3 +386,98 @@ def test_parse_config_dict_fields_match_parse_config() -> None:
     config_fields = set(ParseConfig.model_fields.keys())
     dict_fields = set(ParseConfigDict.__annotations__.keys())
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+def test_parser_config_dict_types_match_parser_config() -> None:
+    """Ensure ParserConfigDict field types match ParserConfig."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator._types import ParserConfigDict
+
+    for field_name, field_info in ParserConfig.model_fields.items():
+        config_type = _normalize_type_str(str(field_info.annotation))
+        dict_type = _normalize_type_str(str(ParserConfigDict.__annotations__[field_name]))
+        assert config_type == dict_type, (
+            f"Type mismatch for {field_name}: Config={config_type}, Dict={dict_type}"
+        )
+
+
+def test_parse_config_dict_types_match_parse_config() -> None:
+    """Ensure ParseConfigDict field types match ParseConfig."""
+    from datamodel_code_generator.config import ParseConfig
+    from datamodel_code_generator._types import ParseConfigDict
+
+    for field_name, field_info in ParseConfig.model_fields.items():
+        config_type = _normalize_type_str(str(field_info.annotation))
+        dict_type = _normalize_type_str(str(ParseConfigDict.__annotations__[field_name]))
+        assert config_type == dict_type, (
+            f"Type mismatch for {field_name}: Config={config_type}, Dict={dict_type}"
+        )
+
+
+def test_generate_config_defaults_match_generate_signature() -> None:
+    """Ensure GenerateConfig default values match generate() signature defaults."""
+    from datamodel_code_generator.config import GenerateConfig
+
+    expected_sig = inspect.signature(_baseline_generate)
+    expected_params = _kwonly_by_name(expected_sig)
+
+    for field_name, field_info in GenerateConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        # Handle Parameter.empty vs None
+        if param.default is inspect.Parameter.empty:
+            # No default in signature means required, but Config may have None default
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, generate()={param.default}"
+        )
+
+
+def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> None:
+    """Ensure generate() with GenerateConfig produces same result as kwargs."""
+    import pydantic
+
+    if pydantic.VERSION < "2.0.0":
+        pytest.skip("GenerateConfig requires Pydantic v2")
+
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.enums import DataModelType
+    from datamodel_code_generator.types import StrictTypes
+
+    if hasattr(GenerateConfig, "model_rebuild"):
+        try:
+            from datamodel_code_generator.model.pydantic_v2 import UnionMode
+        except ImportError:
+            UnionMode = None
+        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+
+    schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
+    output_kwargs = tmp_path / "output_kwargs.py"
+    output_config = tmp_path / "output_config.py"
+
+    # Generate with kwargs
+    generate(
+        input_=schema,
+        output=output_kwargs,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    # Generate with config
+    config = GenerateConfig(
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    generate(
+        input_=schema,
+        output=output_config,
+        config=config,
+    )
+
+    # Compare results
+    kwargs_content = output_kwargs.read_text(encoding="utf-8")
+    config_content = output_config.read_text(encoding="utf-8")
+    assert kwargs_content == config_content, "Output differs between kwargs and config"
