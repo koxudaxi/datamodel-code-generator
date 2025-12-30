@@ -1129,3 +1129,14 @@ def test_input_model_ref_strategy_reuse_foreign_msgspec_output(tmp_path: Path) -
             "class ModelWithPydantic",
         ],
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_config_class(tmp_path: Path) -> None:
+    """Test that config classes like GenerateConfig are properly handled."""
+    run_input_model_and_assert(
+        input_model="datamodel_code_generator.config:GenerateConfig",
+        output_path=tmp_path / "output.py",
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=["TypedDict", "Callable[[str], str]"],
+    )

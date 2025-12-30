@@ -1,0 +1,31 @@
+name: Check config types
+
+on:
+  push:
+    paths:
+      - 'src/datamodel_code_generator/config.py'
+      - 'src/datamodel_code_generator/_types/**'
+      - 'pyproject.toml'
+      - '.github/workflows/config-types.yaml'
+  pull_request:
+    paths:
+      - 'src/datamodel_code_generator/config.py'
+      - 'src/datamodel_code_generator/_types/**'
+      - 'pyproject.toml'
+      - '.github/workflows/config-types.yaml'
+
+jobs:
+  config-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv python install 3.14
+
+      - run: uv tool install --python 3.14 tox --with tox-uv
+
+      - run: tox -e config-types -- --check

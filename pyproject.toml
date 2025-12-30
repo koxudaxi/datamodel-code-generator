@@ -244,7 +244,7 @@ paths.other = [
   "*\\datamodel-code-generator",
 ]
 run.dynamic_context = "none"
-run.omit = [ "tests/data/*", "tests/main/test_performance.py" ]
+run.omit = [ "tests/data/*", "tests/main/test_performance.py", "*/_types/*" ]
 report.fail_under = 88
 run.parallel = true
 run.plugins = [
@@ -258,3 +258,30 @@ reportPrivateImportUsage = false
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
+
+[tool.datamodel-codegen.profiles.config-types-base]
+enum-field-as-literal = "none"
+use-standard-primitive-types = true
+disable-warnings = true
+disable-timestamp = true
+output-model-type = "typing.TypedDict"
+formatters = [ "ruff-format", "ruff-check" ]
+input-model-ref-strategy = "reuse-foreign"
+
+[tool.datamodel-codegen.profiles.generate-config-dict]
+extends = "config-types-base"
+input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
+output = "src/datamodel_code_generator/_types/generate_config_dict.py"
+class-name = "GenerateConfigDict"
+
+[tool.datamodel-codegen.profiles.parser-config-dict]
+extends = "config-types-base"
+input-model = "src/datamodel_code_generator/config.py:ParserConfig"
+output = "src/datamodel_code_generator/_types/parser_config_dict.py"
+class-name = "ParserConfigDict"
+
+[tool.datamodel-codegen.profiles.parse-config-dict]
+extends = "config-types-base"
+input-model = "src/datamodel_code_generator/config.py:ParseConfig"
+output = "src/datamodel_code_generator/_types/parse_config_dict.py"
+class-name = "ParseConfigDict"

@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import inspect
-from typing import TYPE_CHECKING, Any
+import types
+from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
+
+import pytest
+from typing_extensions import NotRequired
 
 from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
@@ -27,6 +31,9 @@ from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model.pydantic import BaseModel
 from datamodel_code_generator.parser.base import Parser, YamlValue, title_to_class_name
+from datamodel_code_generator.util import is_pydantic_v2
+
+PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -34,6 +41,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from urllib.parse import ParseResult
 
+    from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.dataclass import DataclassArguments
     from datamodel_code_generator.model.pydantic import DataTypeManager
@@ -45,6 +53,7 @@ if TYPE_CHECKING:
 def _baseline_generate(
     input_: Path | str | ParseResult | Mapping[str, Any],
     *,
+    config: GenerateConfig | None = None,
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
@@ -287,6 +296,18 @@ class _BaselineParser:
     ) -> None:
         raise NotImplementedError
 
+    def parse(
+        self,
+        with_import: bool | None = True,
+        format_: bool | None = True,
+        settings_path: Path | None = None,
+        disable_future_imports: bool = False,
+        all_exports_scope: AllExportsScope | None = None,
+        all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
+        module_split_mode: ModuleSplitMode | None = None,
+    ) -> str | dict[tuple[str, ...], Any]:
+        raise NotImplementedError
+
 
 def _kwonly_params(signature: inspect.Signature) -> list[inspect.Parameter]:
     return [param for param in signature.parameters.values() if param.kind is inspect.Parameter.KEYWORD_ONLY]
@@ -294,6 +315,83 @@ def _kwonly_params(signature: inspect.Signature) -> list[inspect.Parameter]:
 
 def _kwonly_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter]:
     return {param.name: param for param in _kwonly_params(signature)}
+
+
+def _params_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter]:
+    return {
+        name: param
+        for name, param in signature.parameters.items()
+        if name != "self" and param.kind in {inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY}
+    }
+
+
+def _type_to_str(tp: Any) -> str:
+    """Convert type to normalized string."""
+    if tp is type(None):
+        return "None"
+    if isinstance(tp, type):
+        return tp.__name__
+    if isinstance(tp, str):
+        return tp
+    return (
+        str(tp)
+        .replace("collections.abc.", "")
+        .replace("collections.", "")
+        .replace("typing.", "")
+        .replace("pathlib.", "")
+    )
+
+
+def _normalize_union_str(type_str: str) -> str:
+    """Normalize a union type string by sorting its components."""
+    if " | " in type_str:
+        parts = [p.strip() for p in type_str.split(" | ")]
+        return " | ".join(sorted(parts))
+    return type_str
+
+
+def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
+    """Normalize type for comparison between Config and TypedDict."""
+    if tp is None or tp is type(None):
+        return "None"
+
+    if isinstance(tp, str):
+        return _normalize_union_str(tp)
+
+    if isinstance(tp, ForwardRef):
+        arg = tp.__forward_arg__
+        if arg.startswith("NotRequired[") and arg.endswith("]"):
+            arg = arg[12:-1]
+        return _normalize_union_str(arg)
+
+    if isinstance(tp, list):
+        return f"[{', '.join(_normalize_type(t) for t in tp)}]"
+
+    origin = get_origin(tp)
+    args = get_args(tp)
+
+    if origin in {Annotated, NotRequired}:
+        return _normalize_type(args[0]) if args else _type_to_str(tp)
+
+    if origin is Union or isinstance(tp, types.UnionType):
+        if isinstance(tp, types.UnionType):
+            args = get_args(tp)
+        normalized_args = sorted(_normalize_type(a) for a in args)
+        return _type_to_str(" | ".join(normalized_args))
+
+    if origin is not None:
+        if args:
+            normalized_args = [_normalize_type(a) for a in args]
+            origin_name = getattr(origin, "__name__", str(origin))
+            return _type_to_str(f"{origin_name}[{', '.join(normalized_args)}]")
+        return _type_to_str(origin)
+
+    return _type_to_str(tp)
+
+
+def _types_match(config_type: Any, dict_type: Any) -> bool:
+    """Check if Config type and TypedDict type are equivalent."""
+    return _normalize_type(config_type) == _normalize_type(dict_type)
 
 
 def test_generate_signature_matches_baseline() -> None:
@@ -312,3 +410,196 @@ def test_parser_signature_matches_baseline() -> None:
     assert _kwonly_by_name(actual).keys() == _kwonly_by_name(expected).keys()
     for name, param in _kwonly_by_name(expected).items():
         assert _kwonly_by_name(actual)[name].annotation == param.annotation
+
+
+@PYDANTIC_V2_SKIP
+def test_generate_config_dict_fields_match_generate_config() -> None:
+    """Ensure GenerateConfigDict has same field names as GenerateConfig."""
+    from datamodel_code_generator._types import GenerateConfigDict
+    from datamodel_code_generator.config import GenerateConfig
+
+    config_fields = set(GenerateConfig.model_fields.keys())
+    dict_fields = set(GenerateConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+@PYDANTIC_V2_SKIP
+def test_generate_config_dict_types_match_generate_config() -> None:
+    """Ensure GenerateConfigDict field types match GenerateConfig."""
+    from datamodel_code_generator._types import GenerateConfigDict
+    from datamodel_code_generator.config import GenerateConfig
+
+    for field_name, field_info in GenerateConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = GenerateConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_parser_config_dict_fields_match_parser_config() -> None:
+    """Ensure ParserConfigDict has same field names as ParserConfig."""
+    from datamodel_code_generator._types import ParserConfigDict
+    from datamodel_code_generator.config import ParserConfig
+
+    config_fields = set(ParserConfig.model_fields.keys())
+    dict_fields = set(ParserConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+@PYDANTIC_V2_SKIP
+def test_parse_config_dict_fields_match_parse_config() -> None:
+    """Ensure ParseConfigDict has same field names as ParseConfig."""
+    from datamodel_code_generator._types import ParseConfigDict
+    from datamodel_code_generator.config import ParseConfig
+
+    config_fields = set(ParseConfig.model_fields.keys())
+    dict_fields = set(ParseConfigDict.__annotations__.keys())
+    assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
+
+
+@PYDANTIC_V2_SKIP
+def test_parser_config_dict_types_match_parser_config() -> None:
+    """Ensure ParserConfigDict field types match ParserConfig."""
+    from datamodel_code_generator._types import ParserConfigDict
+    from datamodel_code_generator.config import ParserConfig
+
+    for field_name, field_info in ParserConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = ParserConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_parse_config_dict_types_match_parse_config() -> None:
+    """Ensure ParseConfigDict field types match ParseConfig."""
+    from datamodel_code_generator._types import ParseConfigDict
+    from datamodel_code_generator.config import ParseConfig
+
+    for field_name, field_info in ParseConfig.model_fields.items():
+        config_type = field_info.annotation
+        dict_type = ParseConfigDict.__annotations__[field_name]
+        assert _types_match(config_type, dict_type), (
+            f"Type mismatch for {field_name}: Config={_normalize_type(config_type)}, Dict={_normalize_type(dict_type)}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_generate_config_defaults_match_generate_signature() -> None:
+    """Ensure GenerateConfig default values match generate() signature defaults."""
+    from datamodel_code_generator.config import GenerateConfig
+
+    expected_sig = inspect.signature(_baseline_generate)
+    expected_params = _kwonly_by_name(expected_sig)
+
+    for field_name, field_info in GenerateConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        # Handle Parameter.empty vs None
+        if param.default is inspect.Parameter.empty:
+            # No default in signature means required, but Config may have None default
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, generate()={param.default}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_parser_config_defaults_match_parser_signature() -> None:
+    """Ensure ParserConfig default values match Parser.__init__ signature defaults."""
+    from datamodel_code_generator.config import ParserConfig
+
+    expected_sig = inspect.signature(_BaselineParser.__init__)
+    expected_params = _kwonly_by_name(expected_sig)
+
+    for field_name, field_info in ParserConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        if param.default is inspect.Parameter.empty:
+            continue
+
+        if callable(param.default) and config_default is None:
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, Parser.__init__()={param.default}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_parse_config_defaults_match_parse_signature() -> None:
+    """Ensure ParseConfig default values match Parser.parse() signature defaults."""
+    from datamodel_code_generator.config import ParseConfig
+
+    expected_sig = inspect.signature(_BaselineParser.parse)
+    expected_params = _params_by_name(expected_sig)
+
+    for field_name, field_info in ParseConfig.model_fields.items():
+        if field_name not in expected_params:
+            continue
+
+        param = expected_params[field_name]
+        config_default = field_info.default
+
+        if param.default is inspect.Parameter.empty:
+            continue
+
+        assert config_default == param.default, (
+            f"Default mismatch for {field_name}: Config={config_default}, Parser.parse()={param.default}"
+        )
+
+
+@PYDANTIC_V2_SKIP
+def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> None:
+    """Ensure generate() with GenerateConfig produces same result as kwargs."""
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.enums import DataModelType
+    from datamodel_code_generator.types import StrictTypes
+
+    if hasattr(GenerateConfig, "model_rebuild"):
+        types_namespace: dict[str, type | None] = {"StrictTypes": StrictTypes, "UnionMode": None}
+        try:
+            from datamodel_code_generator.model.pydantic_v2 import UnionMode
+
+            types_namespace["UnionMode"] = UnionMode
+        except ImportError:
+            pass
+        GenerateConfig.model_rebuild(_types_namespace=types_namespace)
+
+    schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
+    output_kwargs = tmp_path / "output_kwargs.py"
+    output_config = tmp_path / "output_config.py"
+
+    # Generate with kwargs
+    generate(
+        input_=schema,
+        output=output_kwargs,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    # Generate with config
+    config = GenerateConfig(
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    generate(
+        input_=schema,
+        output=output_config,
+        config=config,
+    )
+
+    # Compare results
+    kwargs_content = output_kwargs.read_text(encoding="utf-8")
+    config_content = output_config.read_text(encoding="utf-8")
+    assert kwargs_content == config_content, "Output differs between kwargs and config"
