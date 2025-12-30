@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -12,4 +14,4 @@ class SomeType(BaseModel):
 
 
 class MixedUnion(BaseModel):
-    __root__: str | SomeType = Field(..., title='MixedUnion')
+    __root__: Literal['value1'] | SomeType = Field(..., title='MixedUnion')
