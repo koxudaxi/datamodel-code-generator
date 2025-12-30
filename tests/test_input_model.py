@@ -727,6 +727,20 @@ def test_input_model_union_callable(tmp_path: Path) -> None:
     )
 
 
+@SKIP_PYDANTIC_V1
+def test_input_model_custom_generic_type_import(tmp_path: Path) -> None:
+    """Test that custom generic types are properly imported with full module path."""
+    run_input_model_and_assert(
+        input_model="tests.data.python.input_model.pydantic_models:ModelWithCustomGeneric",
+        output_path=tmp_path / "output.py",
+        expected_output_contains=[
+            "from tests.data.python.input_model.pydantic_models import CustomGenericDict",
+            "CustomGenericDict[str, int]",
+            "CustomGenericDict[str, str] | None",
+        ],
+    )
+
+
 # ============================================================================
 # --input-model-ref-strategy tests
 # ============================================================================
