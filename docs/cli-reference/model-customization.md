@@ -1368,11 +1368,15 @@ model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
             
             from __future__ import annotations
             
+            from typing import Literal
+            
             from pydantic import BaseModel, Field
             
             
             class Api(BaseModel):
-                version: str = Field('v1', const=True, description='The version of this API')
+                version: Literal['v1'] = Field(
+                    'v1', const=True, description='The version of this API'
+                )
             ```
 
         === "Pydantic v2"

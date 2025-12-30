@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import inspect
 import types
 from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, get_origin
@@ -344,10 +345,20 @@ def _type_to_str(tp: Any) -> str:
 
 def _normalize_union_str(type_str: str) -> str:
     """Normalize a union type string by sorting its components."""
-    if " | " in type_str:
-        parts = [p.strip() for p in type_str.split(" | ")]
-        return " | ".join(sorted(parts))
-    return type_str
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:  # pragma: no cover
+        return type_str
+    if not isinstance(tree.body, ast.BinOp) or not isinstance(tree.body.op, ast.BitOr):
+        return type_str
+
+    def collect_union_parts(node: ast.expr) -> list[str]:
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+            return collect_union_parts(node.left) + collect_union_parts(node.right)
+        return [ast.unparse(node)]
+
+    parts = collect_union_parts(tree.body)
+    return " | ".join(sorted(parts))
 
 
 def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
