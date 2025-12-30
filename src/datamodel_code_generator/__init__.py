@@ -687,6 +687,11 @@ def generate(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
         allof_merge_mode = (
             config.allof_merge_mode if allof_merge_mode == AllOfMergeMode.Constraints else allof_merge_mode
         )
+        allof_class_hierarchy = (
+            config.allof_class_hierarchy
+            if allof_class_hierarchy == AllOfClassHierarchy.IfNoConflict
+            else allof_class_hierarchy
+        )
         http_headers = config.http_headers if http_headers is None else http_headers
         http_ignore_tls = http_ignore_tls or config.http_ignore_tls
         http_timeout = config.http_timeout if http_timeout is None else http_timeout
