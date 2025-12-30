@@ -1,7 +1,16 @@
 openapi: "3.0.0"
 components:
   schemas:
+    Entity:
+      type: object
+      properties:
+        type_list:
+          type: array
+          items:
+            type: string
     Thing:
+      allOf:
+        - $ref: "#/components/schemas/Entity"
       type: object
       properties:
         type:
@@ -12,7 +21,7 @@ components:
           default:
             - playground:Thing
           items:
-            type: string
+            title: A type entry (default playground:Thing)
     Person:
       allOf:
         - $ref: "#/components/schemas/Thing"
@@ -24,4 +33,4 @@ components:
               default:
                 - playground:Person
               items:
-                title: A type entry
+                title: A type entry (default playground:Person)

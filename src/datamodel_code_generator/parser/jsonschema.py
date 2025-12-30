@@ -7,6 +7,7 @@ Python data models. Supports draft-04 through draft-2020-12 schemas.
 from __future__ import annotations
 
 import enum as _enum
+import importlib
 import json
 import re
 from collections import defaultdict
@@ -561,6 +562,7 @@ class JsonSchemaParser(Parser):
     }
 
     PYTHON_TYPE_IMPORTS: ClassVar[dict[str, Import]] = {
+        # collections.abc
         "Callable": Import.from_full_path("collections.abc.Callable"),
         "Iterable": Import.from_full_path("collections.abc.Iterable"),
         "Iterator": Import.from_full_path("collections.abc.Iterator"),
@@ -570,9 +572,57 @@ class JsonSchemaParser(Parser):
         "AsyncIterable": Import.from_full_path("collections.abc.AsyncIterable"),
         "AsyncIterator": Import.from_full_path("collections.abc.AsyncIterator"),
         "AsyncGenerator": Import.from_full_path("collections.abc.AsyncGenerator"),
+        "Mapping": Import.from_full_path("collections.abc.Mapping"),
+        "MutableMapping": Import.from_full_path("collections.abc.MutableMapping"),
+        "Sequence": Import.from_full_path("collections.abc.Sequence"),
+        "MutableSequence": Import.from_full_path("collections.abc.MutableSequence"),
+        "Set": Import.from_full_path("collections.abc.Set"),
+        "MutableSet": Import.from_full_path("collections.abc.MutableSet"),
+        "Collection": Import.from_full_path("collections.abc.Collection"),
+        "Reversible": Import.from_full_path("collections.abc.Reversible"),
+        # collections
+        "defaultdict": Import.from_full_path("collections.defaultdict"),
+        "OrderedDict": Import.from_full_path("collections.OrderedDict"),
+        "Counter": Import.from_full_path("collections.Counter"),
+        "deque": Import.from_full_path("collections.deque"),
+        "ChainMap": Import.from_full_path("collections.ChainMap"),
+        # re
         "Pattern": Import.from_full_path("re.Pattern"),
         "Match": Import.from_full_path("re.Match"),
+        # typing
+        "Any": Import.from_full_path("typing.Any"),
         "Type": Import.from_full_path("typing.Type"),
+        "Union": Import.from_full_path("typing.Union"),
+        "Optional": Import.from_full_path("typing.Optional"),
+        "Literal": Import.from_full_path("typing.Literal"),
+        "Final": Import.from_full_path("typing.Final"),
+        "ClassVar": Import.from_full_path("typing.ClassVar"),
+        "Annotated": Import.from_full_path("typing.Annotated"),
+        "TypeVar": Import.from_full_path("typing.TypeVar"),
+        "TypeAlias": Import.from_full_path("typing.TypeAlias"),
+        "Never": Import.from_full_path("typing.Never"),
+        "NoReturn": Import.from_full_path("typing.NoReturn"),
+        "Self": Import.from_full_path("typing.Self"),
+        "LiteralString": Import.from_full_path("typing.LiteralString"),
+        "TypeGuard": Import.from_full_path("typing.TypeGuard"),
+        # pathlib
+        "Path": Import.from_full_path("pathlib.Path"),
+        "PurePath": Import.from_full_path("pathlib.PurePath"),
+        # decimal
+        "Decimal": Import.from_full_path("decimal.Decimal"),
+        # uuid
+        "UUID": Import.from_full_path("uuid.UUID"),
+        # datetime
+        "datetime": Import.from_full_path("datetime.datetime"),
+        "date": Import.from_full_path("datetime.date"),
+        "time": Import.from_full_path("datetime.time"),
+        "timedelta": Import.from_full_path("datetime.timedelta"),
+        # enum
+        "Enum": Import.from_full_path("enum.Enum"),
+        "IntEnum": Import.from_full_path("enum.IntEnum"),
+        "StrEnum": Import.from_full_path("enum.StrEnum"),
+        "Flag": Import.from_full_path("enum.Flag"),
+        "IntFlag": Import.from_full_path("enum.IntFlag"),
     }
 
     # Types that require x-python-type override regardless of schema type
@@ -1355,6 +1405,34 @@ class JsonSchemaParser(Parser):
         pattern = r"(?<![.\w])([A-Z]\w*)"
         return re.findall(pattern, type_str)
 
+    @staticmethod
+    @lru_cache(maxsize=256)
+    def _resolve_type_import_dynamic(type_name: str) -> Import | None:
+        """Dynamically resolve import for a type name from known modules."""
+        modules_to_check = (
+            "typing",
+            "collections.abc",
+            "collections",
+            "pathlib",
+            "decimal",
+            "uuid",
+            "datetime",
+            "enum",
+            "re",
+        )
+        for module_name in modules_to_check:
+            with suppress(ImportError):
+                module = importlib.import_module(module_name)
+                if hasattr(module, type_name):
+                    return Import.from_full_path(f"{module_name}.{type_name}")
+        return None
+
+    def _resolve_type_import(self, type_name: str) -> Import | None:
+        """Resolve import for a type name, with dynamic fallback."""
+        if type_name in self.PYTHON_TYPE_IMPORTS:
+            return self.PYTHON_TYPE_IMPORTS[type_name]
+        return self._resolve_type_import_dynamic(type_name)
+
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
         x_python_type = obj.extras.get("x-python-type")
@@ -1366,7 +1444,7 @@ class JsonSchemaParser(Parser):
             return None
 
         base_type = self._get_python_type_base(x_python_type)
-        import_ = self.PYTHON_TYPE_IMPORTS.get(base_type)
+        import_ = self._resolve_type_import(base_type)
 
         # Convert fully qualified path to short name when import is added
         type_str = x_python_type
@@ -1389,7 +1467,7 @@ class JsonSchemaParser(Parser):
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
             if type_name != base_type:
-                nested_import = self.PYTHON_TYPE_IMPORTS.get(type_name)
+                nested_import = self._resolve_type_import(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))
 
@@ -1823,19 +1901,23 @@ class JsonSchemaParser(Parser):
             except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
 
+            result: DataType | None = None
             if parent_schema.properties:
                 prop_schema = parent_schema.properties.get(prop_name)
                 if isinstance(prop_schema, JsonSchemaObject):
                     result = self._build_lightweight_type(prop_schema)
-                    if result is not None:
-                        return result
+            # In case of a missing type, continue searching up the inheritance chain
+            if result is not None and not (result.type == ANY or self._is_list_with_any_item_type(result)):
+                return result
 
+            parent_result: DataType | None = None
             if parent_schema.allOf:
                 grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
                 if grandparent_refs:
-                    result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
-                    if result is not None:
-                        return result
+                    parent_result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
+                    if parent_result is not None:
+                        return parent_result
+                    return result
 
         return None
 

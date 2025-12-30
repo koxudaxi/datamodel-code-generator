@@ -7,7 +7,11 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-class Thing(BaseModel):
+class Entity(BaseModel):
+    type_list: list[str] | None = None
+
+
+class Thing(Entity):
     type: str | None = 'playground:Thing'
     type_list: list[str] | None = ['playground:Thing']
 

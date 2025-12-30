@@ -200,6 +200,66 @@ datamodel-codegen --input-model ./mymodule.py:OPENAPI_SPEC --input-file-type ope
 
 ---
 
+## Custom Python Types with x-python-type {#x-python-type}
+
+When using `x-python-type` in JSON Schema (via `WithJsonSchema` in Pydantic), the generator automatically resolves and generates the required imports.
+
+### Automatic Import Resolution {#import-resolution}
+
+The generator supports many common Python types out of the box:
+
+| Module | Supported Types |
+|--------|-----------------|
+| `typing` | `Any`, `Union`, `Optional`, `Literal`, `Final`, `ClassVar`, `Annotated`, `TypeVar`, `TypeAlias`, `Never`, `NoReturn`, `Self`, `LiteralString`, `TypeGuard`, `Type` |
+| `collections` | `defaultdict`, `OrderedDict`, `Counter`, `deque`, `ChainMap` |
+| `collections.abc` | `Callable`, `Iterable`, `Iterator`, `Generator`, `Awaitable`, `Coroutine`, `AsyncIterable`, `AsyncIterator`, `AsyncGenerator`, `Mapping`, `MutableMapping`, `Sequence`, `MutableSequence`, `Set`, `MutableSet`, `Collection`, `Reversible` |
+| `pathlib` | `Path`, `PurePath` |
+| `decimal` | `Decimal` |
+| `uuid` | `UUID` |
+| `datetime` | `datetime`, `date`, `time`, `timedelta` |
+| `enum` | `Enum`, `IntEnum`, `StrEnum`, `Flag`, `IntFlag` |
+| `re` | `Pattern`, `Match` |
+
+For types not in this list, the generator dynamically searches common modules to resolve imports.
+
+### Example {#x-python-type-example}
+
+**mymodule.py**
+```python
+from collections import defaultdict
+from typing import Any, Annotated
+from pydantic import BaseModel, Field, WithJsonSchema
+
+class Config(BaseModel):
+    data: Annotated[
+        defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]],
+        WithJsonSchema({'type': 'object', 'x-python-type': 'defaultdict[str, dict[str, Any]]'})
+    ] | None = None
+```
+
+```bash
+datamodel-codegen --input-model ./mymodule.py:Config --output-model-type typing.TypedDict
+```
+
+**✨ Generated output**
+```python
+from __future__ import annotations
+
+from collections import defaultdict
+from typing import Any, TypedDict
+
+from typing_extensions import NotRequired
+
+
+class Config(TypedDict):
+    data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+```
+
+!!! tip "Fully Qualified Paths"
+    You can also use fully qualified paths in `x-python-type` (e.g., `collections.defaultdict`), which are always resolved correctly regardless of the static mapping.
+
+---
+
 ## Mutual Exclusion {#mutual-exclusion}
 
 `--input-model` cannot be used with:
