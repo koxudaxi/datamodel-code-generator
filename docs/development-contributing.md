@@ -115,6 +115,9 @@ $ python scripts/build_cli_docs.py
 
 # Verify docs are correct
 $ tox run -e cli-docs
+
+# If you modified config.py, regenerate config TypedDicts
+$ tox run -e config-types
 ```
 
 ### 🔧 Troubleshooting
