@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal, TypeAlias, TypedDict
 
+from datamodel_code_generator.enums import StrictTypes
 from typing_extensions import NotRequired
 
 AllExportsCollisionStrategy: TypeAlias = Literal[
@@ -97,7 +98,7 @@ ReadOnlyWriteOnlyModelType: TypeAlias = Literal['request-response', 'all']
 ReuseScope: TypeAlias = Literal['module', 'tree']
 
 
-StrictTypes: TypeAlias = Literal['str', 'bytes', 'int', 'float', 'bool']
+StrictTypesModel: TypeAlias = Literal['str', 'bytes', 'int', 'float', 'bool']
 
 
 TargetPydanticVersion: TypeAlias = Literal['2', '2.11']

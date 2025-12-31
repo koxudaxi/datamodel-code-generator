@@ -286,14 +286,14 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
         if args:
             nested = [_serialize_python_type(a) for a in args]
             if any(n is not None for n in nested):
-                return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
+                return " | ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
         return None  # pragma: no cover
 
     from typing import Annotated  # noqa: PLC0415
 
     if origin is Annotated:
         if args:
-            return _serialize_python_type(args[0]) or _simple_type_name(args[0])
+            return _serialize_python_type(args[0]) or _full_type_name(args[0])
         return None  # pragma: no cover
 
     type_name: str | None = None
@@ -303,7 +303,7 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
             type_name = _simple_type_name(origin)  # pyright: ignore[reportArgumentType]
     if type_name is not None:
         if args:
-            args_str = ", ".join(_serialize_python_type(a) or _simple_type_name(a) for a in args)
+            args_str = ", ".join(_serialize_python_type(a) or _full_type_name(a) for a in args)
             return f"{type_name}[{args_str}]"
         return type_name  # pragma: no cover
 
@@ -311,7 +311,7 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
         nested = [_serialize_python_type(a) for a in args]
         if any(n is not None for n in nested):
             origin_name = _simple_type_name(origin or tp)  # pyright: ignore[reportArgumentType]
-            args_str = ", ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
+            args_str = ", ".join(n or _full_type_name(a) for n, a in zip(nested, args, strict=False))
             return f"{origin_name}[{args_str}]"
 
     return None
@@ -327,6 +327,55 @@ def _simple_type_name(tp: type) -> str:
         return str(tp).replace("typing.", "")
     if hasattr(tp, "__name__"):
         return tp.__name__
+    return str(tp).replace("typing.", "")  # pragma: no cover
+
+
+def _full_type_name(tp: type) -> str:  # noqa: PLR0911
+    """Get a full qualified name representation of a type for type arguments.
+
+    For generic types, keeps outer type as short name but FQN-izes the type arguments.
+    For non-generic types, returns FQN for non-builtin types.
+    """
+    import types  # noqa: PLC0415
+    from typing import ForwardRef, Union, get_args, get_origin  # noqa: PLC0415
+
+    if tp is type(None):
+        return "None"
+
+    if isinstance(tp, str):
+        return tp
+    if isinstance(tp, ForwardRef):
+        return tp.__forward_arg__
+
+    origin = get_origin(tp)
+    if origin is not None:
+        # Handle Union types (both typing.Union and types.UnionType) with | syntax
+        is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
+        if is_union:
+            args = get_args(tp)
+            if args:
+                return " | ".join(_full_type_name(a) for a in args)
+            return str(tp)  # pragma: no cover
+
+        origin_name = _simple_type_name(origin)
+        args = get_args(tp)
+        if args:
+            args_str = ", ".join(_full_type_name(a) for a in args)
+            return f"{origin_name}[{args_str}]"
+        return origin_name
+
+    module = getattr(tp, "__module__", None)
+    name = getattr(tp, "__name__", None)
+
+    if module == "typing":
+        if name:
+            return name
+        return str(tp).replace("typing.", "")
+
+    if module and name and module not in {"builtins", "collections.abc"}:
+        return f"{module}.{name}"
+    if name:
+        return name
     return str(tp).replace("typing.", "")  # pragma: no cover
 
 
