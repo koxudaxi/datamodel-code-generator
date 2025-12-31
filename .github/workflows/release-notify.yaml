@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
+      contents: read
       issues: write
       pull-requests: write
     env:
@@ -22,7 +23,33 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             // Get tag from the workflow run that triggered this
-            const tag = context.payload.workflow_run.head_branch;
+            let tag = context.payload.workflow_run.head_branch;
+
+            // Fallback: if head_branch is empty, resolve tag from head_sha
+            if (!tag) {
+              const headSha = context.payload.workflow_run.head_sha;
+              console.log(`head_branch is empty, resolving tag from head_sha: ${headSha}`);
+
+              try {
+                const { data: tags } = await github.rest.repos.listTags({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  per_page: 100
+                });
+                const matchingTag = tags.find(t => t.commit.sha === headSha);
+                if (matchingTag) {
+                  tag = matchingTag.name;
+                  console.log(`Resolved tag from sha: ${tag}`);
+                }
+              } catch (e) {
+                console.log(`Failed to resolve tag from sha: ${e.message}`);
+              }
+            }
+
+            if (!tag) {
+              console.log('Could not determine tag, skipping notification');
+              return;
+            }
 
             // Fetch release info for this tag
             let release;
