@@ -274,29 +274,15 @@ input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
 output = "src/datamodel_code_generator/_types/generate_config_dict.py"
 class-name = "GenerateConfigDict"
 
-[tool.datamodel-codegen.profiles.parser-config-dict]
+[tool.datamodel-codegen.profiles.parser-config-dicts]
 extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:ParserConfig"
-output = "src/datamodel_code_generator/_types/parser_config_dict.py"
-class-name = "ParserConfigDict"
-
-[tool.datamodel-codegen.profiles.graphql-parser-config-dict]
-extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:GraphQLParserConfig"
-output = "src/datamodel_code_generator/_types/graphql_parser_config_dict.py"
-class-name = "GraphQLParserConfigDict"
-
-[tool.datamodel-codegen.profiles.jsonschema-parser-config-dict]
-extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:JSONSchemaParserConfig"
-output = "src/datamodel_code_generator/_types/jsonschema_parser_config_dict.py"
-class-name = "JSONSchemaParserConfigDict"
-
-[tool.datamodel-codegen.profiles.openapi-parser-config-dict]
-extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:OpenAPIParserConfig"
-output = "src/datamodel_code_generator/_types/openapi_parser_config_dict.py"
-class-name = "OpenAPIParserConfigDict"
+input-model = [
+  "src/datamodel_code_generator/config.py:ParserConfig",
+  "src/datamodel_code_generator/config.py:GraphQLParserConfig",
+  "src/datamodel_code_generator/config.py:JSONSchemaParserConfig",
+  "src/datamodel_code_generator/config.py:OpenAPIParserConfig",
+]
+output = "src/datamodel_code_generator/_types/parser_config_dicts.py"
 
 [tool.datamodel-codegen.profiles.parse-config-dict]
 extends = "config-types-base"
