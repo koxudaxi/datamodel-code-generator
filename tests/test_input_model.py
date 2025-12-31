@@ -1507,12 +1507,12 @@ def test_full_type_name_forward_ref() -> None:
 
 def test_full_type_name_generic_no_args() -> None:
     """Test _full_type_name with generic type that has no args (covers line 365)."""
-    import typing
-
     from datamodel_code_generator.input_model import _full_type_name
 
-    # typing.List (uppercase) has origin=list but args=() - hits line 365
-    result = _full_type_name(typing.List)  # pyright: ignore[reportArgumentType]
+    # Create a GenericAlias with origin=list but args=() - hits line 365
+    # list.__class_getitem__(()) creates list[()] which has origin but no args
+    generic_with_no_args = list.__class_getitem__(())
+    result = _full_type_name(generic_with_no_args)  # pyright: ignore[reportArgumentType]
     assert result == "list"
 
 
