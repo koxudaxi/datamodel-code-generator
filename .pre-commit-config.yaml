@@ -39,7 +39,7 @@ repos:
     pass_filenames: false
   - id: config-types
     name: Generate config TypedDicts
-    entry: bash -c '[ -x .tox/dev/bin/python ] && PREFIX=.tox/dev/bin || PREFIX=.tox/dev/Scripts; test -x "$PREFIX/python" || tox run -e dev --notest -qq; "$PREFIX/datamodel-codegen" --profile generate-config-dict && "$PREFIX/datamodel-codegen" --profile parser-config-dict && "$PREFIX/datamodel-codegen" --profile graphql-parser-config-dict && "$PREFIX/datamodel-codegen" --profile jsonschema-parser-config-dict && "$PREFIX/datamodel-codegen" --profile openapi-parser-config-dict && "$PREFIX/datamodel-codegen" --profile parse-config-dict'
+    entry: bash -c '[ -x .tox/dev/bin/python ] && PREFIX=.tox/dev/bin || PREFIX=.tox/dev/Scripts; test -x "$PREFIX/python" || tox run -e dev --notest -qq; "$PREFIX/datamodel-codegen" --profile generate-config-dict && "$PREFIX/datamodel-codegen" --profile parser-config-dicts && "$PREFIX/datamodel-codegen" --profile parse-config-dict'
     language: system
     files: ^src/datamodel_code_generator/config\.py$
     pass_filenames: false

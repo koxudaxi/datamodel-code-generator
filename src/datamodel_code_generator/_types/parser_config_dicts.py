@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         DataclassArguments,
         FieldTypeCollisionStrategy,
         NamingStrategy,
+        OpenAPIScope,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -144,5 +145,19 @@ class ParserConfig(TypedDict):
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
 
 
-class JSONSchemaParserConfigDict(ParserConfig):
+class GraphQLParserConfig(ParserConfig):
+    data_model_scalar_type: NotRequired[type[DataModel]]
+    data_model_union_type: NotRequired[type[DataModel]]
+
+
+class JSONSchemaParserConfig(ParserConfig):
     pass
+
+
+class OpenAPIParserConfig(JSONSchemaParserConfig):
+    openapi_scopes: NotRequired[list[OpenAPIScope] | None]
+    include_path_parameters: NotRequired[bool]
+    use_status_code_in_response_name: NotRequired[bool]
+
+
+Model: TypeAlias = ParserConfig | GraphQLParserConfig | JSONSchemaParserConfig | OpenAPIParserConfig
