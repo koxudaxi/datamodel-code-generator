@@ -29,22 +29,26 @@ $ tox run -e dev
 
 .tox/dev is a Python environment you can use for development purposes
 
-## 5. Create new branch and rewrite code.
+## 5. Install pre-commit hooks
+$ uv tool install prek
+$ prek install
+
+## 6. Create new branch and rewrite code.
 $ git checkout -b new-branch
 
-## 6. Run unittest under Python 3.13 (you should pass all test and coverage should be 100%)
+## 7. Run unittest under Python 3.13 (you should pass all test and coverage should be 100%)
 $ tox run -e 3.13
 
-## 7. Format and lint code (will print errors that cannot be automatically fixed)
+## 8. Format and lint code (will print errors that cannot be automatically fixed)
 $ tox run -e fix
 
-## 8. Check README help text is up to date
+## 9. Check README help text is up to date
 $ tox run -e readme
 
-## 9. Check CLI documentation is up to date
+## 10. Check CLI documentation is up to date
 $ tox run -e cli-docs
 
-## 10. Commit and Push...
+## 11. Commit and Push...
 ```
 
 ## ➕ Adding a New CLI Option
@@ -111,6 +115,9 @@ $ python scripts/build_cli_docs.py
 
 # Verify docs are correct
 $ tox run -e cli-docs
+
+# If you modified config.py, regenerate config TypedDicts
+$ tox run -e config-types
 ```
 
 ### 🔧 Troubleshooting
