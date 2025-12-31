@@ -1223,3 +1223,65 @@ def test_get_python_type_flags(x_python_type: str, expected: dict[str, bool]) ->
     obj = model_validate(JsonSchemaObject, {"x-python-type": x_python_type})
     result = parser._get_python_type_flags(obj)
     assert result == expected
+
+
+def test_resolve_type_import_from_defs() -> None:
+    """Test _resolve_type_import_from_defs resolves imports from $defs with x-python-import."""
+    schema_dict: dict[str, Any] = {
+        "type": "object",
+        "properties": {"status": {"$ref": "#/$defs/Status"}},
+        "$defs": {
+            "Status": {
+                "type": "string",
+                "enum": ["active", "inactive"],
+                "x-python-import": {"module": "myapp.enums", "name": "Status"},
+            }
+        },
+    }
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    parser.raw_obj = schema_dict  # Set raw_obj for _load_ref_schema_object to work
+
+    # Call _resolve_type_import_from_defs directly
+    result = parser._resolve_type_import_from_defs("Status")
+    assert result is not None
+    assert result.from_ == "myapp.enums"
+    assert result.import_ == "Status"
+
+
+def test_resolve_type_import_from_defs_not_found() -> None:
+    """Test _resolve_type_import_from_defs returns None when type not in $defs."""
+    schema_dict: dict[str, Any] = {"type": "object", "properties": {"name": {"type": "string"}}}
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    parser.raw_obj = schema_dict
+
+    result = parser._resolve_type_import_from_defs("NonExistentType")
+    assert result is None
+
+
+def test_resolve_type_import_from_defs_no_x_python_import() -> None:
+    """Test _resolve_type_import_from_defs returns None when $defs entry has no x-python-import."""
+    schema_dict: dict[str, Any] = {
+        "type": "object",
+        "properties": {"status": {"$ref": "#/$defs/Status"}},
+        "$defs": {"Status": {"type": "string", "enum": ["active", "inactive"]}},
+    }
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    parser.raw_obj = schema_dict
+
+    result = parser._resolve_type_import_from_defs("Status")
+    assert result is None
+
+
+def test_resolve_type_import_from_defs_exception_handling() -> None:
+    """Test _resolve_type_import_from_defs handles exceptions gracefully.
+
+    When raw_obj is None or invalid, _load_ref_schema_object will raise an exception,
+    and _resolve_type_import_from_defs should catch it and return None.
+    """
+    schema_dict: dict[str, Any] = {"type": "object", "properties": {"name": {"type": "string"}}}
+    parser = JsonSchemaParser(json.dumps(schema_dict))
+    # Set raw_obj to None to trigger exception in _load_ref_schema_object
+    parser.raw_obj = None  # pyright: ignore[reportAttributeAccessIssue]
+
+    result = parser._resolve_type_import_from_defs("SomeType")
+    assert result is None

@@ -370,7 +370,7 @@ def _full_type_name(tp: type) -> str:  # noqa: PLR0911
     if module == "typing":
         if name:
             return name
-        return str(tp).replace("typing.", "")
+        return str(tp).replace("typing.", "")  # pragma: no cover
 
     if module and name and module not in {"builtins", "collections.abc"}:
         return f"{module}.{name}"

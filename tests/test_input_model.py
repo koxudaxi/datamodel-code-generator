@@ -1463,3 +1463,75 @@ def test_input_model_output_model_type_default() -> None:
     )
     assert schema.get("title") == "NoInheritance"
     assert "properties" in schema
+
+
+# ============================================================================
+# Unit tests for helper functions (coverage)
+# ============================================================================
+
+
+def test_simple_type_name_none_type() -> None:
+    """Test _simple_type_name with NoneType."""
+    from datamodel_code_generator.input_model import _simple_type_name
+
+    result = _simple_type_name(type(None))
+    assert result == "None"
+
+
+def test_simple_type_name_generic_type() -> None:
+    """Test _simple_type_name with generic type (has origin)."""
+    from datamodel_code_generator.input_model import _simple_type_name
+
+    result = _simple_type_name(list[str])
+    assert result == "list[str]"
+
+
+def test_full_type_name_string_annotation() -> None:
+    """Test _full_type_name with string annotation."""
+    from datamodel_code_generator.input_model import _full_type_name
+
+    result = _full_type_name("SomeType")  # pyright: ignore[reportArgumentType]
+    assert result == "SomeType"
+
+
+def test_full_type_name_forward_ref() -> None:
+    """Test _full_type_name with ForwardRef."""
+    from typing import ForwardRef
+
+    from datamodel_code_generator.input_model import _full_type_name
+
+    ref = ForwardRef("MyClass")
+    result = _full_type_name(ref)  # pyright: ignore[reportArgumentType]
+    assert result == "MyClass"
+
+
+def test_full_type_name_generic_no_args() -> None:
+    """Test _full_type_name with generic type that has no args (covers line 365)."""
+    import typing
+
+    from datamodel_code_generator.input_model import _full_type_name
+
+    # typing.List (uppercase) has origin=list but args=() - hits line 365
+    result = _full_type_name(typing.List)  # pyright: ignore[reportArgumentType]
+    assert result == "list"
+
+
+def test_full_type_name_typing_special() -> None:
+    """Test _full_type_name with typing module special forms."""
+    from typing import Any
+
+    from datamodel_code_generator.input_model import _full_type_name
+
+    result = _full_type_name(Any)  # pyright: ignore[reportArgumentType]
+    assert result == "Any"
+
+
+def test_serialize_python_type_full_annotated() -> None:
+    """Test _serialize_python_type_full with Annotated type."""
+    from typing import Annotated
+
+    from datamodel_code_generator.input_model import _serialize_python_type_full
+
+    # Annotated with a custom type
+    result = _serialize_python_type_full(Annotated[int, "some_metadata"])
+    assert result == "int"
