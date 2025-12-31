@@ -915,6 +915,31 @@ def test_has_ref_with_schema_keywords_extras_with_metadata_only_keys() -> None:
     assert obj.has_ref_with_schema_keywords is False
 
 
+def test_has_ref_with_schema_keywords_extras_with_extension_keys() -> None:
+    """Test has_ref_with_schema_keywords when extras contains only x-* extension keys.
+
+    OpenAPI/JSON Schema extension fields (x-*) should be treated as metadata
+    and not trigger schema merging, which prevents infinite recursion with
+    self-referencing schemas.
+    """
+    # x-* extensions are vendor extensions, should not trigger merge
+    obj = model_validate(
+        JsonSchemaObject,
+        {
+            "$ref": "#/$defs/Base",
+            "deprecated": False,  # metadata-only field
+            "x-internalAPI": False,  # extension field
+            "x-custom-field": "value",  # another extension field
+        },
+    )
+    # Verify extras contains extension keys
+    assert obj.extras
+    assert "x-internalAPI" in obj.extras
+    assert "x-custom-field" in obj.extras
+    # Extension fields should NOT trigger schema merge
+    assert obj.has_ref_with_schema_keywords is False
+
+
 def test_has_ref_with_schema_keywords_no_extras() -> None:
     """Test has_ref_with_schema_keywords when extras is empty."""
     # Only $ref and a schema-affecting field, no extras
