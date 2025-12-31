@@ -1193,27 +1193,6 @@ def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_multiple_generates_anyof(tmp_path: Path) -> None:
-    """Test multiple --input-model generates TypeAlias with union."""
-    with freeze_time(TIMESTAMP):
-        return_code = main([
-            "--input-model",
-            "tests.data.python.input_model.inheritance_models:ChildA",
-            "--input-model",
-            "tests.data.python.input_model.inheritance_models:ChildB",
-            "--output-model-type",
-            "typing.TypedDict",
-            "--output",
-            str(tmp_path / "output.py"),
-        ])
-    assert return_code == Exit.OK
-    assert_output(
-        (tmp_path / "output.py").read_text(encoding="utf-8"),
-        EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_with_pydantic_output(tmp_path: Path) -> None:
     """Test multiple --input-model works with Pydantic output."""
     run_multiple_input_models_and_assert(

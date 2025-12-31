@@ -1198,6 +1198,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
+        # Union x-python-types (e.g., "Mapping[str, str] | None") should override
+        # when schema_type is None (typically anyOf/oneOf), to preserve the original type
+        if " | " in python_type and schema_type is None:
+            return False
         if schema_type is None:
             return True
         if base_type in {"Union", "Optional"}:
@@ -1876,9 +1880,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         # Don't propagate x-python-type from parent to children if it's a union type,
         # as this causes duplicate types (e.g., "Mapping[str, str] | None" becoming
         # "Mapping[str, str] | Mapping[str, str] | None")
-        x_python_type = base_object.get("x-python-type", "")
+        x_python_type = obj.extras.get("x-python-type", "")
         if " | " in x_python_type:
-            base_object.pop("x-python-type", None)
+            # Remove from the extras dict in base_object (uses alias key)
+            extras_alias = "#-datamodel-code-generator-#-extras-#-special-#"
+            if extras_alias in base_object:
+                base_object[extras_alias].pop("x-python-type", None)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
