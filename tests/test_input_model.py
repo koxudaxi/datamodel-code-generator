@@ -1242,20 +1242,6 @@ def test_input_model_multiple_with_dataclass_output(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_multiple_only_not_contains(tmp_path: Path) -> None:
-    """Test multiple with Pydantic output."""
-    run_multiple_input_models_and_assert(
-        input_models=[
-            "tests.data.python.input_model.inheritance_models:ChildA",
-            "tests.data.python.input_model.inheritance_models:ChildB",
-        ],
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_with_pydantic_output.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel"],
-    )
-
-
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_non_basemodel_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

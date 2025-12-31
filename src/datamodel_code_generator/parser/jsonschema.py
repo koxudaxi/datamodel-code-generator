@@ -613,6 +613,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         "StrEnum": Import.from_full_path("enum.StrEnum"),
         "Flag": Import.from_full_path("enum.Flag"),
         "IntFlag": Import.from_full_path("enum.IntFlag"),
+        # pydantic (use public API path, not internal pydantic.main)
+        "BaseModel": Import.from_full_path("pydantic.BaseModel"),
     }
 
     # Types that require x-python-type override regardless of schema type
@@ -1270,7 +1272,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         nested_imports: list[DataType] = []
         for qualified_name in extract_qualified_names(type_str):
             class_name = qualified_name.rsplit(".", 1)[-1]
-            nested_import = Import.from_full_path(qualified_name)
+            # Check if this type has a known import path (e.g., BaseModel -> pydantic.BaseModel)
+            nested_import = self._resolve_type_import(class_name) or Import.from_full_path(qualified_name)
             nested_imports.append(self.data_type(import_=nested_import))
             type_str = type_str.replace(qualified_name, class_name)
 
@@ -1870,6 +1873,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
         base_object = model_dump(obj, exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
+        # Don't propagate x-python-type from parent to children if it's a union type,
+        # as this causes duplicate types (e.g., "Mapping[str, str] | None" becoming
+        # "Mapping[str, str] | Mapping[str, str] | None")
+        x_python_type = base_object.get("x-python-type", "")
+        if " | " in x_python_type:
+            base_object.pop("x-python-type", None)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):

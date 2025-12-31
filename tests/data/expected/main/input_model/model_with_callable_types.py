@@ -8,7 +8,6 @@ from collections.abc import Callable
 from typing import Any, Type
 
 from pydantic import BaseModel, Field
-from pydantic.main import BaseModel
 
 
 class ModelWithCallableTypes(BaseModel):
