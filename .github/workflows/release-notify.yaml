@@ -1,12 +1,14 @@
 name: Release Notification
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Publish"]
+    types: [completed]
 
 jobs:
   notify:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       issues: write
       pull-requests: write
@@ -19,9 +21,26 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const version = context.payload.release.tag_name;
-            const releaseUrl = context.payload.release.html_url;
-            const releaseBody = context.payload.release.body || '';
+            // Get tag from the workflow run that triggered this
+            const tag = context.payload.workflow_run.head_branch;
+
+            // Fetch release info for this tag
+            let release;
+            try {
+              const { data } = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: tag
+              });
+              release = data;
+            } catch (e) {
+              console.log(`No release found for tag ${tag}: ${e.message}`);
+              return;
+            }
+
+            const version = release.tag_name;
+            const releaseUrl = release.html_url;
+            const releaseBody = release.body || '';
 
             // Target repo from environment variables (set in jobs.notify.env)
             const repoOwner = process.env.TARGET_OWNER;
