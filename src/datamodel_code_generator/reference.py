@@ -594,9 +594,16 @@ class ModelResolver:  # noqa: PLR0904
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
         self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
 
-        # Class name affix configuration
+        # Class name affix configuration with validation
         self.class_name_prefix: str = class_name_prefix or ""
         self.class_name_suffix: str = class_name_suffix or ""
+        # Validate prefix/suffix are valid identifier components
+        if self.class_name_prefix and not self.class_name_prefix.isidentifier():
+            msg = f"--class-name-prefix '{self.class_name_prefix}' is not a valid Python identifier"
+            raise ValueError(msg)
+        if self.class_name_suffix and not (f"A{self.class_name_suffix}").isidentifier():
+            msg = f"--class-name-suffix '{self.class_name_suffix}' is not a valid Python identifier component"
+            raise ValueError(msg)
         self.class_name_affix_scope: ClassNameAffixScope = class_name_affix_scope or ClassNameAffixScope.All
         self.skip_affix_for_root: bool = skip_affix_for_root
         self.skip_generator_and_affix: bool = skip_generator_and_affix

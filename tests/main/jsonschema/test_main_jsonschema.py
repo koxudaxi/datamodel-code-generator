@@ -785,6 +785,32 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
+def test_main_class_name_prefix_invalid(output_file: Path) -> None:
+    """Test that invalid --class-name-prefix is rejected."""
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+        "--output",
+        str(output_file),
+        "--class-name-prefix",
+        "123Invalid",
+    ])
+    assert return_code == Exit.ERROR
+
+
+def test_main_class_name_suffix_invalid(output_file: Path) -> None:
+    """Test that invalid --class-name-suffix is rejected."""
+    return_code: Exit = main([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+        "--output",
+        str(output_file),
+        "--class-name-suffix",
+        "Schema!",
+    ])
+    assert return_code == Exit.ERROR
+
+
 def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
     """Test reserved names are safely suffixed and aliased."""
     run_main_and_assert(
