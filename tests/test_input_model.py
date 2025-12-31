@@ -136,6 +136,7 @@ def test_input_model_pydantic_to_typeddict(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         extra_args=["--output-model-type", "typing.TypedDict"],
         expected_output_contains=["TypedDict"],
+        expected_output_not_contains=["BaseModel"],
     )
 
 
@@ -1366,6 +1367,22 @@ def test_input_model_multiple_with_dataclass_output(tmp_path: Path) -> None:
             "class ChildA(Parent):",
             "class ChildB(Parent):",
         ],
+        expected_output_not_contains=["BaseModel"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_only_not_contains(tmp_path: Path) -> None:
+    """Test expected_output_not_contains without expected_output_contains."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        output_path=output_path,
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+        expected_output_not_contains=["TypedDict"],
     )
 
 
@@ -1400,7 +1417,7 @@ def test_input_model_multiple_pydantic_v1_error(
         nonlocal call_count
         if name == "model_json_schema":
             call_count += 1
-            if call_count <= 2:
+            if call_count <= 2:  # pragma: no branch
                 return False
         return original_hasattr(obj, name)
 
@@ -1677,7 +1694,7 @@ def test_input_model_cwd_already_in_path(
 
     cwd = str(_Path.cwd())
     initial_count = sys.path.count(cwd)
-    if cwd not in sys.path:
+    if cwd not in sys.path:  # pragma: no cover
         sys.path.insert(0, cwd)
 
     output_path = tmp_path / "output.py"
