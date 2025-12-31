@@ -30,7 +30,8 @@ $ tox run -e dev
 .tox/dev is a Python environment you can use for development purposes
 
 ## 5. Install pre-commit hooks
-$ .tox/dev/bin/prek install
+$ uv tool install prek
+$ prek install
 
 ## 6. Create new branch and rewrite code.
 $ git checkout -b new-branch
