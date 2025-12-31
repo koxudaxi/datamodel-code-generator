@@ -22,7 +22,6 @@ if TYPE_CHECKING:
         OpenAPIScope,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
-        StrictTypes,
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
@@ -31,7 +30,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataTypeManager
 
 
-class OpenAPIParserConfigDict(TypedDict):
+class ParserConfig(TypedDict):
     data_model_type: NotRequired[type[DataModel]]
     data_model_root_type: NotRequired[type[DataModel]]
     data_type_manager_type: NotRequired[type[DataTypeManager]]
@@ -143,6 +142,13 @@ class OpenAPIParserConfigDict(TypedDict):
     read_only_write_only_model_type: NotRequired[ReadOnlyWriteOnlyModelType | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
+
+
+class JSONSchemaParserConfig(ParserConfig):
+    pass
+
+
+class OpenAPIParserConfigDict(JSONSchemaParserConfig):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]

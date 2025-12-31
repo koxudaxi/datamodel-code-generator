@@ -21,7 +21,6 @@ if TYPE_CHECKING:
         NamingStrategy,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
-        StrictTypes,
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
@@ -30,7 +29,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataTypeManager
 
 
-class GraphQLParserConfigDict(TypedDict):
+class ParserConfig(TypedDict):
     data_model_type: NotRequired[type[DataModel]]
     data_model_root_type: NotRequired[type[DataModel]]
     data_type_manager_type: NotRequired[type[DataTypeManager]]
@@ -142,5 +141,8 @@ class GraphQLParserConfigDict(TypedDict):
     read_only_write_only_model_type: NotRequired[ReadOnlyWriteOnlyModelType | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
+
+
+class GraphQLParserConfigDict(ParserConfig):
     data_model_scalar_type: NotRequired[type[DataModel]]
     data_model_union_type: NotRequired[type[DataModel]]
