@@ -111,7 +111,7 @@ Use the format `module:Object` or `path/to/file.py:Object` to specify the type."
     expected_stdout="",
 )
 def test_input_model_pydantic_basemodel(tmp_path: Path) -> None:
-    """Import a Python type or dict schema from a module (module:Object or path/to/file.py:Object)."""
+    """Test Pydantic BaseModel input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:User",
         output_path=tmp_path / "output.py",
@@ -190,7 +190,7 @@ def test_input_model_dict_openapi(tmp_path: Path) -> None:
 
 @SKIP_PYDANTIC_V1
 def test_input_model_std_dataclass(tmp_path: Path) -> None:
-    """Test standard dataclass input."""
+    """Test stdlib dataclass input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.dataclass_models:User",
         output_path=tmp_path / "output.py",
@@ -200,7 +200,7 @@ def test_input_model_std_dataclass(tmp_path: Path) -> None:
 
 @SKIP_PYDANTIC_V1
 def test_input_model_pydantic_dataclass(tmp_path: Path) -> None:
-    """Test Pydantic dataclass input."""
+    """Test Pydantic dataclass input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_dataclass_models:User",
         output_path=tmp_path / "output.py",
@@ -210,7 +210,7 @@ def test_input_model_pydantic_dataclass(tmp_path: Path) -> None:
 
 @SKIP_PYDANTIC_V1
 def test_input_model_typeddict(tmp_path: Path) -> None:
-    """Test TypedDict input."""
+    """Test TypedDict input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.typeddict_models:User",
         output_path=tmp_path / "output.py",
