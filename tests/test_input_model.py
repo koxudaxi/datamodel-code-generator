@@ -1546,11 +1546,9 @@ class TempModel(BaseModel):
         ])
     assert return_code == Exit.OK
     content = output_path.read_text(encoding="utf-8")
-    # Verify ChildA inheritance chain is present
     assert "class ChildA(Parent):" in content
     assert "class Parent(GrandParent):" in content
     assert "class GrandParent(BaseModel):" in content
-    # Verify TempModel is generated
     assert "class TempModel(BaseModel):" in content
     assert "value:" in content
 

@@ -274,8 +274,6 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
     from typing import Union  # noqa: PLC0415
 
-    # In Python 3.10-3.13, types.UnionType is distinct from typing.Union
-    # In Python 3.14+, types.UnionType is typing.Union, so this branch is unreachable
     if hasattr(types, "UnionType") and types.UnionType is not Union and origin is types.UnionType:  # pragma: no cover
         if args:
             nested = [_serialize_python_type(a) for a in args]
@@ -858,7 +856,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         schema = _add_python_type_for_unserializable(schema, obj)
         schema = _add_python_type_info(schema, obj)
 
-        # Transform to inheritance structure if the model has BaseModel parents
         schema = _transform_single_model_to_inheritance(schema, obj, schema_generator)
 
         if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
@@ -870,7 +867,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
         return schema
 
-    # Check for dataclass or TypedDict - use TypeAdapter
     from dataclasses import is_dataclass  # noqa: PLC0415
 
     is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
