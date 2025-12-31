@@ -24,12 +24,25 @@ from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
+from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from datamodel_code_generator.reference import Reference
+
+
+class _RawRepr:
+    """Wrapper to prevent repr() from adding quotes around a value."""
+
+    __slots__ = ("value",)
+
+    def __init__(self, value: str) -> None:
+        self.value = value
+
+    def __repr__(self) -> str:
+        return self.value
 
 
 class Constraints(_Constraints):
@@ -137,6 +150,14 @@ class DataModelField(DataModelFieldV1):
             else:
                 data.pop("union_mode")
 
+        # Handle multiple aliases using AliasChoices (Pydantic v2 feature)
+        if self.validation_aliases:
+            # Remove single alias if present (validation_aliases takes precedence)
+            data.pop("alias", None)
+            # Format as AliasChoices(...) - use _RawRepr to prevent double-quoting
+            aliases_repr = ", ".join(repr(a) for a in self.validation_aliases)
+            data["validation_alias"] = _RawRepr(f"AliasChoices({aliases_repr})")
+
         # **extra is not supported in pydantic 2.0
         json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
         if json_schema_extra:
@@ -149,6 +170,16 @@ class DataModelField(DataModelFieldV1):
         field_arguments: list[str],
     ) -> list[str]:
         return field_arguments
+
+    @property
+    def imports(self) -> tuple[Import, ...]:
+        """Get all required imports including AliasChoices if needed."""
+        base_imports = super().imports
+        if self.validation_aliases:
+            from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
+
+            return chain_as_tuple(base_imports, (IMPORT_ALIAS_CHOICES,))
+        return base_imports
 
 
 class ConfigAttribute(NamedTuple):

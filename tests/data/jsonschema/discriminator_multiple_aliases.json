@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "SystemMessage": {
+      "type": "object",
+      "properties": {
+        "message_type": {
+          "type": "string",
+          "const": "system",
+          "default": "system"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": ["message_type", "content"]
+    },
+    "UserMessage": {
+      "type": "object",
+      "properties": {
+        "message_type": {
+          "type": "string",
+          "const": "user",
+          "default": "user"
+        },
+        "content": {
+          "type": "string"
+        }
+      },
+      "required": ["message_type", "content"]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "message": {
+      "discriminator": {
+        "propertyName": "message_type",
+        "mapping": {
+          "system": "#/$defs/SystemMessage",
+          "user": "#/$defs/UserMessage"
+        }
+      },
+      "oneOf": [
+        {"$ref": "#/$defs/SystemMessage"},
+        {"$ref": "#/$defs/UserMessage"}
+      ]
+    }
+  }
+}

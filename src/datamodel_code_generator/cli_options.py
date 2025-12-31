@@ -66,6 +66,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--output": CLIOptionMeta(name="--output", category=OptionCategory.BASE),
     "--url": CLIOptionMeta(name="--url", category=OptionCategory.BASE),
     "--input-model": CLIOptionMeta(name="--input-model", category=OptionCategory.BASE),
+    "--input-model-ref-strategy": CLIOptionMeta(name="--input-model-ref-strategy", category=OptionCategory.BASE),
     "--input-file-type": CLIOptionMeta(name="--input-file-type", category=OptionCategory.BASE),
     "--encoding": CLIOptionMeta(name="--encoding", category=OptionCategory.BASE),
     # ==========================================================================
@@ -162,7 +163,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     # Typing Customization
     # ==========================================================================
+    "--use-union-operator": CLIOptionMeta(name="--use-union-operator", category=OptionCategory.TYPING),
     "--no-use-union-operator": CLIOptionMeta(name="--no-use-union-operator", category=OptionCategory.TYPING),
+    "--use-standard-collections": CLIOptionMeta(name="--use-standard-collections", category=OptionCategory.TYPING),
     "--no-use-standard-collections": CLIOptionMeta(
         name="--no-use-standard-collections", category=OptionCategory.TYPING
     ),
@@ -195,6 +198,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),
     "--allof-merge-mode": CLIOptionMeta(name="--allof-merge-mode", category=OptionCategory.TYPING),
+    "--allof-class-hierarchy": CLIOptionMeta(name="--allof-class-hierarchy", category=OptionCategory.TYPING),
     # ==========================================================================
     # Template Customization
     # ==========================================================================
@@ -308,6 +312,12 @@ def get_canonical_option(option: str) -> str:
 def get_all_canonical_options() -> frozenset[str]:
     """Get all canonical options from argparse."""
     return frozenset(_build_alias_map_from_argparse().values())
+
+
+@lru_cache(maxsize=1)
+def get_all_argparse_options() -> frozenset[str]:
+    """Get all options from argparse (including aliases)."""
+    return frozenset(_build_alias_map_from_argparse().keys())
 
 
 def is_manual_doc(option: str) -> bool:  # pragma: no cover

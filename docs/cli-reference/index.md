@@ -8,11 +8,11 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 6 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 23 | Type annotation and import behavior |
+| 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
+| 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 17 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
@@ -28,6 +28,7 @@ This documentation is auto-generated from test cases.
 - [`--aliases`](field-customization.md#aliases)
 - [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy)
 - [`--all-exports-scope`](general-options.md#all-exports-scope)
+- [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy)
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)
@@ -107,6 +108,7 @@ This documentation is auto-generated from test cases.
 - [`--input`](base-options.md#input)
 - [`--input-file-type`](base-options.md#input-file-type)
 - [`--input-model`](base-options.md#input-model)
+- [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy)
 
 ### K {#k}
 
@@ -165,6 +167,7 @@ This documentation is auto-generated from test cases.
 
 - [`--target-pydantic-version`](model-customization.md#target-pydantic-version)
 - [`--target-python-version`](model-customization.md#target-python-version)
+- [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module)
 - [`--type-mappings`](typing-customization.md#type-mappings)
 - [`--type-overrides`](typing-customization.md#type-overrides)
 
@@ -194,12 +197,15 @@ This documentation is auto-generated from test cases.
 - [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias)
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
+- [`--use-specialized-enum`](typing-customization.md#use-specialized-enum)
+- [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types)
 - [`--use-status-code-in-response-name`](openapi-only-options.md#use-status-code-in-response-name)
 - [`--use-subclass-enum`](model-customization.md#use-subclass-enum)
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
+- [`--use-union-operator`](typing-customization.md#use-union-operator)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
 
 ### V {#v}

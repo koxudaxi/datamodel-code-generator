@@ -30,16 +30,49 @@ class CliDocKwargs(TypedDict, total=False):
     """Type definition for @pytest.mark.cli_doc marker keyword arguments."""
 
     options: Required[list[str]]
+    """CLI option names to document (e.g., ["--foo", "--bar"])."""
+
+    option_description: Required[str]
+    """User-facing description of the CLI option for generated documentation.
+
+    This text appears in the CLI reference docs. Write as if explaining
+    to end users what the option does and when to use it.
+    Do NOT describe what the test verifies - describe the feature itself.
+
+    Example (good): "Ignore pyproject.toml configuration file. This is useful
+                     when you want to override project defaults with CLI arguments."
+    Example (bad):  "Test that --ignore-pyproject flag works correctly."
+    """
+
     cli_args: Required[list[str]]
+    """CLI arguments to pass to the command (e.g., ["--foo", "value"])."""
+
     input_schema: str | None
+    """Path to input schema file relative to tests/data/."""
+
     config_content: str | None
+    """Content of pyproject.toml config to create for the test."""
+
     input_model: str | None
+    """Input model in 'module:name' format for --input-model tests."""
+
     golden_output: str | None
+    """Path to expected output file relative to tests/data/expected/."""
+
     version_outputs: dict[str, str] | None
+    """Version-specific outputs: {"3.10": "path/to/expected.py"}."""
+
     model_outputs: dict[str, str] | None
+    """Model-type-specific outputs: {"pydantic_v2": "path/to/expected.py"}."""
+
     expected_stdout: str | None
+    """Path to expected stdout file relative to tests/data/expected/."""
+
     related_options: list[str] | None
+    """Related CLI options to link in documentation."""
+
     aliases: list[str] | None
+    """Alternative option names (e.g., ["--capitalise-enum-members"])."""
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -56,9 +89,11 @@ def pytest_configure(config: pytest.Config) -> None:
     """Register the cli_doc marker."""
     config.addinivalue_line(
         "markers",
-        "cli_doc(options, input_schema=None, cli_args=None, golden_output=None, version_outputs=None, "
-        "model_outputs=None, expected_stdout=None, config_content=None, aliases=None, **kwargs): "
+        "cli_doc(options, option_description, cli_args, input_schema=None, golden_output=None, "
+        "version_outputs=None, model_outputs=None, expected_stdout=None, config_content=None, "
+        "aliases=None, **kwargs): "
         "Mark test as CLI documentation source. "
+        "option_description: User-facing description for CLI docs (required). "
         "Either golden_output, version_outputs, model_outputs, or expected_stdout is required. "
         "aliases: list of alternative option names (e.g., ['--capitalise-enum-members']).",
     )
@@ -71,6 +106,12 @@ def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  
 
     if "options" not in kwargs:
         errors.append("Missing required field: 'options'")
+    if "option_description" not in kwargs:
+        errors.append("Missing required field: 'option_description'")
+    elif not isinstance(kwargs["option_description"], str):
+        errors.append(f"'option_description' must be a string, got {type(kwargs['option_description']).__name__}")
+    elif not kwargs["option_description"].strip():
+        errors.append("'option_description' must not be empty")
     if "cli_args" not in kwargs:
         errors.append("Missing required field: 'cli_args'")
 
@@ -194,15 +235,13 @@ def pytest_collection_modifyitems(
                 validation_errors.append((item.nodeid, errors))
                 continue
 
-        docstring = ""
-        func = getattr(item, "function", None)
-        if func is not None:
-            docstring = func.__doc__ or ""
+        # Get option_description from marker kwargs (required field)
+        option_description = marker.kwargs.get("option_description", "")
 
         config._cli_doc_items.append({
             "node_id": item.nodeid,
             "marker_kwargs": marker.kwargs,
-            "docstring": docstring,
+            "option_description": option_description,
         })
 
     if validation_errors:
@@ -431,7 +470,8 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
             msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
     else:
-        assert expected == normalized_content  # pragma: no cover
+        # we need to normalize the external_file object's content as well
+        assert _normalize_line_endings(expected._load_value()) == normalized_content  # pragma: no cover
 
 
 class AssertFileContent(Protocol):
@@ -599,6 +639,25 @@ def assert_parser_modules(
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)
+
+
+def assert_error_message(
+    capsys: pytest.CaptureFixture[str],
+    expected: str,
+) -> None:
+    """Assert that stderr contains the expected error message.
+
+    Args:
+        capsys: pytest capsys fixture for capturing output.
+        expected: Expected substring in stderr.
+
+    Usage:
+        return_code = run_main_with_args([...], expected_exit=Exit.ERROR, capsys=capsys)
+        assert_error_message(capsys, "Error message")
+    """
+    __tracebackhide__ = True
+    captured = capsys.readouterr()
+    assert expected in captured.err, f"Expected '{expected}' in stderr, got: {captured.err}"
 
 
 @pytest.fixture(autouse=True)

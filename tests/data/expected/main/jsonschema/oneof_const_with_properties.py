@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -14,4 +14,4 @@ class ConstWithProps1(BaseModel):
 
 
 class ConstWithProps(BaseModel):
-    __root__: ConstWithProps1 | str = Field(..., title='ConstWithProps')
+    __root__: ConstWithProps1 | Literal['value2'] = Field(..., title='ConstWithProps')

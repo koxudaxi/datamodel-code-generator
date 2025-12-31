@@ -6,6 +6,7 @@ from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
 import black
+import pydantic
 import pytest
 from inline_snapshot import snapshot
 
@@ -22,6 +23,7 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
+from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
@@ -153,6 +155,11 @@ def test_frozen_dataclasses(
 
 @pytest.mark.cli_doc(
     options=["--frozen-dataclasses"],
+    option_description="""Generate frozen dataclasses with optional keyword-only fields.
+
+The `--frozen-dataclasses` flag generates dataclass instances that are immutable
+(frozen=True). Combined with `--keyword-only` (Python 3.10+), all fields become
+keyword-only arguments.""",
     input_schema="jsonschema/simple_frozen_test.json",
     cli_args=["--output-model-type", "dataclasses.dataclass", "--frozen-dataclasses"],
     golden_output="frozen_dataclasses.py",
@@ -210,6 +217,13 @@ def test_class_decorators(tmp_path: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--class-decorators"],
+    option_description="""Add custom decorators to generated model classes.
+
+The `--class-decorators` option adds custom decorators to all generated model classes.
+This is useful for integrating with serialization libraries like `dataclasses_json`.
+
+Use with `--additional-imports` to add the required imports for the decorators.
+The `@` prefix is optional and will be added automatically if missing.""",
     input_schema="jsonschema/simple_frozen_test.json",
     cli_args=[
         "--output-model-type",
@@ -345,6 +359,12 @@ def test_use_attribute_docstrings(tmp_path: Path) -> None:
 @freeze_time(TIMESTAMP)
 @pytest.mark.cli_doc(
     options=["--use-attribute-docstrings"],
+    option_description="""Generate field descriptions as attribute docstrings instead of Field descriptions.
+
+The `--use-attribute-docstrings` flag places field descriptions in Python docstring
+format (PEP 224 attribute docstrings) rather than in Field(..., description=...).
+This provides better IDE support for hovering over attributes. Requires
+`--use-field-description` to be enabled.""",
     input_schema="jsonschema/use_attribute_docstrings_test.json",
     cli_args=[
         "--output-model-type",
@@ -654,6 +674,7 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
 
 @pytest.mark.cli_doc(
     options=["--type-overrides"],
+    option_description="""Replace schema model types with custom Python types via JSON mapping.""",
     input_schema="jsonschema/type_overrides_test.json",
     cli_args=["--type-overrides", '{"CustomType": "my_app.types.CustomType"}'],
     golden_output="main/type_overrides_model_level.py",
@@ -719,6 +740,11 @@ def test_skip_root_model(tmp_path: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--skip-root-model"],
+    option_description="""Skip generation of root model when schema contains nested definitions.
+
+The `--skip-root-model` flag prevents generating a model for the root schema object
+when the schema primarily contains reusable definitions. This is useful when the root
+object is just a container for $defs and not a meaningful model itself.""",
     input_schema="jsonschema/skip_root_model_test.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--skip-root-model"],
     golden_output="skip_root_model.py",
@@ -742,6 +768,11 @@ def test_skip_root_model_command_line(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--check"],
+    option_description="""Verify generated code matches existing output without modifying files.
+
+The `--check` flag compares the generated output with existing files and exits with
+a non-zero status if they differ. Useful for CI/CD validation to ensure schemas
+and generated code stay in sync. Works with both single files and directory outputs.""",
     input_schema="jsonschema/person.json",
     cli_args=["--disable-timestamp", "--check"],
     golden_output="person.py",
@@ -977,6 +1008,11 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--all-exports-scope"],
+    option_description="""Generate __all__ exports for child modules in __init__.py files.
+
+The `--all-exports-scope=children` flag adds __all__ to each __init__.py containing
+exports from direct child modules. This improves IDE autocomplete and explicit exports.
+Use 'recursive' to include all descendant exports with collision handling.""",
     input_schema="openapi/modular.yaml",
     cli_args=["--all-exports-scope", "children"],
     golden_output="openapi/modular_all_exports_children",
@@ -1000,6 +1036,12 @@ def test_all_exports_scope_children(output_dir: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--all-exports-collision-strategy"],
+    option_description="""Handle name collisions when exporting recursive module hierarchies.
+
+The `--all-exports-collision-strategy` flag determines how to resolve naming conflicts
+when using `--all-exports-scope=recursive`. The 'minimal-prefix' strategy adds the
+minimum module path prefix needed to disambiguate colliding names, while 'full-prefix'
+uses the complete module path. Requires `--all-exports-scope=recursive`.""",
     input_schema="openapi/modular.yaml",
     cli_args=["--all-exports-scope", "recursive", "--all-exports-collision-strategy", "minimal-prefix"],
     golden_output="openapi/modular_all_exports_recursive",
@@ -1180,7 +1222,13 @@ def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
 
 
 def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
-    """Test --check uses pyproject.toml formatter settings from output path."""
+    """Test --check uses pyproject.toml formatter settings from output path.
+
+    This test verifies that both generation and --check mode use the same
+    pyproject.toml settings from the output directory. Without the fix,
+    generation would use cwd's settings while --check would use output path's
+    settings, causing a diff even with identical input.
+    """
     pyproject_toml = tmp_path / "pyproject.toml"
     pyproject_toml.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
 
@@ -1191,25 +1239,53 @@ def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
   "title": "Person",
   "type": "object",
   "properties": {
-    "firstName": {"type": "string", "description": "The person's first name description that is very long."}
-  }
+    "firstName": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[A-Za-z]+$"
+    }
+  },
+  "required": ["firstName"]
 }""",
         encoding="utf-8",
     )
 
     output_file = tmp_path / "output.py"
+    expected_output = """\
+# generated by datamodel-codegen:
+#   filename:  input.json
+
+from __future__ import annotations
+
+from typing import Annotated
+
+from pydantic import BaseModel, Field
+
+
+class Person(BaseModel):
+    firstName: Annotated[
+        str,
+        Field(
+            max_length=100,
+            min_length=1,
+            regex='^[A-Za-z]+$',
+        ),
+    ]
+"""
     run_main_and_assert(
         input_path=input_json,
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--disable-timestamp"],
+        extra_args=["--disable-timestamp", "--use-annotated"],
+        expected_output=expected_output,
     )
 
     run_main_and_assert(
         input_path=input_json,
         output_path=output_file,
         input_file_type="jsonschema",
-        extra_args=["--disable-timestamp", "--check"],
+        extra_args=["--disable-timestamp", "--use-annotated", "--check"],
         expected_exit=Exit.OK,
     )
 
@@ -1301,6 +1377,11 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
 
 @pytest.mark.cli_doc(
     options=["--module-split-mode"],
+    option_description="""Split generated models into separate files, one per model class.
+
+The `--module-split-mode=single` flag generates each model class in its own file,
+named after the class in snake_case. Use with `--all-exports-scope=recursive` to
+create an __init__.py that re-exports all models for convenient imports.""",
     input_schema="jsonschema/module_split_single/input.json",
     cli_args=["--module-split-mode", "single", "--all-exports-scope", "recursive", "--use-exact-imports"],
     golden_output="jsonschema/module_split_single",
@@ -1331,6 +1412,12 @@ def test_module_split_mode_single(output_dir: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-standard-primitive-types"],
+    option_description="""Use Python standard library types for string formats instead of str.
+
+The `--use-standard-primitive-types` flag configures the code generation to use
+Python standard library types (UUID, IPv4Address, IPv6Address, Path) for corresponding
+string formats instead of plain str. This affects dataclass, msgspec, and TypedDict
+output types. Pydantic already uses these types by default.""",
     input_schema="jsonschema/use_standard_primitive_types.json",
     cli_args=[
         "--output-model-type",
@@ -1868,3 +1955,179 @@ def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFi
 
     with pytest.raises(Error, match=f"Dict input is not supported for {input_file_type.value}"):
         generate(auto_error_dict, input_file_type=input_file_type)
+
+
+def test_pydantic_v1_deprecation_warning(output_file: Path, mocker: MockerFixture) -> None:
+    """Test that deprecation warning is emitted when running with Pydantic v1."""
+    mocker.patch("datamodel_code_generator.__main__.is_pydantic_v2", return_value=False)
+
+    with pytest.warns(DeprecationWarning, match=r"Pydantic v1 runtime support is deprecated"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_with_config_object(output_file: Path) -> None:
+    """Test generate() with GenerateConfig object."""
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import StrictTypes
+
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    config = GenerateConfig(
+        input_filename="test.json",
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        use_schema_description=True,
+        snake_case_field=True,
+        field_constraints=True,
+        extra_template_data={"Model": {"custom_key": "custom_value"}},
+    )
+    generate(
+        input_='{"type": "object", "properties": {"userName": {"type": "string"}}}',
+        config=config,
+    )
+    content = output_file.read_text(encoding="utf-8")
+    assert "class Model" in content
+    assert "user_name" in content
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
+    """Test generate() raises error when both config and kwargs are provided."""
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import StrictTypes
+
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    config = GenerateConfig(
+        input_filename="test.json",
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    # Passing both config and kwargs should raise ValueError
+    with pytest.raises(ValueError, match="Cannot specify both 'config' and keyword arguments"):
+        generate(
+            input_='{"type": "object", "properties": {"name": {"type": "string"}}}',
+            output=output_file,
+            config=config,
+            field_constraints=True,
+        )
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_parser_with_config_and_options_raises_error() -> None:
+    """Test Parser raises error when both config and options are provided."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig()
+    with pytest.raises(ValueError, match="Cannot specify both 'config' and keyword arguments"):
+        JsonSchemaParser(source="{}", config=config, field_constraints=True)
+
+
+def test_jsonschema_parser_with_explicit_target_datetime_class() -> None:
+    """Test JsonSchemaParser with explicit target_datetime_class option."""
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(source="{}", target_datetime_class=DatetimeClassType.Datetime)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
+
+
+def test_openapi_parser_with_explicit_wrap_string_literal() -> None:
+    """Test OpenAPIParser with explicit wrap_string_literal option."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        source='{"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0"}, "paths": {}}',
+        wrap_string_literal=True,
+    )
+    assert parser.wrap_string_literal is True
+
+
+def test_graphql_parser_with_explicit_target_datetime_class() -> None:
+    """Test GraphQLParser with explicit target_datetime_class option."""
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+
+    parser = GraphQLParser(source="type Query { id: ID }", target_datetime_class=DatetimeClassType.Awaredatetime)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_jsonschema_parser_with_config_object() -> None:
+    """Test JsonSchemaParser with ParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = ParserConfig(target_datetime_class=DatetimeClassType.Datetime)
+    parser = JsonSchemaParser(source="{}", config=config)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_openapi_parser_with_config_object() -> None:
+    """Test OpenAPIParser with OpenAPIParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import OpenAPIParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    OpenAPIParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = OpenAPIParserConfig(wrap_string_literal=True)
+    parser = OpenAPIParser(
+        source='{"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0"}, "paths": {}}',
+        config=config,
+    )
+    assert parser.wrap_string_literal is True
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
+def test_graphql_parser_with_config_object() -> None:
+    """Test GraphQLParser with GraphQLParserConfig object to cover config is not None branch."""
+    from datamodel_code_generator.config import GraphQLParserConfig
+    from datamodel_code_generator.format import DatetimeClassType
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.graphql import GraphQLParser
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
+
+    GraphQLParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+    config = GraphQLParserConfig(target_datetime_class=DatetimeClassType.Awaredatetime)
+    parser = GraphQLParser(source="type Query { id: ID }", config=config)
+    assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime

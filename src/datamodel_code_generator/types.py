@@ -7,8 +7,10 @@ utilities for handling unions, optionals, and type hints.
 
 from __future__ import annotations
 
+import ast
 import re
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from enum import Enum, auto
 from functools import lru_cache
 from itertools import chain
@@ -26,7 +28,7 @@ from typing import (
 
 import pydantic
 from packaging import version
-from pydantic import StrictBool, StrictInt, StrictStr, create_model
+from pydantic import Field, StrictBool, StrictInt, StrictStr, create_model
 from typing_extensions import TypeIs
 
 from datamodel_code_generator.format import (
@@ -190,6 +192,108 @@ def chain_as_tuple(*iterables: Iterable[T]) -> tuple[T, ...]:
     return tuple(chain(*iterables))
 
 
+def get_type_base_name(type_str: str) -> str:
+    """Extract base type name from a type annotation string using AST.
+
+    Examples:
+        "List[str]" -> "List"
+        "foo.bar.Baz" -> "Baz"
+        "Optional[int]" -> "Optional"
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+
+    body = tree.body
+    if isinstance(body, ast.Subscript):
+        body = body.value
+
+    if isinstance(body, ast.Attribute):
+        return body.attr
+    if isinstance(body, ast.Name):
+        return body.id
+    return type_str.split("[", maxsplit=1)[0].rsplit(".", 1)[-1].strip()
+
+
+def get_subscript_args(type_str: str) -> list[str]:
+    """Extract type arguments from a subscripted type using AST.
+
+    Examples:
+        "List[str]" -> ["str"]
+        "Dict[str, int]" -> ["str", "int"]
+        "Union[str, int, None]" -> ["str", "int", "None"]
+        "str | int | None" -> ["str", "int", "None"]
+        "str" -> []
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return []
+
+    body = tree.body
+
+    if isinstance(body, ast.BinOp) and isinstance(body.op, ast.BitOr):
+        args: list[str] = []
+
+        def collect_union_args(node: ast.expr) -> None:
+            if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr):
+                collect_union_args(node.left)
+                collect_union_args(node.right)
+            else:
+                args.append(ast.unparse(node))
+
+        collect_union_args(body)
+        return args
+
+    if isinstance(body, ast.Subscript):
+        slice_node = body.slice
+        if isinstance(slice_node, ast.Tuple):
+            return [ast.unparse(elt) for elt in slice_node.elts]
+        return [ast.unparse(slice_node)]
+
+    return []
+
+
+def extract_qualified_names(type_str: str) -> list[str]:
+    """Extract all fully qualified names from a type annotation string using AST.
+
+    Finds patterns like 'module.path.ClassName' where the name contains dots.
+
+    Examples:
+        "type[foo.bar.Baz]" -> ["foo.bar.Baz"]
+        "Dict[a.B, c.D]" -> ["a.B", "c.D"]
+        "str" -> []
+    """
+    try:
+        tree = ast.parse(type_str, mode="eval")
+    except SyntaxError:
+        return []
+
+    qualified_names: list[str] = []
+    visited: set[int] = set()
+
+    def get_full_name(node: ast.expr) -> str | None:
+        parts: list[str] = []
+        current: ast.expr = node
+        while isinstance(current, ast.Attribute):
+            visited.add(id(current))
+            parts.append(current.attr)
+            current = current.value
+        if isinstance(current, ast.Name):
+            parts.append(current.id)
+            return ".".join(reversed(parts))
+        return None
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute) and id(node) not in visited:
+            name = get_full_name(node)
+            if name and "." in name:
+                qualified_names.append(name)
+
+    return qualified_names
+
+
 def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # noqa: PLR0912
     """Remove None from a Union type string, handling nested unions."""
     if use_union_operator:
@@ -324,7 +428,7 @@ class DataType(_BaseModel):
 
     type: Optional[str] = None  # noqa: UP045
     reference: Optional[Reference] = None  # noqa: UP045
-    data_types: list[DataType] = []  # noqa: RUF012
+    data_types: list[DataType] = Field(default_factory=list)
     is_func: bool = False
     kwargs: Optional[dict[str, Any]] = None  # noqa: UP045
     import_: Optional[Import] = None  # noqa: UP045
@@ -333,16 +437,19 @@ class DataType(_BaseModel):
     is_dict: bool = False
     is_list: bool = False
     is_set: bool = False
+    is_frozen_set: bool = False
+    is_mapping: bool = False
+    is_sequence: bool = False
     is_tuple: bool = False
     is_custom_type: bool = False
-    literals: list[Union[StrictBool, StrictInt, StrictStr]] = []  # noqa: RUF012, UP007
-    enum_member_literals: list[tuple[str, str]] = []  # noqa: RUF012  # [(EnumClassName, member_name), ...]
+    literals: list[Union[StrictBool, StrictInt, StrictStr]] = Field(default_factory=list)  # noqa: UP007
+    enum_member_literals: list[tuple[str, str]] = Field(default_factory=list)  # [(EnumClassName, member_name), ...]
     use_standard_collections: bool = False
     use_generic_container: bool = False
     use_union_operator: bool = False
     alias: Optional[str] = None  # noqa: UP045
     parent: Union[DataModelFieldBase, DataType, None] = None  # noqa: UP007
-    children: list[DataType] = []  # noqa: RUF012
+    children: list[DataType] = Field(default_factory=list)
     strict: bool = False
     dict_key: Optional[DataType] = None  # noqa: UP045
     treat_dot_as_module: bool = False
@@ -350,6 +457,38 @@ class DataType(_BaseModel):
 
     _exclude_fields: ClassVar[set[str]] = {"parent", "children"}
     _pass_fields: ClassVar[set[str]] = {"parent", "children", "data_types", "reference"}
+
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> DataType:
+        """Create a deep copy handling circular references in parent/children fields."""
+        if memo is None:
+            memo = {}
+
+        obj_id = id(self)
+        if obj_id in memo:
+            return memo[obj_id]
+
+        cls = self.__class__
+        model_fields = getattr(cls, "model_fields" if is_pydantic_v2() else "__fields__")
+
+        shallow_kwargs: dict[str, Any] = {}
+        for field_name in model_fields:
+            value = getattr(self, field_name)
+            if field_name in self._exclude_fields:
+                shallow_kwargs[field_name] = None
+            else:
+                shallow_kwargs[field_name] = value
+
+        constructor = getattr(cls, "model_construct" if is_pydantic_v2() else "construct")
+        new_obj: DataType = constructor(**shallow_kwargs)
+        memo[obj_id] = new_obj
+
+        for field_name in model_fields:
+            if field_name not in self._exclude_fields:
+                value = getattr(self, field_name)
+                copied_value = deepcopy(value, memo)
+                object.__setattr__(new_obj, field_name, copied_value)
+
+        return new_obj
 
     @classmethod
     def from_import(  # noqa: PLR0913
@@ -489,6 +628,15 @@ class DataType(_BaseModel):
             (bool(self.literals) or bool(self.enum_member_literals), IMPORT_LITERAL),
         )
 
+        imports = (
+            *imports,
+            (self.is_frozen_set and not self.use_standard_collections, IMPORT_FROZEN_SET),
+            (self.is_mapping and self.use_standard_collections, IMPORT_ABC_MAPPING),
+            (self.is_mapping and not self.use_standard_collections, IMPORT_MAPPING),
+            (self.is_sequence and self.use_standard_collections, IMPORT_ABC_SEQUENCE),
+            (self.is_sequence and not self.use_standard_collections, IMPORT_SEQUENCE),
+        )
+
         if self.use_generic_container:
             if self.use_standard_collections:
                 # frozenset is builtin, no import needed for is_set
@@ -516,7 +664,7 @@ class DataType(_BaseModel):
 
         # Yield imports based on conditions
         for field, import_ in imports:
-            if field and import_ != self.import_:
+            if field and import_ is not None and import_ != self.import_:
                 yield import_
 
         # Propagate imports from any dict_key type
@@ -618,14 +766,9 @@ class DataType(_BaseModel):
             is_alias = getattr(source, "is_alias", False)
             if isinstance(source, Nullable) and source.nullable and not is_alias:
                 self.is_optional = True
-        if self.is_list:
-            if self.use_generic_container:
-                list_ = SEQUENCE
-            elif self.use_standard_collections:
-                list_ = STANDARD_LIST
-            else:
-                list_ = LIST
-            type_ = f"{list_}[{type_}]" if type_ else list_
+        if self.is_frozen_set:
+            set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
+            type_ = f"{set_}[{type_}]" if type_ else set_
         elif self.is_set:
             if self.use_generic_container:
                 set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
@@ -634,6 +777,24 @@ class DataType(_BaseModel):
             else:
                 set_ = SET
             type_ = f"{set_}[{type_}]" if type_ else set_
+        elif self.is_sequence:
+            list_ = SEQUENCE
+            type_ = f"{list_}[{type_}]" if type_ else list_
+        elif self.is_list:
+            if self.use_generic_container:
+                list_ = SEQUENCE
+            elif self.use_standard_collections:
+                list_ = STANDARD_LIST
+            else:
+                list_ = LIST
+            type_ = f"{list_}[{type_}]" if type_ else list_
+        elif self.is_mapping:
+            dict_ = MAPPING
+            if self.dict_key or type_:
+                key = self.dict_key.type_hint if self.dict_key else STR
+                type_ = f"{dict_}[{key}, {type_ or ANY}]"
+            else:  # pragma: no cover
+                type_ = dict_
         elif self.is_dict:
             if self.use_generic_container:
                 dict_ = MAPPING

@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "callback": {
+      "anyOf": [
+        {"type": "string", "x-python-type": "Callable[[str], str]"},
+        {"type": "null"}
+      ]
+    }
+  }
+}

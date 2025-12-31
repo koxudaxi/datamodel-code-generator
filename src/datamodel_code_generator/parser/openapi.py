@@ -16,29 +16,15 @@ from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
 from warnings import warn
 
 from pydantic import Field
+from typing_extensions import Unpack
 
 from datamodel_code_generator import (
-    DEFAULT_SHARED_MODULE_NAME,
-    AllOfMergeMode,
-    CollapseRootModelsNameStrategy,
-    DataclassArguments,
     Error,
-    FieldTypeCollisionStrategy,
-    LiteralType,
-    NamingStrategy,
     OpenAPIScope,
-    PythonVersion,
-    PythonVersionMin,
-    ReadOnlyWriteOnlyModelType,
-    ReuseScope,
-    TargetPydanticVersion,
     YamlValue,
     load_data,
     snooper_to_methods,
 )
-from datamodel_code_generator.format import DEFAULT_FORMATTERS, DateClassType, DatetimeClassType, Formatter
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -48,17 +34,16 @@ from datamodel_code_generator.parser.jsonschema import (
 from datamodel_code_generator.reference import FieldNameResolver, is_url, snake_to_upper_camel
 from datamodel_code_generator.types import (
     DataType,
-    DataTypeManager,
     EmptyDataType,
-    StrictTypes,
 )
 from datamodel_code_generator.util import BaseModel, model_dump, model_validate
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterable, Mapping, Sequence
     from urllib.parse import ParseResult
 
-    from datamodel_code_generator.parser import DefaultPutDict
+    from datamodel_code_generator._types import OpenAPIParserConfigDict
+    from datamodel_code_generator.config import OpenAPIParserConfig
+    from datamodel_code_generator.model import DataModelFieldBase
 
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")
@@ -121,7 +106,7 @@ class ParameterObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
 
 
 class HeaderObject(BaseModel):
@@ -133,14 +118,14 @@ class HeaderObject(BaseModel):
     schema_: Optional[JsonSchemaObject] = Field(None, alias="schema")  # noqa: UP045
     example: YamlValue = None
     examples: Optional[Union[str, ReferenceObject, ExampleObject]] = None  # noqa: UP007, UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
 
 
 class RequestBodyObject(BaseModel):
     """Represent an OpenAPI request body object."""
 
     description: Optional[str] = None  # noqa: UP045
-    content: dict[str, MediaObject] = {}  # noqa: RUF012
+    content: dict[str, MediaObject] = Field(default_factory=dict)
     required: bool = False
 
 
@@ -148,31 +133,31 @@ class ResponseObject(BaseModel):
     """Represent an OpenAPI response object."""
 
     description: Optional[str] = None  # noqa: UP045
-    headers: dict[str, ParameterObject] = {}  # noqa: RUF012
-    content: dict[Union[str, int], MediaObject] = {}  # noqa: RUF012, UP007
+    headers: dict[str, ParameterObject] = Field(default_factory=dict)
+    content: dict[Union[str, int], MediaObject] = Field(default_factory=dict)  # noqa: UP007
 
 
 class Operation(BaseModel):
     """Represent an OpenAPI operation object."""
 
-    tags: list[str] = []  # noqa: RUF012
+    tags: list[str] = Field(default_factory=list)
     summary: Optional[str] = None  # noqa: UP045
     description: Optional[str] = None  # noqa: UP045
     operationId: Optional[str] = None  # noqa: N815, UP045
-    parameters: list[Union[ReferenceObject, ParameterObject]] = []  # noqa: RUF012, UP007
+    parameters: list[Union[ReferenceObject, ParameterObject]] = Field(default_factory=list)  # noqa: UP007
     requestBody: Optional[Union[ReferenceObject, RequestBodyObject]] = None  # noqa: N815, UP007, UP045
-    responses: dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
+    responses: dict[Union[str, int], Union[ReferenceObject, ResponseObject]] = Field(default_factory=dict)  # noqa: UP007
     deprecated: bool = False
 
 
 class ComponentsObject(BaseModel):
     """Represent an OpenAPI components object."""
 
-    schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = {}  # noqa: RUF012, UP007
-    responses: dict[str, Union[ReferenceObject, ResponseObject]] = {}  # noqa: RUF012, UP007
-    examples: dict[str, Union[ReferenceObject, ExampleObject]] = {}  # noqa: RUF012, UP007
-    requestBodies: dict[str, Union[ReferenceObject, RequestBodyObject]] = {}  # noqa: N815, RUF012, UP007
-    headers: dict[str, Union[ReferenceObject, HeaderObject]] = {}  # noqa: RUF012, UP007
+    schemas: dict[str, Union[ReferenceObject, JsonSchemaObject]] = Field(default_factory=dict)  # noqa: UP007
+    responses: dict[str, Union[ReferenceObject, ResponseObject]] = Field(default_factory=dict)  # noqa: UP007
+    examples: dict[str, Union[ReferenceObject, ExampleObject]] = Field(default_factory=dict)  # noqa: UP007
+    requestBodies: dict[str, Union[ReferenceObject, RequestBodyObject]] = Field(default_factory=dict)  # noqa: N815, UP007
+    headers: dict[str, Union[ReferenceObject, HeaderObject]] = Field(default_factory=dict)  # noqa: UP007
 
 
 @snooper_to_methods()
@@ -181,242 +166,48 @@ class OpenAPIParser(JsonSchemaParser):
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
 
-    def __init__(  # noqa: PLR0913
+    @classmethod
+    def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:
+        """Create an OpenAPIParserConfig from options."""
+        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+        from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
+        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
+        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
+
+        if is_pydantic_v2():
+            OpenAPIParserConfig.model_rebuild(
+                _types_namespace={
+                    "StrictTypes": types_module.StrictTypes,
+                    "DataModel": model_base.DataModel,
+                    "DataModelFieldBase": model_base.DataModelFieldBase,
+                    "DataTypeManager": types_module.DataTypeManager,
+                }
+            )
+            return OpenAPIParserConfig.model_validate(options)
+        OpenAPIParserConfig.update_forward_refs(
+            StrictTypes=types_module.StrictTypes,
+            DataModel=model_base.DataModel,
+            DataModelFieldBase=model_base.DataModelFieldBase,
+            DataTypeManager=types_module.DataTypeManager,
+        )
+        defaults = {name: field.default for name, field in OpenAPIParserConfig.__fields__.items()}
+        defaults.update(options)
+        return OpenAPIParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+
+    def __init__(
         self,
         source: str | Path | list[Path] | ParseResult,
         *,
-        data_model_type: type[DataModel] = pydantic_model.BaseModel,
-        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
-        base_class: str | None = None,
-        base_class_map: dict[str, str] | None = None,
-        additional_imports: list[str] | None = None,
-        class_decorators: list[str] | None = None,
-        custom_template_dir: Path | None = None,
-        extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
-        target_python_version: PythonVersion = PythonVersionMin,
-        dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
-        validation: bool = False,
-        field_constraints: bool = False,
-        snake_case_field: bool = False,
-        strip_default_none: bool = False,
-        aliases: Mapping[str, str] | None = None,
-        allow_population_by_field_name: bool = False,
-        allow_extra_fields: bool = False,
-        extra_fields: str | None = None,
-        use_generic_base_class: bool = False,
-        apply_default_values_for_required_fields: bool = False,
-        force_optional_for_required_fields: bool = False,
-        class_name: str | None = None,
-        use_standard_collections: bool = False,
-        base_path: Path | None = None,
-        use_schema_description: bool = False,
-        use_field_description: bool = False,
-        use_field_description_example: bool = False,
-        use_attribute_docstrings: bool = False,
-        use_inline_field_description: bool = False,
-        use_default_kwarg: bool = False,
-        reuse_model: bool = False,
-        reuse_scope: ReuseScope | None = None,
-        shared_module_name: str = DEFAULT_SHARED_MODULE_NAME,
-        encoding: str = "utf-8",
-        enum_field_as_literal: LiteralType | None = None,
-        enum_field_as_literal_map: dict[str, str] | None = None,
-        ignore_enum_constraints: bool = False,
-        use_one_literal_as_default: bool = False,
-        use_enum_values_in_discriminator: bool = False,
-        set_default_enum_member: bool = False,
-        use_subclass_enum: bool = False,
-        use_specialized_enum: bool = True,
-        strict_nullable: bool = False,
-        use_generic_container_types: bool = False,
-        enable_faux_immutability: bool = False,
-        remote_text_cache: DefaultPutDict[str, str] | None = None,
-        disable_appending_item_suffix: bool = False,
-        strict_types: Sequence[StrictTypes] | None = None,
-        empty_enum_field_name: str | None = None,
-        custom_class_name_generator: Callable[[str], str] | None = None,
-        field_extra_keys: set[str] | None = None,
-        field_include_all_keys: bool = False,
-        field_extra_keys_without_x_prefix: set[str] | None = None,
-        model_extra_keys: set[str] | None = None,
-        model_extra_keys_without_x_prefix: set[str] | None = None,
-        openapi_scopes: list[OpenAPIScope] | None = None,
-        include_path_parameters: bool = False,
-        wrap_string_literal: bool | None = False,
-        use_title_as_name: bool = False,
-        use_operation_id_as_name: bool = False,
-        use_unique_items_as_set: bool = False,
-        use_tuple_for_fixed_items: bool = False,
-        allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints,
-        http_headers: Sequence[tuple[str, str]] | None = None,
-        http_ignore_tls: bool = False,
-        http_timeout: float | None = None,
-        use_annotated: bool = False,
-        use_serialize_as_any: bool = False,
-        use_non_positive_negative_number_constrained_types: bool = False,
-        use_decimal_for_multiple_of: bool = False,
-        original_field_name_delimiter: str | None = None,
-        use_double_quotes: bool = False,
-        use_union_operator: bool = False,
-        allow_responses_without_content: bool = False,
-        collapse_root_models: bool = False,
-        collapse_root_models_name_strategy: CollapseRootModelsNameStrategy | None = None,
-        collapse_reuse_models: bool = False,
-        skip_root_model: bool = False,
-        use_type_alias: bool = False,
-        special_field_name_prefix: str | None = None,
-        remove_special_field_name_prefix: bool = False,
-        capitalise_enum_members: bool = False,
-        keep_model_order: bool = False,
-        known_third_party: list[str] | None = None,
-        custom_formatters: list[str] | None = None,
-        custom_formatters_kwargs: dict[str, Any] | None = None,
-        use_pendulum: bool = False,
-        use_standard_primitive_types: bool = False,
-        http_query_parameters: Sequence[tuple[str, str]] | None = None,
-        treat_dot_as_module: bool | None = None,
-        use_exact_imports: bool = False,
-        default_field_extras: dict[str, Any] | None = None,
-        target_datetime_class: DatetimeClassType | None = None,
-        target_date_class: DateClassType | None = None,
-        keyword_only: bool = False,
-        frozen_dataclasses: bool = False,
-        no_alias: bool = False,
-        formatters: list[Formatter] = DEFAULT_FORMATTERS,
-        defer_formatting: bool = False,
-        parent_scoped_naming: bool = False,
-        naming_strategy: NamingStrategy | None = None,
-        duplicate_name_suffix: dict[str, str] | None = None,
-        dataclass_arguments: DataclassArguments | None = None,
-        type_mappings: list[str] | None = None,
-        type_overrides: dict[str, str] | None = None,
-        read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
-        use_frozen_field: bool = False,
-        use_default_factory_for_optional_nested_models: bool = False,
-        use_status_code_in_response_name: bool = False,
-        field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
-        target_pydantic_version: TargetPydanticVersion | None = None,
+        config: OpenAPIParserConfig | None = None,
+        **options: Unpack[OpenAPIParserConfigDict],
     ) -> None:
         """Initialize the OpenAPI parser with extensive configuration options."""
-        target_datetime_class = target_datetime_class or DatetimeClassType.Awaredatetime
-        super().__init__(
-            source=source,
-            data_model_type=data_model_type,
-            data_model_root_type=data_model_root_type,
-            data_type_manager_type=data_type_manager_type,
-            data_model_field_type=data_model_field_type,
-            base_class=base_class,
-            base_class_map=base_class_map,
-            additional_imports=additional_imports,
-            class_decorators=class_decorators,
-            custom_template_dir=custom_template_dir,
-            extra_template_data=extra_template_data,
-            target_python_version=target_python_version,
-            dump_resolve_reference_action=dump_resolve_reference_action,
-            validation=validation,
-            field_constraints=field_constraints,
-            snake_case_field=snake_case_field,
-            strip_default_none=strip_default_none,
-            aliases=aliases,
-            allow_population_by_field_name=allow_population_by_field_name,
-            allow_extra_fields=allow_extra_fields,
-            extra_fields=extra_fields,
-            use_generic_base_class=use_generic_base_class,
-            apply_default_values_for_required_fields=apply_default_values_for_required_fields,
-            force_optional_for_required_fields=force_optional_for_required_fields,
-            class_name=class_name,
-            use_standard_collections=use_standard_collections,
-            base_path=base_path,
-            use_schema_description=use_schema_description,
-            use_field_description=use_field_description,
-            use_field_description_example=use_field_description_example,
-            use_attribute_docstrings=use_attribute_docstrings,
-            use_inline_field_description=use_inline_field_description,
-            use_default_kwarg=use_default_kwarg,
-            reuse_model=reuse_model,
-            reuse_scope=reuse_scope,
-            shared_module_name=shared_module_name,
-            encoding=encoding,
-            enum_field_as_literal=enum_field_as_literal,
-            enum_field_as_literal_map=enum_field_as_literal_map,
-            ignore_enum_constraints=ignore_enum_constraints,
-            use_one_literal_as_default=use_one_literal_as_default,
-            use_enum_values_in_discriminator=use_enum_values_in_discriminator,
-            set_default_enum_member=set_default_enum_member,
-            use_subclass_enum=use_subclass_enum,
-            use_specialized_enum=use_specialized_enum,
-            strict_nullable=strict_nullable,
-            use_generic_container_types=use_generic_container_types,
-            enable_faux_immutability=enable_faux_immutability,
-            remote_text_cache=remote_text_cache,
-            disable_appending_item_suffix=disable_appending_item_suffix,
-            strict_types=strict_types,
-            empty_enum_field_name=empty_enum_field_name,
-            custom_class_name_generator=custom_class_name_generator,
-            field_extra_keys=field_extra_keys,
-            field_include_all_keys=field_include_all_keys,
-            field_extra_keys_without_x_prefix=field_extra_keys_without_x_prefix,
-            model_extra_keys=model_extra_keys,
-            model_extra_keys_without_x_prefix=model_extra_keys_without_x_prefix,
-            wrap_string_literal=wrap_string_literal,
-            use_title_as_name=use_title_as_name,
-            use_operation_id_as_name=use_operation_id_as_name,
-            use_unique_items_as_set=use_unique_items_as_set,
-            use_tuple_for_fixed_items=use_tuple_for_fixed_items,
-            allof_merge_mode=allof_merge_mode,
-            http_headers=http_headers,
-            http_ignore_tls=http_ignore_tls,
-            http_timeout=http_timeout,
-            use_annotated=use_annotated,
-            use_serialize_as_any=use_serialize_as_any,
-            use_non_positive_negative_number_constrained_types=use_non_positive_negative_number_constrained_types,
-            use_decimal_for_multiple_of=use_decimal_for_multiple_of,
-            original_field_name_delimiter=original_field_name_delimiter,
-            use_double_quotes=use_double_quotes,
-            use_union_operator=use_union_operator,
-            allow_responses_without_content=allow_responses_without_content,
-            collapse_root_models=collapse_root_models,
-            collapse_root_models_name_strategy=collapse_root_models_name_strategy,
-            collapse_reuse_models=collapse_reuse_models,
-            skip_root_model=skip_root_model,
-            use_type_alias=use_type_alias,
-            special_field_name_prefix=special_field_name_prefix,
-            remove_special_field_name_prefix=remove_special_field_name_prefix,
-            capitalise_enum_members=capitalise_enum_members,
-            keep_model_order=keep_model_order,
-            known_third_party=known_third_party,
-            custom_formatters=custom_formatters,
-            custom_formatters_kwargs=custom_formatters_kwargs,
-            use_pendulum=use_pendulum,
-            use_standard_primitive_types=use_standard_primitive_types,
-            http_query_parameters=http_query_parameters,
-            treat_dot_as_module=treat_dot_as_module,
-            use_exact_imports=use_exact_imports,
-            default_field_extras=default_field_extras,
-            target_datetime_class=target_datetime_class,
-            target_date_class=target_date_class,
-            keyword_only=keyword_only,
-            frozen_dataclasses=frozen_dataclasses,
-            no_alias=no_alias,
-            formatters=formatters,
-            defer_formatting=defer_formatting,
-            parent_scoped_naming=parent_scoped_naming,
-            naming_strategy=naming_strategy,
-            duplicate_name_suffix=duplicate_name_suffix,
-            dataclass_arguments=dataclass_arguments,
-            type_mappings=type_mappings,
-            type_overrides=type_overrides,
-            read_only_write_only_model_type=read_only_write_only_model_type,
-            use_frozen_field=use_frozen_field,
-            use_default_factory_for_optional_nested_models=use_default_factory_for_optional_nested_models,
-            field_type_collision_strategy=field_type_collision_strategy,
-            target_pydantic_version=target_pydantic_version,
-        )
-        self.open_api_scopes: list[OpenAPIScope] = openapi_scopes or [OpenAPIScope.Schemas]
-        self.include_path_parameters: bool = include_path_parameters
-        self.use_status_code_in_response_name: bool = use_status_code_in_response_name
+        if config is None and options.get("wrap_string_literal") is None:
+            options["wrap_string_literal"] = False
+        super().__init__(source=source, config=config, **options)  # type: ignore[arg-type]
+        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]
+        self.include_path_parameters: bool = self.config.include_path_parameters
+        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
@@ -682,7 +473,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
-    def parse_all_parameters(
+    def parse_all_parameters(  # noqa: PLR0912
         self,
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
@@ -751,13 +542,21 @@ class OpenAPIParser(JsonSchemaParser):
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None
+                # Handle multiple aliases (Pydantic v2 AliasChoices)
+                single_alias: str | None = None
+                validation_aliases: list[str] | None = None
+                if isinstance(alias, list):
+                    validation_aliases = alias
+                else:
+                    single_alias = alias
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
                         default=object_schema.default if object_schema else None,
                         data_type=data_type,
                         required=parameter.required,
-                        alias=alias,
+                        alias=single_alias,
+                        validation_aliases=validation_aliases,
                         constraints=model_dump(object_schema, exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,

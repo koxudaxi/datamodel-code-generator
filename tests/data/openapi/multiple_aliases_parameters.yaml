@@ -1,0 +1,55 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Multiple Aliases Test
+paths:
+  /items:
+    get:
+      summary: List items
+      operationId: listItems
+      parameters:
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: sort_order
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: filter_options
+          in: query
+          required: false
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  category:
+                    type: string
+        - name: single_alias_field
+          in: query
+          required: false
+          content:
+            application/json:
+              schema:
+                type: string
+      responses:
+        '200':
+          description: A list of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Item"
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string

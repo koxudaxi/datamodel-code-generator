@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "properties": {
+    "callback": {
+      "x-python-type": "Callable[[str], str]"
+    }
+  }
+}

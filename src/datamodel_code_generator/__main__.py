@@ -52,6 +52,7 @@ from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
@@ -59,6 +60,7 @@ from datamodel_code_generator import (
     Error,
     FieldTypeCollisionStrategy,
     InputFileType,
+    InputModelRefStrategy,
     InvalidClassNameError,
     ModuleSplitMode,
     NamingStrategy,
@@ -383,6 +385,16 @@ class Config(BaseModel):
                 raise Error(self.__validate_all_exports_collision_strategy_err)
             return self
 
+        from pydantic import field_validator as _field_validator  # noqa: PLC0415
+
+        @_field_validator("input_model", mode="before")
+        @classmethod
+        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # pyright: ignore[reportRedeclaration]
+            """Convert string input_model to list for backwards compatibility."""
+            if isinstance(v, str):
+                return [v]
+            return v
+
     else:
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -441,8 +453,17 @@ class Config(BaseModel):
                 raise Error(cls.__validate_all_exports_collision_strategy_err)
             return values
 
+        @field_validator("input_model", mode="before")  # pragma: no cover
+        @classmethod
+        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
+            """Convert string input_model to list for backwards compatibility."""
+            if isinstance(v, str):
+                return [v]
+            return v
+
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
-    input_model: Optional[str] = None  # noqa: UP045
+    input_model: Optional[list[str]] = None  # noqa: UP045
+    input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
@@ -512,6 +533,7 @@ class Config(BaseModel):
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
+    allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     http_timeout: Optional[float] = None  # noqa: UP045
@@ -594,109 +616,44 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
     return additional_imports
 
 
-def _load_model_schema(  # noqa: PLR0912, PLR0915
-    input_model: str,
-    input_file_type: InputFileType,
-) -> dict[str, object]:
-    """Load schema from a Python import path.
+def _resolve_profile_extends(
+    profiles: dict[str, Any],
+    profile_name: str,
+    visited: set[str] | None = None,
+) -> dict[str, Any]:
+    """Resolve profile inheritance via extends key."""
+    if visited is None:
+        visited = set()
 
-    Args:
-        input_model: Import path in 'module.path:ObjectName' format
-        input_file_type: Current input file type setting for validation
-
-    Returns:
-        Schema dict
-
-    Raises:
-        Error: If format invalid, object cannot be loaded, or input_file_type invalid
-    """
-    import importlib.util  # noqa: PLC0415
-    import sys  # noqa: PLC0415
-
-    modname, sep, qualname = input_model.rpartition(":")
-    if not sep or not modname:
-        msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+    if profile_name in visited:
+        chain = " -> ".join(visited) + f" -> {profile_name}"
+        msg = f"Circular extends detected: {chain}"
         raise Error(msg)
 
-    is_path = "/" in modname or "\\" in modname
-    if not is_path and modname.endswith(".py"):
-        is_path = Path(modname).exists()
+    if profile_name not in profiles:
+        available = list(profiles.keys()) if profiles else "none"
+        msg = f"Extended profile '{profile_name}' not found in pyproject.toml. Available profiles: {available}"
+        raise Error(msg)
 
-    cwd = str(Path.cwd())
-    if cwd not in sys.path:
-        sys.path.insert(0, cwd)
+    visited.add(profile_name)
+    profile = profiles[profile_name]
+    extends = profile.get("extends")
 
-    if is_path:
-        file_path = Path(modname).resolve()
-        if not file_path.exists():
-            msg = f"File not found: {modname!r}"
+    if not extends:
+        return dict(profile.items())
+
+    parents = [extends] if isinstance(extends, str) else extends
+    result: dict[str, Any] = {}
+
+    for parent in parents:
+        if parent == profile_name:
+            msg = f"Profile '{profile_name}' cannot extend itself"
             raise Error(msg)
-        module_name = file_path.stem
-        spec = importlib.util.spec_from_file_location(module_name, file_path)
-        if spec is None or spec.loader is None:
-            msg = f"Cannot load module from {modname!r}"
-            raise Error(msg)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-    else:
-        try:
-            module = importlib.util.find_spec(modname)
-            if module is None:
-                msg = f"Cannot find module {modname!r}"
-                raise Error(msg)
-            module = importlib.import_module(modname)
-        except ImportError as e:
-            msg = f"Cannot import module {modname!r}: {e}"
-            raise Error(msg) from e
+        parent_config = _resolve_profile_extends(profiles, parent, visited.copy())
+        result.update(parent_config)
 
-    try:
-        obj = getattr(module, qualname)
-    except AttributeError as e:
-        msg = f"Module {modname!r} has no attribute {qualname!r}"
-        raise Error(msg) from e
-
-    if isinstance(obj, dict):
-        if input_file_type == InputFileType.Auto:
-            msg = "--input-file-type is required when --input-model points to a dict"
-            raise Error(msg)
-        return obj
-
-    if isinstance(obj, type) and issubclass(obj, BaseModel):
-        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
-            msg = (
-                f"--input-file-type must be 'jsonschema' (or omitted) "
-                f"when --input-model points to a Pydantic model, "
-                f"got '{input_file_type.value}'"
-            )
-            raise Error(msg)
-        if not hasattr(obj, "model_json_schema"):
-            msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
-            raise Error(msg)
-        return obj.model_json_schema()
-
-    # Check for dataclass or TypedDict - use TypeAdapter
-    from dataclasses import is_dataclass  # noqa: PLC0415
-
-    is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
-    if is_dataclass(obj) or is_typed_dict:
-        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
-            msg = (
-                f"--input-file-type must be 'jsonschema' (or omitted) "
-                f"when --input-model points to a dataclass or TypedDict, "
-                f"got '{input_file_type.value}'"
-            )
-            raise Error(msg)
-        try:
-            from pydantic import TypeAdapter  # noqa: PLC0415
-
-            return TypeAdapter(obj).json_schema()
-        except ImportError as e:
-            msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
-            raise Error(msg) from e
-
-    msg = f"{qualname!r} is not a supported type. Supported: dict, Pydantic v2 BaseModel, dataclass, TypedDict"
-    raise Error(msg)
+    result.update({k: v for k, v in profile.items() if k != "extends"})
+    return result
 
 
 def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict[str, Any]:
@@ -716,11 +673,10 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                         available = list(profiles.keys()) if profiles else "none"
                         msg = f"Profile '{profile}' not found in pyproject.toml. Available profiles: {available}"
                         raise Error(msg)
-                    profile_config = profiles[profile]
-                    base_config.update(profile_config)
+                    resolved_profile = _resolve_profile_extends(profiles, profile)
+                    base_config.update(resolved_profile)
 
                 pyproject_config = {k.replace("-", "_"): v for k, v in base_config.items()}
-                # Replace US-american spelling if present (ignore if british spelling is present)
                 if (
                     "capitalize_enum_members" in pyproject_config and "capitalise_enum_members" not in pyproject_config
                 ):  # pragma: no cover
@@ -728,12 +684,10 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                 return pyproject_config
 
         if (current_path / ".git").exists():
-            # Stop early if we see a git repository root.
             break
 
         current_path = current_path.parent
 
-    # If profile was requested but no pyproject.toml config was found, raise an error
     if profile:
         msg = f"Profile '{profile}' requested but no [tool.datamodel-codegen] section found in pyproject.toml"
         raise Error(msg)
@@ -953,6 +907,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_unique_items_as_set=config.use_unique_items_as_set,
         use_tuple_for_fixed_items=config.use_tuple_for_fixed_items,
         allof_merge_mode=config.allof_merge_mode,
+        allof_class_hierarchy=config.allof_class_hierarchy,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
         http_timeout=config.http_timeout,
@@ -1132,6 +1087,14 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.disable_warnings:
         warnings.simplefilter("ignore")
 
+    if not is_pydantic_v2():
+        warnings.warn(
+            "Pydantic v1 runtime support is deprecated and will be removed in a future version. "
+            "Please upgrade to Pydantic v2.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+
     if config.reuse_scope == ReuseScope.Tree and not config.reuse_model:
         print(  # noqa: T201
             "Warning: --reuse-scope=tree has no effect without --reuse-model",
@@ -1189,10 +1152,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 print(f"Unable to load alias mapping: {e}", file=sys.stderr)  # noqa: T201
                 return Exit.ERROR
         if not isinstance(aliases, dict) or not all(
-            isinstance(k, str) and isinstance(v, str) for k, v in aliases.items()
+            isinstance(k, str) and (isinstance(v, str) or (isinstance(v, list) and all(isinstance(i, str) for i in v)))
+            for k, v in aliases.items()
         ):
             print(  # noqa: T201
-                'Alias mapping must be a JSON string mapping (e.g. {"from": "to", ...})',
+                "Alias mapping must be a JSON mapping with string keys and string or list of strings values "
+                '(e.g. {"from": "to", "field": ["alias1", "alias2"]})',
                 file=sys.stderr,
             )
             return Exit.ERROR
@@ -1235,7 +1200,18 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     try:
         input_: Path | str | ParseResult
         if config.input_model:
-            schema = _load_model_schema(config.input_model, config.input_file_type)
+            from datamodel_code_generator.input_model import Error as InputModelError  # noqa: PLC0415
+            from datamodel_code_generator.input_model import load_model_schema  # noqa: PLC0415
+
+            try:
+                schema = load_model_schema(
+                    config.input_model,
+                    config.input_file_type,
+                    config.input_model_ref_strategy,
+                    config.output_model_type,
+                )
+            except InputModelError as e:
+                raise Error(str(e)) from e
             input_ = json.dumps(schema)
             if config.input_file_type == InputFileType.Auto:
                 config.input_file_type = InputFileType.JsonSchema
@@ -1250,7 +1226,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             aliases=aliases,
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
-            settings_path=config.output if config.check else None,
+            settings_path=config.output,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

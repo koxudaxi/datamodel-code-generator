@@ -1,0 +1,36 @@
+{
+  "$defs": {
+    "Dog": {
+      "type": "object",
+      "properties": {
+        "bark": {
+          "type": "boolean"
+        }
+      }
+    },
+    "Cat": {
+      "type": "object",
+      "properties": {
+        "meow": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "pet": {
+      "discriminator": {
+        "propertyName": "pet_type",
+        "mapping": {
+          "dog": "#/$defs/Dog",
+          "cat": "#/$defs/Cat"
+        }
+      },
+      "oneOf": [
+        {"$ref": "#/$defs/Dog"},
+        {"$ref": "#/$defs/Cat"}
+      ]
+    }
+  }
+}

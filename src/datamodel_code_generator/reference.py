@@ -225,7 +225,7 @@ class FieldNameResolver:
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
-        aliases: Mapping[str, str] | None = None,
+        aliases: Mapping[str, str | list[str]] | None = None,
         snake_case_field: bool = False,  # noqa: FBT001, FBT002
         empty_field_name: str | None = None,
         original_delimiter: str | None = None,
@@ -235,7 +235,7 @@ class FieldNameResolver:
         no_alias: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize field name resolver with transformation options."""
-        self.aliases: Mapping[str, str] = {} if aliases is None else {**aliases}
+        self.aliases: Mapping[str, str | list[str]] = {} if aliases is None else {**aliases}
         self.empty_field_name: str = empty_field_name or "_"
         self.snake_case_field = snake_case_field
         self.original_delimiter: str | None = original_delimiter
@@ -306,7 +306,7 @@ class FieldNameResolver:
         excludes: set[str] | None = None,
         path: list[str] | None = None,
         class_name: str | None = None,
-    ) -> tuple[str, str | None]:
+    ) -> tuple[str, str | list[str] | None]:
         """Get valid field name and original alias if different.
 
         Supports hierarchical alias resolution with the following priority:
@@ -318,15 +318,33 @@ class FieldNameResolver:
             excludes: Set of names to avoid when generating valid names.
             path: Unused, kept for backward compatibility.
             class_name: Optional class name for scoped alias resolution.
+
+        Returns:
+            A tuple of (python_field_name, alias_or_aliases) where:
+            - python_field_name: The valid Python identifier to use as the field name.
+            - alias_or_aliases: None if no alias needed, str for single alias,
+              or list[str] for multiple aliases (Pydantic v2 AliasChoices).
         """
         del path
         if class_name:
             scoped_key = f"{class_name}.{field_name}"
             if scoped_key in self.aliases:
-                return self.aliases[scoped_key], field_name
+                alias_value = self.aliases[scoped_key]
+                if isinstance(alias_value, list) and alias_value:
+                    # Multiple aliases: validate first alias as field name, return all aliases including original
+                    valid_name = self.get_valid_name(alias_value[0], excludes=excludes)
+                    return valid_name, [field_name, *alias_value]
+                if isinstance(alias_value, str):
+                    return alias_value, field_name
 
         if field_name in self.aliases:
-            return self.aliases[field_name], field_name
+            alias_value = self.aliases[field_name]
+            if isinstance(alias_value, list) and alias_value:
+                # Multiple aliases: validate first alias as field name, return all aliases including original
+                valid_name = self.get_valid_name(alias_value[0], excludes=excludes)
+                return valid_name, [field_name, *alias_value]
+            if isinstance(alias_value, str):
+                return alias_value, field_name
 
         valid_name = self.get_valid_name(field_name, excludes=excludes)
         return (
@@ -508,7 +526,7 @@ class ModelResolver:  # noqa: PLR0904
         duplicate_name_suffix: str | None = None,
         base_url: str | None = None,
         singular_name_suffix: str | None = None,
-        aliases: Mapping[str, str] | None = None,
+        aliases: Mapping[str, str | list[str]] | None = None,
         snake_case_field: bool = False,  # noqa: FBT001, FBT002
         empty_field_name: str | None = None,
         custom_class_name_generator: Callable[[str], str] | None = None,
@@ -1064,7 +1082,7 @@ class ModelResolver:  # noqa: PLR0904
         model_type: ModelType = ModelType.PYDANTIC,
         path: list[str] | None = None,
         class_name: str | None = None,
-    ) -> tuple[str, str | None]:
+    ) -> tuple[str, str | list[str] | None]:
         """Get a valid field name and alias for the specified model type.
 
         Args:
@@ -1075,7 +1093,10 @@ class ModelResolver:  # noqa: PLR0904
             class_name: Optional class name for scoped alias resolution.
 
         Returns:
-            A tuple of (valid_field_name, alias_or_none).
+            A tuple of (python_field_name, alias_or_aliases) where:
+            - python_field_name: The valid Python identifier to use as the field name.
+            - alias_or_aliases: None if no alias needed, str for single alias,
+              or list[str] for multiple aliases (Pydantic v2 AliasChoices).
         """
         del path
         return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(

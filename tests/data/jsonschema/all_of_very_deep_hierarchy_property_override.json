@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecificPerson",
+  "$defs": {
+    "Base": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" }
+      },
+      "required": ["id"]
+    },
+    "Entity": {
+      "allOf": [
+        { "$ref": "#/$defs/Base" }
+      ],
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "default": "Entity" }
+      },
+      "required": ["type"]
+    },
+    "Thing": {
+      "allOf": [
+        { "$ref": "#/$defs/Entity" }
+      ],
+      "type": "object",
+      "properties": {
+        "type": { "default": "Thing" },
+        "name": { "type": "string" }
+      },
+      "required": ["name"]
+    },
+    "Person": {
+      "allOf": [
+        { "$ref": "#/$defs/Thing" }
+      ],
+      "type": "object",
+      "properties": {
+        "type": { "default": "Person" },
+        "age": { "type": "integer" }
+      }
+    }
+  },
+  "type": "object",
+  "allOf": [
+    { "$ref": "#/$defs/Person" }
+  ],
+  "properties": {
+    "type": { "default": "SpecificPerson" },
+    "id": { "default": "specific-id" }
+  }
+}

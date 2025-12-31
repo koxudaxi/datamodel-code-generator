@@ -16,9 +16,24 @@ if TYPE_CHECKING:
 
 @pytest.mark.cli_doc(
     options=["--watch"],
+    option_description="""Watch input file(s) for changes and regenerate output automatically.
+
+The `--watch` flag enables continuous file monitoring mode. When enabled,
+datamodel-codegen watches the input file or directory for changes and
+automatically regenerates the output whenever changes are detected.
+Press Ctrl+C to stop watching.
+
+!!! warning "Requires extra dependency"
+
+    The watch feature requires the `watch` extra:
+
+    ```bash
+    pip install 'datamodel-code-generator[watch]'
+    ```""",
     input_schema="jsonschema/person.json",
     cli_args=["--watch", "--check"],
     expected_stdout="Error: --watch and --check cannot be used together",
+    primary=True,
 )
 def test_watch_with_check_error(output_file: Path) -> None:
     """Watch mode cannot be used with --check mode.
@@ -43,6 +58,11 @@ def test_watch_with_check_error(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--watch"],
+    option_description="""Watch input file(s) for changes and regenerate output automatically.
+
+The `--watch` flag monitors local files for changes. It requires a local file
+path via `--input` and cannot be used with `--url` since remote URLs cannot
+be watched for changes.""",
     cli_args=["--watch", "--url", "https://example.com/schema.json"],
     expected_stdout="Error: --watch requires --input file path",
 )
@@ -113,6 +133,14 @@ def test_get_watchfiles_success() -> None:
 
 @pytest.mark.cli_doc(
     options=["--watch", "--watch-delay"],
+    option_description="""Set debounce delay in seconds for watch mode.
+
+The `--watch-delay` option configures the debounce interval (default: 0.5 seconds)
+for watch mode. This prevents multiple regenerations when files are rapidly
+modified in succession. The delay ensures that after the last file change,
+the generator waits the specified time before regenerating.
+
+**Related:** [`--watch`](general-options.md#watch)""",
     input_schema="jsonschema/person.json",
     cli_args=["--watch", "--watch-delay", "1.5"],
     expected_stdout="Watching",

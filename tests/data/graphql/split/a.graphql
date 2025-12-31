@@ -1,0 +1,7 @@
+type Foo {
+  id: Int!
+}
+
+extend type Bar {
+  eggs: String!
+}

@@ -13,8 +13,22 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+@pytest.mark.cli_doc(
+    options=["--use-annotated"],
+    option_description="""Use typing.Annotated for Field() with constraints.
+
+The `--use-annotated` flag generates Field definitions using typing.Annotated
+syntax instead of default values. This also enables `--field-constraints`.""",
+    input_schema="graphql/annotated.graphql",
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+    golden_output="graphql/annotated.py",
+)
 def test_annotated(output_file: Path) -> None:
-    """Test GraphQL code generation with annotated types."""
+    """Use typing.Annotated for Field() with constraints.
+
+    The `--use-annotated` flag generates Field definitions using typing.Annotated
+    syntax instead of default values. This also enables `--field-constraints`.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
         output_path=output_file,
@@ -40,19 +54,6 @@ def test_annotated_use_standard_collections(output_file: Path) -> None:
     )
 
 
-@pytest.mark.cli_doc(
-    options=["--use-annotated", "--use-union-operator"],
-    input_schema="graphql/annotated.graphql",
-    cli_args=[
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--use-standard-collections",
-        "--use-union-operator",
-    ],
-    golden_output="graphql/annotated_use_standard_collections_use_union_operator.py",
-    related_options=["--use-standard-collections"],
-)
 def test_annotated_use_standard_collections_use_union_operator(output_file: Path) -> None:
     """Test GraphQL annotated types with standard collections and union operator."""
     run_main_and_assert(
@@ -71,13 +72,24 @@ def test_annotated_use_standard_collections_use_union_operator(output_file: Path
 
 
 @pytest.mark.cli_doc(
-    options=["--use-annotated", "--use-union-operator"],
+    options=["--use-union-operator"],
+    option_description="""Use | operator for Union types (PEP 604).
+
+The `--use-union-operator` flag generates union types using the | operator
+(e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
+This is the default behavior.""",
     input_schema="graphql/annotated.graphql",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated", "--use-union-operator"],
     golden_output="graphql/annotated_use_union_operator.py",
+    related_options=["--no-use-union-operator"],
 )
 def test_annotated_use_union_operator(output_file: Path) -> None:
-    """Test GraphQL annotated types with union operator."""
+    """Use | operator for Union types (PEP 604).
+
+    The `--use-union-operator` flag generates union types using the | operator
+    (e.g., `str | None`) instead of `Union[str, None]` or `Optional[str]`.
+    This is the default behavior.
+    """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "annotated.graphql",
         output_path=output_file,
@@ -92,18 +104,6 @@ def test_annotated_use_union_operator(output_file: Path) -> None:
     )
 
 
-@pytest.mark.cli_doc(
-    options=["--aliases", "--use-annotated"],
-    input_schema="graphql/field-aliases.graphql",
-    cli_args=[
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--use-annotated",
-        "--aliases",
-        "graphql/field-aliases.json",
-    ],
-    golden_output="graphql/annotated_field_aliases.py",
-)
 def test_annotated_field_aliases(output_file: Path) -> None:
     """Test GraphQL annotated types with field aliases."""
     run_main_and_assert(

@@ -15,6 +15,7 @@ from datamodel_code_generator.cli_options import (
     CLI_OPTION_META,
     MANUAL_DOCS,
     _canonical_option_key,
+    get_all_argparse_options,
     get_all_canonical_options,
     get_canonical_option,
 )
@@ -33,7 +34,9 @@ class TestCLIOptionMetaSync:  # pragma: no cover
 
     def test_all_registered_options_exist_in_argparse(self) -> None:
         """Verify that all options in CLI_OPTION_META exist in argparse."""
-        argparse_options = get_all_canonical_options()
+        # Use all argparse options (including aliases) because CLI_OPTION_META
+        # may contain both --use-* and --no-use-* variants for BooleanOptionalAction
+        argparse_options = get_all_argparse_options()
         registered = set(CLI_OPTION_META.keys())
 
         orphan = registered - argparse_options

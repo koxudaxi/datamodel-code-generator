@@ -17,12 +17,14 @@ from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
     AllExportsCollisionStrategy,
     AllExportsScope,
+    AllOfClassHierarchy,
     AllOfMergeMode,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
     FieldTypeCollisionStrategy,
     InputFileType,
+    InputModelRefStrategy,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
@@ -157,11 +159,23 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--input-model",
+    action="append",
     help="Python import path to a Pydantic v2 model or schema dict "
     "(e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). "
+    "Can be specified multiple times for related models with inheritance. "
     "For dict input, --input-file-type is required. "
     "Cannot be used with --input or --url.",
     metavar="MODULE:NAME",
+)
+base_options.add_argument(
+    "--input-model-ref-strategy",
+    help="Strategy for referenced types in --input-model. "
+    "'regenerate-all': Regenerate all types. "
+    "'reuse-foreign': Reuse types from different families (Enum, etc.), regenerate same-family. "
+    "'reuse-all': Reuse all referenced types via import. "
+    "If not specified, defaults to regenerate-all behavior.",
+    choices=[s.value for s in InputModelRefStrategy],
+    default=None,
 )
 
 # ======================================================================================
@@ -569,6 +583,14 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--allof-class-hierarchy",
+    help="How to map allOf references to class hierarchies. "
+    "'if-no-conflict': only create subclasses when parent class has no conflicting property definition. "
+    "'always': always create subclasses. ",
+    choices=[m.value for m in AllOfClassHierarchy],
+    default=None,
+)
+typing_options.add_argument(
     "--use-type-alias",
     help="Use TypeAlias instead of root models (experimental)",
     action="store_true",
@@ -774,7 +796,8 @@ template_options.add_argument(
     "Flat: {'field': 'alias'} applies to all occurrences. "
     "Scoped: {'ClassName.field': 'alias'} applies to specific class. "
     "Priority: scoped > flat. "
-    "Example: {'User.name': 'user_name', 'Address.name': 'addr_name', 'id': 'id_'}",
+    "Multiple aliases (Pydantic v2 only): {'field': ['alias1', 'alias2']} uses AliasChoices for validation. "
+    "Example: {'User.name': 'user_name', 'id': 'id_', 'field': ['my-field', 'my_field']}",
     type=Path,
 )
 template_options.add_argument(

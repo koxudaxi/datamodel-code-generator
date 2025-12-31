@@ -12,7 +12,7 @@ datamodel-code-generator can generate code compatible with different Python vers
 | `--use-union-operator` | Use `X \| Y` instead of `Union[X, Y]` |
 | `--use-standard-collections` | Use `list`, `dict` instead of `List`, `Dict` |
 | `--use-annotated` | Use `Annotated` for field metadata |
-| `--use-generic-container-types` | Use generic types like `List[T]` |
+| `--use-generic-container-types` | Use `Sequence`, `Mapping` instead of `list`, `dict` |
 | `--disable-future-imports` | Don't add `from __future__ import annotations` |
 
 ---
@@ -155,23 +155,25 @@ class User(BaseModel):
 
 ## `--use-generic-container-types`
 
-Uses generic container types from `typing` module explicitly.
+Uses abstract container types (`Sequence`, `Mapping`, `FrozenSet`) instead of concrete types (`list`, `dict`, `set`).
 
 ```bash
 datamodel-codegen --input schema.json --output models.py --use-generic-container-types
 ```
 
 ```python
-from typing import List, Dict, Set
+from typing import Mapping, Sequence
 
 class Data(BaseModel):
-    items: List[str]
-    mapping: Dict[str, int]
+    items: Sequence[str]
+    mapping: Mapping[str, int]
 ```
 
+If `--use-standard-collections` is also set, imports from `collections.abc` instead of `typing`.
+
 This is useful when:
-- Working with tools that require explicit `typing` imports
-- Maintaining compatibility with legacy codebases
+- You want to use abstract types for better type flexibility
+- Maintaining compatibility with interfaces that accept any sequence/mapping
 
 ---
 

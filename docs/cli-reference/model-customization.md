@@ -7,7 +7,7 @@
 | [`--allow-extra-fields`](#allow-extra-fields) | Allow extra fields in generated Pydantic models (extra='allo... |
 | [`--allow-population-by-field-name`](#allow-population-by-field-name) | Allow Pydantic model population by field name (not just alia... |
 | [`--base-class`](#base-class) | Specify a custom base class for generated models. |
-| [`--base-class-map`](#base-class-map) | Test --base-class-map option for model-specific base classes... |
+| [`--base-class-map`](#base-class-map) | Specify different base classes for specific models via JSON ... |
 | [`--class-name`](#class-name) | Override the auto-generated class name with a custom name. |
 | [`--collapse-reuse-models`](#collapse-reuse-models) | Collapse duplicate models by replacing references instead of... |
 | [`--collapse-root-models`](#collapse-root-models) | Inline root model definitions instead of creating separate w... |
@@ -1119,7 +1119,10 @@ The `--base-class` flag configures the code generation behavior.
 
 ## `--base-class-map` {#base-class-map}
 
-Test --base-class-map option for model-specific base classes.
+Specify different base classes for specific models via JSON mapping.
+
+The `--base-class-map` option allows you to assign different base classes
+to specific models. Priority: base-class-map > customBasePath > base-class.
 
 **Related:** [`--base-class`](model-customization.md#base-class)
 
@@ -1365,11 +1368,15 @@ model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
             
             from __future__ import annotations
             
+            from typing import Literal
+            
             from pydantic import BaseModel, Field
             
             
             class Api(BaseModel):
-                version: str = Field('v1', const=True, description='The version of this API')
+                version: Literal['v1'] = Field(
+                    'v1', const=True, description='The version of this API'
+                )
             ```
 
         === "Pydantic v2"

@@ -167,6 +167,7 @@ class DataModelFieldBase(_BaseModel):
     default: Optional[Any] = None  # noqa: UP045
     required: bool = False
     alias: Optional[str] = None  # noqa: UP045
+    validation_aliases: Optional[list[str]] = None  # noqa: UP045  # Multiple aliases for Pydantic v2 AliasChoices
     data_type: DataType
     constraints: Any = None
     strip_default_none: bool = False

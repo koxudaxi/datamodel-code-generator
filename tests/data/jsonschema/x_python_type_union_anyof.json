@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "title": "ModelWithUnionType",
+  "properties": {
+    "optional_mapping": {
+      "anyOf": [
+        {"type": "object", "additionalProperties": {"type": "string"}},
+        {"type": "null"}
+      ],
+      "title": "Optional Mapping",
+      "x-python-type": "Mapping[str, str] | None"
+    }
+  },
+  "required": ["optional_mapping"]
+}

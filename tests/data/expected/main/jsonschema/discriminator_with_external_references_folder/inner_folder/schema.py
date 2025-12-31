@@ -15,7 +15,7 @@ from .artificial_folder import type_1
 
 
 class Type3(BaseModel):
-    type_: Literal['c'] = Field(..., const=True, title='Type ')
+    type_: Literal['c'] = Field('c', const=True, title='Type ')
 
 
 class Response(BaseModel):

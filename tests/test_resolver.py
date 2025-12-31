@@ -136,3 +136,63 @@ def test_hierarchical_path_parameter_backward_compatibility() -> None:
     field_name, alias = resolver.get_valid_field_name_and_alias("name", path=["root", "properties", "name"])
     assert field_name == "name_alias"
     assert alias == "name"
+
+
+def test_multiple_aliases_flat() -> None:
+    """Test multiple aliases return list including original field name."""
+    resolver = FieldNameResolver(aliases={"my_field": ["my-field", "myField"]})
+    field_name, aliases = resolver.get_valid_field_name_and_alias("my_field")
+    assert field_name == "my_field"  # First alias validated to valid identifier
+    assert aliases == ["my_field", "my-field", "myField"]  # Original + all aliases
+
+
+def test_multiple_aliases_scoped() -> None:
+    """Test multiple aliases with scoped format (ClassName.field)."""
+    resolver = FieldNameResolver(
+        aliases={
+            "User.name": ["user-name", "userName"],
+            "name": ["default-name", "defaultName"],
+        }
+    )
+
+    field_name, aliases = resolver.get_valid_field_name_and_alias("name", class_name="User")
+    assert field_name == "user_name"  # Hyphen converted to valid identifier
+    assert aliases == ["name", "user-name", "userName"]
+
+    field_name, aliases = resolver.get_valid_field_name_and_alias("name", class_name="Other")
+    assert field_name == "default_name"  # Hyphen converted to valid identifier
+    assert aliases == ["name", "default-name", "defaultName"]
+
+
+def test_multiple_aliases_mixed_with_single() -> None:
+    """Test mixing multiple aliases with single aliases."""
+    resolver = FieldNameResolver(
+        aliases={
+            "multi": ["alias1", "alias2"],
+            "single": "single_alias",
+        }
+    )
+
+    field_name, aliases = resolver.get_valid_field_name_and_alias("multi")
+    assert field_name == "alias1"
+    assert aliases == ["multi", "alias1", "alias2"]
+
+    field_name, alias = resolver.get_valid_field_name_and_alias("single")
+    assert field_name == "single_alias"
+    assert alias == "single"
+
+
+def test_empty_list_aliases_flat() -> None:
+    """Test empty list aliases are ignored and field is treated as no alias."""
+    resolver = FieldNameResolver(aliases={"my_field": []})
+    field_name, alias = resolver.get_valid_field_name_and_alias("my_field")
+    assert field_name == "my_field"
+    assert alias is None  # Empty list is ignored
+
+
+def test_empty_list_aliases_scoped() -> None:
+    """Test empty list aliases with scoped format are ignored."""
+    resolver = FieldNameResolver(aliases={"User.name": []})
+    field_name, alias = resolver.get_valid_field_name_and_alias("name", class_name="User")
+    assert field_name == "name"
+    assert alias is None  # Empty list is ignored

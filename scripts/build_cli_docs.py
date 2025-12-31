@@ -45,7 +45,7 @@ class CLIDocExample:
     """Represents a single CLI documentation example from a test."""
 
     node_id: str
-    docstring: str
+    option_description: str
     input_schema: str | None = None
     config_content: str | None = None
     cli_args: list[str] = field(default_factory=list)
@@ -64,7 +64,7 @@ class CLIDocExample:
         kwargs = item.get("marker_kwargs", {})
         return cls(
             node_id=item.get("node_id", ""),
-            docstring=item.get("docstring", ""),
+            option_description=item.get("option_description", ""),
             input_schema=kwargs.get("input_schema"),
             config_content=kwargs.get("config_content"),
             cli_args=kwargs.get("cli_args", []),
@@ -117,10 +117,10 @@ class CLIDocOption:
                 return ex
         return self.examples[0] if self.examples else None
 
-    def get_docstring(self) -> str:
-        """Get docstring from primary example."""
+    def get_option_description(self) -> str:
+        """Get option description from primary example."""
         primary = self.get_primary()
-        return primary.docstring if primary else ""
+        return primary.option_description if primary else ""
 
     def get_aliases(self) -> list[str]:
         """Get all aliases from all examples."""
@@ -179,6 +179,7 @@ MANUAL_OPTION_DESCRIPTIONS = {
     "--debug": "Show debug messages during code generation",
     "--profile": "Use a named profile from pyproject.toml",
     "--no-color": "Disable colorized output",
+    "--generate-prompt": "Generate a prompt for consulting LLMs about CLI options",
 }
 
 # Regex pattern for detecting MkDocs Material admonitions in docstrings
@@ -577,9 +578,11 @@ def generate_option_section(
 
     md = f"## `{option}` {{#{slugify(option)}}}\n\n"
 
-    # Parse docstring to separate description from admonitions
-    docstring = cli_doc_option.get_docstring()
-    parsed = parse_docstring(docstring) if docstring else ParsedDocstring(description="", admonitions=[])
+    # Parse option_description to separate description from admonitions
+    option_description = cli_doc_option.get_option_description()
+    parsed = (
+        parse_docstring(option_description) if option_description else ParsedDocstring(description="", admonitions=[])
+    )
 
     # Output description (without admonitions)
     if parsed.description:
@@ -599,14 +602,21 @@ def generate_option_section(
     if related_options:
         related_links = []
         for r in related_options:
+            # Skip self-references
+            if r == option:
+                continue
             canonical = get_canonical_option(r)
+            # Also skip if canonical form is the current option
+            if canonical == option:
+                continue
             r_meta = get_option_meta(canonical)
             if r_meta:
                 cat_slug = slugify(r_meta.category.value)
                 related_links.append(f"[`{canonical}`]({cat_slug}.md#{slugify(canonical)})")
             else:
                 related_links.append(f"`{canonical}`")
-        meta_parts.append(f"**Related:** {', '.join(related_links)}")
+        if related_links:  # Only add Related if there are non-self-referencing options
+            meta_parts.append(f"**Related:** {', '.join(related_links)}")
 
     if meta_parts:
         md += " | ".join(meta_parts) + "\n\n"
@@ -702,8 +712,8 @@ def generate_category_page(
     md += "|--------|-------------|\n"
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
-        docstring = cli_doc_option.get_docstring()
-        desc = docstring.split("\n")[0][:DESC_LENGTH_SHORT] if docstring else ""
+        option_description = cli_doc_option.get_option_description()
+        desc = option_description.split("\n")[0][:DESC_LENGTH_SHORT] if option_description else ""
         if len(desc) == DESC_LENGTH_SHORT:
             desc += "..."
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
@@ -729,8 +739,8 @@ def generate_quick_reference(
     all_options: list[tuple[str, str, OptionCategory | None]] = []
     for category, options in categories.items():
         for option, cli_doc_option in options.items():
-            docstring = cli_doc_option.get_docstring()
-            desc = docstring.split("\n")[0] if docstring else ""
+            option_description = cli_doc_option.get_option_description()
+            desc = option_description.split("\n")[0] if option_description else ""
             all_options.append((option, desc, category))
     if manual_docs:
         for option in manual_docs:
@@ -763,8 +773,8 @@ def generate_quick_reference(
 
         for option in sorted(options.keys()):
             cli_doc_option = options[option]
-            docstring = cli_doc_option.get_docstring()
-            desc = docstring.split("\n")[0][:DESC_LENGTH_LONG] if docstring else ""
+            option_description = cli_doc_option.get_option_description()
+            desc = option_description.split("\n")[0][:DESC_LENGTH_LONG] if option_description else ""
             if len(desc) == DESC_LENGTH_LONG:
                 desc += "..."
             slug_opt = slugify(option)
@@ -898,6 +908,9 @@ def generate_manual_docs_section(manual_docs: dict[str, str]) -> str:
 
     for option in sorted(manual_docs.keys()):
         content = manual_docs[option]
+        # Adjust relative paths: manual docs are in manual/ subdirectory,
+        # but utility-options.md is in cli-reference/, so ../../ becomes ../
+        content = content.replace("](../../", "](../")
         md += content
         if not content.endswith("\n"):
             md += "\n"
@@ -942,17 +955,20 @@ def build_docs(*, check: bool = False) -> int:
     if not items and not manual_docs:
         return 0
 
-    # Group by canonical option - collect ALL examples per option
+    # Group by option - collect ALL examples per option
+    # Use the option as-is if it has metadata, otherwise use canonical
     options_map: dict[str, CLIDocOption] = {}
     for item in items:
         example = CLIDocExample.from_item(item)
         for opt in item["marker_kwargs"].get("options", []):
-            canonical = get_canonical_option(opt)
-            if is_manual_doc(canonical):
+            # Use option as-is if it has metadata, otherwise use canonical
+            # This allows --use-* and --no-use-* to be documented separately
+            option_key = opt if get_option_meta(opt) else get_canonical_option(opt)
+            if is_manual_doc(option_key):
                 continue
-            if canonical not in options_map:
-                options_map[canonical] = CLIDocOption(option_name=canonical)
-            options_map[canonical].add_example(example)
+            if option_key not in options_map:
+                options_map[option_key] = CLIDocOption(option_name=option_key)
+            options_map[option_key].add_example(example)
 
     categories: dict[OptionCategory, dict[str, CLIDocOption]] = defaultdict(dict)
 

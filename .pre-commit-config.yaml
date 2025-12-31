@@ -18,9 +18,9 @@ repos:
   rev: 'v0.14.9'
   hooks:
   - id: ruff-format
-    exclude: "^tests/data"
+    exclude: "^tests/data|^src/datamodel_code_generator/_types/"
   - id: ruff
-    exclude: "^tests/data"
+    exclude: "^tests/data|^src/datamodel_code_generator/_types/"
     args: ["--fix", "--unsafe-fixes", "--exit-non-zero-on-fix"]
 - repo: https://github.com/codespell-project/codespell
   rev: v2.4.1
@@ -33,7 +33,13 @@ repos:
   hooks:
   - id: readme
     name: Update README command help
-    entry: bash -c 'test -x .tox/fix/bin/python || tox run -e fix --notest -qq; .tox/fix/bin/python scripts/update_command_help_on_markdown.py'
+    entry: bash -c '[ -x .tox/fix/bin/python ] && PYTHON=.tox/fix/bin/python || PYTHON=.tox/fix/Scripts/python; test -x "$PYTHON" || tox run -e fix --notest -qq; "$PYTHON" scripts/update_command_help_on_markdown.py'
     language: system
     files: ^(src/datamodel_code_generator/arguments\.py|README\.md|docs/index\.md)$
+    pass_filenames: false
+  - id: config-types
+    name: Generate config TypedDicts
+    entry: bash -c '[ -x .tox/dev/bin/python ] && PREFIX=.tox/dev/bin || PREFIX=.tox/dev/Scripts; test -x "$PREFIX/python" || tox run -e dev --notest -qq; "$PREFIX/datamodel-codegen" --profile generate-config-dict && "$PREFIX/datamodel-codegen" --profile parser-config-dict && "$PREFIX/datamodel-codegen" --profile graphql-parser-config-dict && "$PREFIX/datamodel-codegen" --profile jsonschema-parser-config-dict && "$PREFIX/datamodel-codegen" --profile openapi-parser-config-dict && "$PREFIX/datamodel-codegen" --profile parse-config-dict'
+    language: system
+    files: ^src/datamodel_code_generator/config\.py$
     pass_filenames: false
