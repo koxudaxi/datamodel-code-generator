@@ -60,6 +60,7 @@ def run_input_model_and_assert(
     output_path: Path,
     extra_args: Sequence[str] | None = None,
     expected_output_contains: Sequence[str] | None = None,
+    expected_output_not_contains: Sequence[str] | None = None,
 ) -> None:
     """Run main with --input-model and assert results."""
     __tracebackhide__ = True
@@ -71,10 +72,14 @@ def run_input_model_and_assert(
     _assert_exit_code(return_code, Exit.OK, f"--input-model {input_model}")
     _assert_file_exists(output_path)
 
+    content = output_path.read_text(encoding="utf-8")
     if expected_output_contains:
-        content = output_path.read_text(encoding="utf-8")
         for expected in expected_output_contains:
             _assert_output_contains(content, expected)
+    if expected_output_not_contains:
+        for not_expected in expected_output_not_contains:
+            if not_expected in content:  # pragma: no cover
+                pytest.fail(f"Expected output NOT to contain: {not_expected!r}\n\nActual output:\n{content}")
 
 
 def run_input_model_error_and_assert(
