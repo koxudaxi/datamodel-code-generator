@@ -1192,14 +1192,10 @@ def _try_rebuild_model(obj: type) -> None:
 
 def _get_base_model_parents(model_class: type) -> list[type]:
     """Get parent classes that are BaseModel subclasses (excluding BaseModel itself)."""
-    return [
-        p
-        for p in model_class.__bases__
-        if isinstance(p, type) and issubclass(p, BaseModel) and p is not BaseModel
-    ]
+    return [p for p in model_class.__bases__ if isinstance(p, type) and issubclass(p, BaseModel) and p is not BaseModel]
 
 
-def _transform_single_model_to_inheritance(  # noqa: PLR0912
+def _transform_single_model_to_inheritance(
     schema: dict[str, object],
     model_class: type,
     schema_generator: type,
@@ -1268,9 +1264,11 @@ def _transform_single_model_to_inheritance(  # noqa: PLR0912
     new_schema["title"] = schema.get("title")
     new_schema["type"] = "object"
 
-    for key in schema:
-        if key not in {"$defs", "properties", "required", "title", "type", "allOf"}:
-            new_schema[key] = schema[key]
+    new_schema.update({
+        key: value
+        for key, value in schema.items()
+        if key not in {"$defs", "properties", "required", "title", "type", "allOf"}
+    })
 
     return new_schema
 
@@ -1296,9 +1294,7 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
     import sys  # noqa: PLC0415
 
     if len(input_models) == 1:
-        return _load_model_schema(
-            input_models[0], input_file_type, ref_strategy, output_model_type
-        )
+        return _load_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
 
     cwd = str(Path.cwd())
     if cwd not in sys.path:
@@ -1310,7 +1306,9 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
     for input_model in input_models:
         modname, sep, qualname = input_model.rpartition(":")
         if not sep or not modname:
-            msg = f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+            msg = (
+                f"Invalid --input-model format: {input_model!r}. Expected 'module:Object' or 'path/to/file.py:Object'."
+            )
             raise Error(msg)
 
         if modname not in loaded_modules:
@@ -1356,7 +1354,10 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
             raise Error(msg)
 
         if not hasattr(obj, "model_json_schema"):
-            msg = "Multiple --input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
+            msg = (
+                "Multiple --input-model with Pydantic model requires Pydantic v2 runtime. "
+                "Please upgrade Pydantic to v2."
+            )
             raise Error(msg)
 
         model_classes.append(obj)
@@ -1383,9 +1384,7 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
         schema = _add_python_type_for_unserializable(schema, model_class)
         schema = _add_python_type_info(schema, model_class)
 
-        schema = _transform_single_model_to_inheritance(
-            schema, model_class, schema_generator, processed_parents
-        )
+        schema = _transform_single_model_to_inheritance(schema, model_class, schema_generator, processed_parents)
 
         if "$defs" in schema:
             schema_defs = cast("dict[str, object]", schema["$defs"])
@@ -1398,19 +1397,13 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
 
         root_refs.append({"$ref": f"#/$defs/{model_name}"})
 
-    final_schema: dict[str, object] = {"$defs": merged_defs}
-    if len(root_refs) == 1:
-        final_schema.update(root_refs[0])
-    else:
-        final_schema["anyOf"] = root_refs
+    final_schema: dict[str, object] = {"$defs": merged_defs, "anyOf": root_refs}
 
     if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
         all_nested_models: dict[str, type] = {}
         for model_class in model_classes:
             all_nested_models.update(_collect_nested_models(model_class))
-        final_schema = _filter_defs_by_strategy(
-            final_schema, all_nested_models, output_model_type, ref_strategy
-        )
+        final_schema = _filter_defs_by_strategy(final_schema, all_nested_models, output_model_type, ref_strategy)
 
     return final_schema
 

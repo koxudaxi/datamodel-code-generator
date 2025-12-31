@@ -1207,16 +1207,14 @@ def run_multiple_input_models_error_and_assert(
 def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with inherited model generates inheritance chain."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildA",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1228,16 +1226,14 @@ def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
 def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with multi-level inheritance."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:GrandChild",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:GrandChild",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1249,16 +1245,14 @@ def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
 def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with model that has no inheritance."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:NoInheritance",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:NoInheritance",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1270,18 +1264,16 @@ def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
 def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with forked inheritance shares common parent."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildA",
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildB",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1293,18 +1285,16 @@ def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
 def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with different inheritance depths."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildA",
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:GrandChild",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:GrandChild",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1316,18 +1306,16 @@ def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
 def test_input_model_multiple_generates_anyof(tmp_path: Path) -> None:
     """Test multiple --input-model generates TypeAlias with union."""
     with freeze_time(TIMESTAMP):
-        return_code = main(
-            [
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildA",
-                "--input-model",
-                "tests.data.python.input_model.inheritance_models:ChildB",
-                "--output-model-type",
-                "typing.TypedDict",
-                "--output",
-                str(tmp_path / "output.py"),
-            ]
-        )
+        return_code = main([
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "--input-model",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output",
+            str(tmp_path / "output.py"),
+        ])
     assert return_code == Exit.OK
     assert_output(
         (tmp_path / "output.py").read_text(encoding="utf-8"),
@@ -1709,14 +1697,12 @@ def test_input_model_multiple_py_file_without_path_separator(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test loading .py file without path separator (just filename.py)."""
-    from pathlib import Path as _Path
-
-    model_content = '''
+    model_content = """
 from pydantic import BaseModel
 
 class TempModel(BaseModel):
     value: str
-'''
+"""
     temp_file = tmp_path / "temp_model.py"
     temp_file.write_text(model_content)
 
@@ -1733,4 +1719,26 @@ class TempModel(BaseModel):
             "class ChildA(Parent):",
             "class TempModel(BaseModel):",
         ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_config_string_coercion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that string input_model in config is coerced to list."""
+    config_content = """\
+[tool.datamodel-codegen]
+input-model = "tests.data.python.input_model.inheritance_models:NoInheritance"
+output-model-type = "typing.TypedDict"
+"""
+    config_file = tmp_path / "pyproject.toml"
+    config_file.write_text(config_content)
+    monkeypatch.chdir(tmp_path)
+
+    output_path = tmp_path / "output.py"
+    with freeze_time(TIMESTAMP):
+        return_code = main(["--output", str(output_path)])
+    assert return_code == Exit.OK
+    assert_output(
+        output_path.read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "no_inheritance.py",
     )
