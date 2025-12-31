@@ -1226,11 +1226,8 @@ def _transform_single_model_to_inheritance(
 
     defs = dict(cast("dict[str, object]", schema.get("$defs", {})))
 
-    if parent_name in processed_parents:
-        parent_schema = processed_parents[parent_name]
-    else:
-        if hasattr(parent, "model_rebuild"):
-            _try_rebuild_model(parent)
+    if parent_name not in processed_parents:
+        _try_rebuild_model(parent)
         parent_schema = parent.model_json_schema(schema_generator=schema_generator)
         parent_schema = _add_python_type_for_unserializable(parent_schema, parent)
         parent_schema = _add_python_type_info(parent_schema, parent)
@@ -1238,12 +1235,11 @@ def _transform_single_model_to_inheritance(
             parent_schema, parent, schema_generator, processed_parents
         )
         processed_parents[parent_name] = parent_schema
+    parent_schema = processed_parents[parent_name]
 
     if "$defs" in parent_schema:
         parent_defs = cast("dict[str, object]", parent_schema["$defs"])
-        for k, v in parent_defs.items():
-            if k not in defs:
-                defs[k] = v
+        defs.update(parent_defs)
 
     parent_def = {k: v for k, v in parent_schema.items() if k != "$defs"}
     defs[parent_name] = parent_def
@@ -1251,10 +1247,7 @@ def _transform_single_model_to_inheritance(
     original_props = cast("dict[str, object]", schema.get("properties", {}))
     child_props = {k: v for k, v in original_props.items() if k not in parent_fields}
 
-    new_schema: dict[str, object] = {}
-    if defs:
-        new_schema["$defs"] = defs
-    new_schema["allOf"] = [{"$ref": f"#/$defs/{parent_name}"}]
+    new_schema: dict[str, object] = {"$defs": defs, "allOf": [{"$ref": f"#/$defs/{parent_name}"}]}
     if child_props:
         new_schema["properties"] = child_props
     original_required = cast("list[str]", schema.get("required", []))
@@ -1377,8 +1370,7 @@ def _load_multiple_model_schemas(  # noqa: PLR0912, PLR0914, PLR0915
 
     for model_class in model_classes:
         model_name = model_class.__name__
-        if hasattr(model_class, "model_rebuild"):
-            _try_rebuild_model(model_class)
+        _try_rebuild_model(model_class)
 
         schema = model_class.model_json_schema(schema_generator=schema_generator)
         schema = _add_python_type_for_unserializable(schema, model_class)
