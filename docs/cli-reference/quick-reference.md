@@ -92,6 +92,9 @@ datamodel-codegen [OPTIONS]
 | [`--base-class`](model-customization.md#base-class) | Specify a custom base class for generated models. |
 | [`--base-class-map`](model-customization.md#base-class-map) | Specify different base classes for specific models via JSON mapping. |
 | [`--class-name`](model-customization.md#class-name) | Override the auto-generated class name with a custom name. |
+| [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope) | Control which classes receive the prefix/suffix. |
+| [`--class-name-prefix`](model-customization.md#class-name-prefix) | Add a prefix to all generated class names. |
+| [`--class-name-suffix`](model-customization.md#class-name-suffix) | Add a suffix to all generated class names. |
 | [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) | Collapse duplicate models by replacing references instead of inheritance. |
 | [`--collapse-root-models`](model-customization.md#collapse-root-models) | Inline root model definitions instead of creating separate wrapper classes. |
 | [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
@@ -209,6 +212,9 @@ All options sorted alphabetically:
 - [`--check`](general-options.md#check) - Verify generated code matches existing output without modify...
 - [`--class-decorators`](template-customization.md#class-decorators) - Add custom decorators to generated model classes.
 - [`--class-name`](model-customization.md#class-name) - Override the auto-generated class name with a custom name.
+- [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope) - Control which classes receive the prefix/suffix.
+- [`--class-name-prefix`](model-customization.md#class-name-prefix) - Add a prefix to all generated class names.
+- [`--class-name-suffix`](model-customization.md#class-name-suffix) - Add a suffix to all generated class names.
 - [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models) - Collapse duplicate models by replacing references instead of...
 - [`--collapse-root-models`](model-customization.md#collapse-root-models) - Inline root model definitions instead of creating separate w...
 - [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) - Select which name to keep when collapsing root models with o...
