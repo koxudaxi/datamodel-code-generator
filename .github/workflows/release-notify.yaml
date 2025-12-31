@@ -76,8 +76,7 @@ jobs:
 
             // Validate environment variables
             if (!repoOwner || !repoName) {
-              core.setFailed('TARGET_OWNER and TARGET_REPO are required');
-              return;
+              throw new Error('TARGET_OWNER and TARGET_REPO are required');
             }
 
             // Verify we're running in the correct repo
