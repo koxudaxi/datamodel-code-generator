@@ -159,8 +159,10 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--input-model",
+    action="append",
     help="Python import path to a Pydantic v2 model or schema dict "
     "(e.g., 'mypackage.module:ClassName' or 'mypackage.schemas:SCHEMA_DICT'). "
+    "Can be specified multiple times for related models with inheritance. "
     "For dict input, --input-file-type is required. "
     "Cannot be used with --input or --url.",
     metavar="MODULE:NAME",

@@ -613,6 +613,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         "StrEnum": Import.from_full_path("enum.StrEnum"),
         "Flag": Import.from_full_path("enum.Flag"),
         "IntFlag": Import.from_full_path("enum.IntFlag"),
+        "BaseModel": Import.from_full_path("pydantic.BaseModel"),
     }
 
     # Types that require x-python-type override regardless of schema type
@@ -1196,6 +1197,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         all_type_names = self._extract_all_type_names(python_type)
         if any(t in self.PYTHON_TYPE_OVERRIDE_ALWAYS for t in all_type_names):
             return False
+        if " | " in python_type and schema_type is None:
+            return False
         if schema_type is None:
             return True
         if base_type in {"Union", "Optional"}:
@@ -1243,6 +1246,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             return self.PYTHON_TYPE_IMPORTS[type_name]
         return self._resolve_type_import_dynamic(type_name)
 
+    def _resolve_type_import_from_defs(self, type_name: str) -> Import | None:
+        """Resolve import for a type name from $defs with x-python-import."""
+        try:
+            ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
+            x_python_import = ref_schema.extras.get("x-python-import")
+            if isinstance(x_python_import, dict):
+                module = x_python_import.get("module")
+                name = x_python_import.get("name")
+                if module and name:
+                    return Import.from_full_path(f"{module}.{name}")
+        except Exception:  # noqa: BLE001, S110
+            pass
+        return None
+
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
         x_python_type = obj.extras.get("x-python-type")
@@ -1270,14 +1287,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         nested_imports: list[DataType] = []
         for qualified_name in extract_qualified_names(type_str):
             class_name = qualified_name.rsplit(".", 1)[-1]
-            nested_import = Import.from_full_path(qualified_name)
+            nested_import = self._resolve_type_import(class_name) or Import.from_full_path(qualified_name)
             nested_imports.append(self.data_type(import_=nested_import))
             type_str = type_str.replace(qualified_name, class_name)
 
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
             if type_name != base_type:
-                nested_import = self._resolve_type_import(type_name)
+                nested_import = self._resolve_type_import(type_name) or self._resolve_type_import_from_defs(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))
 

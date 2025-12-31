@@ -7204,3 +7204,13 @@ def test_x_python_type_dynamic_resolve(output_file: Path) -> None:
         assert_func=assert_file_content,
         extra_args=["--output-model-type", "typing.TypedDict"],
     )
+
+
+def test_x_python_type_union_anyof(output_file: Path) -> None:
+    """Test x-python-type with union type in anyOf schema."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_union_anyof.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+    )
