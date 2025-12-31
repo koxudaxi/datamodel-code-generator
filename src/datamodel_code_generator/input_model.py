@@ -456,20 +456,20 @@ def _get_type_family(tp: type) -> str:  # noqa: PLR0911
 
 def _get_output_family(output_model_type: DataModelType) -> str:
     """Get the type family corresponding to a DataModelType."""
-    from datamodel_code_generator import DataModelType as DT  # noqa: PLC0415
+    from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
     pydantic_types = {
-        DT.PydanticBaseModel,
-        DT.PydanticV2BaseModel,
-        DT.PydanticV2Dataclass,
+        DataModelType.PydanticBaseModel,
+        DataModelType.PydanticV2BaseModel,
+        DataModelType.PydanticV2Dataclass,
     }
     if output_model_type in pydantic_types:
         return _TYPE_FAMILY_PYDANTIC
-    if output_model_type == DT.DataclassesDataclass:
+    if output_model_type == DataModelType.DataclassesDataclass:
         return _TYPE_FAMILY_DATACLASS
-    if output_model_type == DT.TypingTypedDict:
+    if output_model_type == DataModelType.TypingTypedDict:
         return _TYPE_FAMILY_TYPEDDICT
-    if output_model_type == DT.MsgspecStruct:
+    if output_model_type == DataModelType.MsgspecStruct:
         return _TYPE_FAMILY_MSGSPEC
     return _TYPE_FAMILY_OTHER  # pragma: no cover
 
@@ -488,9 +488,9 @@ def _filter_defs_by_strategy(
     strategy: InputModelRefStrategy,
 ) -> dict[str, Any]:
     """Filter $defs based on ref strategy, marking reused types with x-python-import."""
-    from datamodel_code_generator.arguments import InputModelRefStrategy as IRS  # noqa: PLC0415
+    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
-    if strategy == IRS.RegenerateAll:  # pragma: no cover
+    if strategy == InputModelRefStrategy.RegenerateAll:  # pragma: no cover
         return schema
 
     if "$defs" not in schema:  # pragma: no cover
@@ -507,8 +507,8 @@ def _filter_defs_by_strategy(
         nested_type = nested_models[def_name]
         type_family = _get_type_family(nested_type)
 
-        should_reuse = strategy == IRS.ReuseAll or (
-            strategy == IRS.ReuseForeign and _should_reuse_type(type_family, output_family)
+        should_reuse = strategy == InputModelRefStrategy.ReuseAll or (
+            strategy == InputModelRefStrategy.ReuseForeign and _should_reuse_type(type_family, output_family)
         )
 
         if should_reuse:
@@ -642,12 +642,14 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     import importlib.util  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
-    from datamodel_code_generator import DataModelType as DT  # noqa: PLC0415
-    from datamodel_code_generator import InputFileType as IFT  # noqa: PLC0415
-    from datamodel_code_generator.arguments import InputModelRefStrategy as IRS  # noqa: PLC0415
+    from datamodel_code_generator import (
+        DataModelType,
+        InputFileType,
+    )
+    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     if output_model_type is None:
-        output_model_type = DT.PydanticBaseModel
+        output_model_type = DataModelType.PydanticBaseModel
 
     if len(input_models) == 1:
         return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
@@ -718,7 +720,7 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
         model_classes.append(obj)
 
-    if input_file_type not in {IFT.Auto, IFT.JsonSchema}:
+    if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
         msg = (
             f"--input-file-type must be 'jsonschema' (or omitted) "
             f"when --input-model points to Pydantic models, "
@@ -754,7 +756,7 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
     final_schema: dict[str, object] = {"$defs": merged_defs, "anyOf": root_refs}
 
-    if ref_strategy and ref_strategy != IRS.RegenerateAll:
+    if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
         all_nested_models: dict[str, type] = {}
         for model_class in model_classes:
             all_nested_models.update(_collect_nested_models(model_class))
@@ -786,8 +788,8 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     import importlib.util  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
-    from datamodel_code_generator import InputFileType as IFT  # noqa: PLC0415
-    from datamodel_code_generator.arguments import InputModelRefStrategy as IRS  # noqa: PLC0415
+    from datamodel_code_generator import InputFileType  # noqa: PLC0415
+    from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     modname, sep, qualname = input_model.rpartition(":")
     if not sep or not modname:
@@ -833,13 +835,13 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         raise Error(msg) from e
 
     if isinstance(obj, dict):
-        if input_file_type == IFT.Auto:
+        if input_file_type == InputFileType.Auto:
             msg = "--input-file-type is required when --input-model points to a dict"
             raise Error(msg)
         return obj
 
     if isinstance(obj, type) and issubclass(obj, BaseModel):
-        if input_file_type not in {IFT.Auto, IFT.JsonSchema}:
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
             msg = (
                 f"--input-file-type must be 'jsonschema' (or omitted) "
                 f"when --input-model points to a Pydantic model, "
@@ -859,7 +861,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         # Transform to inheritance structure if the model has BaseModel parents
         schema = _transform_single_model_to_inheritance(schema, obj, schema_generator)
 
-        if ref_strategy and ref_strategy != IRS.RegenerateAll:
+        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
             nested_models = _collect_nested_models(obj)
             model_name = getattr(obj, "__name__", None)
             if model_name and "$defs" in schema and model_name in schema["$defs"]:  # pragma: no cover
@@ -873,7 +875,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
     is_typed_dict = isinstance(obj, type) and hasattr(obj, "__required_keys__")
     if is_dataclass(obj) or is_typed_dict:
-        if input_file_type not in {IFT.Auto, IFT.JsonSchema}:
+        if input_file_type not in {InputFileType.Auto, InputFileType.JsonSchema}:
             msg = (
                 f"--input-file-type must be 'jsonschema' (or omitted) "
                 f"when --input-model points to a dataclass or TypedDict, "
@@ -886,7 +888,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
             schema = TypeAdapter(obj).json_schema()
             schema = _add_python_type_info_generic(schema, cast("type", obj))
 
-            if ref_strategy and ref_strategy != IRS.RegenerateAll:
+            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
                 obj_type = cast("type", obj)
                 nested_models = _collect_nested_models(obj_type)
                 obj_name = getattr(obj, "__name__", None)

@@ -1745,7 +1745,7 @@ output-model-type = "typing.TypedDict"
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_output_model_type_default(tmp_path: Path) -> None:
+def test_input_model_output_model_type_default() -> None:
     """Test that output_model_type defaults to PydanticBaseModel when not specified."""
     from datamodel_code_generator import InputFileType
     from datamodel_code_generator.input_model import load_model_schema
@@ -1758,5 +1758,3 @@ def test_input_model_output_model_type_default(tmp_path: Path) -> None:
     )
     assert schema.get("title") == "NoInheritance"
     assert "properties" in schema
-
-
