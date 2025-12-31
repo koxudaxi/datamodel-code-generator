@@ -274,12 +274,13 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
     from typing import Union  # noqa: PLC0415
 
-    if hasattr(types, "UnionType") and types.UnionType is not Union and origin is types.UnionType:  # pragma: no cover
+    is_union = origin is Union or (hasattr(types, "UnionType") and origin is types.UnionType)
+    if is_union:
         if args:
             nested = [_serialize_python_type(a) for a in args]
             if any(n is not None for n in nested):
                 return " | ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
-        return None
+        return None  # pragma: no cover
 
     from typing import Annotated  # noqa: PLC0415
 

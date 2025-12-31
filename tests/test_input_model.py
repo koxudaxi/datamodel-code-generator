@@ -26,10 +26,6 @@ SKIP_PYDANTIC_V1 = pytest.mark.skipif(
     reason="--input-model with Pydantic models requires Pydantic v2",
 )
 
-SKIP_PYTHON_314 = pytest.mark.skipif(
-    sys.version_info >= (3, 14),
-    reason="Python 3.14 produces different type annotations in model_json_schema output",
-)
 
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
@@ -473,7 +469,6 @@ def test_input_model_module_import_error(
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_preserves_set_type(tmp_path: Path) -> None:
     """Test that Set[T] is preserved when converting Pydantic model."""
     run_input_model_and_assert(
@@ -484,7 +479,6 @@ def test_input_model_preserves_set_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_preserves_frozenset_type(tmp_path: Path) -> None:
     """Test that FrozenSet[T] is preserved when converting Pydantic model."""
     run_input_model_and_assert(
@@ -495,7 +489,6 @@ def test_input_model_preserves_frozenset_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_preserves_mapping_type(tmp_path: Path) -> None:
     """Test that Mapping[K, V] is preserved when converting Pydantic model."""
     run_input_model_and_assert(
@@ -506,7 +499,6 @@ def test_input_model_preserves_mapping_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_preserves_sequence_type(tmp_path: Path) -> None:
     """Test that Sequence[T] is preserved when converting Pydantic model."""
     run_input_model_and_assert(
@@ -517,7 +509,6 @@ def test_input_model_preserves_sequence_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_preserves_nested_model_types(tmp_path: Path) -> None:
     """Test that types in nested models are also preserved."""
     run_input_model_and_assert(
@@ -528,7 +519,6 @@ def test_input_model_preserves_nested_model_types(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_x_python_type_to_typeddict(tmp_path: Path) -> None:
     """Test that x-python-type works when outputting to TypedDict."""
     run_input_model_and_assert(
@@ -540,7 +530,6 @@ def test_input_model_x_python_type_to_typeddict(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_x_python_type_to_dataclass(tmp_path: Path) -> None:
     """Test that x-python-type works when outputting to dataclass."""
     run_input_model_and_assert(
@@ -572,7 +561,6 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_optional_set_type(tmp_path: Path) -> None:
     """Test that Optional[Set[str]] is preserved when converting Pydantic model."""
     run_input_model_and_assert(
@@ -583,7 +571,6 @@ def test_input_model_optional_set_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_optional_set_to_typeddict(tmp_path: Path) -> None:
     """Test that Optional[Set[str]] works when outputting to TypedDict."""
     run_input_model_and_assert(
@@ -595,7 +582,6 @@ def test_input_model_optional_set_to_typeddict(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_union_none_frozenset(tmp_path: Path) -> None:
     """Test that Union[None, FrozenSet[str]] is preserved (container not first arg)."""
     run_input_model_and_assert(
@@ -606,7 +592,6 @@ def test_input_model_union_none_frozenset(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
     """Test that Mapping[str, str] | None using | syntax is preserved correctly.
 
@@ -1033,7 +1018,6 @@ def test_input_model_ref_strategy_reuse_foreign_msgspec_output(tmp_path: Path) -
 
 
 @SKIP_PYDANTIC_V1
-@SKIP_PYTHON_314
 def test_input_model_config_class(tmp_path: Path) -> None:
     """Test that config classes like GenerateConfig are properly handled."""
     run_input_model_and_assert(
