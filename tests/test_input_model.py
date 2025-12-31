@@ -1535,3 +1535,23 @@ def test_serialize_python_type_full_annotated() -> None:
     # Annotated with a custom type
     result = _serialize_python_type_full(Annotated[int, "some_metadata"])
     assert result == "int"
+
+
+def test_full_type_name_builtin_type() -> None:
+    """Test _full_type_name with builtin type (module='builtins')."""
+    from datamodel_code_generator.input_model import _full_type_name
+
+    # int is a builtin type with module='builtins'
+    result = _full_type_name(int)
+    assert result == "int"
+
+
+def test_full_type_name_collections_abc_type() -> None:
+    """Test _full_type_name with collections.abc type."""
+    from collections.abc import Iterable
+
+    from datamodel_code_generator.input_model import _full_type_name
+
+    # Iterable is from collections.abc
+    result = _full_type_name(Iterable)  # pyright: ignore[reportArgumentType]
+    assert result == "Iterable"
