@@ -453,7 +453,7 @@ class Config(BaseModel):
                 raise Error(cls.__validate_all_exports_collision_strategy_err)
             return values
 
-        @field_validator("input_model", mode="before")
+        @field_validator("input_model", mode="before")  # pragma: no cover
         @classmethod
         def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
             """Convert string input_model to list for backwards compatibility."""
