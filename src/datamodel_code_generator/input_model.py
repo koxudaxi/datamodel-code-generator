@@ -874,8 +874,8 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         spec.loader.exec_module(module)
     else:
         try:
-            module = importlib.util.find_spec(modname)
-            if module is None:
+            spec = importlib.util.find_spec(modname)
+            if spec is None:
                 msg = f"Cannot find module {modname!r}"
                 raise Error(msg)
             module = importlib.import_module(modname)
