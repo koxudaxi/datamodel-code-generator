@@ -22,4 +22,4 @@ class ModelWithPythonTypes(TypedDict):
     nested_in_list: list[list[int]]
     optional_set: set[str] | None
     nullable_frozenset: frozenset[str] | None
-    optional_mapping: Mapping[str, str] | None
+    optional_mapping: Mapping[str, str] | Mapping[str, str] | None

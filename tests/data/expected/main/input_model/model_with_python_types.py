@@ -23,4 +23,6 @@ class ModelWithPythonTypes(BaseModel):
     nested_in_list: list[list[int]] = Field(..., title='Nested In List')
     optional_set: set[str] | None = Field(..., title='Optional Set')
     nullable_frozenset: frozenset[str] | None = Field(..., title='Nullable Frozenset')
-    optional_mapping: Mapping[str, str] | None = Field(..., title='Optional Mapping')
+    optional_mapping: Mapping[str, str] | Mapping[str, str] | None = Field(
+        ..., title='Optional Mapping'
+    )

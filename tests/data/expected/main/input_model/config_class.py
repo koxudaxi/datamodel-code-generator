@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Literal, TypeAlias, TypedDict, Union
+from typing import Any, Literal, TypeAlias, TypedDict
 
 from typing_extensions import NotRequired
 
@@ -118,12 +118,14 @@ class GenerateConfig(TypedDict):
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[str | None]
-    extra_template_data: NotRequired[Union[defaultdict[str, dict[str, Any]], None]]
+    extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
-    aliases: NotRequired[Mapping[str, str | list[str]] | None]
+    aliases: NotRequired[
+        Mapping[str, str | list[str]] | Mapping[str, str | list[str]] | None
+    ]
     disable_timestamp: NotRequired[bool]
     enable_version_header: NotRequired[bool]
     enable_command_header: NotRequired[bool]
@@ -158,14 +160,14 @@ class GenerateConfig(TypedDict):
     use_generic_container_types: NotRequired[bool]
     enable_faux_immutability: NotRequired[bool]
     disable_appending_item_suffix: NotRequired[bool]
-    strict_types: NotRequired[Sequence[StrictTypes] | None]
+    strict_types: NotRequired[Sequence[StrictTypes] | Sequence[StrictTypes] | None]
     empty_enum_field_name: NotRequired[str | None]
     custom_class_name_generator: NotRequired[Callable[[str], str] | None]
-    field_extra_keys: NotRequired[set[str] | None]
+    field_extra_keys: NotRequired[set[str] | set[str] | None]
     field_include_all_keys: NotRequired[bool]
-    field_extra_keys_without_x_prefix: NotRequired[set[str] | None]
-    model_extra_keys: NotRequired[set[str] | None]
-    model_extra_keys_without_x_prefix: NotRequired[set[str] | None]
+    field_extra_keys_without_x_prefix: NotRequired[set[str] | set[str] | None]
+    model_extra_keys: NotRequired[set[str] | set[str] | None]
+    model_extra_keys_without_x_prefix: NotRequired[set[str] | set[str] | None]
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     graphql_scopes: NotRequired[list[GraphQLScope] | None]
@@ -176,7 +178,9 @@ class GenerateConfig(TypedDict):
     use_tuple_for_fixed_items: NotRequired[bool]
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
-    http_headers: NotRequired[Sequence[tuple[str, str]] | None]
+    http_headers: NotRequired[
+        Sequence[tuple[str, str]] | Sequence[tuple[str, str]] | None
+    ]
     http_ignore_tls: NotRequired[bool]
     http_timeout: NotRequired[float | None]
     use_annotated: NotRequired[bool]
@@ -204,7 +208,9 @@ class GenerateConfig(TypedDict):
     custom_formatters_kwargs: NotRequired[dict[str, Any] | None]
     use_pendulum: NotRequired[bool]
     use_standard_primitive_types: NotRequired[bool]
-    http_query_parameters: NotRequired[Sequence[tuple[str, str]] | None]
+    http_query_parameters: NotRequired[
+        Sequence[tuple[str, str]] | Sequence[tuple[str, str]] | None
+    ]
     treat_dot_as_module: NotRequired[bool | None]
     use_exact_imports: NotRequired[bool]
     union_mode: NotRequired[UnionMode | None]
