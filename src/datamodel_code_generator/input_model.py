@@ -268,7 +268,7 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     import types  # noqa: PLC0415
     from typing import get_args, get_origin  # noqa: PLC0415
 
-    origin = get_origin(tp)
+    origin: type | None = get_origin(tp)
     args = get_args(tp)
     preserved_origins = _get_preserved_type_origins()
 
@@ -291,9 +291,9 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
 
     type_name: str | None = None
     if origin is not None:
-        type_name = preserved_origins.get(origin)
+        type_name = preserved_origins.get(origin)  # pyright: ignore[reportArgumentType]
         if type_name is None and getattr(origin, "__module__", None) == "collections":  # pragma: no cover
-            type_name = _simple_type_name(origin)
+            type_name = _simple_type_name(origin)  # pyright: ignore[reportArgumentType]
     if type_name is not None:
         if args:
             args_str = ", ".join(_serialize_python_type(a) or _simple_type_name(a) for a in args)
@@ -303,7 +303,7 @@ def _serialize_python_type(tp: type) -> str | None:  # noqa: PLR0911
     if args:
         nested = [_serialize_python_type(a) for a in args]
         if any(n is not None for n in nested):
-            origin_name = _simple_type_name(origin or tp)
+            origin_name = _simple_type_name(origin or tp)  # pyright: ignore[reportArgumentType]
             args_str = ", ".join(n or _simple_type_name(a) for n, a in zip(nested, args, strict=False))
             return f"{origin_name}[{args_str}]"
 

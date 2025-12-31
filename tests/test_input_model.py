@@ -27,7 +27,6 @@ SKIP_PYDANTIC_V1 = pytest.mark.skipif(
 )
 
 
-
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
     """Assert exit code matches expected value."""
     __tracebackhide__ = True
@@ -362,8 +361,6 @@ def test_input_model_adds_cwd_to_sys_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Test that --input-model adds cwd to sys.path if not present."""
-    import sys
-
     cwd = str(tmp_path)
     monkeypatch.chdir(tmp_path)
     assert cwd not in sys.path
@@ -497,9 +494,7 @@ def test_input_model_preserves_python_types(tmp_path: Path, test_id: str) -> Non
         ("dataclasses.dataclass", "model_with_python_types_dataclass.py"),
     ],
 )
-def test_input_model_x_python_type_output_formats(
-    tmp_path: Path, output_model_type: str, expected_file: str
-) -> None:
+def test_input_model_x_python_type_output_formats(tmp_path: Path, output_model_type: str, expected_file: str) -> None:
     """Test that x-python-type works with different output model types."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
@@ -1376,7 +1371,6 @@ def test_input_model_cwd_already_in_path(
     tmp_path: Path,
 ) -> None:
     """Test that cwd is not duplicated in sys.path when already present."""
-    import sys
     from pathlib import Path as _Path
 
     cwd = str(_Path.cwd())
