@@ -469,8 +469,19 @@ def test_input_model_module_import_error(
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_preserves_set_type(tmp_path: Path) -> None:
-    """Test that Set[T] is preserved when converting Pydantic model."""
+@pytest.mark.parametrize(
+    "test_id",
+    [
+        "set_type",
+        "frozenset_type",
+        "mapping_type",
+        "sequence_type",
+        "nested_model_types",
+    ],
+)
+def test_input_model_preserves_python_types(tmp_path: Path, test_id: str) -> None:
+    """Test that Python collection types are preserved when converting Pydantic model."""
+    del test_id
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
         output_path=tmp_path / "output.py",
@@ -479,64 +490,22 @@ def test_input_model_preserves_set_type(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_preserves_frozenset_type(tmp_path: Path) -> None:
-    """Test that FrozenSet[T] is preserved when converting Pydantic model."""
+@pytest.mark.parametrize(
+    ("output_model_type", "expected_file"),
+    [
+        ("typing.TypedDict", "model_with_python_types_typeddict.py"),
+        ("dataclasses.dataclass", "model_with_python_types_dataclass.py"),
+    ],
+)
+def test_input_model_x_python_type_output_formats(
+    tmp_path: Path, output_model_type: str, expected_file: str
+) -> None:
+    """Test that x-python-type works with different output model types."""
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
         output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_preserves_mapping_type(tmp_path: Path) -> None:
-    """Test that Mapping[K, V] is preserved when converting Pydantic model."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_preserves_sequence_type(tmp_path: Path) -> None:
-    """Test that Sequence[T] is preserved when converting Pydantic model."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_preserves_nested_model_types(tmp_path: Path) -> None:
-    """Test that types in nested models are also preserved."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_x_python_type_to_typeddict(tmp_path: Path) -> None:
-    """Test that x-python-type works when outputting to TypedDict."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types_typeddict.py",
-        extra_args=["--output-model-type", "typing.TypedDict"],
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_x_python_type_to_dataclass(tmp_path: Path) -> None:
-    """Test that x-python-type works when outputting to dataclass."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types_dataclass.py",
-        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        expected_file=EXPECTED_INPUT_MODEL_PATH / expected_file,
+        extra_args=["--output-model-type", output_model_type],
     )
 
 
@@ -561,43 +530,17 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_optional_set_type(tmp_path: Path) -> None:
-    """Test that Optional[Set[str]] is preserved when converting Pydantic model."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_optional_set_to_typeddict(tmp_path: Path) -> None:
-    """Test that Optional[Set[str]] works when outputting to TypedDict."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types_typeddict.py",
-        extra_args=["--output-model-type", "typing.TypedDict"],
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_union_none_frozenset(tmp_path: Path) -> None:
-    """Test that Union[None, FrozenSet[str]] is preserved (container not first arg)."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_python_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
-    """Test that Mapping[str, str] | None using | syntax is preserved correctly.
-
-    In Python 3.10-3.13, get_origin(X | Y) returns types.UnionType.
-    This test verifies that types.UnionType is handled correctly in those versions.
-    """
+@pytest.mark.parametrize(
+    "test_id",
+    [
+        "optional_set",
+        "union_none_frozenset",
+        "optional_mapping_union_syntax",
+    ],
+)
+def test_input_model_optional_types(tmp_path: Path, test_id: str) -> None:
+    """Test that optional/union Python types are preserved when converting Pydantic model."""
+    del test_id
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithPythonTypes",
         output_path=tmp_path / "output.py",
@@ -611,68 +554,21 @@ def test_input_model_optional_mapping_union_syntax(tmp_path: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_callable_basic(tmp_path: Path) -> None:
-    """Test that Callable[[str], str] is preserved when converting Pydantic model."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_callable_multi_param(tmp_path: Path) -> None:
-    """Test that Callable[[int, int], bool] is preserved."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_callable_variadic(tmp_path: Path) -> None:
-    """Test that Callable[..., Any] is preserved."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_callable_no_param(tmp_path: Path) -> None:
-    """Test that Callable[[], None] is preserved."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_callable_optional(tmp_path: Path) -> None:
-    """Test that Callable[[str], str] | None is preserved."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_type_field(tmp_path: Path) -> None:
-    """Test that Type[BaseModel] is preserved with proper import."""
-    run_input_model_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
-        output_path=tmp_path / "output.py",
-        expected_file=EXPECTED_INPUT_MODEL_PATH / "model_with_callable_types.py",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_nested_callable(tmp_path: Path) -> None:
-    """Test that list[Callable[[str], int]] is preserved."""
+@pytest.mark.parametrize(
+    "test_id",
+    [
+        "basic",
+        "multi_param",
+        "variadic",
+        "no_param",
+        "optional",
+        "type_field",
+        "nested",
+    ],
+)
+def test_input_model_callable_types(tmp_path: Path, test_id: str) -> None:
+    """Test that Callable and Type annotations are preserved when converting Pydantic model."""
+    del test_id
     run_input_model_and_assert(
         input_model="tests.data.python.input_model.pydantic_models:ModelWithCallableTypes",
         output_path=tmp_path / "output.py",
