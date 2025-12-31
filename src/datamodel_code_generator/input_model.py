@@ -63,6 +63,13 @@ def _serialize_python_type_full(tp: type) -> str:  # noqa: PLR0911
         parts = [_serialize_python_type_full(arg) for arg in args]
         return " | ".join(parts)
 
+    from typing import Annotated  # noqa: PLC0415
+
+    if origin is Annotated:
+        if args:
+            return _serialize_python_type_full(args[0])
+        return str(tp).replace("typing.", "")  # pragma: no cover
+
     if origin is type:
         if args:
             return f"Type[{_serialize_python_type_full(args[0])}]"

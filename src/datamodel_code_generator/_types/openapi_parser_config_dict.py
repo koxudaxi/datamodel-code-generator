@@ -22,6 +22,7 @@ if TYPE_CHECKING:
         OpenAPIScope,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
+        StrictTypes,
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion

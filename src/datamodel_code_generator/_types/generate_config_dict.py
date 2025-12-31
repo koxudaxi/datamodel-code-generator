@@ -28,6 +28,7 @@ if TYPE_CHECKING:
         OpenAPIScope,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
+        StrictTypes,
         TargetPydanticVersion,
         UnionMode,
     )

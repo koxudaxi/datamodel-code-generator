@@ -1246,6 +1246,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             return self.PYTHON_TYPE_IMPORTS[type_name]
         return self._resolve_type_import_dynamic(type_name)
 
+    def _resolve_type_import_from_defs(self, type_name: str) -> Import | None:
+        """Resolve import for a type name from $defs with x-python-import."""
+        try:
+            ref_schema = self._load_ref_schema_object(f"#/$defs/{type_name}")
+            x_python_import = ref_schema.extras.get("x-python-import")
+            if isinstance(x_python_import, dict):
+                module = x_python_import.get("module")
+                name = x_python_import.get("name")
+                if module and name:
+                    return Import.from_full_path(f"{module}.{name}")
+        except Exception:  # noqa: BLE001, S110
+            pass
+        return None
+
     def _get_python_type_override(self, obj: JsonSchemaObject) -> DataType | None:
         """Get DataType from x-python-type if it's incompatible with schema type."""
         x_python_type = obj.extras.get("x-python-type")
@@ -1280,7 +1294,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         # Collect imports for all nested types (e.g., Iterable inside Callable[[Iterable[str]], str])
         for type_name in self._extract_all_type_names(type_str):
             if type_name != base_type:
-                nested_import = self._resolve_type_import(type_name)
+                nested_import = self._resolve_type_import(type_name) or self._resolve_type_import_from_defs(type_name)
                 if nested_import:
                     nested_imports.append(self.data_type(import_=nested_import))
 

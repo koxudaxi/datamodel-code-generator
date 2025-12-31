@@ -21,6 +21,7 @@ if TYPE_CHECKING:
         NamingStrategy,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
+        StrictTypes,
         TargetPydanticVersion,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
