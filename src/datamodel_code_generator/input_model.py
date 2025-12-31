@@ -357,7 +357,7 @@ def _full_type_name(tp: type) -> str:  # noqa: PLR0911
                 return " | ".join(_full_type_name(a) for a in args)
             return str(tp)  # pragma: no cover
 
-        origin_name = _simple_type_name(origin)
+        origin_name = _simple_type_name(origin)  # pyright: ignore[reportArgumentType]
         args = get_args(tp)
         if args:
             args_str = ", ".join(_full_type_name(a) for a in args)
