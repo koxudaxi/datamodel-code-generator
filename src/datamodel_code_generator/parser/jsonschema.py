@@ -1873,11 +1873,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
         base_object = model_dump(obj, exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
-        x_python_type = obj.extras.get("x-python-type", "")
-        if " | " in x_python_type:
-            extras_alias = "#-datamodel-code-generator-#-extras-#-special-#"
-            if extras_alias in base_object:
-                base_object[extras_alias].pop("x-python-type", None)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
