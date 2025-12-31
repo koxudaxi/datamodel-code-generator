@@ -642,7 +642,7 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     import importlib.util  # noqa: PLC0415
     import sys  # noqa: PLC0415
 
-    from datamodel_code_generator import (
+    from datamodel_code_generator import (  # noqa: PLC0415
         DataModelType,
         InputFileType,
     )
