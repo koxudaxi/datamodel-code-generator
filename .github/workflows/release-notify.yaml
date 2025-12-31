@@ -31,15 +31,16 @@ jobs:
               console.log(`head_branch is empty, resolving tag from head_sha: ${headSha}`);
 
               try {
-                const { data: tags } = await github.rest.repos.listTags({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  per_page: 100
-                });
-                const matchingTag = tags.find(t => t.commit.sha === headSha);
-                if (matchingTag) {
-                  tag = matchingTag.name;
-                  console.log(`Resolved tag from sha: ${tag}`);
+                for await (const response of github.paginate.iterator(
+                  github.rest.repos.listTags,
+                  { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 }
+                )) {
+                  const matchingTag = response.data.find(t => t.commit.sha === headSha);
+                  if (matchingTag) {
+                    tag = matchingTag.name;
+                    console.log(`Resolved tag from sha: ${tag}`);
+                    break;
+                  }
                 }
               } catch (e) {
                 console.log(`Failed to resolve tag from sha: ${e.message}`);
