@@ -6,12 +6,10 @@ objects, interfaces, enums, scalars, inputs, and union types.
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
 )
-from urllib.parse import ParseResult
 
 from typing_extensions import Unpack
 
@@ -26,7 +24,6 @@ from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as Py
 from datamodel_code_generator.parser.base import (
     DataType,
     Parser,
-    Source,
     escape_characters,
 )
 from datamodel_code_generator.reference import ModelType, Reference
@@ -40,7 +37,8 @@ except ImportError as exc:  # pragma: no cover
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from pathlib import Path
+    from urllib.parse import ParseResult
 
     from datamodel_code_generator._types import GraphQLParserConfigDict
     from datamodel_code_generator.config import GraphQLParserConfig
@@ -136,31 +134,6 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         self.data_model_union_type = self.config.data_model_union_type
         self.use_standard_collections = use_standard_collections
         self.use_union_operator = use_union_operator
-
-    def _get_context_source_path_parts(self) -> Iterator[tuple[Source, list[str]]]:
-        # TODO (denisart): Temporarily this method duplicates
-        # the method `datamodel_code_generator.parser.jsonschema.JsonSchemaParser._get_context_source_path_parts`.
-
-        if isinstance(self.source, list) or (  # pragma: no cover
-            isinstance(self.source, Path) and self.source.is_dir()
-        ):  # pragma: no cover
-            self.current_source_path = Path()
-            self.model_resolver.after_load_files = {
-                self.base_path.joinpath(s.path).resolve().as_posix() for s in self.iter_source
-            }
-
-        for source in self.iter_source:
-            if isinstance(self.source, ParseResult):  # pragma: no cover
-                path_parts = self.get_url_path_parts(self.source)
-            else:
-                path_parts = list(source.path.parts)
-            if self.current_source_path is not None:  # pragma: no cover
-                self.current_source_path = source.path
-            with (
-                self.model_resolver.current_base_path_context(source.path.parent),
-                self.model_resolver.current_root_context(path_parts),
-            ):
-                yield source, path_parts
 
     def _resolve_types(self, paths: list[str], schema: graphql.GraphQLSchema) -> None:
         for type_name, type_ in schema.type_map.items():
@@ -523,13 +496,13 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             graphql.type.introspection.TypeKind.UNION: self.parse_union,
         }
 
-        for source, path_parts in self._get_context_source_path_parts():
-            schema: graphql.GraphQLSchema = build_graphql_schema(source.text)
-            self.raw_obj = schema
+        combined_schema = "\n".join(source.text for source in self.iter_source)
+        schema: graphql.GraphQLSchema = build_graphql_schema(combined_schema)
+        self.raw_obj = schema
 
-            self._resolve_types(path_parts, schema)
+        self._resolve_types([], schema)
 
-            for next_type in self.parse_order:
-                for obj in self.support_graphql_types[next_type]:
-                    parser_ = mapper_from_graphql_type_to_parser_method[next_type]
-                    parser_(obj)
+        for next_type in self.parse_order:
+            for obj in self.support_graphql_types[next_type]:
+                parser_ = mapper_from_graphql_type_to_parser_method[next_type]
+                parser_(obj)
