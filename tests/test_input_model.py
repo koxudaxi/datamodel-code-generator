@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from argparse import Namespace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pydantic
@@ -11,10 +12,13 @@ import pytest
 from datamodel_code_generator import __main__ as main_module
 from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit, main
+from tests.conftest import assert_output, freeze_time
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from pathlib import Path
+
+EXPECTED_INPUT_MODEL_PATH = Path(__file__).parent / "data" / "expected" / "main" / "input_model"
+TIMESTAMP = "1985-10-26T01:21:00-07:00"
 
 SKIP_PYDANTIC_V1 = pytest.mark.skipif(
     pydantic.VERSION < "2.0.0",
@@ -1139,4 +1143,594 @@ def test_input_model_config_class(tmp_path: Path) -> None:
         output_path=tmp_path / "output.py",
         extra_args=["--output-model-type", "typing.TypedDict"],
         expected_output_contains=["TypedDict", "Callable[[str], str]"],
+    )
+
+
+# ============================================================================
+# Inheritance support tests (single and multiple --input-model)
+# ============================================================================
+
+
+def run_multiple_input_models_and_assert(
+    *,
+    input_models: Sequence[str],
+    output_path: Path,
+    extra_args: Sequence[str] | None = None,
+    expected_output_contains: Sequence[str] | None = None,
+    expected_output_not_contains: Sequence[str] | None = None,
+) -> None:
+    """Run main with multiple --input-model and assert results."""
+    __tracebackhide__ = True
+    args: list[str] = []
+    for input_model in input_models:
+        args.extend(["--input-model", input_model])
+    args.extend(["--output", str(output_path)])
+    if extra_args:
+        args.extend(extra_args)
+
+    return_code = main(args)
+    _assert_exit_code(return_code, Exit.OK, f"--input-model {input_models}")
+    _assert_file_exists(output_path)
+
+    content = output_path.read_text(encoding="utf-8")
+    if expected_output_contains:
+        for expected in expected_output_contains:
+            _assert_output_contains(content, expected)
+    if expected_output_not_contains:
+        for not_expected in expected_output_not_contains:
+            if not_expected in content:  # pragma: no cover
+                pytest.fail(f"Expected output NOT to contain: {not_expected!r}\n\nActual output:\n{content}")
+
+
+def run_multiple_input_models_error_and_assert(
+    *,
+    input_models: Sequence[str],
+    extra_args: Sequence[str] | None = None,
+    capsys: pytest.CaptureFixture[str],
+    expected_stderr_contains: str,
+) -> None:
+    """Run main with multiple --input-model expecting error and assert stderr."""
+    __tracebackhide__ = True
+    args: list[str] = []
+    for input_model in input_models:
+        args.extend(["--input-model", input_model])
+    if extra_args:
+        args.extend(extra_args)
+
+    return_code = main(args)
+    _assert_exit_code(return_code, Exit.ERROR, f"--input-model {input_models}")
+    captured = capsys.readouterr()
+    _assert_stderr_contains(captured.err, expected_stderr_contains)
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
+    """Test single --input-model with inherited model generates inheritance chain."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildA",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "single_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
+    """Test single --input-model with multi-level inheritance."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:GrandChild",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "multi_level_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
+    """Test single --input-model with model that has no inheritance."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:NoInheritance",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "no_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
+    """Test multiple --input-model with forked inheritance shares common parent."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildA",
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildB",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
+    """Test multiple --input-model with different inheritance depths."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildA",
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:GrandChild",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "mixed_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_generates_anyof(tmp_path: Path) -> None:
+    """Test multiple --input-model generates TypeAlias with union."""
+    with freeze_time(TIMESTAMP):
+        return_code = main(
+            [
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildA",
+                "--input-model",
+                "tests.data.python.input_model.inheritance_models:ChildB",
+                "--output-model-type",
+                "typing.TypedDict",
+                "--output",
+                str(tmp_path / "output.py"),
+            ]
+        )
+    assert return_code == Exit.OK
+    assert_output(
+        (tmp_path / "output.py").read_text(encoding="utf-8"),
+        EXPECTED_INPUT_MODEL_PATH / "forked_inheritance.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_with_pydantic_output(tmp_path: Path) -> None:
+    """Test multiple --input-model works with Pydantic output."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        output_path=output_path,
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+        expected_output_contains=[
+            "class GrandParent(BaseModel):",
+            "class Parent(GrandParent):",
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_with_dataclass_output(tmp_path: Path) -> None:
+    """Test multiple --input-model works with dataclass output."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        output_path=output_path,
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+        expected_output_contains=[
+            "@dataclass",
+            "class GrandParent:",
+            "class Parent(GrandParent):",
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_non_basemodel_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model includes non-BaseModel."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.dict_schemas:USER_SCHEMA",
+        ],
+        extra_args=["--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="Multiple --input-model only supports Pydantic v2 BaseModel",
+    )
+
+
+def test_input_model_multiple_pydantic_v1_error(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test error when multiple --input-model used with Pydantic v1 model."""
+    import builtins
+
+    original_hasattr = builtins.hasattr
+    call_count = 0
+
+    def mock_hasattr(obj: object, name: str) -> bool:
+        nonlocal call_count
+        if name == "model_json_schema":
+            call_count += 1
+            if call_count <= 2:
+                return False
+        return original_hasattr(obj, name)
+
+    monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
+
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="requires Pydantic v2 runtime",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_invalid_format_error(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model has invalid format."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "invalid_format_no_colon",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Invalid --input-model format",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_file_not_found_error(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model file doesn't exist."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "./nonexistent_file.py:Model",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="File not found",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_module_not_found_error(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model module doesn't exist."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "nonexistent_module_xyz:Model",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Cannot find module",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_attribute_not_found_error(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model attribute doesn't exist."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:NonexistentModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="has no attribute",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_non_jsonschema_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test error when multiple --input-model used with non-jsonschema type."""
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        extra_args=["--input-file-type", "openapi", "--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="--input-file-type must be 'jsonschema'",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_same_module(tmp_path: Path) -> None:
+    """Test multiple --input-model from same module reuses module load."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+            "tests.data.python.input_model.inheritance_models:GrandChild",
+        ],
+        output_path=output_path,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=[
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+            "class GrandChild(Intermediate):",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
+    """Test multiple --input-model with file path format."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests/data/python/input_model/inheritance_models.py:ChildA",
+            "tests/data/python/input_model/inheritance_models.py:ChildB",
+        ],
+        output_path=output_path,
+        extra_args=["--output-model-type", "typing.TypedDict"],
+        expected_output_contains=[
+            "class Parent(GrandParent):",
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:
+    """Test multiple --input-model works with --input-model-ref-strategy."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        output_path=output_path,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--input-model-ref-strategy",
+            "reuse-foreign",
+        ],
+        expected_output_contains=[
+            "class GrandParent(TypedDict):",
+            "class Parent(GrandParent):",
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_cannot_load_module_error(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test error when spec_from_file_location returns None for multiple models."""
+    import importlib.util
+
+    test_file = tmp_path / "test_model.py"
+    test_file.write_text("from pydantic import BaseModel\nclass Model(BaseModel): pass")
+
+    original_spec_from_file_location = importlib.util.spec_from_file_location
+
+    def mock_spec(*args: object, **kwargs: object) -> None:
+        if hasattr(mock_spec, "called"):
+            return None
+        mock_spec.called = True  # type: ignore[attr-defined]
+        return original_spec_from_file_location(*args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, "spec_from_file_location", mock_spec)
+
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests/data/python/input_model/inheritance_models.py:ChildA",
+            f"{test_file}:Model",
+        ],
+        extra_args=["--output", str(tmp_path / "output.py")],
+        capsys=capsys,
+        expected_stderr_contains="Cannot load module",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_import_error(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test error when module import fails for multiple models."""
+    import importlib
+    import importlib.util
+
+    class FakeSpec:
+        name = "fake_module"
+
+    original_find_spec = importlib.util.find_spec
+    original_import_module = importlib.import_module
+    call_count = 0
+
+    def fake_find_spec(name: str, *args: object, **kwargs: object) -> FakeSpec | None:
+        nonlocal call_count
+        call_count += 1
+        if "nonexistent_import_module" in name:
+            return FakeSpec()
+        return original_find_spec(name, *args, **kwargs)
+
+    def fake_import_module(name: str, *args: object, **kwargs: object) -> object:
+        if "nonexistent_import_module" in name:
+            msg = "fake import error"
+            raise ImportError(msg)
+        return original_import_module(name, *args, **kwargs)
+
+    monkeypatch.setattr(importlib.util, "find_spec", fake_find_spec)
+    monkeypatch.setattr(importlib, "import_module", fake_import_module)
+
+    run_multiple_input_models_error_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "nonexistent_import_module:Model",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Cannot import module",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_empty_child_no_properties(
+    tmp_path: Path,
+) -> None:
+    """Test inheritance with empty child that adds no properties."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=["tests.data.python.input_model.inheritance_models:EmptyChild"],
+        output_path=output_path,
+        expected_output_contains=[
+            "class EmptyChild(Parent):",
+            "class Parent(GrandParent):",
+            "class GrandParent(BaseModel):",
+            "pass",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_optional_only_child_no_required(
+    tmp_path: Path,
+) -> None:
+    """Test inheritance with child that adds only optional fields."""
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=["tests.data.python.input_model.inheritance_models:OptionalOnlyChild"],
+        output_path=output_path,
+        expected_output_contains=[
+            "class OptionalOnlyChild(Parent):",
+            "optional_field:",
+            "= Field(None",
+        ],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_cwd_already_in_path(
+    tmp_path: Path,
+) -> None:
+    """Test that cwd is not duplicated in sys.path when already present."""
+    import sys
+    from pathlib import Path as _Path
+
+    cwd = str(_Path.cwd())
+    initial_count = sys.path.count(cwd)
+    if cwd not in sys.path:
+        sys.path.insert(0, cwd)
+
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "tests.data.python.input_model.inheritance_models:ChildB",
+        ],
+        output_path=output_path,
+        expected_output_contains=[
+            "class ChildA(Parent):",
+            "class ChildB(Parent):",
+        ],
+    )
+    final_count = sys.path.count(cwd)
+    assert final_count <= initial_count + 1
+
+
+@SKIP_PYDANTIC_V1
+def test_input_model_multiple_py_file_without_path_separator(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test loading .py file without path separator (just filename.py)."""
+    from pathlib import Path as _Path
+
+    model_content = '''
+from pydantic import BaseModel
+
+class TempModel(BaseModel):
+    value: str
+'''
+    temp_file = tmp_path / "temp_model.py"
+    temp_file.write_text(model_content)
+
+    monkeypatch.chdir(tmp_path)
+
+    output_path = tmp_path / "output.py"
+    run_multiple_input_models_and_assert(
+        input_models=[
+            "tests.data.python.input_model.inheritance_models:ChildA",
+            "temp_model.py:TempModel",
+        ],
+        output_path=output_path,
+        expected_output_contains=[
+            "class ChildA(Parent):",
+            "class TempModel(BaseModel):",
+        ],
     )
