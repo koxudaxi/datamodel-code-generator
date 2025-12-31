@@ -19,6 +19,7 @@ from datamodel_code_generator.enums import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
@@ -196,6 +197,29 @@ model_options.add_argument(
 model_options.add_argument(
     "--class-name",
     help="Set class name of root model",
+    default=None,
+)
+model_options.add_argument(
+    "--class-name-prefix",
+    help="Prefix to add to generated class names (e.g., 'Api' produces 'ApiUser'). "
+    "Does not apply to root model when --class-name is specified.",
+    type=str,
+    default=None,
+)
+model_options.add_argument(
+    "--class-name-suffix",
+    help="Suffix to add to generated class names (e.g., 'Schema' produces 'UserSchema'). "
+    "Does not apply to root model when --class-name is specified.",
+    type=str,
+    default=None,
+)
+model_options.add_argument(
+    "--class-name-affix-scope",
+    help="Scope for applying --class-name-prefix/--class-name-suffix. "
+    "'all': Apply to all classes including enums (default). "
+    "'models': Apply only to model classes. "
+    "'enums': Apply only to enum classes.",
+    choices=[s.value for s in ClassNameAffixScope],
     default=None,
 )
 model_options.add_argument(

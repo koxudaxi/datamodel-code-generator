@@ -128,6 +128,19 @@ class NamingStrategy(Enum):
     PrimaryFirst = "primary-first"
 
 
+class ClassNameAffixScope(Enum):
+    """Scope for applying class name prefix/suffix.
+
+    All: Apply to all classes including enums (default).
+    Models: Apply only to model classes (BaseModel, TypedDict, dataclass, msgspec).
+    Enums: Apply only to enum classes.
+    """
+
+    All = "all"
+    Models = "models"
+    Enums = "enums"
+
+
 class CollapseRootModelsNameStrategy(Enum):
     """Strategy for naming when collapsing root models with object references.
 
@@ -233,7 +246,9 @@ __all__ = [
     "MIN_VERSION",
     "AllExportsCollisionStrategy",
     "AllExportsScope",
+    "AllOfClassHierarchy",
     "AllOfMergeMode",
+    "ClassNameAffixScope",
     "CollapseRootModelsNameStrategy",
     "DataModelType",
     "DataclassArguments",

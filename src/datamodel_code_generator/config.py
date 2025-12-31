@@ -15,6 +15,7 @@ from datamodel_code_generator.enums import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
@@ -103,6 +104,9 @@ class GenerateConfig(BaseModel):
     apply_default_values_for_required_fields: bool = False
     force_optional_for_required_fields: bool = False
     class_name: str | None = None
+    class_name_prefix: str | None = None
+    class_name_suffix: str | None = None
+    class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All
     use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
@@ -235,6 +239,9 @@ class ParserConfig(BaseModel):
     use_generic_base_class: bool = False
     force_optional_for_required_fields: bool = False
     class_name: str | None = None
+    class_name_prefix: str | None = None
+    class_name_suffix: str | None = None
+    class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All
     use_standard_collections: bool = False
     base_path: Path | None = None
     use_schema_description: bool = False

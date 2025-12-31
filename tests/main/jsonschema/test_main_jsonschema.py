@@ -674,6 +674,117 @@ def test_main_invalid_model_name(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--class-name-prefix"],
+    option_description="""Add a prefix to all generated class names.
+
+The --class-name-prefix option allows you to add a prefix to all generated class
+names, including both models and enums. This is useful for namespacing generated
+code or avoiding conflicts with existing classes.""",
+    input_schema="jsonschema/class_name_affix.json",
+    cli_args=["--class-name-prefix", "Api"],
+    golden_output="main/jsonschema/class_name_prefix/output.py",
+    related_options=["--class-name-suffix", "--class-name-affix-scope"],
+)
+@freeze_time("2019-07-26")
+def test_main_class_name_prefix(output_file: Path) -> None:
+    """Add a prefix to all generated class names.
+
+    The --class-name-prefix option allows you to add a prefix to all generated class
+    names, including both models and enums. This is useful for namespacing generated
+    code or avoiding conflicts with existing classes.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_name_prefix/output.py",
+        extra_args=["--class-name-prefix", "Api"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--class-name-suffix"],
+    option_description="""Add a suffix to all generated class names.
+
+The --class-name-suffix option allows you to add a suffix to all generated class
+names, including both models and enums. This is useful for distinguishing generated
+classes (e.g., adding 'Schema' or 'Model' suffix).""",
+    input_schema="jsonschema/class_name_affix.json",
+    cli_args=["--class-name-suffix", "Schema"],
+    golden_output="main/jsonschema/class_name_suffix/output.py",
+    related_options=["--class-name-prefix", "--class-name-affix-scope"],
+)
+@freeze_time("2019-07-26")
+def test_main_class_name_suffix(output_file: Path) -> None:
+    """Add a suffix to all generated class names.
+
+    The --class-name-suffix option allows you to add a suffix to all generated class
+    names, including both models and enums. This is useful for distinguishing generated
+    classes (e.g., adding 'Schema' or 'Model' suffix).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_name_suffix/output.py",
+        extra_args=["--class-name-suffix", "Schema"],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--class-name-affix-scope"],
+    option_description="""Control which classes receive the prefix/suffix.
+
+The --class-name-affix-scope option controls which types of classes receive the
+prefix or suffix specified by --class-name-prefix or --class-name-suffix:
+- 'all': Apply to all classes (models and enums) - this is the default
+- 'models': Apply only to model classes (BaseModel, dataclass, TypedDict, etc.)
+- 'enums': Apply only to enum classes""",
+    input_schema="jsonschema/class_name_affix.json",
+    cli_args=["--class-name-suffix", "Schema", "--class-name-affix-scope", "models"],
+    golden_output="main/jsonschema/class_name_affix_scope_models/output.py",
+    related_options=["--class-name-prefix", "--class-name-suffix"],
+)
+@freeze_time("2019-07-26")
+def test_main_class_name_affix_scope_models(output_file: Path) -> None:
+    """Control which classes receive the prefix/suffix.
+
+    The --class-name-affix-scope option controls which types of classes receive the
+    prefix or suffix specified by --class-name-prefix or --class-name-suffix:
+    - 'all': Apply to all classes (models and enums) - this is the default
+    - 'models': Apply only to model classes (BaseModel, dataclass, TypedDict, etc.)
+    - 'enums': Apply only to enum classes
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_name_affix_scope_models/output.py",
+        extra_args=["--class-name-suffix", "Schema", "--class-name-affix-scope", "models"],
+    )
+
+
+@freeze_time("2019-07-26")
+def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
+    """Test that --class-name-suffix does not apply to root when --class-name is specified.
+
+    When --class-name is explicitly set, the suffix should not be applied to the root model
+    because the user has explicitly chosen the root model name.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "class_name_affix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="class_name_suffix_with_class_name/output.py",
+        extra_args=["--class-name-suffix", "Schema", "--class-name", "MyRootModel"],
+    )
+
+
 def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
     """Test reserved names are safely suffixed and aliased."""
     run_main_and_assert(

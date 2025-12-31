@@ -893,6 +893,10 @@ class Parser(ABC, Generic[ParserConfigT]):
             treat_dot_as_module=config.treat_dot_as_module,
             naming_strategy=config.naming_strategy,
             duplicate_name_suffix_map=config.duplicate_name_suffix,
+            class_name_prefix=config.class_name_prefix,
+            class_name_suffix=config.class_name_suffix,
+            class_name_affix_scope=config.class_name_affix_scope,
+            skip_affix_for_root=config.class_name is not None,
         )
         self.class_name: str | None = config.class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal

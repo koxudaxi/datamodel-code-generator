@@ -54,6 +54,7 @@ from datamodel_code_generator import (
     AllExportsScope,
     AllOfClassHierarchy,
     AllOfMergeMode,
+    ClassNameAffixScope,
     CollapseRootModelsNameStrategy,
     DataclassArguments,
     DataModelType,
@@ -395,6 +396,16 @@ class Config(BaseModel):
                 return [v]
             return v
 
+        @_field_validator("class_name_affix_scope", mode="before")
+        @classmethod
+        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # pyright: ignore[reportRedeclaration]
+            """Convert string to ClassNameAffixScope enum."""
+            if v is None:
+                return ClassNameAffixScope.All
+            if isinstance(v, str):
+                return ClassNameAffixScope(v)
+            return v
+
     else:
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -461,6 +472,16 @@ class Config(BaseModel):
                 return [v]
             return v
 
+        @field_validator("class_name_affix_scope", mode="before")  # pragma: no cover
+        @classmethod
+        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:
+            """Convert string to ClassNameAffixScope enum."""
+            if v is None:
+                return ClassNameAffixScope.All
+            if isinstance(v, str):
+                return ClassNameAffixScope(v)
+            return v
+
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[list[str]] = None  # noqa: UP045
     input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
@@ -493,6 +514,9 @@ class Config(BaseModel):
     use_default: bool = False
     force_optional: bool = False
     class_name: Optional[str] = None  # noqa: UP045
+    class_name_prefix: Optional[str] = None  # noqa: UP045
+    class_name_suffix: Optional[str] = None  # noqa: UP045
+    class_name_affix_scope: ClassNameAffixScope = ClassNameAffixScope.All
     use_standard_collections: bool = True
     use_schema_description: bool = False
     use_field_description: bool = False
@@ -869,6 +893,9 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         apply_default_values_for_required_fields=config.use_default,
         force_optional_for_required_fields=config.force_optional,
         class_name=config.class_name,
+        class_name_prefix=config.class_name_prefix,
+        class_name_suffix=config.class_name_suffix,
+        class_name_affix_scope=config.class_name_affix_scope,
         use_standard_collections=config.use_standard_collections,
         use_schema_description=config.use_schema_description,
         use_field_description=config.use_field_description,

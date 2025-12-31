@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import (
         AllOfClassHierarchy,
         AllOfMergeMode,
+        ClassNameAffixScope,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
         FieldTypeCollisionStrategy,
@@ -56,6 +57,9 @@ class ParserConfig(TypedDict):
     use_generic_base_class: NotRequired[bool]
     force_optional_for_required_fields: NotRequired[bool]
     class_name: NotRequired[str | None]
+    class_name_prefix: NotRequired[str | None]
+    class_name_suffix: NotRequired[str | None]
+    class_name_affix_scope: NotRequired[ClassNameAffixScope]
     use_standard_collections: NotRequired[bool]
     base_path: NotRequired[Path | None]
     use_schema_description: NotRequired[bool]

@@ -3149,6 +3149,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 singular_name=singular_name,
                 singular_name_suffix="Enum",
                 loaded=True,
+                model_type="enum",
             )
             self.set_schema_extensions(reference.path, obj)
             data_model_root_type = self.data_model_root_type(
@@ -3219,6 +3220,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             singular_name=singular_name,
             singular_name_suffix="Enum",
             loaded=True,
+            model_type="enum",
         )
 
         if not nullable:
@@ -3232,6 +3234,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             singular_name=singular_name,
             singular_name_suffix="Enum",
             loaded=True,
+            model_type="enum",
         )
 
         data_model_root_type = self.data_model_root_type(

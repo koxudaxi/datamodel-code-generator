@@ -17,6 +17,7 @@ if TYPE_CHECKING:
         AllExportsScope,
         AllOfClassHierarchy,
         AllOfMergeMode,
+        ClassNameAffixScope,
         CollapseRootModelsNameStrategy,
         DataclassArguments,
         DataModelType,
@@ -65,6 +66,9 @@ class GenerateConfigDict(TypedDict):
     apply_default_values_for_required_fields: NotRequired[bool]
     force_optional_for_required_fields: NotRequired[bool]
     class_name: NotRequired[str | None]
+    class_name_prefix: NotRequired[str | None]
+    class_name_suffix: NotRequired[str | None]
+    class_name_affix_scope: NotRequired[ClassNameAffixScope]
     use_standard_collections: NotRequired[bool]
     use_schema_description: NotRequired[bool]
     use_field_description: NotRequired[bool]
