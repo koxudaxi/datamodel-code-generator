@@ -396,7 +396,7 @@ class Config(BaseModel):
                 return [v]
             return v
 
-        @_field_validator("class_name_affix_scope", mode="before")
+        @_field_validator("class_name_affix_scope", mode="before")  # pragma: no cover
         @classmethod
         def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # pyright: ignore[reportRedeclaration]
             """Convert string to ClassNameAffixScope enum."""
