@@ -27,10 +27,11 @@ Below are the data types and features recognized by datamodel-code-generator for
 - datetime
 - time
 - password
-- email
-- idn-email
+- email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
+- idn-email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
 - path
 - uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
+- ulid (requires [`python-ulid`](https://github.com/mdomke/python-ulid))
 - ipv4
 - ipv6
 - hostname
