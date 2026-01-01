@@ -1093,6 +1093,10 @@ class ModelResolver:  # noqa: PLR0904
         Returns:
             The name after applying generator and affix (no uniqueness, no singularization).
         """
+        # Honor skip_generator_and_affix for consistency
+        if self.skip_generator_and_affix:
+            return name
+
         # Apply class name generator (custom or default - both provide validation)
         class_name = self.class_name_generator(name)
         # Apply affix (no singularization for GraphQL)
