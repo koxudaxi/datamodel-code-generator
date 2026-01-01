@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.types import DataTypeManager
 
 
-class ParserConfig(TypedDict):
+class ParserConfigDict(TypedDict):
     data_model_type: NotRequired[type[DataModel]]
     data_model_root_type: NotRequired[type[DataModel]]
     data_type_manager_type: NotRequired[type[DataTypeManager]]
@@ -149,19 +149,19 @@ class ParserConfig(TypedDict):
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
 
 
-class GraphQLParserConfig(ParserConfig):
+class GraphQLParserConfigDict(ParserConfigDict):
     data_model_scalar_type: NotRequired[type[DataModel]]
     data_model_union_type: NotRequired[type[DataModel]]
 
 
-class JSONSchemaParserConfig(ParserConfig):
+class JSONSchemaParserConfigDict(ParserConfigDict):
     pass
 
 
-class OpenAPIParserConfig(JSONSchemaParserConfig):
+class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
 
 
-Model: TypeAlias = ParserConfig | GraphQLParserConfig | JSONSchemaParserConfig | OpenAPIParserConfig
+ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict

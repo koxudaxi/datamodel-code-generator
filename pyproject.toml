@@ -283,6 +283,7 @@ input-model = [
   "src/datamodel_code_generator/config.py:OpenAPIParserConfig",
 ]
 output = "src/datamodel_code_generator/_types/parser_config_dicts.py"
+class-name-suffix = "Dict"
 
 [tool.datamodel-codegen.profiles.parse-config-dict]
 extends = "config-types-base"
