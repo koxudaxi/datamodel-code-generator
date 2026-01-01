@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 36 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 6 | OpenAPI-specific features |
 | ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
@@ -44,6 +44,9 @@ This documentation is auto-generated from test cases.
 - [`--check`](general-options.md#check)
 - [`--class-decorators`](template-customization.md#class-decorators)
 - [`--class-name`](model-customization.md#class-name)
+- [`--class-name-affix-scope`](model-customization.md#class-name-affix-scope)
+- [`--class-name-prefix`](model-customization.md#class-name-prefix)
+- [`--class-name-suffix`](model-customization.md#class-name-suffix)
 - [`--collapse-reuse-models`](model-customization.md#collapse-reuse-models)
 - [`--collapse-root-models`](model-customization.md#collapse-root-models)
 - [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy)

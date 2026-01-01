@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
+from datamodel_code_generator.enums import ClassNameAffixScope
 from datamodel_code_generator.util import ConfigDict, camel_to_snake, is_pydantic_v2, model_validator
 
 if TYPE_CHECKING:
@@ -542,6 +543,10 @@ class ModelResolver:  # noqa: PLR0904
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
         naming_strategy: NamingStrategy | None = None,
         duplicate_name_suffix_map: dict[str, str] | None = None,
+        class_name_prefix: str | None = None,
+        class_name_suffix: str | None = None,
+        class_name_affix_scope: ClassNameAffixScope | None = None,
+        skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -587,6 +592,17 @@ class ModelResolver:  # noqa: PLR0904
         # Duplicate name suffix map for type-specific suffixes
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
         self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
+
+        self.class_name_prefix: str = class_name_prefix or ""
+        self.class_name_suffix: str = class_name_suffix or ""
+        if self.class_name_prefix and not self.class_name_prefix.isidentifier():
+            msg = f"--class-name-prefix '{self.class_name_prefix}' is not a valid Python identifier"
+            raise ValueError(msg)
+        if self.class_name_suffix and not (f"A{self.class_name_suffix}").isidentifier():
+            msg = f"--class-name-suffix '{self.class_name_suffix}' is not a valid Python identifier component"
+            raise ValueError(msg)
+        self.class_name_affix_scope: ClassNameAffixScope = class_name_affix_scope or ClassNameAffixScope.All
+        self.skip_affix_for_root: bool = skip_affix_for_root
 
         # Incrementally maintained set of reference names for O(1) uniqueness checking
         self._reference_names_cache: set[str] = set()
@@ -815,7 +831,10 @@ class ModelResolver:  # noqa: PLR0904
         # For PrimaryFirst strategy, use unique=True for external references
         # so that definitions in the main input file get priority for clean names
         use_unique = self.naming_strategy == NamingStrategy.PrimaryFirst and self._is_external_path(path)
-        name = self.get_class_name(original_name, unique=use_unique).name
+        has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
+        needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
+        skip_affix = has_affix_config and needs_scope
+        name = self.get_class_name(original_name, unique=use_unique, skip_affix=skip_affix).name
         reference = Reference(
             path=path,
             original_name=original_name,
@@ -913,20 +932,27 @@ class ModelResolver:  # noqa: PLR0904
         unique: bool = True,
         singular_name_suffix: str | None = None,
         loaded: bool = False,
+        model_type: str = "model",
     ) -> Reference:
         """Add or update a model reference with the given path and name."""
         joined_path = self.join_path(tuple(path))
+        is_root = joined_path == "#" or (joined_path.endswith("#") and "/" not in joined_path.split("#")[-1])
         reference: Reference | None = self.references.get(joined_path)
         old_ref_name: str | None = reference.name if reference else None
         if reference:
+            was_already_loaded = reference.loaded
             if loaded and not reference.loaded:
                 reference.loaded = True
-            if not original_name or original_name in {reference.original_name, reference.name}:
+            has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
+            needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
+            needs_reprocess = has_affix_config and needs_scope and not was_already_loaded
+            if not needs_reprocess and (
+                not original_name or original_name in {reference.original_name, reference.name}
+            ):
                 return reference
         name = original_name
         duplicate_name: str | None = None
         if class_name:
-            # Apply naming strategy before further processing
             name = self._check_parent_scope_option(name, path)
             name = self._apply_full_path_naming(name, path)
 
@@ -943,6 +969,8 @@ class ModelResolver:  # noqa: PLR0904
                     reserved_name=reference.name if reference else None,
                     singular_name=singular_name,
                     singular_name_suffix=singular_name_suffix,
+                    model_type=model_type,
+                    is_root=is_root,
                 )
             else:
                 name, duplicate_name = self.get_class_name(
@@ -951,6 +979,8 @@ class ModelResolver:  # noqa: PLR0904
                     reserved_name=reference.name if reference else None,
                     singular_name=singular_name,
                     singular_name_suffix=singular_name_suffix,
+                    model_type=model_type,
+                    is_root=is_root,
                 )
         else:
             # TODO: create a validate for module name
@@ -999,13 +1029,66 @@ class ModelResolver:  # noqa: PLR0904
             name, ignore_snake_case_field=True, upper_camel=True
         )
 
-    def get_class_name(
+    def _apply_class_name_affix(
+        self,
+        name: str,
+        model_type: str = "model",
+        is_root: bool = False,  # noqa: FBT001, FBT002
+    ) -> str:
+        """Apply prefix/suffix based on scope.
+
+        Args:
+            name: The base class name (after singularization)
+            model_type: "model" or "enum"
+            is_root: True if this is the root schema
+
+        Returns:
+            The name with prefix/suffix applied according to scope rules.
+        """
+        if is_root and self.skip_affix_for_root:
+            return name
+
+        scope = self.class_name_affix_scope
+        is_enum = model_type == "enum"
+        should_apply = (
+            scope == ClassNameAffixScope.All
+            or (scope == ClassNameAffixScope.Models and not is_enum)
+            or (scope == ClassNameAffixScope.Enums and is_enum)
+        )
+
+        if not should_apply:
+            return name
+
+        return f"{self.class_name_prefix}{name}{self.class_name_suffix}"
+
+    def get_affixed_name(self, name: str, model_type: str = "model") -> str:
+        """Apply class name generator and affix without uniqueness checks.
+
+        Used by GraphQL parser which maintains its own naming.
+        Note: GraphQL does NOT use singularization - this is intentional.
+        Note: GraphQL dotted type names (e.g., 'Foo.Bar') are treated as single names,
+              not module paths - treat_dot_as_module splitting is NOT applied.
+
+        Args:
+            name: The original name
+            model_type: "model" or "enum"
+
+        Returns:
+            The name after applying generator and affix (no uniqueness, no singularization).
+        """
+        class_name = self.class_name_generator(name)
+        return self._apply_class_name_affix(class_name, model_type=model_type, is_root=False)
+
+    def get_class_name(  # noqa: PLR0913, PLR0917
         self,
         name: str,
         unique: bool = True,  # noqa: FBT001, FBT002
         reserved_name: str | None = None,
         singular_name: bool = False,  # noqa: FBT001, FBT002
         singular_name_suffix: str | None = None,
+        model_type: str = "model",
+        is_root: bool = False,  # noqa: FBT001, FBT002
+        skip_affix: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
         if "." in name and self.treat_dot_as_module is not False:
@@ -1025,12 +1108,16 @@ class ModelResolver:  # noqa: PLR0904
 
         if singular_name:
             class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)
+
+        if not skip_affix:
+            class_name = self._apply_class_name_affix(class_name, model_type=model_type, is_root=is_root)
+
+        if unique and reserved_name == class_name:
+            return ClassName(name=f"{prefix}{class_name}", duplicate_name=None)
+
         duplicate_name: str | None = None
         if unique:
-            if reserved_name == class_name:
-                return ClassName(name=class_name, duplicate_name=duplicate_name)
-
-            unique_name = self._get_unique_name(class_name, camel=True)
+            unique_name = self._get_unique_name(class_name, camel=True, model_type=model_type)
             if unique_name != class_name:
                 duplicate_name = class_name
             class_name = unique_name

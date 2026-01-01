@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/Status"
+    },
+    "item": {
+      "$ref": "#/$defs/Item"
+    }
+  },
+  "$defs": {
+    "Status": {
+      "type": "string",
+      "enum": ["active", "inactive"]
+    },
+    "Item": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"}
+      }
+    }
+  }
+}
