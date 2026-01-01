@@ -13,6 +13,8 @@ datamodel-code-generator allows you to customize how schema types are mapped to 
 | `--output-datetime-class` | Choose datetime output type |
 | `--use-pendulum` | Use Pendulum library for datetime types |
 | `--use-decimal-for-multiple-of` | Use Decimal for multipleOf constraints |
+| `format: "email"` | Email validation (requires `email-validator`) |
+| `format: "ulid"` | ULID type support (requires `python-ulid`) |
 
 ---
 
@@ -230,6 +232,111 @@ class Event(BaseModel):
 
 ---
 
+## Email Format Support
+
+The generator supports the `email` and `idn-email` string formats, which generate Pydantic's `EmailStr` type.
+
+!!! warning "Required Dependency"
+    The `email` format requires the `email-validator` package to be installed:
+    ```bash
+    pip install email-validator
+    ```
+    Or install Pydantic with the email extra:
+    ```bash
+    pip install pydantic[email]
+    ```
+
+### Schema Example
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "format": "email"
+    }
+  }
+}
+```
+
+### Output
+
+```python
+from pydantic import BaseModel, EmailStr
+
+class MyModel(BaseModel):
+    email: EmailStr
+```
+
+### Avoiding the Dependency
+
+If you don't want to install `email-validator`, you can map email formats to plain strings:
+
+```bash
+datamodel-codegen --input schema.json --output models.py \
+  --type-mappings "string+email=string" "string+idn-email=string"
+```
+
+This generates `str` instead of `EmailStr`.
+
+---
+
+## ULID Format Support
+
+The generator supports the `ulid` string format, which generates [`python-ulid`](https://github.com/mdomke/python-ulid) types.
+
+!!! warning "Required Dependency"
+    The `ulid` format requires the `python-ulid` package to be installed:
+    ```bash
+    pip install python-ulid
+    ```
+    For Pydantic integration, use:
+    ```bash
+    pip install python-ulid[pydantic]
+    ```
+
+### Schema Example
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "ulid"
+    }
+  }
+}
+```
+
+### Output
+
+```python
+from ulid import ULID
+from pydantic import BaseModel
+
+class MyModel(BaseModel):
+    id: ULID
+```
+
+### What is ULID?
+
+ULID (Universally Unique Lexicographically Sortable Identifier) is an alternative to UUID that offers:
+
+- **Lexicographic sorting** - ULIDs sort naturally by creation time
+- **Compactness** - 26 characters vs 36 for UUID
+- **URL-safe** - Uses Crockford's Base32 encoding
+- **Timestamp encoded** - First 10 characters encode creation time
+
+### When to use
+
+- Distributed systems requiring time-ordered IDs
+- Applications where database index performance matters
+- When you need both uniqueness and sortability
+
+---
+
 ## `--use-decimal-for-multiple-of`
 
 Uses `Decimal` type for numbers with `multipleOf` constraints to avoid floating-point precision issues.
@@ -319,6 +426,7 @@ datamodel-codegen --input schema.json --output models.py \
 | `email` | `EmailStr` | `str` |
 | `idn-email` | `EmailStr` | `str` |
 | `uuid` | `UUID` | `str` |
+| `ulid` | `ULID` (requires `python-ulid`) | `str` |
 | `uri` | `AnyUrl` | `str` |
 | `binary` | `bytes` | `str` |
 
