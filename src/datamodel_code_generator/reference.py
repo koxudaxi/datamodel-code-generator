@@ -547,7 +547,6 @@ class ModelResolver:  # noqa: PLR0904
         class_name_suffix: str | None = None,
         class_name_affix_scope: ClassNameAffixScope | None = None,
         skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
-        skip_generator_and_affix: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -606,7 +605,6 @@ class ModelResolver:  # noqa: PLR0904
             raise ValueError(msg)
         self.class_name_affix_scope: ClassNameAffixScope = class_name_affix_scope or ClassNameAffixScope.All
         self.skip_affix_for_root: bool = skip_affix_for_root
-        self.skip_generator_and_affix: bool = skip_generator_and_affix
 
         # Incrementally maintained set of reference names for O(1) uniqueness checking
         self._reference_names_cache: set[str] = set()
@@ -1093,10 +1091,6 @@ class ModelResolver:  # noqa: PLR0904
         Returns:
             The name after applying generator and affix (no uniqueness, no singularization).
         """
-        # Honor skip_generator_and_affix for consistency
-        if self.skip_generator_and_affix:
-            return name
-
         # Apply class name generator (custom or default - both provide validation)
         class_name = self.class_name_generator(name)
         # Apply affix (no singularization for GraphQL)
@@ -1114,41 +1108,33 @@ class ModelResolver:  # noqa: PLR0904
         skip_affix: bool = False,  # noqa: FBT001, FBT002
     ) -> ClassName:
         """Generate a unique class name with optional singularization."""
-        # Skip ALL transformations but KEEP uniqueness.
-        # This is used by __replace_duplicate_name_in_module() to preserve exact names.
-        # CRITICAL: reserved_name is NEVER referenced in this branch.
-        if self.skip_generator_and_affix:
-            class_name = name
-            prefix = ""
+        if "." in name and self.treat_dot_as_module is not False:
+            split_name = name.split(".")
+            prefix = ".".join(
+                # TODO: create a validate for class name
+                self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
+                for n in split_name[:-1]
+            )
+            prefix += "."
+            class_name = split_name[-1]
         else:
-            # NOTE: reserved_name check is ONLY evaluated in this else branch
-            if "." in name and self.treat_dot_as_module is not False:
-                split_name = name.split(".")
-                prefix = ".".join(
-                    # TODO: create a validate for class name
-                    self.field_name_resolvers[ModelType.CLASS].get_valid_name(n, ignore_snake_case_field=True)
-                    for n in split_name[:-1]
-                )
-                prefix += "."
-                class_name = split_name[-1]
-            else:
-                prefix = ""
-                class_name = name.replace(".", "_") if "." in name else name
+            prefix = ""
+            class_name = name.replace(".", "_") if "." in name else name
 
-            class_name = self.class_name_generator(class_name)
+        class_name = self.class_name_generator(class_name)
 
-            if singular_name:
-                class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)
+        if singular_name:
+            class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)
 
-            # Apply affix AFTER singularization (skip when model_type is unknown)
-            if not skip_affix:
-                class_name = self._apply_class_name_affix(class_name, model_type=model_type, is_root=is_root)
+        # Apply affix AFTER singularization (skip when model_type is unknown)
+        if not skip_affix:
+            class_name = self._apply_class_name_affix(class_name, model_type=model_type, is_root=is_root)
 
-            # reserved_name check (only in this branch, after all transformations)
-            if unique and reserved_name == class_name:
-                return ClassName(name=f"{prefix}{class_name}", duplicate_name=None)
+        # reserved_name check (after all transformations)
+        if unique and reserved_name == class_name:
+            return ClassName(name=f"{prefix}{class_name}", duplicate_name=None)
 
-        # Uniqueness handling (ALWAYS runs for both branches)
+        # Uniqueness handling
         duplicate_name: str | None = None
         if unique:
             unique_name = self._get_unique_name(class_name, camel=True, model_type=model_type)
