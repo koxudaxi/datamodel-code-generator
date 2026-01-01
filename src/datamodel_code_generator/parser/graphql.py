@@ -147,9 +147,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
             if resolved_type in self.support_graphql_types:  # pragma: no cover
                 self.all_graphql_objects[type_.name] = type_
-                # Determine model_type from resolved_type
                 graphql_model_type = "enum" if resolved_type == graphql.TypeKind.ENUM else "model"
-                # Apply generator + affix via public API (no uniqueness, no singularization)
                 affixed_name = self.model_resolver.get_affixed_name(type_.name, model_type=graphql_model_type)
                 self.references[type_.name] = Reference(
                     path=f"{paths!s}/{resolved_type.value}/{type_.name}",

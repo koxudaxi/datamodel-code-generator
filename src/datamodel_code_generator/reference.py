@@ -593,10 +593,8 @@ class ModelResolver:  # noqa: PLR0904
         # Only use suffixes when explicitly provided via --duplicate-name-suffix
         self.duplicate_name_suffix_map: dict[str, str] = duplicate_name_suffix_map or {}
 
-        # Class name affix configuration with validation
         self.class_name_prefix: str = class_name_prefix or ""
         self.class_name_suffix: str = class_name_suffix or ""
-        # Validate prefix/suffix are valid identifier components
         if self.class_name_prefix and not self.class_name_prefix.isidentifier():
             msg = f"--class-name-prefix '{self.class_name_prefix}' is not a valid Python identifier"
             raise ValueError(msg)
@@ -833,9 +831,6 @@ class ModelResolver:  # noqa: PLR0904
         # For PrimaryFirst strategy, use unique=True for external references
         # so that definitions in the main input file get priority for clean names
         use_unique = self.naming_strategy == NamingStrategy.PrimaryFirst and self._is_external_path(path)
-        # If class name prefix/suffix is configured and scope-dependent, skip affix here
-        # since we don't know the model_type yet. The affix will be applied when add()
-        # is called with the actual model_type.
         has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
         needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
         skip_affix = has_affix_config and needs_scope
@@ -941,23 +936,16 @@ class ModelResolver:  # noqa: PLR0904
     ) -> Reference:
         """Add or update a model reference with the given path and name."""
         joined_path = self.join_path(tuple(path))
-        # Determine if this is root path (ends with '#' without additional fragment)
-        # Examples: "#" or "filename.json#" are root, "filename.json#/defs/Foo" is not
         is_root = joined_path == "#" or (joined_path.endswith("#") and "/" not in joined_path.split("#")[-1])
         reference: Reference | None = self.references.get(joined_path)
         old_ref_name: str | None = reference.name if reference else None
         if reference:
-            # Remember if reference was already loaded before this call
             was_already_loaded = reference.loaded
             if loaded and not reference.loaded:
                 reference.loaded = True
-            # Return early if the reference was already loaded (fully processed with correct affix).
-            # If the reference was created by add_ref() (not loaded) and we have scope-dependent
-            # affix config, we need to continue to apply the correct affix with the now-known model_type.
             has_affix_config = bool(self.class_name_prefix or self.class_name_suffix)
             needs_scope = self.class_name_affix_scope != ClassNameAffixScope.All
             needs_reprocess = has_affix_config and needs_scope and not was_already_loaded
-            # Return early if original_name matches the original_name or the already-transformed name.
             if not needs_reprocess and (
                 not original_name or original_name in {reference.original_name, reference.name}
             ):
@@ -965,7 +953,6 @@ class ModelResolver:  # noqa: PLR0904
         name = original_name
         duplicate_name: str | None = None
         if class_name:
-            # Apply naming strategy before further processing
             name = self._check_parent_scope_option(name, path)
             name = self._apply_full_path_naming(name, path)
 
@@ -1058,11 +1045,9 @@ class ModelResolver:  # noqa: PLR0904
         Returns:
             The name with prefix/suffix applied according to scope rules.
         """
-        # Skip affix for root model only when --class-name is specified
         if is_root and self.skip_affix_for_root:
             return name
 
-        # Check scope
         scope = self.class_name_affix_scope
         is_enum = model_type == "enum"
         should_apply = (
@@ -1091,9 +1076,7 @@ class ModelResolver:  # noqa: PLR0904
         Returns:
             The name after applying generator and affix (no uniqueness, no singularization).
         """
-        # Apply class name generator (custom or default - both provide validation)
         class_name = self.class_name_generator(name)
-        # Apply affix (no singularization for GraphQL)
         return self._apply_class_name_affix(class_name, model_type=model_type, is_root=False)
 
     def get_class_name(  # noqa: PLR0913, PLR0917
@@ -1126,15 +1109,12 @@ class ModelResolver:  # noqa: PLR0904
         if singular_name:
             class_name = get_singular_name(class_name, singular_name_suffix or self.singular_name_suffix)
 
-        # Apply affix AFTER singularization (skip when model_type is unknown)
         if not skip_affix:
             class_name = self._apply_class_name_affix(class_name, model_type=model_type, is_root=is_root)
 
-        # reserved_name check (after all transformations)
         if unique and reserved_name == class_name:
             return ClassName(name=f"{prefix}{class_name}", duplicate_name=None)
 
-        # Uniqueness handling
         duplicate_name: str | None = None
         if unique:
             unique_name = self._get_unique_name(class_name, camel=True, model_type=model_type)
