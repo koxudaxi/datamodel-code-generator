@@ -1133,6 +1133,7 @@ class Parser(ABC, Generic[ParserConfigT]):
             exclude_names={i.alias or i.import_ for m in models for i in m.imports},
             duplicate_name_suffix="Model",
             custom_class_name_generator=(lambda name: name) if self.custom_class_name_generator else None,
+            skip_generator_and_affix=True,
         )
 
         model_names: dict[str, DataModel] = {}
