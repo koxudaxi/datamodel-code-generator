@@ -9,6 +9,7 @@ from __future__ import annotations
 OPTION_DESCRIPTIONS: dict[str, str] = {
     "--additional-imports": "Add custom imports to generated output files.",
     "--aliases": "Apply custom field and class name aliases from JSON file.",
+    "--default-values": "Override field default values from external JSON file.",
     "--all-exports-collision-strategy": "Handle name collisions when exporting recursive module hierarchies.",
     "--all-exports-scope": "Generate __all__ exports for child modules in __init__.py files.",
     "--allof-class-hierarchy": "Controls how allOf schemas are represented in the generated class hierarchy.",

@@ -147,6 +147,7 @@ class ParserConfigDict(TypedDict):
     read_only_write_only_model_type: NotRequired[ReadOnlyWriteOnlyModelType | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
+    default_value_overrides: NotRequired[Mapping[str, Any] | None]
 
 
 class GraphQLParserConfigDict(ParserConfigDict):

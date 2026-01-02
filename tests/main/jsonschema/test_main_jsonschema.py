@@ -29,6 +29,7 @@ from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
     DATA_PATH,
+    DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
     LEGACY_BLACK_SKIP,
@@ -7404,4 +7405,29 @@ def test_x_python_type_union_anyof(output_file: Path) -> None:
         output_path=output_file,
         input_file_type=None,
         assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--default-values"],
+    option_description="""Override field default values from external JSON file.
+
+The `--default-values` option allows specifying default values for fields via a JSON file.
+Supports scoped format (ClassName.field) for hierarchical overrides.""",
+    input_schema="jsonschema/default_values_override.json",
+    cli_args=["--default-values", "default_values/scoped_defaults.json"],
+    golden_output="jsonschema/jsonschema_default_values_override.py",
+)
+def test_main_jsonschema_default_values_override(output_file: Path) -> None:
+    """Test default value overrides from external JSON file."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_values_override.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_default_values_override.py",
+        extra_args=[
+            "--default-values",
+            str(DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json"),
+        ],
     )

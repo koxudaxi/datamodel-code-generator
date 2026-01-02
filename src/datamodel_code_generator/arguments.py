@@ -825,6 +825,18 @@ template_options.add_argument(
     type=Path,
 )
 template_options.add_argument(
+    "--default-values",
+    help="Default value overrides file (JSON). "
+    "Supports hierarchical formats: "
+    "Flat: {'field': value} applies to all occurrences. "
+    "Scoped: {'ClassName.field': value} applies to specific class. "
+    "Priority: scoped > flat. "
+    "Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. "
+    "Required fields remain required unless --use-default is also specified. "
+    "Example: {'User.status': 'active', 'page': 1, 'limit': 10}",
+    type=Path,
+)
+template_options.add_argument(
     "--custom-file-header",
     help="Custom file header",
     type=str,

@@ -897,6 +897,7 @@ class Parser(ABC, Generic[ParserConfigT]):
             class_name_suffix=config.class_name_suffix,
             class_name_affix_scope=config.class_name_affix_scope,
             skip_affix_for_root=config.class_name is not None,
+            default_value_overrides=config.default_value_overrides,
         )
         self.class_name: str | None = config.class_name
         self.wrap_string_literal: bool | None = config.wrap_string_literal

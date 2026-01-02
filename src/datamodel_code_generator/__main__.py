@@ -177,7 +177,7 @@ class Config(BaseModel):
             """Get model fields."""
             return cls.__fields__
 
-    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
+    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", "default_values", mode="before")
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
         """Validate and open file path."""
         if value is None:  # pragma: no cover
@@ -504,6 +504,7 @@ class Config(BaseModel):
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Optional[TextIOBase] = None  # noqa: UP045
+    default_values: Optional[TextIOBase] = None  # noqa: UP045
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
@@ -862,6 +863,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
+    default_value_overrides: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
     result = generate(
@@ -987,6 +989,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
+        default_value_overrides=default_value_overrides,
     )
 
     if output is None and result is not None:  # pragma: no cover
@@ -1189,6 +1192,23 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             return Exit.ERROR
 
+    default_value_overrides: dict[str, Any] | None
+    if config.default_values is None:
+        default_value_overrides = None
+    else:
+        with config.default_values as data:
+            try:
+                default_value_overrides = json.load(data)
+            except json.JSONDecodeError as e:
+                print(f"Unable to load default values mapping: {e}", file=sys.stderr)  # noqa: T201
+                return Exit.ERROR
+        if not isinstance(default_value_overrides, dict):
+            print("Unable to load default values mapping: must be a JSON object", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
+        if not all(isinstance(k, str) for k in default_value_overrides):  # pragma: no cover
+            print("Unable to load default values mapping: all keys must be strings", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR  # pragma: no cover
+
     if config.custom_formatters_kwargs is None:
         custom_formatters_kwargs = None
     else:
@@ -1254,6 +1274,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
             settings_path=config.output,
+            default_value_overrides=default_value_overrides,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201
@@ -1302,7 +1323,9 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         try:
             from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
 
-            return watch_and_regenerate(config, extra_template_data, aliases, custom_formatters_kwargs)
+            return watch_and_regenerate(
+                config, extra_template_data, aliases, custom_formatters_kwargs, default_value_overrides
+            )
         except Exception as e:  # noqa: BLE001
             print(str(e), file=sys.stderr)  # noqa: T201
             return Exit.ERROR
