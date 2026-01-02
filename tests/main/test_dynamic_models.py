@@ -217,13 +217,9 @@ def test_concurrent_same_schema() -> None:
     """Test concurrent access with the same schema."""
     schema = make_object_schema({"name": {"type": "string"}})
     results: list[dict[str, type]] = []
-    errors: list[Exception] = []
 
     def worker() -> None:
-        try:
-            results.append(generate_dynamic_models(schema))
-        except Exception as e:  # noqa: BLE001
-            errors.append(e)
+        results.append(generate_dynamic_models(schema))
 
     threads = [threading.Thread(target=worker) for _ in range(10)]
     for t in threads:
@@ -231,7 +227,6 @@ def test_concurrent_same_schema() -> None:
     for t in threads:
         t.join()
 
-    assert len(errors) == 0
     assert len(results) == 10
     assert all(r is results[0] for r in results)
 
@@ -240,18 +235,13 @@ def test_concurrent_different_schemas() -> None:
     """Test concurrent access with different schemas."""
     schemas = [make_object_schema({f"field{i}": {"type": "string"}}) for i in range(5)]
     results: list[dict[str, type]] = []
-    errors: list[Exception] = []
 
     def worker(schema: dict[str, Any]) -> None:
-        try:
-            results.append(generate_dynamic_models(schema))
-        except Exception as e:  # noqa: BLE001
-            errors.append(e)
+        results.append(generate_dynamic_models(schema))
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(worker, schemas)
 
-    assert len(errors) == 0
     assert len(results) == 5
 
 

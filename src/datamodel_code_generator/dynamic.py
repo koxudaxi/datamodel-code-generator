@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import ast
 import builtins
-import hashlib
 import itertools
 import json
 import sys
@@ -162,12 +161,8 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
     Returns None if the schema is not JSON-serializable.
     """
     try:
-        config_dict = config.model_dump(mode="json", exclude_defaults=True)
-        key_data = {
-            "schema": dict(schema),
-            "config": config_dict,
-        }
-        return hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
+        key_data = {"schema": dict(schema), "config": config.model_dump(mode="json", exclude_defaults=True)}
+        return json.dumps(key_data, sort_keys=True, separators=(",", ":"))
     except (TypeError, ValueError):
         return None
 
