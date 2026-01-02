@@ -89,7 +89,6 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
-    from datamodel_code_generator.validators import ValidatorsConfigType
 
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
 
@@ -837,7 +836,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
-        self.validators: ValidatorsConfigType | None = config.validators
+        self.validators: dict[str, Any] | None = config.validators
 
         if self.validators:
             for model_name, model_config in self.validators.items():

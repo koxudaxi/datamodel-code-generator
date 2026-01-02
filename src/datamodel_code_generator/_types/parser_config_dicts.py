@@ -30,14 +30,6 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import DataTypeManager
-    from datamodel_code_generator.validators import ModelValidators
-
-
-class ValidatorDefinitionDict(TypedDict):
-    field: NotRequired[str]
-    fields: NotRequired[list[str]]
-    function: NotRequired[str]
-    mode: NotRequired[str]
 
 
 class ParserConfigDict(TypedDict):
@@ -51,7 +43,7 @@ class ParserConfigDict(TypedDict):
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
-    validators: NotRequired[dict[str, ModelValidators] | None]
+    validators: NotRequired[dict[str, Any] | None]
     target_python_version: NotRequired[PythonVersion]
     dump_resolve_reference_action: NotRequired[Callable[[Iterable[str]], str] | None]
     validation: NotRequired[bool]

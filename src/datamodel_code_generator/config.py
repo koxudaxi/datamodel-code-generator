@@ -46,7 +46,6 @@ from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
-from datamodel_code_generator.validators import ValidatorsConfigType  # noqa: TC001 - used by Pydantic at runtime
 
 if TYPE_CHECKING:
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -88,7 +87,7 @@ class GenerateConfig(BaseModel):
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
-    validators: ValidatorsConfigType | None = None
+    validators: dict[str, Any] | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -230,7 +229,7 @@ class ParserConfig(BaseModel):
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
-    validators: ValidatorsConfigType | None = None
+    validators: dict[str, Any] | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False

@@ -6,25 +6,8 @@ Provides types for defining custom field validators that can be added to generat
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypedDict
 
-
-class ValidatorDefinition(TypedDict, total=False):
-    """Definition of a single validator."""
-
-    field: str
-    fields: list[str]
-    function: str
-    mode: str
-
-
-class ModelValidators(TypedDict, total=False):
-    """Validators configuration for a single model."""
-
-    validators: list[ValidatorDefinition]
-
-
-ValidatorsConfigType = dict[str, ModelValidators]
+from pydantic import BaseModel, RootModel
 
 
 class ValidatorMode(str, Enum):
@@ -34,3 +17,22 @@ class ValidatorMode(str, Enum):
     AFTER = "after"
     WRAP = "wrap"
     PLAIN = "plain"
+
+
+class ValidatorDefinition(BaseModel):
+    """Definition of a single validator."""
+
+    field: str | None = None
+    fields: list[str] | None = None
+    function: str
+    mode: ValidatorMode = ValidatorMode.AFTER
+
+
+class ModelValidators(BaseModel):
+    """Validators configuration for a single model."""
+
+    validators: list[ValidatorDefinition]
+
+
+class ValidatorsConfig(RootModel[dict[str, ModelValidators]]):
+    """Root model for validators configuration."""

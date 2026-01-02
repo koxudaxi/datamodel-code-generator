@@ -99,7 +99,6 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
-    from datamodel_code_generator.validators import ValidatorsConfigType
 
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
@@ -902,7 +901,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
-    validators: ValidatorsConfigType | None = None,
+    validators: dict[str, Any] | None = None,
     default_value_overrides: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
@@ -1259,12 +1258,28 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    validators_config, error = _load_json_config(
-        config.validators, "validators configuration", _validate_string_key_dict
-    )
-    if error:
-        print(error, file=sys.stderr)  # noqa: T201
-        return Exit.ERROR
+    validators_config: dict[str, Any] | None = None
+    if config.validators is not None:
+        from pydantic import ValidationError  # noqa: PLC0415
+
+        from datamodel_code_generator.validators import ValidatorsConfig  # noqa: PLC0415
+
+        with config.validators as data:
+            try:
+                raw_config = json.load(data)
+            except json.JSONDecodeError as e:
+                print(f"Unable to load validators configuration: {e}", file=sys.stderr)  # noqa: T201
+                return Exit.ERROR
+        try:
+            validated = ValidatorsConfig.model_validate(raw_config)
+            # Convert back to dict for downstream usage
+            validators_config = {
+                model_name: model_validators.model_dump(mode="json")
+                for model_name, model_validators in validated.root.items()
+            }
+        except ValidationError as e:
+            print(f"Invalid validators configuration: {e}", file=sys.stderr)  # noqa: T201
+            return Exit.ERROR
 
     if config.check:
         config_output = cast("Path", config.output)
