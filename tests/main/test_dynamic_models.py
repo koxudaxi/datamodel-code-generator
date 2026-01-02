@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 import pydantic
 import pytest
+from inline_snapshot import snapshot
 
 from datamodel_code_generator import (
     DataModelType,
@@ -53,6 +54,26 @@ def make_config(
     )
 
 
+def generate_and_validate(
+    schema: dict[str, Any],
+    validations: dict[str, dict[str, Any]],
+    *,
+    config: GenerateConfig | None = None,
+) -> dict[str, Any]:
+    """Generate dynamic models and validate data, returning model_dump results.
+
+    Args:
+        schema: JSON Schema or OpenAPI schema as dict.
+        validations: Dict mapping model name to input data to validate.
+        config: Optional GenerateConfig for customization.
+
+    Returns:
+        Dict mapping model name to model_dump(mode='json') of validated instance.
+    """
+    models = generate_dynamic_models(schema, config=config)
+    return {name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()}
+
+
 @pytest.fixture(autouse=True)
 def _setup_and_clear_cache() -> None:
     """Rebuild GenerateConfig and clear cache before each test."""
@@ -63,44 +84,30 @@ def _setup_and_clear_cache() -> None:
 def test_simple_model() -> None:
     """Test generating a simple model and validating data."""
     schema = make_object_schema({"name": {"type": "string"}, "age": {"type": "integer"}}, required=["name"])
-    models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Model"]
-
-    Model = models["Model"]
-    instance = Model.model_validate({"name": "John", "age": 30})
-    assert instance.name == "John"
-    assert instance.age == 30
-
-    instance_optional = Model.model_validate({"name": "Jane"})
-    assert instance_optional.name == "Jane"
-    assert instance_optional.age is None
+    assert generate_and_validate(schema, {"Model": {"name": "John", "age": 30}}) == snapshot({
+        "Model": {"name": "John", "age": 30}
+    })
+    assert generate_and_validate(schema, {"Model": {"name": "Jane"}}) == snapshot({
+        "Model": {"name": "Jane", "age": None}
+    })
 
 
 def test_nested_models() -> None:
     """Test generating nested models and validating nested data."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
-    models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Model", "User"]
-
-    Model = models["Model"]
-    instance = Model.model_validate({"user": {"name": "Alice"}})
-    assert instance.user.name == "Alice"
+    assert generate_and_validate(schema, {"Model": {"user": {"name": "Alice"}}}) == snapshot({
+        "Model": {"user": {"name": "Alice"}}
+    })
 
 
 def test_enum_model() -> None:
     """Test generating model with enum and validating enum values."""
     schema = make_object_schema({"status": {"type": "string", "enum": ["active", "inactive"]}})
+    assert generate_and_validate(schema, {"Model": {"status": "active"}}) == snapshot({"Model": {"status": "active"}})
+
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Model", "Status"]
-
-    Model = models["Model"]
-    Status = models["Status"]
-    instance = Model.model_validate({"status": "active"})
-    assert instance.status == Status.active
-    assert instance.status.value == "active"
-
     with pytest.raises(pydantic.ValidationError):
-        Model.model_validate({"status": "invalid"})
+        models["Model"].model_validate({"status": "invalid"})
 
 
 def test_circular_reference() -> None:
@@ -117,16 +124,20 @@ def test_circular_reference() -> None:
         },
         "$ref": "#/$defs/Node",
     }
-    models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Model", "Node", "RootModel"]
-
-    Node = models["Node"]
-    data = {"value": "root", "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}]}
-    instance = Node.model_validate(data)
-    assert instance.value == "root"
-    assert len(instance.children) == 2
-    assert instance.children[0].value == "child1"
-    assert instance.children[1].value == "child2"
+    assert generate_and_validate(
+        schema,
+        {
+            "Node": {
+                "value": "root",
+                "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}],
+            }
+        },
+    ) == snapshot({
+        "Node": {
+            "value": "root",
+            "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}],
+        }
+    })
 
 
 def test_allof_inheritance() -> None:
@@ -140,13 +151,9 @@ def test_allof_inheritance() -> None:
         },
         "$ref": "#/$defs/Extended",
     }
-    models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Base", "Extended", "Model", "RootModel"]
-
-    Extended = models["Extended"]
-    instance = Extended.model_validate({"id": 42, "name": "test"})
-    assert instance.id == 42
-    assert instance.name == "test"
+    assert generate_and_validate(schema, {"Extended": {"id": 42, "name": "test"}}) == snapshot({
+        "Extended": {"id": 42, "name": "test"}
+    })
 
 
 def test_validation_error() -> None:
@@ -267,30 +274,25 @@ def test_concurrent_different_schemas() -> None:
 def test_numeric_constraints() -> None:
     """Test models with numeric constraints validate properly."""
     schema = make_object_schema({"age": {"type": "integer", "minimum": 0, "maximum": 150}})
+    assert generate_and_validate(schema, {"Model": {"age": 30}}) == snapshot({"Model": {"age": 30}})
+
     models = generate_dynamic_models(schema)
-    Model = models["Model"]
-
-    instance = Model.model_validate({"age": 30})
-    assert instance.age == 30
-
     with pytest.raises(pydantic.ValidationError):
-        Model.model_validate({"age": -1})
-
+        models["Model"].model_validate({"age": -1})
     with pytest.raises(pydantic.ValidationError):
-        Model.model_validate({"age": 200})
+        models["Model"].model_validate({"age": 200})
 
 
 def test_string_constraints() -> None:
     """Test models with string constraints validate properly."""
     schema = make_object_schema({"email": {"type": "string", "pattern": r"^[\w\.-]+@[\w\.-]+\.\w+$"}})
+    assert generate_and_validate(schema, {"Model": {"email": "test@example.com"}}) == snapshot({
+        "Model": {"email": "test@example.com"}
+    })
+
     models = generate_dynamic_models(schema)
-    Model = models["Model"]
-
-    instance = Model.model_validate({"email": "test@example.com"})
-    assert instance.email == "test@example.com"
-
     with pytest.raises(pydantic.ValidationError):
-        Model.model_validate({"email": "invalid-email"})
+        models["Model"].model_validate({"email": "invalid-email"})
 
 
 def test_explicit_input_file_type() -> None:
@@ -316,13 +318,9 @@ def test_openapi_auto_detection() -> None:
             }
         },
     }
-    models = generate_dynamic_models(openapi_schema)
-    assert sorted(models.keys()) == ["User"]
-
-    User = models["User"]
-    instance = User.model_validate({"id": 1, "name": "Alice"})
-    assert instance.id == 1
-    assert instance.name == "Alice"
+    assert generate_and_validate(openapi_schema, {"User": {"id": 1, "name": "Alice"}}) == snapshot({
+        "User": {"id": 1, "name": "Alice"}
+    })
 
 
 def test_config_with_auto_input_type() -> None:
@@ -401,21 +399,17 @@ def test_multi_module_output() -> None:
         },
         "$ref": "#/$defs/Order",
     }
-    models = generate_dynamic_models(schema, config=make_config(module_split_mode=ModuleSplitMode.Single))
-    assert "User" in models
-    assert "Order" in models
-
-    User = models["User"]
-    Order = models["Order"]
-
-    user = User.model_validate({"name": "Alice", "age": 25})
-    assert user.name == "Alice"
-    assert user.age == 25
-
-    order = Order.model_validate({"id": 1, "user": {"name": "Bob", "age": 30}})
-    assert order.id == 1
-    assert order.user.name == "Bob"
-    assert order.user.age == 30
+    assert generate_and_validate(
+        schema,
+        {
+            "User": {"name": "Alice", "age": 25},
+            "Order": {"id": 1, "user": {"name": "Bob", "age": 30}},
+        },
+        config=make_config(module_split_mode=ModuleSplitMode.Single),
+    ) == snapshot({
+        "User": {"name": "Alice", "age": 25},
+        "Order": {"id": 1, "user": {"name": "Bob", "age": 30}},
+    })
 
 
 def test_generated_code_matches_expected() -> None:
@@ -446,15 +440,13 @@ def test_generated_code_matches_expected() -> None:
     assert isinstance(result, str)
     assert_output(result, EXPECTED_PATH / "complex_schema.py")
 
-    models = generate_dynamic_models(schema)
-    Person = models["Person"]
-    Address = models["Address"]
-
-    person = Person.model_validate({"name": "John", "address": {"street": "123 Main St", "city": "NYC"}})
-    assert person.name == "John"
-    assert person.address.street == "123 Main St"
-    assert person.address.city == "NYC"
-
-    address = Address.model_validate({"street": "456 Oak Ave", "city": "LA"})
-    assert address.street == "456 Oak Ave"
-    assert address.city == "LA"
+    assert generate_and_validate(
+        schema,
+        {
+            "Person": {"name": "John", "address": {"street": "123 Main St", "city": "NYC"}},
+            "Address": {"street": "456 Oak Ave", "city": "LA"},
+        },
+    ) == snapshot({
+        "Person": {"name": "John", "address": {"street": "123 Main St", "city": "NYC"}},
+        "Address": {"street": "456 Oak Ave", "city": "LA"},
+    })
