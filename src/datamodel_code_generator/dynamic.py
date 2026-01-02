@@ -6,7 +6,15 @@ or OpenAPI schemas.
 
 from __future__ import annotations
 
+import builtins
+import hashlib
+import json
+import threading
+from enum import Enum
 from typing import TYPE_CHECKING, Any
+
+import pydantic
+from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -15,14 +23,12 @@ if TYPE_CHECKING:
 
 
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
-_dynamic_models_lock: Any = None
-_dynamic_models_lock_init: Any = None
+_dynamic_models_lock: threading.Lock | None = None
+_dynamic_models_lock_init: threading.Lock | None = None
 
 
-def _get_dynamic_models_lock() -> Any:
+def _get_dynamic_models_lock() -> threading.Lock:
     """Get or create the lock for dynamic models cache (thread-safe lazy initialization)."""
-    import threading  # noqa: PLC0415
-
     global _dynamic_models_lock, _dynamic_models_lock_init  # noqa: PLW0603
     if _dynamic_models_lock_init is None:
         _dynamic_models_lock_init = threading.Lock()
@@ -38,9 +44,6 @@ def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | 
 
     Returns None if the schema is not JSON-serializable.
     """
-    import hashlib  # noqa: PLC0415
-    import json  # noqa: PLC0415
-
     try:
         config_dict = config.model_dump(mode="json", exclude_defaults=True)
         key_data = {
@@ -90,12 +93,6 @@ def generate_dynamic_models(
         >>> user.model_dump()
         {'name': 'John', 'age': 30}
     """
-    import builtins  # noqa: PLC0415
-    from enum import Enum  # noqa: PLC0415
-
-    import pydantic  # noqa: PLC0415
-    from pydantic import BaseModel  # noqa: PLC0415
-
     from datamodel_code_generator import Error, generate, is_openapi  # noqa: PLC0415
     from datamodel_code_generator.config import GenerateConfig as GenerateConfigClass  # noqa: PLC0415
     from datamodel_code_generator.enums import DataModelType, InputFileType  # noqa: PLC0415
