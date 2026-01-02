@@ -739,6 +739,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             "openapi_scopes": config.openapi_scopes,
             "include_path_parameters": config.include_path_parameters,
             "use_status_code_in_response_name": config.use_status_code_in_response_name,
+            "openapi_include_paths": config.openapi_include_paths,
             **additional_options,
         }
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
@@ -879,7 +880,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
         file.close()
 
-    if defer_formatting and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters):
+    if (
+        defer_formatting
+        and config.formatters
+        and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters)
+    ):
         code_formatter = CodeFormatter(
             config.target_python_version,
             config.settings_path,

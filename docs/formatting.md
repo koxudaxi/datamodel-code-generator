@@ -6,6 +6,14 @@ Generated code is automatically formatted using code formatters. By default, `bl
 
 ## 🎯 Default Behavior
 
+!!! warning "Future Change"
+    In a future version, the default formatters will change from `black` and `isort` to `ruff`.
+    To prepare for this change, consider switching to ruff now using `--formatters ruff-format ruff-check`.
+
+    **CLI users**: To suppress this warning, use `--disable-warnings` or explicitly specify `--formatters black isort`.
+
+    **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
+
 ```bash
 datamodel-codegen --input schema.yaml --output model.py
 ```
@@ -27,6 +35,12 @@ This runs the following formatters in order:
 ### ⚡ Using ruff instead of black
 
 [Ruff](https://github.com/astral-sh/ruff) is a fast Python linter and formatter. To use it:
+
+!!! note "Installation Required"
+    ruff is an optional dependency. Install it with:
+    ```bash
+    pip install 'datamodel-code-generator[ruff]'
+    ```
 
 ```bash
 # Use ruff for both linting and formatting

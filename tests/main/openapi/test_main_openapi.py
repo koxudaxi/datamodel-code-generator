@@ -4707,3 +4707,63 @@ def test_main_openapi_use_default_with_default_values_parameters(output_file: Pa
             "parameters",
         ],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--openapi-include-paths"],
+    option_description="""Filter OpenAPI paths to include in model generation.
+
+The `--openapi-include-paths` flag allows filtering which paths are processed.""",
+    input_schema="openapi/body_and_parameters.yaml",
+    cli_args=["--openapi-scopes", "paths", "schemas", "--openapi-include-paths", "/pets*"],
+    golden_output="openapi/openapi_include_paths/pets_only.py",
+)
+def test_main_openapi_include_paths(output_file: Path) -> None:
+    """Filter OpenAPI paths to include in model generation.
+
+    The `--openapi-include-paths` flag allows filtering which paths are processed.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "openapi_include_paths" / "pets_only.py",
+        extra_args=["--openapi-scopes", "paths", "schemas", "--openapi-include-paths", "/pets*"],
+    )
+
+
+def test_main_openapi_include_paths_without_leading_slash(output_file: Path) -> None:
+    """Test path pattern matching works without leading slash."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "body_and_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "openapi_include_paths" / "pets_only.py",
+        extra_args=["--openapi-scopes", "paths", "schemas", "--openapi-include-paths", "pets*"],
+    )
+
+
+def test_main_openapi_include_paths_warning_without_paths_scope() -> None:
+    """Warn when --openapi-include-paths used without paths scope."""
+    import warnings
+
+    from datamodel_code_generator.__main__ import main
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        main([
+            "--input",
+            str(OPEN_API_DATA_PATH / "body_and_parameters.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--openapi-scopes",
+            "schemas",
+            "--openapi-include-paths",
+            "/pets*",
+        ])
+        warning_messages = [str(warning.message) for warning in w]
+        assert any(
+            "--openapi-include-paths has no effect without --openapi-scopes paths" in msg for msg in warning_messages
+        )

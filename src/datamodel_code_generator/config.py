@@ -30,7 +30,6 @@ from datamodel_code_generator.enums import (
     TargetPydanticVersion,
 )
 from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
     DateClassType,
     DatetimeClassType,
     Formatter,
@@ -140,6 +139,7 @@ class GenerateConfig(BaseModel):
     model_extra_keys_without_x_prefix: set[str] | None = None
     openapi_scopes: list[OpenAPIScope] | None = None
     include_path_parameters: bool = False
+    openapi_include_paths: list[str] | None = None
     graphql_scopes: list[GraphQLScope] | None = None
     wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
@@ -185,7 +185,7 @@ class GenerateConfig(BaseModel):
     no_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    formatters: list[Formatter] | None = None
     settings_path: Path | None = None
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None
@@ -319,7 +319,7 @@ class ParserConfig(BaseModel):
     no_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    formatters: list[Formatter] | None = None
     defer_formatting: bool = False
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None
@@ -350,6 +350,7 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
     openapi_scopes: list[OpenAPIScope] | None = None
     include_path_parameters: bool = False
     use_status_code_in_response_name: bool = False
+    openapi_include_paths: list[str] | None = None
 
 
 class ParseConfig(BaseModel):

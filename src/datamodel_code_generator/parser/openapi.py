@@ -6,6 +6,7 @@ specifications, including paths, operations, parameters, and request/response bo
 
 from __future__ import annotations
 
+import fnmatch
 import re
 from collections import defaultdict
 from contextlib import nullcontext
@@ -208,6 +209,12 @@ class OpenAPIParser(JsonSchemaParser):
         self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]
         self.include_path_parameters: bool = self.config.include_path_parameters
         self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name
+        self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths
+        if self.openapi_include_paths and OpenAPIScope.Paths not in self.open_api_scopes:
+            warn(
+                "--openapi-include-paths has no effect without --openapi-scopes paths",
+                stacklevel=2,
+            )
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
@@ -338,6 +345,25 @@ class OpenAPIParser(JsonSchemaParser):
         self.resolve_ref(schema.ref)
         return self.get_ref_data_type(schema.ref)
 
+    def _normalize_path(self, path: str) -> str:  # noqa: PLR6301
+        """Normalize path for consistent matching.
+
+        Note: This is an instance method (not static) due to the snooper_to_methods
+        class decorator which does not preserve staticmethod descriptors.
+        """
+        if not path.startswith("/"):
+            path = f"/{path}"
+        return path
+
+    def _matches_path_pattern(self, path: str) -> bool:
+        """Check if path matches any of the include patterns."""
+        if not self.openapi_include_paths:
+            return True
+        normalized_path = self._normalize_path(path)
+        return any(
+            fnmatch.fnmatch(normalized_path, self._normalize_path(pattern)) for pattern in self.openapi_include_paths
+        )
+
     def _process_path_items(  # noqa: PLR0913
         self,
         items: dict[str, dict[str, Any]],
@@ -347,10 +373,13 @@ class OpenAPIParser(JsonSchemaParser):
         security: list[dict[str, list[str]]] | None,
         *,
         strip_leading_slash: bool = True,
+        apply_path_filter: bool = True,
     ) -> None:
         """Process path or webhook items with operations."""
         scope_path = [*base_path, f"#/{scope_name}"]
         for item_name, methods_ in items.items():
+            if apply_path_filter and not self._matches_path_pattern(item_name):
+                continue
             item_ref = methods_.get("$ref")
             if item_ref:
                 methods = self.get_ref_model(item_ref)
@@ -740,7 +769,9 @@ class OpenAPIParser(JsonSchemaParser):
 
             if OpenAPIScope.Webhooks in self.open_api_scopes:
                 webhooks: dict[str, dict[str, Any]] = specification.get("webhooks", {})
-                self._process_path_items(webhooks, path_parts, "webhooks", [], security, strip_leading_slash=False)
+                self._process_path_items(
+                    webhooks, path_parts, "webhooks", [], security, strip_leading_slash=False, apply_path_filter=False
+                )
 
             if OpenAPIScope.RequestBodies in self.open_api_scopes:
                 request_bodies: dict[str, Any] = specification.get("components", {}).get("requestBodies", {})

@@ -136,7 +136,7 @@ class ParserConfigDict(TypedDict):
     no_alias: NotRequired[bool]
     use_frozen_field: NotRequired[bool]
     use_default_factory_for_optional_nested_models: NotRequired[bool]
-    formatters: NotRequired[list[Formatter]]
+    formatters: NotRequired[list[Formatter] | None]
     defer_formatting: NotRequired[bool]
     parent_scoped_naming: NotRequired[bool]
     naming_strategy: NotRequired[NamingStrategy | None]
@@ -163,6 +163,7 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
+    openapi_include_paths: NotRequired[list[str] | None]
 
 
 ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict

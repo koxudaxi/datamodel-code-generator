@@ -477,6 +477,27 @@ class JsonSchemaObject(BaseModel):
                 schema_affecting_fields |= {"extras"}
         return bool(schema_affecting_fields)
 
+    @cached_property
+    def is_ref_with_nullable_only(self) -> bool:
+        """Check if schema has $ref with only nullable: true (no other schema-affecting keywords).
+
+        This is used to avoid creating duplicate models when a $ref is combined
+        with nullable: true. In such cases, the reference should be used directly
+        with Optional type annotation instead of merging schemas.
+        """
+        if not self.ref or self.nullable is not True:
+            return False
+        other_fields = get_fields_set(self) - {"ref", "nullable"} - self.__metadata_only_fields__ - {"extras"}
+        if other_fields:
+            return False
+        if self.extras:
+            schema_affecting_extras = {
+                k for k in self.extras if k not in self.__metadata_only_fields__ and not k.startswith("x-")
+            }
+            if schema_affecting_extras:
+                return False
+        return True
+
 
 @lru_cache
 def get_ref_type(ref: str) -> JSONReference:
@@ -1811,7 +1832,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         if ref_value is None:
             return None  # pragma: no cover
 
-        if ref_item.has_ref_with_schema_keywords:
+        if ref_item.has_ref_with_schema_keywords and not ref_item.is_ref_with_nullable_only:
             ref_schema = self._merge_ref_with_schema(ref_item)
         else:
             ref_schema = self._load_ref_schema_object(ref_value)
@@ -1897,12 +1918,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         target_attribute_name: str,
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
-        base_object = model_dump(obj, exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
+        base_object = model_dump(obj, exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if target_attribute.ref:
-                if target_attribute.has_ref_with_schema_keywords:
+                if target_attribute.has_ref_with_schema_keywords and not target_attribute.is_ref_with_nullable_only:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
                     combined_schemas.append(
                         model_validate(
@@ -2652,12 +2673,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             dict_key=key_type,
         )
 
-    def _should_create_type_alias_for_title(self, item: JsonSchemaObject, name: str) -> bool:
+    def _should_create_type_alias_for_title(  # noqa: PLR0911
+        self, item: JsonSchemaObject, name: str
+    ) -> bool:
         """Check if a type alias should be created for an inline type with title.
 
         When use_title_as_name is enabled and the item has a title, certain inline types
-        (array, dict, oneOf/anyOf unions, enum as literal) should create a type alias
-        instead of being inlined.
+        (array, dict, oneOf/anyOf unions, enum as literal, primitive types) should create
+        a type alias instead of being inlined.
         """
         if not (self.use_title_as_name and item.title):
             return False
@@ -2681,11 +2704,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             and isinstance(item.additionalProperties, JsonSchemaObject)
         ):
             return True
-        return bool(
+        if item.patternProperties:
+            return True
+        if item.propertyNames:
+            return True
+        if (
             item.enum
             and not self.ignore_enum_constraints
             and self.should_parse_enum_as_literal(item, property_name=name)
+        ):
+            return True
+        is_primitive = (
+            item.type
+            and not item.is_array
+            and not item.is_object
+            and not item.anyOf
+            and not item.oneOf
+            and not item.allOf
+            and not item.ref
+            and not (item.enum and not self.ignore_enum_constraints)
         )
+        return bool(is_primitive)
 
     def parse_item(  # noqa: PLR0911, PLR0912, PLR0914
         self,
@@ -2716,6 +2755,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 item,
                 root_type_path,
             )
+        if item.is_ref_with_nullable_only and item.ref:
+            ref_data_type = self.get_ref_data_type(item.ref)
+            if self.strict_nullable:
+                return self.data_type(data_types=[ref_data_type], is_optional=True)
+            return ref_data_type
         if item.has_ref_with_schema_keywords:
             item = self._merge_ref_with_schema(item)
         if item.ref:
@@ -2779,7 +2823,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 python_type_flags = self._get_python_type_flags(item)
                 dict_flags = python_type_flags or {"is_dict": True}
                 return self.data_type(
-                    data_types=[self.parse_item(name, item.additionalProperties, object_path)],
+                    data_types=[
+                        self.parse_item(
+                            name, item.additionalProperties, get_special_path("additionalProperties", object_path)
+                        )
+                    ],
                     **dict_flags,
                 )
             return self.data_type_manager.get_data_type(
@@ -2997,7 +3045,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             python_type_flags = self._get_python_type_flags(obj)
             dict_flags = python_type_flags or {"is_dict": True}
             data_type = self.data_type(
-                data_types=[self.parse_item(name, obj.additionalProperties, path)],
+                data_types=[
+                    self.parse_item(name, obj.additionalProperties, get_special_path("additionalProperties", path))
+                ],
                 **dict_flags,
             )
         elif obj.enum and not self.ignore_enum_constraints:
@@ -3539,7 +3589,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         path: list[str],
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
-        if obj.has_ref_with_schema_keywords:
+        if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             obj = self._merge_ref_with_schema(obj)
 
         if obj.is_array:

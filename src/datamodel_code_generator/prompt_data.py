@@ -80,6 +80,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--no-use-specialized-enum": "Disable specialized Enum classes for Python 3.11+ code generation.",
     "--no-use-standard-collections": "Use typing.Dict/List instead of built-in dict/list for container types.",
     "--no-use-union-operator": "Use Union[X, Y] / Optional[X] instead of X | Y union operator.",
+    "--openapi-include-paths": "Filter OpenAPI paths to include in model generation.",
     "--openapi-scopes": "Specify OpenAPI scopes to generate (schemas, paths, parameters).",
     "--original-field-name-delimiter": "Specify delimiter for original field names when using snake-case conversion.",
     "--output": "Specify the destination path for generated Python code.",

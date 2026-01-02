@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from pathlib import Path
 from unittest import mock
 
@@ -48,7 +49,11 @@ def test_format_code_with_skip_string_normalization(
 ) -> None:
     """Test code formatting with skip string normalization option."""
     monkeypatch.chdir(tmp_path)
-    formatter = CodeFormatter(PythonVersionMin, skip_string_normalization=skip_string_normalization)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        skip_string_normalization=skip_string_normalization,
+        formatters=[Formatter.BLACK, Formatter.ISORT],
+    )
 
     formatted_code = formatter.format_code("a = 'b'")
 
@@ -61,6 +66,7 @@ def test_format_code_un_exist_custom_formatter() -> None:
         _ = CodeFormatter(
             PythonVersionMin,
             custom_formatters=[UN_EXIST_FORMATTER],
+            formatters=[Formatter.BLACK, Formatter.ISORT],
         )
 
 
@@ -70,6 +76,7 @@ def test_format_code_invalid_formatter_name() -> None:
         _ = CodeFormatter(
             PythonVersionMin,
             custom_formatters=[WRONG_FORMATTER],
+            formatters=[Formatter.BLACK, Formatter.ISORT],
         )
 
 
@@ -79,6 +86,7 @@ def test_format_code_is_not_subclass() -> None:
         _ = CodeFormatter(
             PythonVersionMin,
             custom_formatters=[NOT_SUBCLASS_FORMATTER],
+            formatters=[Formatter.BLACK, Formatter.ISORT],
         )
 
 
@@ -88,6 +96,7 @@ def test_format_code_with_custom_formatter_without_kwargs(tmp_path: Path, monkey
     formatter = CodeFormatter(
         PythonVersionMin,
         custom_formatters=[ADD_COMMENT_FORMATTER],
+        formatters=[Formatter.BLACK, Formatter.ISORT],
     )
 
     formatted_code = formatter.format_code("x = 1\ny = 2")
@@ -102,6 +111,7 @@ def test_format_code_with_custom_formatter_with_kwargs(tmp_path: Path, monkeypat
         PythonVersionMin,
         custom_formatters=[ADD_LICENSE_FORMATTER],
         custom_formatters_kwargs={"license_file": EXAMPLE_LICENSE_FILE},
+        formatters=[Formatter.BLACK, Formatter.ISORT],
     )
 
     formatted_code = formatter.format_code("x = 1\ny = 2")
@@ -128,6 +138,7 @@ def test_format_code_with_two_custom_formatters(tmp_path: Path, monkeypatch: pyt
             ADD_LICENSE_FORMATTER,
         ],
         custom_formatters_kwargs={"license_file": EXAMPLE_LICENSE_FILE},
+        formatters=[Formatter.BLACK, Formatter.ISORT],
     )
 
     formatted_code = formatter.format_code("x = 1\ny = 2")
@@ -190,7 +201,9 @@ def test_settings_path_with_existing_file(tmp_path: Path) -> None:
     existing_file = tmp_path / "existing.py"
     existing_file.write_text("", encoding="utf-8")
 
-    formatter = CodeFormatter(PythonVersionMin, settings_path=existing_file)
+    formatter = CodeFormatter(
+        PythonVersionMin, settings_path=existing_file, formatters=[Formatter.BLACK, Formatter.ISORT]
+    )
 
     assert formatter.settings_path == str(tmp_path)
 
@@ -201,7 +214,9 @@ def test_settings_path_with_nonexistent_file(tmp_path: Path) -> None:
     pyproject.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
     nonexistent_file = tmp_path / "nonexistent.py"
 
-    formatter = CodeFormatter(PythonVersionMin, settings_path=nonexistent_file)
+    formatter = CodeFormatter(
+        PythonVersionMin, settings_path=nonexistent_file, formatters=[Formatter.BLACK, Formatter.ISORT]
+    )
 
     assert formatter.settings_path == str(tmp_path)
 
@@ -212,7 +227,9 @@ def test_settings_path_with_deeply_nested_nonexistent_path(tmp_path: Path) -> No
     pyproject.write_text("[tool.black]\nline-length = 60\n", encoding="utf-8")
     nested_path = tmp_path / "a" / "b" / "c" / "nonexistent.py"
 
-    formatter = CodeFormatter(PythonVersionMin, settings_path=nested_path)
+    formatter = CodeFormatter(
+        PythonVersionMin, settings_path=nested_path, formatters=[Formatter.BLACK, Formatter.ISORT]
+    )
 
     assert formatter.settings_path == str(tmp_path)
 
@@ -338,3 +355,26 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         check=False,
         cwd=mock.ANY,
     )
+
+
+def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that FutureWarning is emitted when formatters is None (default)."""
+    monkeypatch.chdir(tmp_path)
+    with pytest.warns(FutureWarning, match="default formatters"):
+        CodeFormatter(PythonVersionMin)
+
+
+def test_code_formatter_no_warning_when_formatters_explicit(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that no warning is emitted when formatters is explicitly specified."""
+    monkeypatch.chdir(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        CodeFormatter(PythonVersionMin, formatters=[Formatter.BLACK, Formatter.ISORT])
+
+
+def test_code_formatter_no_warning_when_formatters_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that no warning is emitted when formatters is empty list."""
+    monkeypatch.chdir(tmp_path)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        CodeFormatter(PythonVersionMin, formatters=[])

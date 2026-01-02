@@ -2736,6 +2736,25 @@ The `--type-mappings` flag configures the code generation behavior.
 
 Replace schema model types with custom Python types via JSON mapping.
 
+This option is useful for importing models from external libraries (like `geojson-pydantic`)
+instead of generating them.
+
+**Override Formats:**
+
+| Format | Description |
+|--------|-------------|
+| `{"ModelName": "package.Type"}` | Model-level: Skip generating `ModelName` and import from `package` |
+| `{"Model.field": "package.Type"}` | Scoped: Override only specific field in specific model |
+
+**Common Use Cases:**
+
+| Use Case | Example Override |
+|----------|------------------|
+| GeoJSON types | `{"Feature": "geojson_pydantic.Feature"}` |
+| Custom datetime | `{"Timestamp": "pendulum.DateTime"}` |
+| MongoDB ObjectId | `{"ObjectId": "bson.ObjectId"}` |
+| Custom validators | `{"Email": "my_app.types.ValidatedEmail"}` |
+
 !!! tip "Usage"
 
     ```bash
@@ -2743,6 +2762,11 @@ Replace schema model types with custom Python types via JSON mapping.
     ```
 
     1. :material-arrow-left: `--type-overrides` - the option documented here
+
+!!! note "Model-level overrides skip generation"
+    When you specify a model-level override (without a dot in the key), the generator will
+    **skip generating that model entirely** and import it from the specified package instead.
+
 
 ??? example "Examples"
 
@@ -4173,6 +4197,8 @@ generates TypeAliasType, and for Python 3.12+, it uses the 'type' statement
 syntax. This feature is experimental.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
+
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
 !!! tip "Usage"
 

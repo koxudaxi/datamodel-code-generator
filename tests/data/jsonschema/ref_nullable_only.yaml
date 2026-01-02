@@ -1,0 +1,19 @@
+$schema: "http://json-schema.org/draft-07/schema#"
+definitions:
+  User:
+    type: object
+    properties:
+      name:
+        type: string
+    required:
+      - name
+type: object
+properties:
+  user_a:
+    $ref: "#/definitions/User"
+    nullable: true
+  user_b:
+    $ref: "#/definitions/User"
+    nullable: true
+  user_c:
+    $ref: "#/definitions/User"

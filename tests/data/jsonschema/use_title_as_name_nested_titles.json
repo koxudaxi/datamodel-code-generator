@@ -1,0 +1,83 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+        "Foo": {
+            "type": "object",
+            "properties": {
+                "array": {
+                    "title": "MyArray",
+                    "type": "array",
+                    "items": {
+                        "title": "MyArrayItem",
+                        "type": "string"
+                    }
+                },
+                "object": {
+                    "title": "MyObject",
+                    "type": "object",
+                    "additionalProperties": {
+                        "title": "MyObjectProp",
+                        "type": "string"
+                    }
+                },
+                "oneOf": {
+                    "title": "MyOneOf",
+                    "oneOf": [
+                        {
+                            "title": "MyOneOfBranch",
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        }
+                    ]
+                },
+                "anyOf": {
+                    "title": "MyAnyOf",
+                    "anyOf": [
+                        {
+                            "title": "MyAnyOfBranch",
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ]
+                },
+                "nestedArray": {
+                    "title": "MyNestedArray",
+                    "type": "array",
+                    "items": {
+                        "title": "MyNestedArrayItem",
+                        "type": "array",
+                        "items": {
+                            "title": "MyDeepItem",
+                            "type": "integer"
+                        }
+                    }
+                },
+                "patternObj": {
+                    "title": "MyPatternObj",
+                    "type": "object",
+                    "patternProperties": {
+                        "^S_": {
+                            "title": "MyPatternValue",
+                            "type": "string"
+                        }
+                    }
+                },
+                "propNamesObj": {
+                    "title": "MyPropNamesObj",
+                    "type": "object",
+                    "propertyNames": {
+                        "pattern": "^[a-z]+$"
+                    },
+                    "additionalProperties": {
+                        "title": "MyPropValue",
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+    }
+}

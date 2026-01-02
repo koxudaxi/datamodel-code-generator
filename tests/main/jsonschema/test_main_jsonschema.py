@@ -3105,6 +3105,56 @@ def test_jsonschema_use_title_as_name_inline_types_pydantic(output_file: Path) -
     )
 
 
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_nested_titles(output_file: Path) -> None:
+    """Test use-title-as-name creates type aliases for nested elements with titles.
+
+    When use_title_as_name is enabled, nested elements like array items,
+    additionalProperties values, and oneOf/anyOf branches that have their own
+    titles should also create type aliases.
+
+    Fixes: https://github.com/koxudaxi/datamodel-code-generator/issues/2887
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_nested_titles.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_nested_titles.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--skip-root-model",
+        ],
+    )
+
+
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) -> None:
+    """Test use-title-as-name with Pydantic v2 creates named types for nested elements."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_nested_titles.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_nested_titles_pydantic.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+        ],
+    )
+
+
 def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(
@@ -7430,4 +7480,106 @@ def test_main_jsonschema_default_values_override(output_file: Path) -> None:
             "--default-values",
             str(DEFAULT_VALUES_DATA_PATH / "scoped_defaults.json"),
         ],
+    )
+
+
+def test_ref_nullable_only_no_duplicate_model(output_file: Path) -> None:
+    """Test that $ref + nullable: true does not create duplicate models.
+
+    When a property has $ref with nullable: true, it should use the referenced
+    type directly (e.g., User) with Optional type annotation, not create a new
+    model with a derived name (e.g., UserA, UserB).
+
+    See: https://github.com/koxudaxi/datamodel-code-generator/discussions/1792
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_only.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_ref_nullable_only_strict_nullable(output_file: Path) -> None:
+    """Test $ref + nullable: true with --strict-nullable flag.
+
+    The output should be the same as without strict-nullable for this case,
+    using the referenced type directly with Optional annotation.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_only.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_only_strict.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
+    )
+
+
+def test_ref_nullable_with_metadata_no_duplicate_model(output_file: Path) -> None:
+    """Test $ref + nullable: true + metadata (title/description) does not merge.
+
+    When a property has $ref with nullable: true and metadata-only fields like
+    title or description, it should not create a new model. The metadata should
+    be applied to the field, and the reference should be used directly.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_with_metadata.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_with_metadata.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
+    )
+
+
+def test_ref_nullable_with_constraint_creates_model(output_file: Path) -> None:
+    """Test $ref + nullable: true + constraint DOES create a merged model.
+
+    When a property has $ref with nullable: true AND a schema constraint like
+    minLength, it should merge the schemas and create a new model because the
+    constraint affects the schema structure.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_with_constraint.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_with_constraint.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
+    )
+
+
+def test_ref_nullable_with_extra_creates_model(output_file: Path) -> None:
+    """Test $ref + nullable: true + schema-affecting extras DOES create a merged model.
+
+    When a property has $ref with nullable: true AND schema-affecting extras like
+    'if', 'then', 'else', it should merge the schemas and create a new model.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_with_extra.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_with_extra.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
+    )
+
+
+def test_reduce_duplicate_field_types(output_file: Path) -> None:
+    """Test reducing duplicate field types using $ref and --use-type-alias.
+
+    When multiple classes share the same field type defined in $defs,
+    using --use-type-alias creates a single TypeAlias that's reused across classes.
+    This is the recommended pattern to avoid duplicate Annotated field definitions.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reduce_duplicate_field_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reduce_duplicate_field_types.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-type-alias"],
     )
