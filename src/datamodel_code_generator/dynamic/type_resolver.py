@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import decimal
-from typing import TYPE_CHECKING, Any, ForwardRef, Literal, Union
+import operator
+from functools import reduce
+from typing import TYPE_CHECKING, Any, ForwardRef, Literal
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
@@ -19,7 +21,7 @@ PRIMITIVE_TYPE_MAP: dict[str, type[Any]] = {
     "boolean": bool,
     "bytes": bytes,
     "None": type(None),
-    "Any": Any,  # type: ignore[dict-item]
+    "Any": Any,
 }
 
 CONSTRAINED_TYPE_MAP: dict[str, type[Any]] = {
@@ -57,22 +59,22 @@ class TypeResolver:
             return ForwardRef(model_name), constraints
 
         if data_type.literals:
-            return Literal[tuple(data_type.literals)], constraints  # type: ignore[valid-type]
+            return Literal[tuple(data_type.literals)], constraints
 
         if len(data_type.data_types) > 1:
-            inner_types = tuple(self.resolve(dt) for dt in data_type.data_types)
-            return Union[inner_types], constraints  # type: ignore[valid-type] # noqa: UP007
+            inner_types = [self.resolve(dt) for dt in data_type.data_types]
+            return reduce(operator.or_, inner_types), constraints
 
         if data_type.is_optional and data_type.data_types:
             inner = self.resolve(data_type.data_types[0])
-            return inner | None, constraints  # type: ignore[operator]
+            return inner | None, constraints
 
         return self._resolve_type_string(data_type, constraints)
 
     def _resolve_type_string(self, data_type: DataType, constraints: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
         """Resolve type from type string."""
         if not data_type.type:
-            return Any, constraints  # type: ignore[return-value]
+            return Any, constraints
 
         type_str = data_type.type
 
@@ -87,9 +89,10 @@ class TypeResolver:
         if type_str in self._models:
             return self._models[type_str], constraints
 
-        return Any, constraints  # type: ignore[return-value]
+        return Any, constraints
 
-    def _extract_constraints(self, data_type: DataType, constraints: dict[str, Any]) -> None:  # noqa: PLR6301
+    @staticmethod
+    def _extract_constraints(data_type: DataType, constraints: dict[str, Any]) -> None:
         """Extract constraints from DataType kwargs."""
         if not data_type.kwargs:
             return

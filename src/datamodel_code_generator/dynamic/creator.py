@@ -8,10 +8,10 @@ from typing import TYPE_CHECKING, Any, cast
 from pydantic import BaseModel, Field, create_model
 
 from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
-from datamodel_code_generator.dynamic.exceptions import (
-    TypeResolutionError,
-)
+from datamodel_code_generator.dynamic.exceptions import TypeResolutionError
 from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+from datamodel_code_generator.model.enum import Enum as EnumModel
+from datamodel_code_generator.parser.base import sort_data_models
 
 if TYPE_CHECKING:
     from pydantic.fields import FieldInfo
@@ -40,9 +40,6 @@ class DynamicModelCreator:
             TypeResolutionError: If a type cannot be resolved.
             DynamicModelError: If model generation fails.
         """
-        from datamodel_code_generator.model.enum import Enum as EnumModel  # noqa: PLC0415
-        from datamodel_code_generator.parser.base import sort_data_models  # noqa: PLC0415
-
         if not self.parser.results:
             return {}
 
@@ -110,9 +107,8 @@ class DynamicModelCreator:
             return f"{module_name}.{data_model.class_name}"
         return data_model.class_name
 
-    def _create_field_info(  # noqa: PLR6301
-        self, field: DataModelFieldBase, type_constraints: dict[str, Any] | None = None
-    ) -> FieldInfo:
+    @staticmethod
+    def _create_field_info(field: DataModelFieldBase, type_constraints: dict[str, Any] | None = None) -> FieldInfo:
         """Convert DataModelFieldBase to Pydantic FieldInfo."""
         kwargs = constraints_to_field_kwargs(field.constraints)
 
@@ -151,7 +147,8 @@ class DynamicModelCreator:
 
         return tuple(bases) if bases else (BaseModel,)
 
-    def _get_module_name(self, data_model: DataModel) -> str:  # noqa: PLR6301
+    @staticmethod
+    def _get_module_name(data_model: DataModel) -> str:
         """Determine module name for the dynamic model."""
         if data_model.reference and data_model.reference.path:
             parts = data_model.reference.path.split("/")
@@ -168,7 +165,7 @@ class DynamicModelCreator:
                     value = value.strip("'\"")
                 members[field.name] = value
 
-        enum_class: type[Any] = Enum(data_model.class_name, members)  # type: ignore[assignment]
+        enum_class: type[Any] = Enum(data_model.class_name, members)
 
         model_key = self._get_model_key(data_model)
         self._models[model_key] = enum_class
