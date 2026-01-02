@@ -87,7 +87,7 @@ class GenerateConfig(BaseModel):
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
-    validators: dict[str, Any] | None = None
+    validators: Mapping[str, Any] | None = None
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -229,7 +229,7 @@ class ParserConfig(BaseModel):
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
     extra_template_data: ExtraTemplateDataType | None = None
-    validators: dict[str, Any] | None = None
+    validators: Mapping[str, Any] | None = None
     target_python_version: PythonVersion = PythonVersionMin
     dump_resolve_reference_action: DumpResolveReferenceAction | None = None
     validation: bool = False

@@ -39,11 +39,11 @@ import signal
 import tempfile
 import warnings
 from collections import defaultdict
-from collections.abc import Callable, Sequence  # noqa: TC003  # pydantic needs it
+from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, TypeVar, Union, cast
 from urllib.parse import ParseResult, urlparse
 
 from pydantic import BaseModel
@@ -98,6 +98,8 @@ if TYPE_CHECKING:
     from argparse import Namespace
 
     from typing_extensions import Self
+
+    from datamodel_code_generator.validators import ModelValidators
 
 
 # Options that should be excluded from pyproject.toml config generation
@@ -892,6 +894,42 @@ def _load_json_config(
     return result, None
 
 
+_ModelT = TypeVar("_ModelT")
+
+
+def _load_json_config_with_pydantic(
+    file_handle: TextIOBase | None,
+    name: str,
+    model: type[_ModelT],
+) -> tuple[_ModelT | None, str | None]:
+    """Load and validate a JSON configuration file using a Pydantic model.
+
+    Args:
+        file_handle: The file handle to read from, or None.
+        name: The name of the config for error messages.
+        model: The Pydantic model class to use for validation.
+
+    Returns:
+        A tuple of (validated_model, error_message). If successful, error_message is None.
+        If file_handle is None, returns (None, None).
+    """
+    from pydantic import ValidationError  # noqa: PLC0415
+
+    if file_handle is None:
+        return None, None
+
+    with file_handle as data:
+        try:
+            raw = json.load(data)
+        except json.JSONDecodeError as e:
+            return None, f"Unable to load {name}: {e}"
+
+    try:
+        return model.model_validate(raw), None  # pyright: ignore[reportAttributeAccessIssue]
+    except ValidationError as e:
+        return None, f"Invalid {name}: {e}"
+
+
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
@@ -901,7 +939,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
-    validators: dict[str, Any] | None = None,
+    validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
@@ -1031,7 +1069,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
-        validators=validators,  # pyright: ignore[reportCallIssue]
+        validators=validators,  # pyright: ignore[reportArgumentType]
         default_value_overrides=default_value_overrides,
     )
 
@@ -1258,28 +1296,22 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    validators_config: dict[str, Any] | None = None
-    if config.validators is not None:
-        from pydantic import ValidationError  # noqa: PLC0415
+    from datamodel_code_generator.validators import ValidatorsConfig  # noqa: PLC0415
 
-        from datamodel_code_generator.validators import ValidatorsConfig  # noqa: PLC0415
+    if config.validators is not None and ValidatorsConfig is None:
+        print(  # noqa: T201
+            "Error: --validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option.",
+            file=sys.stderr,
+        )
+        return Exit.ERROR
 
-        with config.validators as data:
-            try:
-                raw_config = json.load(data)
-            except json.JSONDecodeError as e:
-                print(f"Unable to load validators configuration: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
-        try:
-            validated = ValidatorsConfig.model_validate(raw_config)
-            # Convert back to dict for downstream usage
-            validators_config = {
-                model_name: model_validators.model_dump(mode="json")
-                for model_name, model_validators in validated.root.items()
-            }
-        except ValidationError as e:
-            print(f"Invalid validators configuration: {e}", file=sys.stderr)  # noqa: T201
-            return Exit.ERROR
+    validated_validators, error = _load_json_config_with_pydantic(
+        config.validators, "validators configuration", ValidatorsConfig
+    )
+    if error:
+        print(error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+    validators_config = validated_validators.root if validated_validators else None
 
     if config.check:
         config_output = cast("Path", config.output)

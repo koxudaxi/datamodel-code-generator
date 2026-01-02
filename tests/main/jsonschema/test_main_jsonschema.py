@@ -24,6 +24,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
@@ -40,6 +41,8 @@ from tests.main.conftest import (
     run_main_with_args,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
+
+PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -7649,6 +7652,7 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
     )
 
 
+@PYDANTIC_V2_SKIP
 @pytest.mark.cli_doc(
     options=["--validators"],
     option_description="""Add custom field validators to generated Pydantic v2 models.
@@ -7692,6 +7696,7 @@ def test_field_validators(output_file: Path) -> None:
     )
 
 
+@PYDANTIC_V2_SKIP
 def test_field_validators_multi_fields(output_file: Path) -> None:
     """Test validators with multiple fields."""
     run_main_and_assert(
@@ -7711,6 +7716,7 @@ def test_field_validators_multi_fields(output_file: Path) -> None:
     )
 
 
+@PYDANTIC_V2_SKIP
 def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test error handling for invalid validators JSON file."""
     invalid_json = tmp_path / "invalid.json"
@@ -7732,6 +7738,7 @@ def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pyte
     )
 
 
+@PYDANTIC_V2_SKIP
 def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test error handling for validators JSON with invalid structure (not an object)."""
     invalid_structure = tmp_path / "invalid_structure.json"
@@ -7749,5 +7756,5 @@ def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys:
             "pydantic_v2.BaseModel",
         ],
         capsys=capsys,
-        expected_stderr_contains="Validators configuration must be a JSON object",
+        expected_stderr_contains="Invalid validators configuration",
     )

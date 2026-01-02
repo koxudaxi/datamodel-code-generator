@@ -85,7 +85,7 @@ from datamodel_code_generator.types import DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable, Iterator, Sequence
+    from collections.abc import Iterable, Iterator, Mapping, Sequence
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
@@ -836,12 +836,24 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
-        self.validators: dict[str, Any] | None = config.validators
+        self.validators: Mapping[str, Any] | None = config.validators
 
         if self.validators:
             for model_name, model_config in self.validators.items():
-                if "validators" in model_config:
-                    self.extra_template_data[model_name]["validators"] = model_config["validators"]
+                if hasattr(model_config, "validators"):
+                    # Pydantic model (validated via ValidatorsConfig)
+                    self.extra_template_data[model_name]["validators"] = [
+                        v.model_dump(mode="json") for v in model_config.validators
+                    ]
+                elif "validators" in model_config:
+                    # Dict (passed directly via API or via model_dump())
+                    # Ensure enum values are converted to strings
+                    self.extra_template_data[model_name]["validators"] = [
+                        {k: v.value if hasattr(v, "value") else v for k, v in validator.items()}
+                        if isinstance(validator, dict)
+                        else validator.model_dump(mode="json")
+                        for validator in model_config["validators"]
+                    ]
 
         self.use_generic_base_class: bool = config.use_generic_base_class
         self.generic_base_class_config: dict[str, Any] = {}

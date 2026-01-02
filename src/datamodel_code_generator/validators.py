@@ -6,8 +6,14 @@ Provides types for defining custom field validators that can be added to generat
 from __future__ import annotations
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel
+
+from datamodel_code_generator.util import is_pydantic_v2
+
+if TYPE_CHECKING:
+    from pydantic import RootModel
 
 
 class ValidatorMode(str, Enum):
@@ -34,5 +40,12 @@ class ModelValidators(BaseModel):
     validators: list[ValidatorDefinition]
 
 
-class ValidatorsConfig(RootModel[dict[str, ModelValidators]]):
-    """Root model for validators configuration."""
+if is_pydantic_v2():
+    from pydantic import RootModel
+
+    class ValidatorsConfig(RootModel[dict[str, ModelValidators]]):
+        """Root model for validators configuration."""
+
+else:
+    # Pydantic v1 doesn't support RootModel, but validators feature is v2-only anyway
+    ValidatorsConfig = None  # type: ignore[assignment,misc]
