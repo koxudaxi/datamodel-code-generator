@@ -2787,6 +2787,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_one_of(name, item, get_special_path("oneOf", path)))
         if item.allOf:
+            if len(item.allOf) == 1 and not item.properties:
+                single_item = item.allOf[0]
+                if single_item.ref:
+                    return self.get_ref_data_type(single_item.ref)
             all_of_path = get_special_path("allOf", path)
             all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
             return self.parse_all_of(
