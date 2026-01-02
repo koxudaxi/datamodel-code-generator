@@ -3104,6 +3104,56 @@ def test_jsonschema_use_title_as_name_inline_types_pydantic(output_file: Path) -
     )
 
 
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_nested_titles(output_file: Path) -> None:
+    """Test use-title-as-name creates type aliases for nested elements with titles.
+
+    When use_title_as_name is enabled, nested elements like array items,
+    additionalProperties values, and oneOf/anyOf branches that have their own
+    titles should also create type aliases.
+
+    Fixes: https://github.com/koxudaxi/datamodel-code-generator/issues/2887
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_nested_titles.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_nested_titles.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--skip-root-model",
+        ],
+    )
+
+
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) -> None:
+    """Test use-title-as-name with Pydantic v2 creates named types for nested elements."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_nested_titles.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_nested_titles_pydantic.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+        ],
+    )
+
+
 def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(

@@ -1912,7 +1912,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         target_attribute_name: str,
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
-        base_object = model_dump(obj, exclude={target_attribute_name}, exclude_unset=True, by_alias=True)
+        base_object = model_dump(obj, exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
@@ -2657,12 +2657,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             dict_key=key_type,
         )
 
-    def _should_create_type_alias_for_title(self, item: JsonSchemaObject, name: str) -> bool:
+    def _should_create_type_alias_for_title(  # noqa: PLR0911
+        self, item: JsonSchemaObject, name: str
+    ) -> bool:
         """Check if a type alias should be created for an inline type with title.
 
         When use_title_as_name is enabled and the item has a title, certain inline types
-        (array, dict, oneOf/anyOf unions, enum as literal) should create a type alias
-        instead of being inlined.
+        (array, dict, oneOf/anyOf unions, enum as literal, primitive types) should create
+        a type alias instead of being inlined.
         """
         if not (self.use_title_as_name and item.title):
             return False
@@ -2686,11 +2688,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             and isinstance(item.additionalProperties, JsonSchemaObject)
         ):
             return True
-        return bool(
+        if item.patternProperties:
+            return True
+        if item.propertyNames:
+            return True
+        if (
             item.enum
             and not self.ignore_enum_constraints
             and self.should_parse_enum_as_literal(item, property_name=name)
+        ):
+            return True
+        is_primitive = (
+            item.type
+            and not item.is_array
+            and not item.is_object
+            and not item.anyOf
+            and not item.oneOf
+            and not item.allOf
+            and not item.ref
+            and not (item.enum and not self.ignore_enum_constraints)
         )
+        return bool(is_primitive)
 
     def parse_item(  # noqa: PLR0911, PLR0912, PLR0914
         self,
@@ -2789,7 +2807,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 python_type_flags = self._get_python_type_flags(item)
                 dict_flags = python_type_flags or {"is_dict": True}
                 return self.data_type(
-                    data_types=[self.parse_item(name, item.additionalProperties, object_path)],
+                    data_types=[
+                        self.parse_item(
+                            name, item.additionalProperties, get_special_path("additionalProperties", object_path)
+                        )
+                    ],
                     **dict_flags,
                 )
             return self.data_type_manager.get_data_type(
@@ -3007,7 +3029,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             python_type_flags = self._get_python_type_flags(obj)
             dict_flags = python_type_flags or {"is_dict": True}
             data_type = self.data_type(
-                data_types=[self.parse_item(name, obj.additionalProperties, path)],
+                data_types=[
+                    self.parse_item(name, obj.additionalProperties, get_special_path("additionalProperties", path))
+                ],
                 **dict_flags,
             )
         elif obj.enum and not self.ignore_enum_constraints:
