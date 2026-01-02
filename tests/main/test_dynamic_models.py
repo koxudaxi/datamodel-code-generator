@@ -15,6 +15,7 @@ from datamodel_code_generator import (
     clear_dynamic_models_cache,
     generate_dynamic_models,
 )
+from datamodel_code_generator.config import GenerateConfig
 
 if TYPE_CHECKING:
     from typing import Any
@@ -154,14 +155,24 @@ class TestCache:
         models2 = generate_dynamic_models(schema2)
         assert models1 is not models2
 
-    def test_cache_miss_different_kwargs(self) -> None:
-        """Test that different kwargs create different cache entries."""
+    def test_cache_miss_different_config(self) -> None:
+        """Test that different configs create different cache entries."""
         schema: dict[str, Any] = {
             "type": "object",
             "properties": {"name": {"type": "string"}},
         }
-        models1 = generate_dynamic_models(schema, class_name="User")
-        models2 = generate_dynamic_models(schema, class_name="Person")
+        config1 = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            class_name="User",
+        )
+        config2 = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+            class_name="Person",
+        )
+        models1 = generate_dynamic_models(schema, config=config1)
+        models2 = generate_dynamic_models(schema, config=config2)
         assert models1 is not models2
         assert "User" in models1
         assert "Person" in models2
@@ -266,6 +277,7 @@ class TestThreadSafety:
             executor.map(worker, schemas)
 
         assert not errors
+        assert len(results) == 5
 
 
 class TestConstraints:
@@ -307,21 +319,29 @@ class TestExplicitParameters:
     """Tests for explicit parameter passing."""
 
     def test_explicit_input_file_type(self) -> None:
-        """Test passing explicit input_file_type."""
+        """Test passing explicit input_file_type via config."""
         schema: dict[str, Any] = {
             "type": "object",
             "properties": {"name": {"type": "string"}},
         }
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+        )
+        models = generate_dynamic_models(schema, config=config)
         assert "Model" in models
 
     def test_explicit_output_model_type(self) -> None:
-        """Test passing explicit output_model_type."""
+        """Test passing explicit output_model_type via config."""
         schema: dict[str, Any] = {
             "type": "object",
             "properties": {"name": {"type": "string"}},
         }
-        models = generate_dynamic_models(schema, output_model_type=DataModelType.PydanticV2BaseModel)
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+        )
+        models = generate_dynamic_models(schema, config=config)
         assert "Model" in models
 
     def test_openapi_auto_detection(self) -> None:
@@ -342,6 +362,16 @@ class TestExplicitParameters:
         models = generate_dynamic_models(openapi_schema)
         assert "User" in models
 
+    def test_config_with_auto_input_type(self) -> None:
+        """Test that input_file_type=Auto in config is auto-detected."""
+        schema: dict[str, Any] = {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+        }
+        config = GenerateConfig(class_name="User")
+        models = generate_dynamic_models(schema, config=config)
+        assert "User" in models
+
 
 class TestCacheKeyGeneration:
     """Tests for cache key generation edge cases."""
@@ -350,12 +380,16 @@ class TestCacheKeyGeneration:
         """Test that non-JSON-serializable schemas skip caching."""
         from datamodel_code_generator import _make_cache_key
 
+        config = GenerateConfig(
+            input_file_type=InputFileType.JsonSchema,
+            output_model_type=DataModelType.PydanticV2BaseModel,
+        )
         schema_with_non_serializable: dict[str, Any] = {
             "type": "object",
             "properties": {"name": {"type": "string"}},
             "custom": object(),
         }
-        cache_key = _make_cache_key(schema_with_non_serializable, {})
+        cache_key = _make_cache_key(schema_with_non_serializable, config)
         assert cache_key is None
 
 
@@ -401,11 +435,11 @@ class TestDoubleCheckedLocking:
 
             from datamodel_code_generator import _make_cache_key
 
-            effective_kwargs = {
-                "input_file_type": InputFileType.JsonSchema,
-                "output_model_type": DataModelType.PydanticV2BaseModel,
-            }
-            cache_key = _make_cache_key(schema, effective_kwargs)
+            config = GenerateConfig(
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+            )
+            cache_key = _make_cache_key(schema, config)
             assert cache_key is not None
             dcg._dynamic_models_cache[cache_key] = cached_models
 

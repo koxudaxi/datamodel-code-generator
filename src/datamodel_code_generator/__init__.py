@@ -258,7 +258,7 @@ def chdir(path: Path | None) -> Iterator[None]:
             os.chdir(prev_cwd)
 
 
-def is_openapi(data: dict) -> bool:
+def is_openapi(data: Mapping[str, Any]) -> bool:
     """Check if the data dict is an OpenAPI specification."""
     return "openapi" in data
 
@@ -947,8 +947,8 @@ def _get_dynamic_models_lock() -> Any:
     return _dynamic_models_lock
 
 
-def _make_cache_key(schema: dict[str, Any], kwargs: dict[str, Any]) -> str | None:
-    """Create cache key from schema and kwargs.
+def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | None:
+    """Create cache key from schema and config.
 
     Returns None if the schema is not JSON-serializable.
     """
@@ -956,9 +956,10 @@ def _make_cache_key(schema: dict[str, Any], kwargs: dict[str, Any]) -> str | Non
     import json  # noqa: PLC0415
 
     try:
+        config_dict = config.model_dump(mode="json", exclude_defaults=True)
         key_data = {
-            "schema": schema,
-            "kwargs": {k: repr(v) for k, v in sorted(kwargs.items())},
+            "schema": dict(schema),
+            "config": config_dict,
         }
         return hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
     except (TypeError, ValueError):
@@ -966,10 +967,10 @@ def _make_cache_key(schema: dict[str, Any], kwargs: dict[str, Any]) -> str | Non
 
 
 def generate_dynamic_models(
-    input_: dict[str, Any],
+    input_: Mapping[str, Any],
     *,
+    config: GenerateConfig | None = None,
     cache_size: int = 128,
-    **kwargs: Any,
 ) -> dict[str, type]:
     """Generate actual Python model classes from schema at runtime.
 
@@ -979,8 +980,8 @@ def generate_dynamic_models(
 
     Args:
         input_: JSON Schema or OpenAPI schema as dict.
+        config: A GenerateConfig object with generation options. If None, uses defaults.
         cache_size: Maximum number of schemas to cache. Set to 0 to disable caching.
-        **kwargs: Additional arguments passed to generate().
 
     Returns:
         Dictionary mapping class names to model classes.
@@ -989,7 +990,7 @@ def generate_dynamic_models(
         - Thread-safe (uses internal lock and cache)
         - Pydantic v2 only (v1 is not supported)
         - Not pickle-able (use model_dump() to serialize instances)
-        - Cached by schema + kwargs hash with FIFO eviction when cache_size is exceeded
+        - Cached by schema + config hash with FIFO eviction when cache_size is exceeded
 
     Example:
         >>> schema = {
@@ -1004,23 +1005,37 @@ def generate_dynamic_models(
         {'name': 'John', 'age': 30}
     """
     import builtins  # noqa: PLC0415
+    from enum import Enum  # noqa: PLC0415
 
     import pydantic  # noqa: PLC0415
+    from pydantic import BaseModel  # noqa: PLC0415
+
+    from datamodel_code_generator.config import GenerateConfig as GenerateConfigClass  # noqa: PLC0415
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
+    from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
 
     if pydantic.VERSION < "2.0.0":  # pragma: no cover
         msg = f"generate_dynamic_models requires Pydantic v2, found v{pydantic.VERSION}"
         raise Error(msg)
 
-    effective_kwargs = dict(kwargs)
-    if "input_file_type" not in effective_kwargs:
-        if is_openapi(input_):
-            effective_kwargs["input_file_type"] = InputFileType.OpenAPI
-        else:
-            effective_kwargs["input_file_type"] = InputFileType.JsonSchema
-    if "output_model_type" not in effective_kwargs:
-        effective_kwargs["output_model_type"] = DataModelType.PydanticV2BaseModel
+    GenerateConfigClass.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
-    cache_key = _make_cache_key(input_, effective_kwargs)
+    if config is None:
+        if is_openapi(input_):
+            config = GenerateConfigClass(
+                input_file_type=InputFileType.OpenAPI,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+            )
+        else:
+            config = GenerateConfigClass(
+                input_file_type=InputFileType.JsonSchema,
+                output_model_type=DataModelType.PydanticV2BaseModel,
+            )
+    elif config.input_file_type == InputFileType.Auto:
+        detected_type = InputFileType.OpenAPI if is_openapi(input_) else InputFileType.JsonSchema
+        config = config.model_copy(update={"input_file_type": detected_type})
+
+    cache_key = _make_cache_key(input_, config)
     use_cache = cache_size > 0 and cache_key is not None
 
     if use_cache and cache_key in _dynamic_models_cache:
@@ -1031,7 +1046,7 @@ def generate_dynamic_models(
         if use_cache and cache_key in _dynamic_models_cache:
             return _dynamic_models_cache[cache_key]
 
-        result = generate(input_=input_, **effective_kwargs)
+        result = generate(input_=input_, config=config)
         if not isinstance(result, str):  # pragma: no cover
             msg = "generate_dynamic_models only supports single-module output"
             raise Error(msg)
@@ -1040,12 +1055,16 @@ def generate_dynamic_models(
         namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
         exec(code, namespace)  # noqa: S102
 
-        models = {k: v for k, v in namespace.items() if isinstance(v, type) and not k.startswith("_")}
-
-        from pydantic import BaseModel  # noqa: PLC0415
+        models = {
+            k: v
+            for k, v in namespace.items()
+            if isinstance(v, type)
+            and not k.startswith("_")
+            and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
+        }
 
         for obj in models.values():
-            if isinstance(obj, type) and issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
+            if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
                 obj.model_rebuild(_types_namespace=namespace)
 
         if use_cache:
