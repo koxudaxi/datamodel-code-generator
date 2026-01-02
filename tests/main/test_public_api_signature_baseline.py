@@ -121,6 +121,7 @@ def _baseline_generate(
     model_extra_keys_without_x_prefix: set[str] | None = None,
     openapi_scopes: list[OpenAPIScope] | None = None,
     include_path_parameters: bool = False,
+    openapi_include_paths: list[str] | None = None,
     graphql_scopes: list[GraphQLScope] | None = None,
     wrap_string_literal: bool | None = None,
     use_title_as_name: bool = False,
