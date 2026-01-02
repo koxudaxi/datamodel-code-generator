@@ -246,7 +246,6 @@ paths.other = [
 ]
 run.dynamic_context = "none"
 run.omit = [ "tests/data/*", "tests/main/test_performance.py", "*/_types/*" ]
-report.fail_under = 100
 run.parallel = true
 run.plugins = [
   "covdefaults",
