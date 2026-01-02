@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -30,6 +31,7 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="generate_dynamic_models requires Pydantic v2")
 
+DATA_PATH = Path(__file__).parent.parent / "data" / "dynamic_models"
 EXPECTED_PATH = Path(__file__).parent.parent / "data" / "expected" / "dynamic_models"
 
 
@@ -284,20 +286,8 @@ def test_explicit_input_file_type() -> None:
 
 def test_openapi_auto_detection() -> None:
     """Test that OpenAPI schemas are auto-detected and models work."""
-    openapi_schema: dict[str, Any] = {
-        "openapi": "3.0.0",
-        "info": {"title": "Test API", "version": "1.0.0"},
-        "paths": {},
-        "components": {
-            "schemas": {
-                "User": {
-                    "type": "object",
-                    "properties": {"id": {"type": "integer"}, "name": {"type": "string"}},
-                    "required": ["id", "name"],
-                }
-            }
-        },
-    }
+    with (DATA_PATH / "openapi_schema.json").open() as f:
+        openapi_schema = json.load(f)
     assert_dynamic_models(
         openapi_schema, {"User": {"id": 1, "name": "Alice"}}, EXPECTED_PATH / "openapi_auto_detection.json"
     )
