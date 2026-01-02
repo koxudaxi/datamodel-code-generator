@@ -352,8 +352,10 @@ class BaseModel(BaseModelBase):
         if not validators:
             return
 
+        from datamodel_code_generator.reference import ModelResolver  # noqa: PLC0415
+
         prepared_validators: list[dict[str, Any]] = []
-        used_method_names: set[str] = set()
+        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -369,14 +371,9 @@ class BaseModel(BaseModelBase):
 
             fields_str = ", ".join(f"'{f}'" for f in fields)
 
-            # Generate unique method name with increment suffix if needed
+            # Generate unique method name using ModelResolver
             base_method_name = f"{function_name}_validator"
-            method_name = base_method_name
-            count = 1
-            while method_name in used_method_names:
-                method_name = f"{base_method_name}_{count}"
-                count += 1
-            used_method_names.add(method_name)
+            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
 
             mode_str = f"mode='{mode}'"
 
