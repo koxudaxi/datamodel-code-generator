@@ -175,6 +175,7 @@ class GenerateConfig(TypedDict):
     model_extra_keys_without_x_prefix: NotRequired[set[str] | None]
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
+    openapi_include_paths: NotRequired[list[str] | None]
     graphql_scopes: NotRequired[list[GraphQLScope] | None]
     wrap_string_literal: NotRequired[bool | None]
     use_title_as_name: NotRequired[bool]

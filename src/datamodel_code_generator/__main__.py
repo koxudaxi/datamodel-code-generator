@@ -550,6 +550,7 @@ class Config(BaseModel):
     model_extra_keys_without_x_prefix: Optional[set[str]] = None  # noqa: UP045
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
     include_path_parameters: bool = False
+    openapi_include_paths: Optional[list[str]] = None  # noqa: UP045
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
@@ -927,6 +928,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         model_extra_keys_without_x_prefix=config.model_extra_keys_without_x_prefix,
         openapi_scopes=config.openapi_scopes,
         include_path_parameters=config.include_path_parameters,
+        openapi_include_paths=config.openapi_include_paths,
         wrap_string_literal=config.wrap_string_literal,
         use_title_as_name=config.use_title_as_name,
         use_operation_id_as_name=config.use_operation_id_as_name,

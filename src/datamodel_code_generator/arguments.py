@@ -925,6 +925,18 @@ openapi_options.add_argument(
     default=None,
 )
 openapi_options.add_argument(
+    "--openapi-include-paths",
+    nargs="+",
+    metavar="PATTERN",
+    help=(
+        "Include only OpenAPI paths matching fnmatch patterns. "
+        "Use wildcards: '*' matches any chars, '?' matches single char. "
+        "Example: '/users/*' '/products'. "
+        "Requires '--openapi-scopes' to include 'paths'."
+    ),
+    default=None,
+)
+openapi_options.add_argument(
     "--validation",
     help="Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future "
     "releases",

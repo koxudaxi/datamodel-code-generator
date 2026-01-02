@@ -236,6 +236,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         name="--read-only-write-only-model-type", category=OptionCategory.OPENAPI
     ),
     "--include-path-parameters": CLIOptionMeta(name="--include-path-parameters", category=OptionCategory.OPENAPI),
+    "--openapi-include-paths": CLIOptionMeta(name="--openapi-include-paths", category=OptionCategory.OPENAPI),
     "--validation": CLIOptionMeta(
         name="--validation",
         category=OptionCategory.OPENAPI,

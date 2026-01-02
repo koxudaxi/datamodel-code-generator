@@ -162,6 +162,7 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
+    openapi_include_paths: NotRequired[list[str] | None]
 
 
 ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict
