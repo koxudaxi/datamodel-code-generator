@@ -7540,3 +7540,20 @@ def test_ref_nullable_with_extra_creates_model(output_file: Path) -> None:
         expected_file="ref_nullable_with_extra.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
     )
+
+
+def test_reduce_duplicate_field_types(output_file: Path) -> None:
+    """Test reducing duplicate field types using $ref and --use-type-alias.
+
+    When multiple classes share the same field type defined in $defs,
+    using --use-type-alias creates a single TypeAlias that's reused across classes.
+    This is the recommended pattern to avoid duplicate Annotated field definitions.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reduce_duplicate_field_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reduce_duplicate_field_types.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-type-alias"],
+    )

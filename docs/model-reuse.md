@@ -1,4 +1,4 @@
-<!-- related-cli-options: --reuse-model, --reuse-scope, --shared-module-name, --collapse-root-models, --disable-warnings -->
+<!-- related-cli-options: --reuse-model, --reuse-scope, --shared-module-name, --collapse-root-models, --disable-warnings, --use-type-alias -->
 
 # Model Reuse and Deduplication
 
@@ -12,6 +12,7 @@ When generating models from schemas, you may encounter duplicate model definitio
 | `--reuse-scope` | Control scope of deduplication (`root` or `tree`) |
 | `--shared-module-name` | Name for shared module in multi-file output |
 | `--collapse-root-models` | Inline root models instead of creating wrappers |
+| `--use-type-alias` | Create TypeAlias for reusable field types (see [Reducing Duplicate Field Types](#reducing-duplicate-field-types)) |
 
 ---
 
@@ -243,10 +244,98 @@ models/
 
 ---
 
+## Reducing Duplicate Field Types
+
+When multiple classes share the same field type with identical constraints or metadata, you can reduce duplication by defining the type once in `$defs` and referencing it with `$ref`. Combined with `--use-type-alias`, this creates a single TypeAlias that's reused across all classes.
+
+### Problem: Duplicate Annotated Fields
+
+Without using `$ref`, each class gets its own inline field definition:
+
+```python
+class ClassA(BaseModel):
+    place_name: Annotated[str, Field(alias='placeName')]  # Duplicate!
+
+class ClassB(BaseModel):
+    place_name: Annotated[str, Field(alias='placeName')]  # Duplicate!
+```
+
+### Solution: Use `$defs` with `--use-type-alias`
+
+**Step 1: Define the shared type in `$defs`**
+
+```json
+{
+  "$defs": {
+    "PlaceName": {
+      "type": "string",
+      "title": "PlaceName",
+      "description": "A place name"
+    },
+    "ClassA": {
+      "type": "object",
+      "properties": {
+        "place_name": { "$ref": "#/$defs/PlaceName" }
+      }
+    },
+    "ClassB": {
+      "type": "object",
+      "properties": {
+        "place_name": { "$ref": "#/$defs/PlaceName" }
+      }
+    }
+  }
+}
+```
+
+**Step 2: Generate with `--use-type-alias`**
+
+```bash
+datamodel-codegen \
+  --input schema.json \
+  --output model.py \
+  --use-type-alias
+```
+
+### Result: Single TypeAlias reused across classes
+
+```python
+PlaceName = TypeAliasType(
+    "PlaceName",
+    Annotated[str, Field(..., description='A place name', title='PlaceName')],
+)
+
+
+class ClassA(BaseModel):
+    place_name: PlaceName  # Reuses the TypeAlias
+
+
+class ClassB(BaseModel):
+    place_name: PlaceName  # Reuses the TypeAlias
+```
+
+### Benefits
+
+- **Single source of truth** - Field type is defined once
+- **Easier maintenance** - Change the type in one place
+- **Cleaner generated code** - No redundant annotations
+- **Type safety** - All fields share the exact same type
+
+### When to Use This Pattern
+
+This pattern is ideal when:
+
+- Multiple classes share fields with the same constraints (e.g., `minLength`, `pattern`)
+- Fields have identical metadata (e.g., `description`, `examples`)
+- You want to ensure type consistency across your schema
+
+---
+
 ## See Also
 
 - [CLI Reference: `--reuse-model`](cli-reference/model-customization.md#reuse-model)
 - [CLI Reference: `--reuse-scope`](cli-reference/model-customization.md#reuse-scope)
 - [CLI Reference: `--collapse-root-models`](cli-reference/model-customization.md#collapse-root-models)
+- [CLI Reference: `--use-type-alias`](cli-reference/typing-customization.md#use-type-alias)
 - [Root Models and Type Aliases](root-model-and-type-alias.md)
 - [FAQ: Performance](faq.md#-performance)

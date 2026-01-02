@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Model",
+  "$defs": {
+    "PlaceName": {
+      "type": "string",
+      "title": "PlaceName",
+      "description": "A place name with alias",
+      "examples": ["Tokyo", "New York"]
+    },
+    "ClassA": {
+      "type": "object",
+      "title": "ClassA",
+      "properties": {
+        "place_name": {
+          "$ref": "#/$defs/PlaceName"
+        },
+        "other_field": {
+          "type": "integer"
+        }
+      },
+      "required": ["place_name"]
+    },
+    "ClassB": {
+      "type": "object",
+      "title": "ClassB",
+      "properties": {
+        "place_name": {
+          "$ref": "#/$defs/PlaceName"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": ["place_name"]
+    }
+  },
+  "anyOf": [
+    {"$ref": "#/$defs/ClassA"},
+    {"$ref": "#/$defs/ClassB"}
+  ]
+}
