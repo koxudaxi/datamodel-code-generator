@@ -1702,6 +1702,10 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
 
+    def _is_pydantic_v2_model(self) -> bool:
+        """Check if the output model type is Pydantic v2."""
+        return self.data_model_type.__module__.startswith("datamodel_code_generator.model.pydantic_v2")
+
     def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         models: list[DataModel],
@@ -1819,19 +1823,15 @@ class Parser(ABC, Generic[ParserConfigT]):
                             model_field.constraints = ConstraintsBase.merge_constraints(
                                 root_type_field.constraints, model_field.constraints
                             )
-                        if (  # pragma: no cover
-                            isinstance(
-                                root_type_field,
-                                pydantic_model.DataModelField,
+                        discriminator = root_type_field.extras.get("discriminator")
+                        if discriminator and isinstance(root_type_field, pydantic_model.DataModelField):
+                            prop_name = (
+                                discriminator.get("propertyName") if isinstance(discriminator, dict) else discriminator
                             )
-                            and not model_field.extras.get("discriminator")
-                            and not any(t.is_list for t in model_field.data_type.data_types)
-                        ):
-                            discriminator = root_type_field.extras.get("discriminator")
-                            if discriminator:
-                                model_field.extras["discriminator"] = discriminator
+                            if self._is_pydantic_v2_model():
+                                copied_data_type.discriminator = prop_name
                         assert isinstance(data_type.parent, DataType)
-                        data_type.parent.data_types.remove(data_type)  # pragma: no cover
+                        data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
 
                     elif isinstance(data_type.parent, DataType):

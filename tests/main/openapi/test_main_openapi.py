@@ -2580,26 +2580,24 @@ def test_main_openapi_discriminator(input_: str, output: str, output_file: Path)
 
 @freeze_time("2023-07-27")
 @pytest.mark.parametrize(
-    ("kind", "option", "expected"),
+    ("kind", "option", "output_model", "expected"),
     [
-        (
-            "anyOf",
-            "--collapse-root-models",
-            "in_array_collapse_root_models.py",
-        ),
-        (
-            "oneOf",
-            "--collapse-root-models",
-            "in_array_collapse_root_models.py",
-        ),
-        ("anyOf", None, "in_array.py"),
-        ("oneOf", None, "in_array.py"),
+        ("anyOf", "--collapse-root-models", None, "in_array_collapse_root_models.py"),
+        ("oneOf", "--collapse-root-models", None, "in_array_collapse_root_models.py"),
+        ("anyOf", None, None, "in_array.py"),
+        ("oneOf", None, None, "in_array.py"),
+        ("anyOf", "--collapse-root-models", "pydantic_v2.BaseModel", "in_array_collapse_root_models_pydantic_v2.py"),
+        ("oneOf", "--collapse-root-models", "pydantic_v2.BaseModel", "in_array_collapse_root_models_pydantic_v2.py"),
     ],
 )
-def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str, output_file: Path) -> None:
+def test_main_openapi_discriminator_in_array(
+    kind: str, option: str | None, output_model: str | None, expected: str, output_file: Path
+) -> None:
     """Test OpenAPI generation with discriminator in array."""
     input_file = f"discriminator_in_array_{kind.lower()}.yaml"
     extra_args = [option] if option else []
+    if output_model:
+        extra_args.extend(["--output-model-type", output_model])
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / input_file,
         output_path=output_file,
