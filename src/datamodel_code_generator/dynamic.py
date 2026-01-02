@@ -9,6 +9,7 @@ from __future__ import annotations
 import ast
 import builtins
 import hashlib
+import itertools
 import json
 import sys
 import threading
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
 _dynamic_models_lock = threading.Lock()
-_dynamic_module_counter = 0
+_dynamic_module_counter = itertools.count(1)
 
 
 def _is_init_file(path_tuple: tuple[str, ...]) -> bool:
@@ -96,9 +97,7 @@ def _build_module_edges(modules: dict[tuple[str, ...], str]) -> dict[tuple[str, 
 
 def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type]:
     """Execute multiple modules and extract models."""
-    global _dynamic_module_counter  # noqa: PLW0603
-    _dynamic_module_counter += 1
-    package_name = f"_dcg_dynamic_{_dynamic_module_counter}"
+    package_name = f"_dcg_dynamic_{next(_dynamic_module_counter)}"
 
     created_modules: list[str] = []
     all_namespaces: dict[str, dict[str, Any]] = {}
@@ -235,9 +234,6 @@ def generate_dynamic_models(
 
     cache_key = _make_cache_key(input_, config)
     use_cache = cache_size > 0 and cache_key is not None
-
-    if use_cache and cache_key in _dynamic_models_cache:
-        return _dynamic_models_cache[cache_key]
 
     with _dynamic_models_lock:
         if use_cache and cache_key in _dynamic_models_cache:
