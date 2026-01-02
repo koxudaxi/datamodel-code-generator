@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import pydantic
 import pytest
-from inline_snapshot import snapshot
 
 from datamodel_code_generator import (
     DataModelType,
@@ -17,6 +16,9 @@ from datamodel_code_generator import (
     generate_dynamic_models,
 )
 from datamodel_code_generator.config import GenerateConfig
+from datamodel_code_generator.enums import ModuleSplitMode
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
     from typing import Any
@@ -25,8 +27,9 @@ pytestmark = pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="generate_dyn
 
 
 @pytest.fixture(autouse=True)
-def _clear_cache() -> None:
-    """Clear cache before each test."""
+def _setup_and_clear_cache() -> None:
+    """Rebuild GenerateConfig and clear cache before each test."""
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
     clear_dynamic_models_cache()
 
 
@@ -41,10 +44,10 @@ def test_simple_model() -> None:
         "required": ["name"],
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Model"])
+    assert sorted(models.keys()) == ["Model"]
     model = models["Model"]
     instance = model(name="John", age=30)
-    assert instance.model_dump() == snapshot({"name": "John", "age": 30})
+    assert instance.model_dump() == {"name": "John", "age": 30}
 
 
 def test_nested_models() -> None:
@@ -61,7 +64,7 @@ def test_nested_models() -> None:
         },
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Model", "User"])
+    assert sorted(models.keys()) == ["Model", "User"]
 
 
 def test_enum_model() -> None:
@@ -76,11 +79,11 @@ def test_enum_model() -> None:
         },
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Model", "Status"])
+    assert sorted(models.keys()) == ["Model", "Status"]
     model = models["Model"]
     status_enum = models["Status"]
     instance = model(status=status_enum.active)
-    assert instance.status.value == snapshot("active")
+    assert instance.status.value == "active"
 
 
 def test_circular_reference() -> None:
@@ -101,10 +104,10 @@ def test_circular_reference() -> None:
         "$ref": "#/$defs/Node",
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Model", "Node", "RootModel"])
+    assert sorted(models.keys()) == ["Model", "Node", "RootModel"]
     node_class = models["Node"]
     node = node_class(value="root", children=[node_class(value="child", children=[])])
-    assert node.model_dump() == snapshot({"value": "root", "children": [{"value": "child", "children": []}]})
+    assert node.model_dump() == {"value": "root", "children": [{"value": "child", "children": []}]}
 
 
 def test_allof_inheritance() -> None:
@@ -128,10 +131,10 @@ def test_allof_inheritance() -> None:
         "$ref": "#/$defs/Extended",
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Base", "Extended", "Model", "RootModel"])
+    assert sorted(models.keys()) == ["Base", "Extended", "Model", "RootModel"]
     extended = models["Extended"]
     instance = extended(id=1, name="test")
-    assert instance.model_dump() == snapshot({"id": 1, "name": "test"})
+    assert instance.model_dump() == {"id": 1, "name": "test"}
 
 
 def test_cache_hit() -> None:
@@ -179,8 +182,8 @@ def test_cache_miss_different_config() -> None:
     models1 = generate_dynamic_models(schema, config=config1)
     models2 = generate_dynamic_models(schema, config=config2)
     assert models1 is not models2
-    assert sorted(models1.keys()) == snapshot(["User"])
-    assert sorted(models2.keys()) == snapshot(["Person"])
+    assert sorted(models1.keys()) == ["User"]
+    assert sorted(models2.keys()) == ["Person"]
 
 
 def test_cache_disabled() -> None:
@@ -201,7 +204,7 @@ def test_cache_eviction() -> None:
         generate_dynamic_models(schema, cache_size=3)
 
     count = clear_dynamic_models_cache()
-    assert count == snapshot(3)
+    assert count == 3
 
 
 def test_cache_shrinks_when_smaller_size_requested() -> None:
@@ -211,7 +214,7 @@ def test_cache_shrinks_when_smaller_size_requested() -> None:
         generate_dynamic_models(schema, cache_size=10)
 
     count = clear_dynamic_models_cache()
-    assert count == snapshot(5)
+    assert count == 5
 
     for schema in schemas:
         generate_dynamic_models(schema, cache_size=10)
@@ -223,7 +226,7 @@ def test_cache_shrinks_when_smaller_size_requested() -> None:
     generate_dynamic_models(new_schema, cache_size=2)
 
     count = clear_dynamic_models_cache()
-    assert count == snapshot(2)
+    assert count == 2
 
 
 def test_clear_cache() -> None:
@@ -234,10 +237,10 @@ def test_clear_cache() -> None:
     }
     generate_dynamic_models(schema)
     count = clear_dynamic_models_cache()
-    assert count == snapshot(1)
+    assert count == 1
 
     count = clear_dynamic_models_cache()
-    assert count == snapshot(0)
+    assert count == 0
 
 
 def test_concurrent_same_schema() -> None:
@@ -263,7 +266,7 @@ def test_concurrent_same_schema() -> None:
         t.join()
 
     assert not errors
-    assert len(results) == snapshot(10)
+    assert len(results) == 10
     assert all(r is results[0] for r in results)
 
 
@@ -284,7 +287,7 @@ def test_concurrent_different_schemas() -> None:
         executor.map(worker, schemas)
 
     assert not errors
-    assert len(results) == snapshot(5)
+    assert len(results) == 5
 
 
 def test_numeric_constraints() -> None:
@@ -302,7 +305,7 @@ def test_numeric_constraints() -> None:
     models = generate_dynamic_models(schema)
     model = models["Model"]
     instance = model(age=30)
-    assert instance.model_dump() == snapshot({"age": 30})
+    assert instance.model_dump() == {"age": 30}
 
 
 def test_string_constraints() -> None:
@@ -317,7 +320,7 @@ def test_string_constraints() -> None:
         },
     }
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == snapshot(["Model"])
+    assert sorted(models.keys()) == ["Model"]
 
 
 def test_explicit_input_file_type() -> None:
@@ -331,7 +334,7 @@ def test_explicit_input_file_type() -> None:
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
     models = generate_dynamic_models(schema, config=config)
-    assert sorted(models.keys()) == snapshot(["Model"])
+    assert sorted(models.keys()) == ["Model"]
 
 
 def test_openapi_auto_detection() -> None:
@@ -350,7 +353,7 @@ def test_openapi_auto_detection() -> None:
         },
     }
     models = generate_dynamic_models(openapi_schema)
-    assert sorted(models.keys()) == snapshot(["User"])
+    assert sorted(models.keys()) == ["User"]
 
 
 def test_config_with_auto_input_type() -> None:
@@ -361,7 +364,7 @@ def test_config_with_auto_input_type() -> None:
     }
     config = GenerateConfig(class_name="User")
     models = generate_dynamic_models(schema, config=config)
-    assert sorted(models.keys()) == snapshot(["User"])
+    assert sorted(models.keys()) == ["User"]
 
 
 def test_non_serializable_schema_skips_cache() -> None:
@@ -389,7 +392,6 @@ def test_cache_hit_inside_lock() -> None:
         "type": "object",
         "properties": {"name": {"type": "string"}},
     }
-    dcg._get_dynamic_models_lock()
     original_lock = dcg._dynamic_models_lock
     cached_models: dict[str, type] = {"Model": type("Model", (), {})}
     cache_populated = threading.Event()
@@ -431,10 +433,49 @@ def test_cache_hit_inside_lock() -> None:
         cache_populated.set()
         thread.join(timeout=10)
 
-        assert len(result_holder) == snapshot(1)
+        assert len(result_holder) == 1
         assert result_holder[0] is cached_models
     finally:
         cache_populated.set()
         dcg._dynamic_models_lock = original_lock
         if cache_key and cache_key in dcg._dynamic_models_cache:
             del dcg._dynamic_models_cache[cache_key]
+
+
+def test_multi_module_output() -> None:
+    """Test generating models with multi-module output (module_split_mode=Single)."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "User": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "age": {"type": "integer"},
+                },
+                "required": ["name"],
+            },
+            "Order": {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "user": {"$ref": "#/$defs/User"},
+                },
+                "required": ["id"],
+            },
+        },
+        "$ref": "#/$defs/Order",
+    }
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        module_split_mode=ModuleSplitMode.Single,
+    )
+    models = generate_dynamic_models(schema, config=config)
+    assert "User" in models
+    assert "Order" in models
+    user_class = models["User"]
+    order_class = models["Order"]
+    user = user_class(name="Alice", age=25)
+    assert user.model_dump() == {"name": "Alice", "age": 25}
+    order = order_class(id=1, user=user)
+    assert order.model_dump() == {"id": 1, "user": {"name": "Alice", "age": 25}}

@@ -9,7 +9,10 @@ from __future__ import annotations
 import builtins
 import hashlib
 import json
+import re
+import sys
 import threading
+import types
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -26,20 +29,149 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
-_dynamic_models_lock: threading.Lock | None = None
-_dynamic_models_lock_init: threading.Lock | None = None
+_dynamic_models_lock = threading.Lock()
+_dynamic_module_counter = 0
 
 
-def _get_dynamic_models_lock() -> threading.Lock:
-    """Get or create the lock for dynamic models cache (thread-safe lazy initialization)."""
-    global _dynamic_models_lock, _dynamic_models_lock_init  # noqa: PLW0603
-    if _dynamic_models_lock_init is None:
-        _dynamic_models_lock_init = threading.Lock()
-    if _dynamic_models_lock is None:
-        with _dynamic_models_lock_init:
-            if _dynamic_models_lock is None:
-                _dynamic_models_lock = threading.Lock()
-    return _dynamic_models_lock
+def _path_to_module_name(package_name: str, path_tuple: tuple[str, ...]) -> str:
+    """Convert path tuple to module name."""
+    parts = [package_name, *path_tuple[:-1]]
+    filename = path_tuple[-1].removesuffix(".py")
+    if filename != "__init__":
+        parts.append(filename)
+    return ".".join(parts)
+
+
+def _execute_single_module(code: str) -> dict[str, type]:
+    """Execute single module code and extract models."""
+    namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
+    exec(code, namespace)  # noqa: S102
+
+    models = _extract_models(namespace)
+
+    for obj in models.values():
+        if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
+            obj.model_rebuild(_types_namespace=namespace)
+
+    return models
+
+
+def _get_relative_imports(code: str) -> set[str]:
+    """Extract relative import module names from code."""
+    imports: set[str] = set()
+    imports.update(match.group(1) for match in re.finditer(r"from \. import (\w+)", code))
+    imports.update(match.group(1) for match in re.finditer(r"from \.(\w+) import", code))
+    return imports
+
+
+def _topological_sort(modules: dict[tuple[str, ...], str]) -> list[tuple[str, ...]]:
+    """Sort modules by dependencies using topological sort."""
+    # Build module name to path mapping
+    name_to_path: dict[str, tuple[str, ...]] = {}
+    for path in modules:
+        filename = path[-1]
+        if filename.endswith(".py"):
+            name = filename[:-3]
+            if name != "__init__":
+                name_to_path[name] = path
+
+    # Build dependency graph
+    deps: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+    for path, code in modules.items():
+        deps[path] = set()
+        for imported in _get_relative_imports(code):
+            if imported in name_to_path:
+                deps[path].add(name_to_path[imported])
+
+    # Kahn's algorithm for topological sort
+    in_degree: dict[tuple[str, ...], int] = dict.fromkeys(modules, 0)
+    for path, path_deps in deps.items():
+        for _dep in path_deps:
+            in_degree[path] += 1
+
+    queue = [p for p in modules if in_degree[p] == 0]
+    result: list[tuple[str, ...]] = []
+
+    while queue:
+        # Sort by: non-__init__ first, then by path for stability
+        queue.sort(key=lambda p: (p[-1] == "__init__.py", p))
+        path = queue.pop(0)
+        result.append(path)
+        for other_path, other_deps in deps.items():
+            if path in other_deps:
+                in_degree[other_path] -= 1
+                if in_degree[other_path] == 0:
+                    queue.append(other_path)
+
+    return result
+
+
+def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type]:
+    """Execute multiple modules and extract models."""
+    global _dynamic_module_counter  # noqa: PLW0603
+    _dynamic_module_counter += 1
+    package_name = f"_dcg_dynamic_{_dynamic_module_counter}"
+
+    created_modules: list[str] = []
+    all_namespaces: dict[str, dict[str, Any]] = {}
+
+    try:
+        # Sort modules by dependencies using topological sort
+        sorted_paths = _topological_sort(modules)
+
+        # Create and register all modules first
+        for path_tuple in sorted_paths:
+            module_name = _path_to_module_name(package_name, path_tuple)
+            module = types.ModuleType(module_name)
+            module.__dict__["__builtins__"] = builtins.__dict__
+            module.__package__ = (
+                package_name if path_tuple[-1] == "__init__.py" else ".".join(module_name.split(".")[:-1])
+            )
+            sys.modules[module_name] = module
+            created_modules.append(module_name)
+            all_namespaces[module_name] = module.__dict__
+
+        # Register package
+        if package_name not in sys.modules:
+            pkg = types.ModuleType(package_name)
+            pkg.__path__ = []
+            pkg.__package__ = package_name
+            sys.modules[package_name] = pkg
+            created_modules.insert(0, package_name)
+
+        # Execute each module
+        for path_tuple in sorted_paths:
+            module_name = _path_to_module_name(package_name, path_tuple)
+            exec(modules[path_tuple], all_namespaces[module_name])  # noqa: S102
+
+        # Collect all models from all namespaces
+        models: dict[str, type] = {}
+        combined_namespace: dict[str, Any] = {}
+        for ns in all_namespaces.values():
+            combined_namespace.update(ns)
+            models.update(_extract_models(ns))
+
+        # Rebuild models with combined namespace
+        for obj in models.values():
+            if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
+                obj.model_rebuild(_types_namespace=combined_namespace)
+
+        return models
+    finally:
+        # Clean up sys.modules
+        for module_name in reversed(created_modules):
+            sys.modules.pop(module_name, None)
+
+
+def _extract_models(namespace: dict[str, Any]) -> dict[str, type]:
+    """Extract model and enum classes from namespace."""
+    return {
+        k: v
+        for k, v in namespace.items()
+        if isinstance(v, type)
+        and not k.startswith("_")
+        and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
+    }
 
 
 def _make_cache_key(schema: Mapping[str, Any], config: GenerateConfig) -> str | None:
@@ -83,6 +215,7 @@ def generate_dynamic_models(
         - Pydantic v2 only (v1 is not supported)
         - Not pickle-able (use model_dump() to serialize instances)
         - Cached by schema + config hash with FIFO eviction when cache_size is exceeded
+        - Supports both single-module and multi-module output
 
     Example:
         >>> schema = {
@@ -123,31 +256,15 @@ def generate_dynamic_models(
     if use_cache and cache_key in _dynamic_models_cache:
         return _dynamic_models_cache[cache_key]
 
-    lock = _get_dynamic_models_lock()
-    with lock:
+    with _dynamic_models_lock:
         if use_cache and cache_key in _dynamic_models_cache:
             return _dynamic_models_cache[cache_key]
 
         result = generate(input_=input_, config=config)
-        if not isinstance(result, str):  # pragma: no cover
-            msg = "generate_dynamic_models only supports single-module output"
+        if result is None:  # pragma: no cover
+            msg = "generate() returned None"
             raise Error(msg)
-        code: str = result
-
-        namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
-        exec(code, namespace)  # noqa: S102
-
-        models = {
-            k: v
-            for k, v in namespace.items()
-            if isinstance(v, type)
-            and not k.startswith("_")
-            and ((issubclass(v, BaseModel) and v is not BaseModel) or (issubclass(v, Enum) and v is not Enum))
-        }
-
-        for obj in models.values():
-            if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
-                obj.model_rebuild(_types_namespace=namespace)
+        models = _execute_single_module(result) if isinstance(result, str) else _execute_multi_module(result)
 
         if use_cache:
             while len(_dynamic_models_cache) >= cache_size:
@@ -164,8 +281,7 @@ def clear_dynamic_models_cache() -> int:
     Returns:
         Number of cached entries that were cleared.
     """
-    lock = _get_dynamic_models_lock()
-    with lock:
+    with _dynamic_models_lock:
         count = len(_dynamic_models_cache)
         _dynamic_models_cache.clear()
         return count
