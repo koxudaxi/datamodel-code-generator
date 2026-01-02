@@ -6,14 +6,15 @@ or OpenAPI schemas.
 
 from __future__ import annotations
 
+import ast
 import builtins
 import hashlib
 import json
-import re
 import sys
 import threading
 import types
 from enum import Enum
+from pathlib import PurePath
 from typing import TYPE_CHECKING, Any
 
 import pydantic
@@ -23,6 +24,7 @@ from datamodel_code_generator import Error, generate, is_openapi
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import DataModelType, InputFileType
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.types import StrictTypes
 
 if TYPE_CHECKING:
@@ -33,12 +35,17 @@ _dynamic_models_lock = threading.Lock()
 _dynamic_module_counter = 0
 
 
+def _is_init_file(path_tuple: tuple[str, ...]) -> bool:
+    """Check if path tuple represents an __init__.py file."""
+    return PurePath(path_tuple[-1]).stem == "__init__"
+
+
 def _path_to_module_name(package_name: str, path_tuple: tuple[str, ...]) -> str:
     """Convert path tuple to module name."""
     parts = [package_name, *path_tuple[:-1]]
-    filename = path_tuple[-1].removesuffix(".py")
-    if filename != "__init__":
-        parts.append(filename)
+    stem = PurePath(path_tuple[-1]).stem
+    if stem != "__init__":
+        parts.append(stem)
     return ".".join(parts)
 
 
@@ -57,53 +64,38 @@ def _execute_single_module(code: str) -> dict[str, type]:
 
 
 def _get_relative_imports(code: str) -> set[str]:
-    """Extract relative import module names from code."""
+    """Extract relative import module names from code using AST."""
     imports: set[str] = set()
-    imports.update(match.group(1) for match in re.finditer(r"from \. import (\w+)", code))
-    imports.update(match.group(1) for match in re.finditer(r"from \.(\w+) import", code))
+    tree = ast.parse(code)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 1:
+            if node.module:
+                imports.add(node.module.split(".")[0])
+            else:
+                imports.update(alias.name for alias in node.names)
     return imports
 
 
-def _topological_sort(modules: dict[tuple[str, ...], str]) -> list[tuple[str, ...]]:
-    """Sort modules by dependencies using topological sort."""
-    # Build module name to path mapping
+def _build_module_edges(modules: dict[tuple[str, ...], str]) -> dict[tuple[str, ...], set[tuple[str, ...]]]:
+    """Build dependency edges for topological sort.
+
+    Returns edges where edges[u] contains v means u must come before v.
+    """
     name_to_path: dict[str, tuple[str, ...]] = {}
     for path in modules:
-        filename = path[-1]
-        if filename.endswith(".py"):
-            name = filename[:-3]
+        filepath = PurePath(path[-1])
+        if filepath.suffix == ".py":
+            name = filepath.stem
             if name != "__init__":
                 name_to_path[name] = path
 
-    # Build dependency graph
-    deps: dict[tuple[str, ...], set[tuple[str, ...]]] = {}
+    edges: dict[tuple[str, ...], set[tuple[str, ...]]] = {path: set() for path in modules}
     for path, code in modules.items():
-        deps[path] = set()
         for imported in _get_relative_imports(code):
             if imported in name_to_path:
-                deps[path].add(name_to_path[imported])
-
-    # Kahn's algorithm for topological sort
-    in_degree: dict[tuple[str, ...], int] = dict.fromkeys(modules, 0)
-    for path, path_deps in deps.items():
-        for _dep in path_deps:
-            in_degree[path] += 1
-
-    queue = [p for p in modules if in_degree[p] == 0]
-    result: list[tuple[str, ...]] = []
-
-    while queue:
-        # Sort by: non-__init__ first, then by path for stability
-        queue.sort(key=lambda p: (p[-1] == "__init__.py", p))
-        path = queue.pop(0)
-        result.append(path)
-        for other_path, other_deps in deps.items():
-            if path in other_deps:
-                in_degree[other_path] -= 1
-                if in_degree[other_path] == 0:
-                    queue.append(other_path)
-
-    return result
+                dep_path = name_to_path[imported]
+                edges[dep_path].add(path)
+    return edges
 
 
 def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type]:
@@ -116,17 +108,18 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
     all_namespaces: dict[str, dict[str, Any]] = {}
 
     try:
-        # Sort modules by dependencies using topological sort
-        sorted_paths = _topological_sort(modules)
+        nodes = list(modules.keys())
+        nodes.sort(key=lambda p: (_is_init_file(p), p))
+        node_index = {node: i for i, node in enumerate(nodes)}
+        edges = _build_module_edges(modules)
+        sorted_paths = stable_toposort(nodes, edges, key=node_index.__getitem__)
 
         # Create and register all modules first
         for path_tuple in sorted_paths:
             module_name = _path_to_module_name(package_name, path_tuple)
             module = types.ModuleType(module_name)
             module.__dict__["__builtins__"] = builtins.__dict__
-            module.__package__ = (
-                package_name if path_tuple[-1] == "__init__.py" else ".".join(module_name.split(".")[:-1])
-            )
+            module.__package__ = package_name if _is_init_file(path_tuple) else ".".join(module_name.split(".")[:-1])
             sys.modules[module_name] = module
             created_modules.append(module_name)
             all_namespaces[module_name] = module.__dict__

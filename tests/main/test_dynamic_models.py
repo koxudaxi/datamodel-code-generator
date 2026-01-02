@@ -20,29 +20,15 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.enums import ModuleSplitMode
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.types import StrictTypes
+from tests.conftest import assert_output
 
 if TYPE_CHECKING:
     from typing import Any
 
+
 pytestmark = pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="generate_dynamic_models requires Pydantic v2")
 
 EXPECTED_PATH = Path(__file__).parent / "expected" / "dynamic_models"
-
-
-def assert_model_keys(models: dict[str, type], expected_keys: list[str]) -> None:
-    """Assert that models dict contains exactly the expected keys."""
-    assert sorted(models.keys()) == sorted(expected_keys)
-
-
-def assert_model_dump(instance: object, expected: dict[str, Any]) -> None:
-    """Assert that model instance dumps to expected dict."""
-    assert instance.model_dump() == expected  # type: ignore[union-attr]
-
-
-def assert_has_models(models: dict[str, type], *keys: str) -> None:
-    """Assert that models dict contains all specified keys."""
-    for key in keys:
-        assert key in models, f"Expected model '{key}' not found in {list(models.keys())}"
 
 
 def make_object_schema(properties: dict[str, Any], required: list[str] | None = None) -> dict[str, Any]:
@@ -77,23 +63,23 @@ def test_simple_model() -> None:
     """Test generating a simple model."""
     schema = make_object_schema({"name": {"type": "string"}, "age": {"type": "integer"}}, required=["name"])
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Model"])
+    assert sorted(models.keys()) == ["Model"]
     instance = models["Model"](name="John", age=30)
-    assert_model_dump(instance, {"name": "John", "age": 30})
+    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "simple_model_dump.txt")
 
 
 def test_nested_models() -> None:
     """Test generating nested models."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Model", "User"])
+    assert sorted(models.keys()) == ["Model", "User"]
 
 
 def test_enum_model() -> None:
     """Test generating model with enum."""
     schema = make_object_schema({"status": {"type": "string", "enum": ["active", "inactive"]}})
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Model", "Status"])
+    assert sorted(models.keys()) == ["Model", "Status"]
     instance = models["Model"](status=models["Status"].active)
     assert instance.status.value == "active"
 
@@ -113,9 +99,9 @@ def test_circular_reference() -> None:
         "$ref": "#/$defs/Node",
     }
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Model", "Node", "RootModel"])
+    assert sorted(models.keys()) == ["Model", "Node", "RootModel"]
     node = models["Node"](value="root", children=[models["Node"](value="child", children=[])])
-    assert_model_dump(node, {"value": "root", "children": [{"value": "child", "children": []}]})
+    assert_output(repr(node.model_dump()), EXPECTED_PATH / "circular_reference_dump.txt")
 
 
 def test_allof_inheritance() -> None:
@@ -130,9 +116,9 @@ def test_allof_inheritance() -> None:
         "$ref": "#/$defs/Extended",
     }
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Base", "Extended", "Model", "RootModel"])
+    assert sorted(models.keys()) == ["Base", "Extended", "Model", "RootModel"]
     instance = models["Extended"](id=1, name="test")
-    assert_model_dump(instance, {"id": 1, "name": "test"})
+    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "allof_inheritance_dump.txt")
 
 
 def test_cache_hit() -> None:
@@ -156,8 +142,8 @@ def test_cache_miss_different_config() -> None:
     models1 = generate_dynamic_models(schema, config=make_config(class_name="User"))
     models2 = generate_dynamic_models(schema, config=make_config(class_name="Person"))
     assert models1 is not models2
-    assert_model_keys(models1, ["User"])
-    assert_model_keys(models2, ["Person"])
+    assert sorted(models1.keys()) == ["User"]
+    assert sorted(models2.keys()) == ["Person"]
 
 
 def test_cache_disabled() -> None:
@@ -213,7 +199,7 @@ def test_concurrent_same_schema() -> None:
     for t in threads:
         t.join()
 
-    assert not errors
+    assert len(errors) == 0
     assert len(results) == 10
     assert all(r is results[0] for r in results)
 
@@ -233,7 +219,7 @@ def test_concurrent_different_schemas() -> None:
     with ThreadPoolExecutor(max_workers=5) as executor:
         executor.map(worker, schemas)
 
-    assert not errors
+    assert len(errors) == 0
     assert len(results) == 5
 
 
@@ -242,21 +228,21 @@ def test_numeric_constraints() -> None:
     schema = make_object_schema({"age": {"type": "integer", "minimum": 0, "maximum": 150}})
     models = generate_dynamic_models(schema)
     instance = models["Model"](age=30)
-    assert_model_dump(instance, {"age": 30})
+    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "numeric_constraints_dump.txt")
 
 
 def test_string_constraints() -> None:
     """Test models with string constraints."""
     schema = make_object_schema({"email": {"type": "string", "pattern": r"^[\w\.-]+@[\w\.-]+\.\w+$"}})
     models = generate_dynamic_models(schema)
-    assert_model_keys(models, ["Model"])
+    assert sorted(models.keys()) == ["Model"]
 
 
 def test_explicit_input_file_type() -> None:
     """Test passing explicit input_file_type via config."""
     schema = make_object_schema({"name": {"type": "string"}})
     models = generate_dynamic_models(schema, config=make_config())
-    assert_model_keys(models, ["Model"])
+    assert sorted(models.keys()) == ["Model"]
 
 
 def test_openapi_auto_detection() -> None:
@@ -268,14 +254,14 @@ def test_openapi_auto_detection() -> None:
         "components": {"schemas": {"User": {"type": "object", "properties": {"name": {"type": "string"}}}}},
     }
     models = generate_dynamic_models(openapi_schema)
-    assert_model_keys(models, ["User"])
+    assert sorted(models.keys()) == ["User"]
 
 
 def test_config_with_auto_input_type() -> None:
     """Test that input_file_type=Auto in config is auto-detected."""
     schema = make_object_schema({"name": {"type": "string"}})
     models = generate_dynamic_models(schema, config=GenerateConfig(class_name="User"))
-    assert_model_keys(models, ["User"])
+    assert sorted(models.keys()) == ["User"]
 
 
 def test_non_serializable_schema_skips_cache() -> None:
@@ -348,8 +334,9 @@ def test_multi_module_output() -> None:
         "$ref": "#/$defs/Order",
     }
     models = generate_dynamic_models(schema, config=make_config(module_split_mode=ModuleSplitMode.Single))
-    assert_has_models(models, "User", "Order")
+    assert "User" in models
+    assert "Order" in models
     user = models["User"](name="Alice", age=25)
-    assert_model_dump(user, {"name": "Alice", "age": 25})
+    assert_output(repr(user.model_dump()), EXPECTED_PATH / "multi_module_user_dump.txt")
     order = models["Order"](id=1, user=user)
-    assert_model_dump(order, {"id": 1, "user": {"name": "Alice", "age": 25}})
+    assert_output(repr(order.model_dump()), EXPECTED_PATH / "multi_module_order_dump.txt")
