@@ -378,7 +378,6 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         default = self._get_default(field, final_data_type, required=required)
         has_default = default is not None
 
-        # Resolve default value override (GraphQL uses original type name for scoping)
         effective_default, effective_has_default = self.model_resolver.resolve_default_value(
             original_field_name,
             default,
@@ -386,7 +385,6 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             class_name=class_name,
         )
 
-        # Recalculate required if default was added via override
         if self.apply_default_values_for_required_fields and effective_has_default:
             required = False
 

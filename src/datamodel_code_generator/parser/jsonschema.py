@@ -1041,7 +1041,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         effective_has_default: bool | None = None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
-        # Use effective values if provided, otherwise fall back to field values
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
@@ -2418,7 +2417,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
-            # Resolve default value override
             effective_default, effective_has_default = self.model_resolver.resolve_default_value(
                 original_field_name,
                 field.default,

@@ -535,14 +535,12 @@ class OpenAPIParser(JsonSchemaParser):
                 class_name=name,
             )
             if parameter.schema_:
-                # Resolve default value override for parameter.schema_ branch
                 effective_default, effective_has_default = self.model_resolver.resolve_default_value(
                     parameter_name,
                     parameter.schema_.default,
                     parameter.schema_.has_default,
                     class_name=reference.name,
                 )
-                # Recalculate required if default was added via override
                 effective_required = parameter.required
                 if self.apply_default_values_for_required_fields and effective_has_default:
                     effective_required = False
@@ -584,7 +582,6 @@ class OpenAPIParser(JsonSchemaParser):
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None
-                # Resolve default value override for parameter.content branch
                 original_default = object_schema.default if object_schema else None
                 original_has_default = object_schema.has_default if object_schema else False
                 effective_default, effective_has_default = self.model_resolver.resolve_default_value(
@@ -593,7 +590,6 @@ class OpenAPIParser(JsonSchemaParser):
                     original_has_default,
                     class_name=reference.name,
                 )
-                # Recalculate required if default was added via override
                 effective_required = parameter.required
                 if self.apply_default_values_for_required_fields and effective_has_default:
                     effective_required = False
