@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "definitions": {
+    "StringType": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "field1": {
+      "$ref": "#/definitions/StringType"
+    },
+    "field2": {
+      "$ref": "#/definitions/StringType"
+    },
+    "nested1": {
+      "type": "object",
+      "properties": {
+        "pos": {
+          "type": "object",
+          "properties": {
+            "x": {"type": "integer"},
+            "y": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "nested2": {
+      "type": "object",
+      "properties": {
+        "pos": {
+          "type": "object",
+          "properties": {
+            "x": {"type": "integer"},
+            "y": {"type": "integer"}
+          }
+        }
+      }
+    }
+  }
+}
