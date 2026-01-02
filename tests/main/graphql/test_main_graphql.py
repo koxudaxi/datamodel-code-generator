@@ -799,3 +799,27 @@ def test_main_graphql_use_default_with_default_values(output_file: Path) -> None
             str(DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json"),
         ],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--graphql-no-typename"],
+    option_description="""Exclude __typename field from generated GraphQL models.
+
+The `--graphql-no-typename` flag prevents the generator from adding the
+`typename__` field (aliased to `__typename`) to generated models. This is
+useful when using generated models for GraphQL mutations, as servers typically
+don't expect this field in input data.""",
+    input_schema="graphql/no-typename.graphql",
+    cli_args=["--graphql-no-typename"],
+    golden_output="graphql/no_typename.py",
+)
+def test_main_graphql_no_typename(output_file: Path) -> None:
+    """Test that --graphql-no-typename excludes typename__ field from all types."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "no-typename.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="no_typename.py",
+        extra_args=["--graphql-no-typename"],
+    )

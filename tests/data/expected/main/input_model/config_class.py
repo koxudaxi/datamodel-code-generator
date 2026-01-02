@@ -177,6 +177,7 @@ class GenerateConfig(TypedDict):
     include_path_parameters: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
     graphql_scopes: NotRequired[list[GraphQLScope] | None]
+    graphql_no_typename: NotRequired[bool]
     wrap_string_literal: NotRequired[bool | None]
     use_title_as_name: NotRequired[bool]
     use_operation_id_as_name: NotRequired[bool]

@@ -103,6 +103,7 @@ model_options = arg_parser.add_argument_group("Model customization")
 extra_fields_model_options = model_options.add_mutually_exclusive_group()
 template_options = arg_parser.add_argument_group("Template customization")
 openapi_options = arg_parser.add_argument_group("OpenAPI-only options")
+graphql_options = arg_parser.add_argument_group("GraphQL-only options")
 general_options = arg_parser.add_argument_group("General options")
 
 # ======================================================================================
@@ -966,6 +967,17 @@ openapi_options.add_argument(
 openapi_options.add_argument(
     "--use-status-code-in-response-name",
     help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
+    action="store_true",
+    default=None,
+)
+
+# ======================================================================================
+# Options specific to GraphQL input schemas
+# ======================================================================================
+graphql_options.add_argument(
+    "--graphql-no-typename",
+    help="Exclude __typename field from generated GraphQL models. "
+    "Useful when using generated models for GraphQL mutations.",
     action="store_true",
     default=None,
 )
