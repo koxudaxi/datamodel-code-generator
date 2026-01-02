@@ -841,7 +841,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         if self.validators:
             for model_name, model_config in self.validators.items():
                 self.extra_template_data[model_name]["validators"] = [
-                    v.model_dump(mode="json") for v in model_config.validators
+                    model_dump(v, mode="json") for v in model_config.validators
                 ]
 
         self.use_generic_base_class: bool = config.use_generic_base_class

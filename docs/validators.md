@@ -61,6 +61,8 @@ def validate_name(v: Any, info: ValidationInfo) -> Any:
 Wrap validators receive a handler to call the next validator in the chain:
 
 ```python
+from pydantic import ValidationInfo, ValidatorFunctionWrapHandler
+
 def wrap_validate_name(
     v: Any,
     handler: ValidatorFunctionWrapHandler,
