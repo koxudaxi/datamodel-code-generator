@@ -227,6 +227,37 @@ def _get_base_model_class() -> type:
 _BaseModel: type | None = None
 
 
+def create_module_getattr(
+    module_name: str,
+    lazy_imports: dict[str, tuple[str, str]],
+) -> Callable[[str], Any]:
+    """Create a __getattr__ function for lazy module imports.
+
+    Args:
+        module_name: The name of the module (typically __name__).
+        lazy_imports: Mapping of attribute name to (module_path, attribute_name).
+
+    Returns:
+        A __getattr__ function that lazily imports the specified attributes.
+
+    Example:
+        __getattr__ = create_module_getattr(__name__, {
+            "MyClass": ("mypackage.mymodule", "MyClass"),
+        })
+    """
+    from importlib import import_module  # noqa: PLC0415
+
+    def _getattr(name: str) -> Any:
+        if name in lazy_imports:
+            module_path, attr_name = lazy_imports[name]
+            module = import_module(module_path)
+            return getattr(module, attr_name)
+        msg = f"module {module_name!r} has no attribute {name!r}"
+        raise AttributeError(msg)
+
+    return _getattr
+
+
 def __getattr__(name: str) -> Any:
     """Provide lazy access to BaseModel and SafeLoader."""
     global _BaseModel  # noqa: PLW0603

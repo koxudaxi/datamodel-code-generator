@@ -928,18 +928,15 @@ inferred_message = (
 )
 
 
-def __getattr__(name: str) -> Any:
-    """Lazy import for dynamic model generation functions."""
-    if name == "generate_dynamic_models":
-        from datamodel_code_generator.dynamic import generate_dynamic_models  # noqa: PLC0415
+from datamodel_code_generator.util import create_module_getattr  # noqa: E402
 
-        return generate_dynamic_models
-    if name == "clear_dynamic_models_cache":
-        from datamodel_code_generator.dynamic import clear_dynamic_models_cache  # noqa: PLC0415
-
-        return clear_dynamic_models_cache
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
+__getattr__ = create_module_getattr(
+    __name__,
+    {
+        "generate_dynamic_models": ("datamodel_code_generator.dynamic", "generate_dynamic_models"),
+        "clear_dynamic_models_cache": ("datamodel_code_generator.dynamic", "clear_dynamic_models_cache"),
+    },
+)
 
 
 __all__ = [
