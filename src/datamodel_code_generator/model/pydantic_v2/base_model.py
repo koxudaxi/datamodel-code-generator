@@ -353,6 +353,7 @@ class BaseModel(BaseModelBase):
             return
 
         prepared_validators: list[dict[str, Any]] = []
+        used_method_names: set[str] = set()
         for validator in validators:
             fields = validator.get("fields") or [validator.get("field")]
             fields = [f for f in fields if f]
@@ -368,13 +369,14 @@ class BaseModel(BaseModelBase):
 
             fields_str = ", ".join(f"'{f}'" for f in fields)
 
-            if len(fields) == 1:
-                method_name = f"{function_name}_{fields[0]}_validator"
-            else:
-                import hashlib  # noqa: PLC0415
-
-                fields_hash = hashlib.md5("_".join(sorted(fields)).encode()).hexdigest()[:6]  # noqa: S324
-                method_name = f"{function_name}_{fields_hash}_validator"
+            # Generate unique method name with increment suffix if needed
+            base_method_name = f"{function_name}_validator"
+            method_name = base_method_name
+            count = 1
+            while method_name in used_method_names:
+                method_name = f"{base_method_name}_{count}"
+                count += 1
+            used_method_names.add(method_name)
 
             mode_str = f"mode='{mode}'"
 

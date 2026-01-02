@@ -16,5 +16,5 @@ class User(BaseModel):
 
     @field_validator('name', 'email', mode='after')
     @classmethod
-    def validate_contact_84d627_validator(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_contact_validator(cls, v: Any, info: ValidationInfo) -> Any:
         return validate_contact(v, info)

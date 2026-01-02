@@ -168,17 +168,17 @@ class User(BaseModel):
 
     @field_validator('name', mode='before')
     @classmethod
-    def validate_name_name_validator(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_name_validator(cls, v: Any, info: ValidationInfo) -> Any:
         return validate_name(v, info)
 
     @field_validator('email', mode='after')
     @classmethod
-    def validate_email_email_validator(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_email_validator(cls, v: Any, info: ValidationInfo) -> Any:
         return validate_email(v, info)
 
     @field_validator('name', 'email', mode='after')
     @classmethod
-    def validate_contact_info_84d627_validator(cls, v: Any, info: ValidationInfo) -> Any:
+    def validate_contact_info_validator(cls, v: Any, info: ValidationInfo) -> Any:
         return validate_contact_info(v, info)
 ```
 
@@ -187,7 +187,7 @@ class User(BaseModel):
 - This feature only supports Pydantic v2 (`--output-model-type pydantic_v2.BaseModel`)
 - The `ModelName` in the validators file must match the generated Python class name
 - Validator functions are imported automatically based on the `function` path
-- For multi-field validators, a hash suffix is added to the method name to ensure uniqueness
+- When the same validator function is used multiple times, an incrementing suffix (`_1`, `_2`, etc.) is added to ensure method name uniqueness
 
 ---
 
