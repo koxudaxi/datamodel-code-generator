@@ -6,25 +6,25 @@ Provides types for defining custom field validators that can be added to generat
 from __future__ import annotations
 
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TypedDict
 
-if TYPE_CHECKING:
-    from typing import TypedDict
 
-    class ValidatorDefinition(TypedDict, total=False):
-        """Definition of a single validator."""
+class ValidatorDefinition(TypedDict, total=False):
+    """Definition of a single validator."""
 
-        field: str
-        fields: list[str]
-        function: str
-        mode: str
+    field: str
+    fields: list[str]
+    function: str
+    mode: str
 
-    class ModelValidators(TypedDict, total=False):
-        """Validators configuration for a single model."""
 
-        validators: list[ValidatorDefinition]
+class ModelValidators(TypedDict, total=False):
+    """Validators configuration for a single model."""
 
-    ValidatorsConfigType = dict[str, ModelValidators]
+    validators: list[ValidatorDefinition]
+
+
+ValidatorsConfigType = dict[str, ModelValidators]
 
 
 class ValidatorMode(str, Enum):

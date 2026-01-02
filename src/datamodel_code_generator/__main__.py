@@ -99,6 +99,8 @@ if TYPE_CHECKING:
 
     from typing_extensions import Self
 
+    from datamodel_code_generator.validators import ValidatorsConfigType
+
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
     "check",
@@ -900,7 +902,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
-    validators: dict[str, Any] | None = None,
+    validators: ValidatorsConfigType | None = None,
     default_value_overrides: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
@@ -1257,22 +1259,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    validators_config: dict[str, Any] | None
-    if config.validators is None:
-        validators_config = None
-    else:
-        with config.validators as data:
-            try:
-                validators_config = json.load(data)
-            except json.JSONDecodeError as e:
-                print(f"Unable to load validators configuration: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
-        if not isinstance(validators_config, dict):
-            print(  # noqa: T201
-                "Validators configuration must be a JSON object with model names as keys",
-                file=sys.stderr,
-            )
-            return Exit.ERROR
+    validators_config, error = _load_json_config(
+        config.validators, "validators configuration", _validate_string_key_dict
+    )
+    if error:
+        print(error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
 
     if config.check:
         config_output = cast("Path", config.output)

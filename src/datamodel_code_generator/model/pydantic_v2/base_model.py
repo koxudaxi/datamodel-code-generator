@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
@@ -23,7 +23,14 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
+from datamodel_code_generator.model.pydantic_v2.imports import (
+    IMPORT_BASE_MODEL,
+    IMPORT_CONFIG_DICT,
+    IMPORT_FIELD_VALIDATOR,
+    IMPORT_VALIDATION_INFO,
+    IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
+)
+from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
 
@@ -343,16 +350,9 @@ class BaseModel(BaseModelBase):
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""
-        from datamodel_code_generator.model.pydantic_v2.imports import (  # noqa: PLC0415
-            IMPORT_FIELD_VALIDATOR,
-            IMPORT_VALIDATION_INFO,
-        )
-
         validators = self.extra_template_data.get("validators")
         if not validators:
             return
-
-        from datamodel_code_generator.reference import ModelResolver  # noqa: PLC0415
 
         prepared_validators: list[dict[str, Any]] = []
         scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
@@ -388,11 +388,6 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(Import.from_full_path(function_path))
 
         if prepared_validators:
-            from datamodel_code_generator.imports import IMPORT_ANY  # noqa: PLC0415
-            from datamodel_code_generator.model.pydantic_v2.imports import (  # noqa: PLC0415
-                IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
-            )
-
             self.extra_template_data["prepared_validators"] = prepared_validators  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
