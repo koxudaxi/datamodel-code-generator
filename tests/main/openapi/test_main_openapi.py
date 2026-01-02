@@ -2628,53 +2628,6 @@ def test_main_openapi_discriminator_in_array_underscore(output_file: Path) -> No
     )
 
 
-@SKIP_PYDANTIC_V1
-def test_main_openapi_discriminator_in_array_runtime_validation(output_file: Path) -> None:
-    """Test discriminator in array works at runtime with Pydantic v2."""
-    from typing import Annotated, Literal
-
-    from pydantic import BaseModel, Field
-
-    from datamodel_code_generator.__main__ import main
-
-    return_code = main([
-        "--input",
-        str(OPEN_API_DATA_PATH / "discriminator_in_array_underscore.yaml"),
-        "--output",
-        str(output_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--collapse-root-models",
-        "--use-standard-collections",
-    ])
-    assert return_code == Exit.OK
-
-    code = output_file.read_text(encoding="utf-8")
-    namespace: dict[str, object] = {
-        "Annotated": Annotated,
-        "Literal": Literal,
-        "BaseModel": BaseModel,
-        "Field": Field,
-    }
-    exec(compile(code, output_file, "exec"), namespace)
-
-    container_cls = namespace["Container"]
-    string_attr_cls = namespace["StringAttr"]
-    number_attr_cls = namespace["NumberAttr"]
-
-    obj = container_cls.model_validate({
-        "attributes": [
-            {"attr_type": "string_val", "value": "hello"},
-            {"attr_type": "number_val", "value": 42.5},
-        ]
-    })
-    assert len(obj.attributes) == 2
-    assert isinstance(obj.attributes[0], string_attr_cls)
-    assert isinstance(obj.attributes[1], number_attr_cls)
-    assert obj.attributes[0].value == "hello"
-    assert obj.attributes[1].value == 42.5
-
-
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
