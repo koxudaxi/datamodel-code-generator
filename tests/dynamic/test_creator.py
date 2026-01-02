@@ -1,907 +1,237 @@
-# ruff: noqa: D101, D102
+# ruff: noqa: D103
 """Tests for dynamic model generation."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
+from inline_snapshot import snapshot
 from pydantic import VERSION, ValidationError
 
 from datamodel_code_generator import InputFileType, generate_dynamic_models
 
-if TYPE_CHECKING:
-    from pathlib import Path
-
 PYDANTIC_V2 = VERSION.startswith("2.")
+DATA_DIR = Path(__file__).parent.parent / "data" / "dynamic"
 
+pytestmark = pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
 
-@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
-class TestDynamicModelCreation:
-    def test_simple_model(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
-            "required": ["name"],
-        }
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+def test_simple_model() -> None:
+    models = generate_dynamic_models(DATA_DIR / "simple.json")
+    assert "Model" in models
+    instance = models["Model"](name="John", age=30)
+    assert instance.name == snapshot("John")
+    assert instance.age == snapshot(30)
 
-        assert "Model" in models
-        instance = models["Model"](name="John", age=30)
-        assert instance.name == "John"
-        assert instance.age == 30
 
-    def test_nested_models(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"user": {"$ref": "#/$defs/User"}},
-            "$defs": {
-                "User": {
-                    "type": "object",
-                    "properties": {"name": {"type": "string"}},
-                }
-            },
-        }
+def test_nested_models() -> None:
+    models = generate_dynamic_models(DATA_DIR / "nested.json")
+    assert "Model" in models
+    assert "User" in models
+    user = models["User"](name="Alice")
+    model = models["Model"](user=user)
+    assert model.user.name == snapshot("Alice")
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
 
-        assert "User" in models
-        assert "Model" in models
-        user = models["User"](name="Alice")
-        model = models["Model"](user=user)
-        assert model.user.name == "Alice"
+def test_numeric_constraints() -> None:
+    models = generate_dynamic_models(DATA_DIR / "numeric_constraints.json")
+    models["Model"](count=50)
+    with pytest.raises(ValidationError):
+        models["Model"](count=-1)
+    with pytest.raises(ValidationError):
+        models["Model"](count=7)
 
-    def test_string_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                }
-            },
-        }
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+def test_array_constraints() -> None:
+    models = generate_dynamic_models(DATA_DIR / "array_constraints.json")
+    models["Model"](tags=["a", "b", "c"])
+    with pytest.raises(ValidationError):
+        models["Model"](tags=[])
+    with pytest.raises(ValidationError):
+        models["Model"](tags=["a", "b", "c", "d", "e", "f"])
 
-        instance = models["Model"](email="test@example.com")
-        assert instance.email == "test@example.com"
 
-    def test_numeric_constraints(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 100,
-                    "multipleOf": 5,
-                }
-            },
-        }
+def test_circular_reference() -> None:
+    models = generate_dynamic_models(DATA_DIR / "circular.json")
+    assert "Node" in models
+    node_class = models["Node"]
+    node = node_class(value="root", children=[node_class(value="child", children=[])])
+    assert node.children[0].value == snapshot("child")
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
 
-        models["Model"](count=50)
+def test_enum_values() -> None:
+    models = generate_dynamic_models(DATA_DIR / "enum.json")
+    models["Model"](status="active")
+    with pytest.raises(ValidationError):
+        models["Model"](status="invalid")
 
-        with pytest.raises(ValidationError):
-            models["Model"](count=-1)
 
-        with pytest.raises(ValidationError):
-            models["Model"](count=7)
+def test_optional_field() -> None:
+    models = generate_dynamic_models(DATA_DIR / "optional.json")
+    instance = models["Model"](name="John")
+    assert instance.name == snapshot("John")
+    assert instance.nickname is None
 
-    def test_array_constraints(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"tags": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 5}},
-        }
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+def test_default_value() -> None:
+    models = generate_dynamic_models(DATA_DIR / "default.json")
+    instance = models["Model"]()
+    assert instance.count == snapshot(10)
 
-        models["Model"](tags=["a", "b", "c"])
 
-        with pytest.raises(ValidationError):
-            models["Model"](tags=[])
+def test_allof_inheritance() -> None:
+    models = generate_dynamic_models(DATA_DIR / "allof.json")
+    child = models["Child"](id=1, name="Test")
+    assert child.id == snapshot(1)
+    assert child.name == snapshot("Test")
 
-        with pytest.raises(ValidationError):
-            models["Model"](tags=["a", "b", "c", "d", "e", "f"])
 
-    def test_circular_reference(self) -> None:
-        schema = {
-            "$defs": {
-                "Node": {
-                    "type": "object",
-                    "properties": {
-                        "value": {"type": "string"},
-                        "children": {"type": "array", "items": {"$ref": "#/$defs/Node"}},
-                    },
-                }
-            },
-            "$ref": "#/$defs/Node",
-        }
+def test_openapi_schema() -> None:
+    models = generate_dynamic_models(DATA_DIR / "openapi.yaml", input_file_type=InputFileType.OpenAPI)
+    assert "User" in models
+    user = models["User"](name="John", email="john@example.com")
+    assert user.name == snapshot("John")
+    assert user.email == snapshot("john@example.com")
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
 
-        node_class = models["Node"]
-        node = node_class(value="root", children=[node_class(value="child", children=[])])
-        assert node.children[0].value == "child"
+def test_string_constraints() -> None:
+    models = generate_dynamic_models(DATA_DIR / "string_constraints.json")
+    models["Model"](code="ABC")
+    with pytest.raises(ValidationError):
+        models["Model"](code="A")
+    with pytest.raises(ValidationError):
+        models["Model"](code="abc")
 
-    def test_enum_values(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"status": {"enum": ["pending", "active", "completed"]}},
-        }
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        models["Model"](status="active")
-
-        with pytest.raises(ValidationError):
-            models["Model"](status="invalid")
-
-    def test_optional_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"name": {"type": "string"}, "nickname": {"type": "string"}},
-            "required": ["name"],
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](name="John")
-        assert instance.name == "John"
-        assert instance.nickname is None
-
-    def test_default_value(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"count": {"type": "integer", "default": 10}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"]()
-        assert instance.count == 10
-
-    def test_all_of_inheritance(self) -> None:
-        schema = {
-            "$defs": {
-                "Base": {"type": "object", "properties": {"id": {"type": "integer"}}},
-                "Child": {
-                    "allOf": [
-                        {"$ref": "#/$defs/Base"},
-                        {"properties": {"name": {"type": "string"}}},
-                    ]
-                },
-            },
-            "$ref": "#/$defs/Child",
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        child = models["Child"](id=1, name="Test")
-        assert child.id == 1
-        assert child.name == "Test"
-
-    def test_openapi_schema(self) -> None:
-        schema = """
-openapi: "3.0.0"
-info:
-  title: Test API
-  version: "1.0"
-paths: {}
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        name:
-          type: string
-        email:
-          type: string
-      required:
-        - name
-"""
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.OpenAPI)
-
-        assert "User" in models
-        user = models["User"](name="John", email="john@example.com")
-        assert user.name == "John"
-        assert user.email == "john@example.com"
-
-    def test_empty_schema(self) -> None:
-        schema = {"type": "object", "properties": {}}
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-        instance = models["Model"]()
-        assert instance is not None
-
-    def test_string_constraints(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "code": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 10,
-                    "pattern": "^[A-Z]+$",
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        models["Model"](code="ABC")
-
-        with pytest.raises(ValidationError):
-            models["Model"](code="A")
-
-        with pytest.raises(ValidationError):
-            models["Model"](code="abc")
-
-    def test_exclusive_numeric_constraints(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "value": {
-                    "type": "number",
-                    "exclusiveMinimum": 0,
-                    "exclusiveMaximum": 100,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        models["Model"](value=50)
-
-        with pytest.raises(ValidationError):
-            models["Model"](value=0)
-
-        with pytest.raises(ValidationError):
-            models["Model"](value=100)
-
-    def test_date_format(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "created": {"type": "string", "format": "date"},
-                "updated": {"type": "string", "format": "date-time"},
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        from datetime import date, datetime, timezone
-
-        instance = models["Model"](created=date(2024, 1, 1), updated=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc))
-        assert instance.created == date(2024, 1, 1)
-
-    def test_uuid_format(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"id": {"type": "string", "format": "uuid"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        import uuid
-
-        test_uuid = uuid.uuid4()
-        instance = models["Model"](id=test_uuid)
-        assert instance.id == test_uuid
-
-    def test_dict_type(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "metadata": {
-                    "type": "object",
-                    "additionalProperties": {"type": "string"},
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](metadata={"key": "value"})
-        assert instance.metadata == {"key": "value"}
-
-    def test_set_type(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "tags": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "uniqueItems": True,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](tags=["a", "b", "c"])
-        assert "a" in instance.tags
-
-    def test_ref_type(self) -> None:
-        schema = {
-            "$defs": {
-                "Address": {
-                    "type": "object",
-                    "properties": {"city": {"type": "string"}},
-                }
-            },
-            "type": "object",
-            "properties": {"address": {"$ref": "#/$defs/Address"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        address = models["Address"](city="Tokyo")
-        instance = models["Model"](address=address)
-        assert instance.address.city == "Tokyo"
-
-    def test_literal_type(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"status": {"const": "active"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](status="active")
-        assert instance.status == "active"
-
-    def test_nullable_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"name": {"type": ["string", "null"]}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance1 = models["Model"](name="test")
-        assert instance1.name == "test"
-
-        instance2 = models["Model"](name=None)
-        assert instance2.name is None
-
-    def test_integer_enum(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"priority": {"enum": [1, 2, 3]}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        models["Model"](priority=2)
-
-        with pytest.raises(ValidationError):
-            models["Model"](priority=5)
-
-    def test_boolean_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"active": {"type": "boolean"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](active=True)
-        assert instance.active is True
-
-    def test_float_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"price": {"type": "number"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](price=19.99)
-        assert instance.price == 19.99
-
-    def test_empty_results(self) -> None:
-        schema = {}
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert isinstance(models, dict)
-
-    def test_file_path_input(self, tmp_path: Path) -> None:
-        schema_file = tmp_path / "schema.json"
-        schema_file.write_text('{"type": "object", "properties": {"name": {"type": "string"}}}')
-
-        models = generate_dynamic_models(str(schema_file), input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-        instance = models["Model"](name="Test")
-        assert instance.name == "Test"
-
-    def test_path_object_input(self, tmp_path: Path) -> None:
-        schema_file = tmp_path / "schema.json"
-        schema_file.write_text('{"type": "object", "properties": {"value": {"type": "integer"}}}')
-
-        models = generate_dynamic_models(schema_file, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-        instance = models["Model"](value=42)
-        assert instance.value == 42
-
-    def test_field_with_alias(self) -> None:
-        schema = """
-openapi: "3.0.0"
-info:
-  title: Test API
-  version: "1.0"
-paths: {}
-components:
-  schemas:
-    User:
-      type: object
-      properties:
-        user_name:
-          type: string
-      x-alias:
-        user_name: userName
-"""
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.OpenAPI)
-        assert "User" in models
-
-    def test_field_with_description(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "The user's name",
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-        instance = models["Model"](name="Test")
-        assert instance.name == "Test"
-
-    def test_standalone_enum_type(self) -> None:
-        schema = {
-            "$defs": {
-                "Status": {
-                    "type": "string",
-                    "enum": ["active", "inactive", "pending"],
-                }
-            },
-            "type": "object",
-            "properties": {"status": {"$ref": "#/$defs/Status"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Status" in models
-        assert "Model" in models
-
-    def test_any_of_union(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"value": {"anyOf": [{"type": "string"}, {"type": "integer"}]}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance1 = models["Model"](value="test")
-        assert instance1.value == "test"
-
-        instance2 = models["Model"](value=42)
-        assert instance2.value == 42
-
-    def test_one_of_union(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"data": {"oneOf": [{"type": "boolean"}, {"type": "number"}]}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](data=True)
-        assert instance.data is True
-
-    def test_time_format(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"time_value": {"type": "string", "format": "time"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        from datetime import time
-
-        instance = models["Model"](time_value=time(12, 30, 0))
-        assert instance.time_value == time(12, 30, 0)
-
-    def test_decimal_format(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"amount": {"type": "string", "format": "decimal"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        from decimal import Decimal
-
-        instance = models["Model"](amount=Decimal("123.45"))
-        assert instance.amount == Decimal("123.45")
-
-    def test_bytes_type(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"data": {"type": "string", "format": "binary"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](data=b"hello")
-        assert instance.data == b"hello"
-
-    def test_array_without_items(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"items": {"type": "array"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](items=[1, "two", 3.0])
-        assert instance.items == [1, "two", 3.0]
-
-    def test_object_without_properties(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"data": {"type": "object"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](data={"any": "value"})
-        assert instance.data == {"any": "value"}
-
-    def test_nested_allof_multiple_refs(self) -> None:
-        schema = {
-            "$defs": {
-                "Named": {
-                    "type": "object",
-                    "properties": {"name": {"type": "string"}},
-                },
-                "Aged": {
-                    "type": "object",
-                    "properties": {"age": {"type": "integer"}},
-                },
-                "Person": {
-                    "allOf": [
-                        {"$ref": "#/$defs/Named"},
-                        {"$ref": "#/$defs/Aged"},
-                    ]
-                },
-            },
-            "$ref": "#/$defs/Person",
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Person" in models
-        person = models["Person"](name="John", age=30)
-        assert person.name == "John"
-        assert person.age == 30
-
-    def test_deep_nested_refs(self) -> None:
-        schema = {
-            "$defs": {
-                "Inner": {
-                    "type": "object",
-                    "properties": {"value": {"type": "string"}},
-                },
-                "Middle": {
-                    "type": "object",
-                    "properties": {"inner": {"$ref": "#/$defs/Inner"}},
-                },
-                "Outer": {
-                    "type": "object",
-                    "properties": {"middle": {"$ref": "#/$defs/Middle"}},
-                },
-            },
-            "$ref": "#/$defs/Outer",
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        inner = models["Inner"](value="test")
-        middle = models["Middle"](inner=inner)
-        outer = models["Outer"](middle=middle)
-        assert outer.middle.inner.value == "test"
-
-    def test_additional_properties_typed(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "meta": {
-                    "type": "object",
-                    "additionalProperties": {"type": "integer"},
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](meta={"count": 10, "total": 100})
-        assert instance.meta["count"] == 10
-
-    def test_required_field(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "name": {"type": "string"},
-                "email": {"type": "string"},
-            },
-            "required": ["name", "email"],
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        with pytest.raises(ValidationError):
-            models["Model"](name="John")
-
-        instance = models["Model"](name="John", email="john@test.com")
-        assert instance.name == "John"
-
-    def test_ge_constraint(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "value": {"type": "integer", "minimum": 10},
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        models["Model"](value=10)
-        models["Model"](value=15)
-
-        with pytest.raises(ValidationError):
-            models["Model"](value=9)
-
-    def test_le_constraint(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "value": {"type": "integer", "maximum": 100},
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
+def test_exclusive_constraints() -> None:
+    models = generate_dynamic_models(DATA_DIR / "exclusive_constraints.json")
+    models["Model"](value=50)
+    with pytest.raises(ValidationError):
+        models["Model"](value=0)
+    with pytest.raises(ValidationError):
         models["Model"](value=100)
-        models["Model"](value=50)
-
-        with pytest.raises(ValidationError):
-            models["Model"](value=101)
-
-    def test_forward_ref_resolution(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"item": {"$ref": "#/$defs/Item"}},
-            "$defs": {
-                "Item": {
-                    "type": "object",
-                    "properties": {"name": {"type": "string"}},
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        item = models["Item"](name="Widget")
-        model = models["Model"](item=item)
-        assert model.item.name == "Widget"
-
-    def test_auto_input_type_detection(self) -> None:
-        schema = {"type": "object", "properties": {"name": {"type": "string"}}}
-
-        models = generate_dynamic_models(schema)
-
-        assert "Model" in models
-        instance = models["Model"](name="Test")
-        assert instance.name == "Test"
-
-    def test_graphql_not_supported(self) -> None:
-        schema = """
-        type Query {
-            hello: String
-        }
-        """
-
-        from datamodel_code_generator import Error
-
-        with pytest.raises(Error, match="GraphQL is not yet supported"):
-            generate_dynamic_models(schema, input_file_type=InputFileType.GraphQL)
-
-    def test_tuple_type(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "coords": {
-                    "type": "array",
-                    "prefixItems": [{"type": "number"}, {"type": "number"}],
-                    "items": False,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-
-    def test_typed_dict_additional_properties(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": {"type": "integer"},
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        instance = models["Model"](data={"a": 1, "b": 2})
-        assert instance.data["a"] == 1
-
-    def test_json_schema_unique_items(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "items": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "uniqueItems": True,
-                    "minItems": 1,
-                    "maxItems": 10,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
-
-    def test_min_max_properties(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "minProperties": 1,
-                    "maxProperties": 5,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-
-        assert "Model" in models
 
 
-@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
-class TestCreatorEdgeCases:
-    def test_empty_parser_results(self) -> None:
-        schema = {}
+def test_formats() -> None:
+    from datetime import date, datetime, time, timezone
+    from decimal import Decimal
+    from uuid import uuid4
 
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        assert models == {} or isinstance(models, dict)
-
-    def test_field_with_pattern_constraint(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "code": {"type": "string", "pattern": "^[A-Z]{3}$"},
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        instance = models["Model"](code="ABC")
-        assert instance.code == "ABC"
-
-        with pytest.raises(ValidationError):
-            models["Model"](code="abc")
+    models = generate_dynamic_models(DATA_DIR / "formats.json")
+    test_uuid = uuid4()
+    instance = models["Model"](
+        date_field=date(2024, 1, 1),
+        datetime_field=datetime(2024, 1, 1, 12, 0, tzinfo=timezone.utc),
+        uuid_field=test_uuid,
+        time_field=time(12, 30),
+        decimal_field=Decimal("123.45"),
+        binary_field=b"hello",
+    )
+    assert instance.date_field == snapshot(date(2024, 1, 1))
+    assert instance.uuid_field == test_uuid
+    assert instance.time_field == snapshot(time(12, 30))
+    assert instance.decimal_field == snapshot(Decimal("123.45"))
+    assert instance.binary_field == snapshot(b"hello")
 
 
-@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
-class TestTypeResolver:
-    def test_set_with_typed_items(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "tags": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "uniqueItems": True,
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        instance = models["Model"](tags=["a", "b"])
-        assert "a" in instance.tags
-
-    def test_dict_with_key_value_types(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {
-                "mapping": {
-                    "type": "object",
-                    "additionalProperties": {"type": "string"},
-                }
-            },
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        instance = models["Model"](mapping={"key": "value"})
-        assert instance.mapping["key"] == "value"
-
-    def test_format_date_type(self) -> None:
-        from datetime import date
-
-        schema = {
-            "type": "object",
-            "properties": {"birthday": {"type": "string", "format": "date"}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        instance = models["Model"](birthday=date(1990, 1, 1))
-        assert instance.birthday == date(1990, 1, 1)
-
-    def test_forward_ref_already_resolved(self) -> None:
-        schema = {
-            "$defs": {
-                "Address": {
-                    "type": "object",
-                    "properties": {"city": {"type": "string"}},
-                },
-                "Person": {
-                    "type": "object",
-                    "properties": {
-                        "home": {"$ref": "#/$defs/Address"},
-                        "work": {"$ref": "#/$defs/Address"},
-                    },
-                },
-            },
-            "$ref": "#/$defs/Person",
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        addr = models["Address"](city="NYC")
-        person = models["Person"](home=addr, work=addr)
-        assert person.home.city == "NYC"
-
-    def test_union_with_multiple_types(self) -> None:
-        schema = {
-            "type": "object",
-            "properties": {"value": {"anyOf": [{"type": "string"}, {"type": "integer"}, {"type": "boolean"}]}},
-        }
-
-        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
-        assert models["Model"](value="test").value == "test"
-        assert models["Model"](value=42).value == 42
-        assert models["Model"](value=True).value is True
+def test_types() -> None:
+    models = generate_dynamic_models(DATA_DIR / "types.json")
+    instance = models["Model"](
+        bool_field=True, float_field=19.99, string_field="test", nullable_field=None, const_field="active"
+    )
+    assert instance.bool_field is True
+    assert instance.float_field == snapshot(19.99)
+    assert instance.nullable_field is None
+    assert instance.const_field == snapshot("active")
 
 
-@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
+def test_objects() -> None:
+    models = generate_dynamic_models(DATA_DIR / "objects.json")
+    instance = models["Model"](
+        dict_str={"key": "value"},
+        dict_int={"count": 10},
+        plain_object={"any": "value"},
+        plain_array=[1, "two", 3.0],
+    )
+    assert instance.dict_str == snapshot({"key": "value"})
+    assert instance.dict_int == snapshot({"count": 10})
+
+
+def test_unions() -> None:
+    models = generate_dynamic_models(DATA_DIR / "unions.json")
+    assert models["Model"](anyof_field="test").anyof_field == snapshot("test")
+    assert models["Model"](anyof_field=42).anyof_field == snapshot(42)
+    assert models["Model"](oneof_field=True).oneof_field is True
+    assert models["Model"](multi_union="str").multi_union == snapshot("str")
+
+
+def test_refs() -> None:
+    models = generate_dynamic_models(DATA_DIR / "refs.json")
+    for name in ["Address", "Inner", "Middle", "Model", "Outer"]:
+        assert name in models
+    address = models["Address"](city="Tokyo")
+    inner = models["Inner"](value="test")
+    middle = models["Middle"](inner=inner)
+    outer = models["Outer"](middle=middle)
+    instance = models["Model"](address=address, outer=outer)
+    assert instance.address.city == snapshot("Tokyo")
+    assert instance.outer.middle.inner.value == snapshot("test")
+
+
+def test_standalone_enum() -> None:
+    models = generate_dynamic_models(DATA_DIR / "standalone_enum.json")
+    assert "Model" in models
+    assert "Status" in models
+
+
+def test_multiple_allof() -> None:
+    models = generate_dynamic_models(DATA_DIR / "multiple_allof.json")
+    person = models["Person"](name="John", age=30)
+    assert person.name == snapshot("John")
+    assert person.age == snapshot(30)
+
+
+def test_required_field() -> None:
+    models = generate_dynamic_models(DATA_DIR / "required.json")
+    with pytest.raises(ValidationError):
+        models["Model"](name="John")
+    instance = models["Model"](name="John", email="john@test.com")
+    assert instance.email == snapshot("john@test.com")
+
+
+def test_tuple_type() -> None:
+    models = generate_dynamic_models(DATA_DIR / "tuple.json")
+    assert "Model" in models
+
+
+def test_unique_items() -> None:
+    models = generate_dynamic_models(DATA_DIR / "unique_items.json")
+    instance = models["Model"](tags=["a", "b"], constrained_tags=["x"])
+    assert "a" in instance.tags
+
+
+def test_min_max_properties() -> None:
+    models = generate_dynamic_models(DATA_DIR / "min_max_properties.json")
+    assert "Model" in models
+
+
+def test_description() -> None:
+    models = generate_dynamic_models(DATA_DIR / "description.json")
+    instance = models["Model"](name="Test")
+    assert instance.name == snapshot("Test")
+    field_info = models["Model"].model_fields["name"]
+    assert field_info.description == snapshot("The user's name")
+
+
+def test_graphql_not_supported() -> None:
+    from datamodel_code_generator import Error
+
+    with pytest.raises(Error, match="GraphQL is not yet supported"):
+        generate_dynamic_models("type Query { hello: String }", input_file_type=InputFileType.GraphQL)
+
+
 def test_type_resolution_error() -> None:
-    """Test TypeResolutionError is raised when type resolution fails."""
     from unittest.mock import MagicMock, patch
 
     from datamodel_code_generator.dynamic.creator import DynamicModelCreator
@@ -909,11 +239,9 @@ def test_type_resolution_error() -> None:
 
     mock_parser = MagicMock()
     creator = DynamicModelCreator(mock_parser)
-
     mock_field = MagicMock()
     mock_field.name = "test_field"
     mock_field.data_type = MagicMock()
-
     mock_data_model = MagicMock()
     mock_data_model.class_name = "TestModel"
     mock_data_model.fields = [mock_field]

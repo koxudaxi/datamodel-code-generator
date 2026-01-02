@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "data": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 5
+    }
+  }
+}

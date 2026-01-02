@@ -1,0 +1,19 @@
+{
+  "$defs": {
+    "Named": {
+      "type": "object",
+      "properties": {"name": {"type": "string"}}
+    },
+    "Aged": {
+      "type": "object",
+      "properties": {"age": {"type": "integer"}}
+    },
+    "Person": {
+      "allOf": [
+        {"$ref": "#/$defs/Named"},
+        {"$ref": "#/$defs/Aged"}
+      ]
+    }
+  },
+  "$ref": "#/$defs/Person"
+}

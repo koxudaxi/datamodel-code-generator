@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "bool_field": {"type": "boolean"},
+    "float_field": {"type": "number"},
+    "string_field": {"type": "string"},
+    "nullable_field": {"type": ["string", "null"]},
+    "const_field": {"const": "active"}
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "$defs": {
+    "Node": {
+      "type": "object",
+      "properties": {
+        "value": {"type": "string"},
+        "children": {"type": "array", "items": {"$ref": "#/$defs/Node"}}
+      }
+    }
+  },
+  "$ref": "#/$defs/Node"
+}

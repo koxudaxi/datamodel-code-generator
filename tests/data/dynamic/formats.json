@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "date_field": {"type": "string", "format": "date"},
+    "datetime_field": {"type": "string", "format": "date-time"},
+    "uuid_field": {"type": "string", "format": "uuid"},
+    "time_field": {"type": "string", "format": "time"},
+    "decimal_field": {"type": "string", "format": "decimal"},
+    "binary_field": {"type": "string", "format": "binary"}
+  }
+}

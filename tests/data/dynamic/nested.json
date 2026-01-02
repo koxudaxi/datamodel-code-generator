@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "properties": {
+    "user": {"$ref": "#/$defs/User"}
+  },
+  "$defs": {
+    "User": {
+      "type": "object",
+      "properties": {"name": {"type": "string"}}
+    }
+  }
+}

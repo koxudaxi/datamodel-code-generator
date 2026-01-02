@@ -1,0 +1,25 @@
+{
+  "$defs": {
+    "Address": {
+      "type": "object",
+      "properties": {"city": {"type": "string"}}
+    },
+    "Inner": {
+      "type": "object",
+      "properties": {"value": {"type": "string"}}
+    },
+    "Middle": {
+      "type": "object",
+      "properties": {"inner": {"$ref": "#/$defs/Inner"}}
+    },
+    "Outer": {
+      "type": "object",
+      "properties": {"middle": {"$ref": "#/$defs/Middle"}}
+    }
+  },
+  "type": "object",
+  "properties": {
+    "address": {"$ref": "#/$defs/Address"},
+    "outer": {"$ref": "#/$defs/Outer"}
+  }
+}

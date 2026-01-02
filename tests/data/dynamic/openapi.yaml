@@ -1,0 +1,16 @@
+openapi: "3.0.0"
+info:
+  title: Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+      required:
+        - name

@@ -1,0 +1,6 @@
+{
+  "type": "object",
+  "properties": {
+    "status": {"enum": ["pending", "active", "completed"]}
+  }
+}

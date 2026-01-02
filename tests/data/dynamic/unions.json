@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "anyof_field": {
+      "anyOf": [{"type": "string"}, {"type": "integer"}]
+    },
+    "oneof_field": {
+      "oneOf": [{"type": "boolean"}, {"type": "number"}]
+    },
+    "multi_union": {
+      "anyOf": [{"type": "string"}, {"type": "integer"}, {"type": "boolean"}]
+    }
+  }
+}

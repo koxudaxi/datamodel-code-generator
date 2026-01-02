@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "coords": {
+      "type": "array",
+      "prefixItems": [{"type": "number"}, {"type": "number"}],
+      "items": false
+    }
+  }
+}

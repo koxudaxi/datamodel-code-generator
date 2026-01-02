@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "dict_str": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "dict_int": {
+      "type": "object",
+      "additionalProperties": {"type": "integer"}
+    },
+    "plain_object": {"type": "object"},
+    "plain_array": {"type": "array"}
+  }
+}
