@@ -362,10 +362,7 @@ class BaseModel(BaseModelBase):
             if not fields:
                 continue
 
-            function_path = validator.get("function")
-            if not function_path:
-                continue
-
+            function_path: str = validator["function"]
             function_name = function_path.rsplit(".", 1)[-1]
             mode = validator.get("mode", "after")
 
