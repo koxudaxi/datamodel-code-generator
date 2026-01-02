@@ -9,6 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Literal, TypeAlias, TypedDict
 
 from datamodel_code_generator.enums import StrictTypes
+from datamodel_code_generator.validators import ModelValidators
 from typing_extensions import NotRequired
 
 AllExportsCollisionStrategy: TypeAlias = Literal[
@@ -110,6 +111,9 @@ TargetPydanticVersion: TypeAlias = Literal['2', '2.11']
 UnionMode: TypeAlias = Literal['smart', 'left_to_right']
 
 
+ValidatorMode: TypeAlias = Literal['before', 'after', 'wrap', 'plain']
+
+
 class GenerateConfig(TypedDict):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
@@ -123,6 +127,7 @@ class GenerateConfig(TypedDict):
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[str | None]
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+    validators: NotRequired[Mapping[str, ModelValidators] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
@@ -241,3 +246,14 @@ class GenerateConfig(TypedDict):
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
+
+
+class ValidatorDefinition(TypedDict):
+    field: NotRequired[str | None]
+    fields: NotRequired[list[str] | None]
+    function: str
+    mode: NotRequired[ValidatorMode]
+
+
+class ModelValidatorsModel(TypedDict):
+    validators: list[ValidatorDefinition]

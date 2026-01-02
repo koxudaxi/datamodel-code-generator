@@ -51,6 +51,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import StrictTypes
+    from datamodel_code_generator.validators import ModelValidators
 
 
 def _baseline_generate(
@@ -69,6 +70,7 @@ def _baseline_generate(
     class_decorators: list[str] | None = None,
     custom_template_dir: Path | None = None,
     extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+    validators: Mapping[str, ModelValidators] | None = None,
     validation: bool = False,
     field_constraints: bool = False,
     snake_case_field: bool = False,
@@ -204,6 +206,7 @@ class _BaselineParser:
         class_decorators: list[str] | None = None,
         custom_template_dir: Path | None = None,
         extra_template_data: defaultdict[str, dict[str, Any]] | None = None,
+        validators: Mapping[str, ModelValidators] | None = None,
         target_python_version: PythonVersion = PythonVersionMin,
         dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = None,
         validation: bool = False,

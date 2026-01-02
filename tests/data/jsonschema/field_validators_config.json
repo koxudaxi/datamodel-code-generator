@@ -1,0 +1,16 @@
+{
+  "User": {
+    "validators": [
+      {
+        "field": "name",
+        "function": "myapp.validators.validate_name",
+        "mode": "before"
+      },
+      {
+        "field": "email",
+        "function": "myapp.validators.validate_email",
+        "mode": "after"
+      }
+    ]
+  }
+}

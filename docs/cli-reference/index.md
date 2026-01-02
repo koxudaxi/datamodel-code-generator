@@ -12,7 +12,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 19 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
@@ -219,6 +219,7 @@ This documentation is auto-generated from test cases.
 ### V {#v}
 
 - [`--validation`](openapi-only-options.md#validation)
+- [`--validators`](template-customization.md#validators)
 - [`--version`](utility-options.md#version)
 
 ### W {#w}

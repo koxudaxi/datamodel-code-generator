@@ -45,6 +45,8 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             "external_child.json",
             "external_child.yaml",
             "extra_data_msgspec.json",
+            "field_validators_config.json",
+            "field_validators_multi_fields_config.json",
             "list_only.json",
             "list_only.yaml",
             "whitespace_only.yaml",

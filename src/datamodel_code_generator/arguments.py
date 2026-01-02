@@ -877,6 +877,12 @@ template_options.add_argument(
     type=Path,
 )
 template_options.add_argument(
+    "--validators",
+    help="Validators configuration file (JSON). Defines field validators for Pydantic v2 models. "
+    "Keys are model names, values contain validator definitions with field, function, and mode.",
+    type=Path,
+)
+template_options.add_argument(
     "--use-double-quotes",
     action="store_true",
     default=None,

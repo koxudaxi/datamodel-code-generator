@@ -142,6 +142,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-union-operator": "Use | operator for Union types (PEP 604).",
     "--use-unique-items-as-set": "Generate set types for arrays with uniqueItems constraint.",
     "--validation": "Enable validation constraints (deprecated, use --field-constraints).",
+    "--validators": "Add custom field validators to generated Pydantic v2 models.",
     "--watch": "Watch input file(s) for changes and regenerate output automatically.",
     "--watch-delay": "Set debounce delay in seconds for watch mode.",
     "--wrap-string-literal": "Wrap long string literals across multiple lines.",

@@ -258,7 +258,7 @@ def chdir(path: Path | None) -> Iterator[None]:
             os.chdir(prev_cwd)
 
 
-def is_openapi(data: dict) -> bool:
+def is_openapi(data: Mapping[str, Any]) -> bool:
     """Check if the data dict is an OpenAPI specification."""
     return "openapi" in data
 
@@ -927,6 +927,23 @@ inferred_message = (
     "`--input-file-type` option."
 )
 
+
+_LAZY_IMPORTS = {
+    "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
+    "generate_dynamic_models": "datamodel_code_generator.dynamic",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_IMPORTS:
+        import importlib  # noqa: PLC0415
+
+        module = importlib.import_module(_LAZY_IMPORTS[name])
+        return getattr(module, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
 __all__ = [
     "DEFAULT_FORMATTERS",
     "DEFAULT_SHARED_MODULE_NAME",
@@ -959,5 +976,7 @@ __all__ = [
     "ReuseScope",
     "SchemaParseError",
     "TargetPydanticVersion",
+    "clear_dynamic_models_cache",  # noqa: F822
     "generate",
+    "generate_dynamic_models",  # noqa: F822
 ]

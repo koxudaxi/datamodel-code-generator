@@ -30,6 +30,14 @@ if TYPE_CHECKING:
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import DataTypeManager
+    from datamodel_code_generator.validators import ModelValidators, ValidatorMode
+
+
+class ValidatorDefinitionDict(TypedDict):
+    field: NotRequired[str | None]
+    fields: NotRequired[list[str] | None]
+    function: str
+    mode: NotRequired[ValidatorMode]
 
 
 class ParserConfigDict(TypedDict):
@@ -43,6 +51,7 @@ class ParserConfigDict(TypedDict):
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+    validators: NotRequired[Mapping[str, ModelValidators] | None]
     target_python_version: NotRequired[PythonVersion]
     dump_resolve_reference_action: NotRequired[Callable[[Iterable[str]], str] | None]
     validation: NotRequired[bool]
@@ -169,3 +178,7 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
 
 
 ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict
+
+
+class ModelValidatorsDict(TypedDict):
+    validators: list[ValidatorDefinitionDict]

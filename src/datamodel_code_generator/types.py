@@ -93,14 +93,14 @@ READ_ONLY = "ReadOnly"
 READ_ONLY_PREFIX = f"{READ_ONLY}["
 
 
-def __getattr__(name: str) -> Any:
-    """Provide lazy access to StrictTypes for backwards compatibility."""
-    if name == "StrictTypes":
-        from datamodel_code_generator.enums import StrictTypes  # noqa: PLC0415
+from datamodel_code_generator.util import create_module_getattr  # noqa: E402
 
-        return StrictTypes
-    msg = f"module {__name__!r} has no attribute {name!r}"
-    raise AttributeError(msg)
+__getattr__ = create_module_getattr(
+    __name__,
+    {
+        "StrictTypes": ("datamodel_code_generator.enums", "StrictTypes"),
+    },
+)
 
 
 if TYPE_CHECKING:

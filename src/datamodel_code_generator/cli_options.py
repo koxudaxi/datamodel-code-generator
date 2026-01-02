@@ -211,6 +211,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--wrap-string-literal": CLIOptionMeta(name="--wrap-string-literal", category=OptionCategory.TEMPLATE),
     "--custom-template-dir": CLIOptionMeta(name="--custom-template-dir", category=OptionCategory.TEMPLATE),
     "--extra-template-data": CLIOptionMeta(name="--extra-template-data", category=OptionCategory.TEMPLATE),
+    "--validators": CLIOptionMeta(name="--validators", category=OptionCategory.TEMPLATE),
     "--custom-file-header": CLIOptionMeta(name="--custom-file-header", category=OptionCategory.TEMPLATE),
     "--custom-file-header-path": CLIOptionMeta(name="--custom-file-header-path", category=OptionCategory.TEMPLATE),
     "--additional-imports": CLIOptionMeta(name="--additional-imports", category=OptionCategory.TEMPLATE),

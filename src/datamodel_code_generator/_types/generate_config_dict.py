@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.parser import LiteralType
+    from datamodel_code_generator.validators import ModelValidators, ValidatorMode
 
 
 class GenerateConfigDict(TypedDict):
@@ -50,6 +51,7 @@ class GenerateConfigDict(TypedDict):
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+    validators: NotRequired[Mapping[str, ModelValidators] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
@@ -166,3 +168,14 @@ class GenerateConfigDict(TypedDict):
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
+
+
+class ValidatorDefinition(TypedDict):
+    field: NotRequired[str | None]
+    fields: NotRequired[list[str] | None]
+    function: str
+    mode: NotRequired[ValidatorMode]
+
+
+class ModelValidatorsModel(TypedDict):
+    validators: list[ValidatorDefinition]

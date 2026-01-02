@@ -251,5 +251,6 @@ class Model(BaseModel):
 
 ## 📖 See Also
 
-- 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options (same parameters as module)
-- 📋 [Generate from JSON Schema](jsonschema.md) - JSON Schema examples
+- [Dynamic Model Generation](dynamic-model-generation.md) - Generate Python classes at runtime
+- [CLI Reference](cli-reference/index.md) - Complete CLI options (same parameters as module)
+- [Generate from JSON Schema](jsonschema.md) - JSON Schema examples
