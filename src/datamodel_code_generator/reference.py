@@ -1207,10 +1207,9 @@ class ModelResolver:  # noqa: PLR0904
         if not self.default_value_overrides:
             return original_default, has_default
 
-        if class_name is not None:
-            scoped_key = f"{class_name}.{field_name}"
-            if scoped_key in self.default_value_overrides:
-                return self.default_value_overrides[scoped_key], True
+        scoped_key = f"{class_name}.{field_name}" if class_name else None
+        if scoped_key and scoped_key in self.default_value_overrides:
+            return self.default_value_overrides[scoped_key], True
 
         if field_name in self.default_value_overrides:
             return self.default_value_overrides[field_name], True
