@@ -30,7 +30,6 @@ from datamodel_code_generator.enums import (
     TargetPydanticVersion,
 )
 from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
     DateClassType,
     DatetimeClassType,
     Formatter,
@@ -185,7 +184,7 @@ class GenerateConfig(BaseModel):
     no_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    formatters: list[Formatter] | None = None
     settings_path: Path | None = None
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None
@@ -318,7 +317,7 @@ class ParserConfig(BaseModel):
     no_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    formatters: list[Formatter] | None = None
     defer_formatting: bool = False
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None

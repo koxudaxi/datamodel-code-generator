@@ -928,7 +928,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.custom_formatters_kwargs = config.custom_formatters_kwargs
         self.treat_dot_as_module = config.treat_dot_as_module
         self.default_field_extras: dict[str, Any] | None = config.default_field_extras
-        self.formatters: list[Formatter] = config.formatters
+        self.formatters: list[Formatter] | None = config.formatters
         self.defer_formatting: bool = config.defer_formatting
         self.type_mappings: dict[tuple[str, str], str] = Parser._parse_type_mappings(config.type_mappings)
         self.type_overrides: dict[str, str] = config.type_overrides or {}

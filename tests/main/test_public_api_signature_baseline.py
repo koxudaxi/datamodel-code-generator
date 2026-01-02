@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Annotated, Any, ForwardRef, Union, get_args, g
 import pytest
 from typing_extensions import NotRequired
 
-from datamodel_code_generator import DEFAULT_FORMATTERS, DEFAULT_SHARED_MODULE_NAME, generate
+from datamodel_code_generator import DEFAULT_SHARED_MODULE_NAME, generate
 from datamodel_code_generator.enums import (
     AllExportsCollisionStrategy,
     AllExportsScope,
@@ -166,7 +166,7 @@ def _baseline_generate(
     no_alias: bool = False,
     use_frozen_field: bool = False,
     use_default_factory_for_optional_nested_models: bool = False,
-    formatters: list[Formatter] = DEFAULT_FORMATTERS,
+    formatters: list[Formatter] | None = None,
     settings_path: Path | None = None,
     parent_scoped_naming: bool = False,
     naming_strategy: NamingStrategy | None = None,
@@ -293,7 +293,7 @@ class _BaselineParser:
         no_alias: bool = False,
         use_frozen_field: bool = False,
         use_default_factory_for_optional_nested_models: bool = False,
-        formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        formatters: list[Formatter] | None = None,
         defer_formatting: bool = False,
         parent_scoped_naming: bool = False,
         naming_strategy: NamingStrategy | None = None,

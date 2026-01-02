@@ -193,10 +193,21 @@ class CodeFormatter:
         custom_formatters: list[str] | None = None,
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
-        formatters: list[Formatter] = DEFAULT_FORMATTERS,
+        formatters: list[Formatter] | None = None,
         defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
+        if formatters is None:
+            warn(
+                "The default formatters (black, isort) will be replaced by ruff in a future version. "
+                "To prepare for this change, consider using: formatters=[Formatter.RUFF_FORMAT, Formatter.RUFF_CHECK]. "
+                "Install ruff with: pip install 'datamodel-code-generator[ruff]'. "
+                "To suppress this warning, specify formatters explicitly.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            formatters = list(DEFAULT_FORMATTERS)
+
         if not settings_path:
             settings_path = Path.cwd()
         elif settings_path.is_file():
