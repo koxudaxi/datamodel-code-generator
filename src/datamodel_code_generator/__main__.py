@@ -595,6 +595,7 @@ class Config(BaseModel):
     frozen_dataclasses: bool = False
     dataclass_arguments: Optional[DataclassArguments] = None  # noqa: UP045
     no_alias: bool = False
+    use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
@@ -1007,6 +1008,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         keyword_only=config.keyword_only,
         frozen_dataclasses=config.frozen_dataclasses,
         no_alias=config.no_alias,
+        use_serialization_alias=config.use_serialization_alias,
         use_frozen_field=config.use_frozen_field,
         use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
         formatters=config.formatters,

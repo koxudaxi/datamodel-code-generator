@@ -158,6 +158,9 @@ class DataModelField(DataModelFieldV1):
             aliases_repr = ", ".join(repr(a) for a in self.validation_aliases)
             data["validation_alias"] = _RawRepr(f"AliasChoices({aliases_repr})")
 
+        if self.use_serialization_alias and "alias" in data:
+            data["serialization_alias"] = data.pop("alias")
+
         # **extra is not supported in pydantic 2.0
         json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
         if json_schema_extra:

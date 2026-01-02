@@ -629,6 +629,7 @@ class OpenAPIParser(JsonSchemaParser):
                         original_name=parameter_name,
                         has_default=effective_has_default,
                         type_has_null=object_schema.type_has_null if object_schema else None,
+                        use_serialization_alias=self.use_serialization_alias,
                     )
                 )
 

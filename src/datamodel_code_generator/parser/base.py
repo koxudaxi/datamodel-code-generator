@@ -938,6 +938,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         }
         self.read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = config.read_only_write_only_model_type
         self.use_frozen_field: bool = config.use_frozen_field
+        self.use_serialization_alias: bool = config.use_serialization_alias
         self.use_default_factory_for_optional_nested_models: bool = (
             config.use_default_factory_for_optional_nested_models
         )
@@ -1495,6 +1496,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                                 required=True,
                                 alias=single_alias,
                                 validation_aliases=validation_aliases,
+                                use_serialization_alias=self.use_serialization_alias,
                             )
                         )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)

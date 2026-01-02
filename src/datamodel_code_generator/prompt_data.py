@@ -129,6 +129,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-pendulum": "Use pendulum types for date/time fields instead of datetime module.",
     "--use-root-model-type-alias": "Generate RootModel as type alias format for better mypy support.",
     "--use-schema-description": "Use schema description as class docstring.",
+    "--use-serialization-alias": "Use serialization_alias instead of alias for field aliasing (Pydantic v2 only).",
     "--use-serialize-as-any": "Wrap fields with subtypes in Pydantic's SerializeAsAny.",
     "--use-specialized-enum": "Generate StrEnum/IntEnum for string/integer enums (Python 3.11+).",
     "--use-standard-collections": "Use built-in dict/list instead of typing.Dict/List.",

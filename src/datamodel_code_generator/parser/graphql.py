@@ -198,6 +198,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             use_one_literal_as_default=True,
             use_default_kwarg=self.use_default_kwarg,
             has_default=True,
+            use_serialization_alias=self.use_serialization_alias,
         )
 
     def _get_default(  # noqa: PLR6301
@@ -417,6 +418,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             use_default_kwarg=self.use_default_kwarg,
             original_name=field_name,
             has_default=effective_has_default,
+            use_serialization_alias=self.use_serialization_alias,
         )
 
     def parse_object_like(
