@@ -928,10 +928,21 @@ inferred_message = (
 )
 
 
-from datamodel_code_generator.dynamic import (  # noqa: E402
-    clear_dynamic_models_cache,
-    generate_dynamic_models,
-)
+_LAZY_IMPORTS = {
+    "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
+    "generate_dynamic_models": "datamodel_code_generator.dynamic",
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name in _LAZY_IMPORTS:
+        import importlib  # noqa: PLC0415
+
+        module = importlib.import_module(_LAZY_IMPORTS[name])
+        return getattr(module, name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
 
 __all__ = [
     "DEFAULT_FORMATTERS",
@@ -965,7 +976,7 @@ __all__ = [
     "ReuseScope",
     "SchemaParseError",
     "TargetPydanticVersion",
-    "clear_dynamic_models_cache",
+    "clear_dynamic_models_cache",  # noqa: F822
     "generate",
-    "generate_dynamic_models",
+    "generate_dynamic_models",  # noqa: F822
 ]
