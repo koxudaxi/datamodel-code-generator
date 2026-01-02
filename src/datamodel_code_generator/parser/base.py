@@ -3132,3 +3132,39 @@ class Parser(ABC, Generic[ParserConfigT]):
                 for k, v in results.items()
             }
         )
+
+    def create_dynamic_models(self) -> dict[str, type]:
+        """Create actual Python model classes from parsed schema.
+
+        This method should be called after parse_raw() has been executed.
+        It uses Pydantic's create_model() to generate real Python classes
+        that can be instantiated and used for validation.
+
+        Returns:
+            Dictionary mapping class names to Pydantic model classes.
+
+        Raises:
+            DynamicModelError: Base exception for any generation failure.
+            TypeResolutionError: If a field type cannot be resolved.
+
+        Example:
+            parser = JsonSchemaParser(source=schema)
+            parser.parse_raw()
+            models = parser.create_dynamic_models()
+
+            User = models['User']
+            user = User(name='John', age=30)
+            print(user.model_dump())
+
+        Note:
+            - Only Pydantic v2 models are supported
+            - Circular references are resolved via model_rebuild()
+            - Custom validators/methods are not included
+        """
+        from datamodel_code_generator.dynamic.creator import DynamicModelCreator  # noqa: PLC0415
+
+        if not self.results:
+            return {}
+
+        creator = DynamicModelCreator(self)
+        return creator.create_models()

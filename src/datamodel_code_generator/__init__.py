@@ -896,6 +896,85 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     return None
 
 
+def generate_dynamic_models(
+    input_: Path | str | ParseResult | Mapping[str, Any],
+    *,
+    input_file_type: InputFileType = InputFileType.Auto,
+) -> dict[str, type]:
+    """Generate actual Python model classes from schema at runtime.
+
+    This function creates real Python classes using Pydantic's create_model(),
+    allowing you to instantiate and validate data directly without generating code.
+
+    Args:
+        input_: The input source (file path, string content, URL, or dict).
+        input_file_type: The type of input file. Defaults to Auto-detection.
+
+    Returns:
+        Dictionary mapping class names to actual Python model classes.
+
+    Raises:
+        DynamicModelError: If model generation fails.
+        TypeResolutionError: If a field type cannot be resolved.
+
+    Example:
+        >>> schema = {
+        ...     "type": "object",
+        ...     "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        ...     "required": ["name"],
+        ... }
+        >>> models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        >>> User = models["Model"]
+        >>> user = User(name="John", age=30)
+        >>> user.model_dump()
+        {'name': 'John', 'age': 30}
+
+    Note:
+        - Only Pydantic v2 models are supported
+        - Circular references are handled via model_rebuild()
+        - Custom validators/methods are not included
+        - For code generation, use generate() instead
+    """
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
+    from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
+
+    # Convert input to source and determine file path for base_path resolution
+    source: str | Path | dict[str, Any] | ParseResult
+    if isinstance(input_, Mapping):
+        source = dict(input_)
+    elif isinstance(input_, Path):
+        source = input_  # Keep Path object for base_path resolution
+    elif isinstance(input_, str):
+        # Check if it's a file path - keep Path object for base_path resolution
+        path = Path(input_)
+        source = path if path.exists() and path.is_file() else input_
+    else:
+        source = input_
+
+    # Infer input type if not specified
+    if input_file_type == InputFileType.Auto:
+        if isinstance(source, Mapping):
+            input_file_type = InputFileType.JsonSchema
+        elif isinstance(source, Path):
+            input_file_type = infer_input_type(source.read_text())
+        elif isinstance(source, str):
+            input_file_type = infer_input_type(source)
+        else:
+            # ParseResult - default to JsonSchema
+            input_file_type = InputFileType.JsonSchema
+
+    if input_file_type == InputFileType.OpenAPI:
+        parser = OpenAPIParser(source=source)
+    elif input_file_type == InputFileType.GraphQL:
+        msg = "GraphQL is not yet supported for dynamic model generation"
+        raise Error(msg)
+    else:
+        parser = JsonSchemaParser(source=source)
+
+    parser.parse_raw()
+    return parser.create_dynamic_models()
+
+
 def infer_input_type(text: str) -> InputFileType:
     """Automatically detect the input file type from text content."""
     import yaml.parser  # noqa: PLC0415
@@ -955,4 +1034,5 @@ __all__ = [
     "SchemaParseError",
     "TargetPydanticVersion",
     "generate",
+    "generate_dynamic_models",
 ]
