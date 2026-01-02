@@ -201,6 +201,7 @@ class GenerateConfig(BaseModel):
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
+    default_value_overrides: Mapping[str, Any] | None = None
 
 
 class ParserConfig(BaseModel):
@@ -330,6 +331,7 @@ class ParserConfig(BaseModel):
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     target_pydantic_version: TargetPydanticVersion | None = None
+    default_value_overrides: Mapping[str, Any] | None = None
 
 
 class GraphQLParserConfig(ParserConfig):

@@ -164,3 +164,4 @@ class GenerateConfigDict(TypedDict):
     all_exports_collision_strategy: NotRequired[AllExportsCollisionStrategy | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
+    default_value_overrides: NotRequired[Mapping[str, Any] | None]

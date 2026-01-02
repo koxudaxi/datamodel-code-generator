@@ -1037,8 +1037,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         field_type: DataType,
         alias: str | list[str] | None,
         original_field_name: str | None,
+        effective_default: Any = None,
+        effective_has_default: bool | None = None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
+        default_value = effective_default if effective_has_default is not None else field.default
+        has_default = effective_has_default if effective_has_default is not None else field.has_default
+
         constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
@@ -1055,7 +1060,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             single_alias = alias
         return self.data_model_field_type(
             name=field_name,
-            default=field.default,
+            default=default_value,
             data_type=field_type,
             required=required,
             alias=single_alias,
@@ -1063,7 +1068,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             constraints=constraints,
             nullable=field.nullable
             if self.strict_nullable and field.nullable is not None
-            else (False if self.strict_nullable and (field.has_default or required) else None),
+            else (False if self.strict_nullable and (has_default or required) else None),
             strip_default_none=self.strip_default_none,
             extras=self.get_field_extras(field),
             use_annotated=self.use_annotated,
@@ -1073,7 +1078,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             use_inline_field_description=self.use_inline_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=original_field_name,
-            has_default=field.has_default,
+            has_default=has_default,
             type_has_null=field.type_has_null,
             read_only=self._resolve_field_flag(field, "readOnly"),
             write_only=self._resolve_field_flag(field, "writeOnly"),
@@ -2412,8 +2417,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
+            effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+                original_field_name,
+                field.default,
+                field.has_default,
+                class_name=class_name,
+            )
+
             if self.force_optional_for_required_fields or (
-                self.apply_default_values_for_required_fields and field.has_default
+                self.apply_default_values_for_required_fields and effective_has_default
             ):
                 required: bool = False
             else:
@@ -2426,6 +2438,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                     field_type=field_type,
                     alias=alias,
                     original_field_name=original_field_name,
+                    effective_default=effective_default,
+                    effective_has_default=effective_has_default,
                 )
             )
         return fields

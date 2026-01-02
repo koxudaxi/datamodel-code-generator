@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 22 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 23 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
@@ -61,6 +61,7 @@ This documentation is auto-generated from test cases.
 
 - [`--dataclass-arguments`](model-customization.md#dataclass-arguments)
 - [`--debug`](utility-options.md#debug)
+- [`--default-values`](field-customization.md#default-values)
 - [`--disable-appending-item-suffix`](template-customization.md#disable-appending-item-suffix)
 - [`--disable-future-imports`](typing-customization.md#disable-future-imports)
 - [`--disable-timestamp`](template-customization.md#disable-timestamp)

@@ -29,6 +29,7 @@ from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
+    DEFAULT_VALUES_DATA_PATH,
     EXPECTED_MAIN_PATH,
     JSON_SCHEMA_DATA_PATH,
     OPEN_API_DATA_PATH,
@@ -2180,3 +2181,45 @@ def test_graphql_parser_with_config_object() -> None:
     config = GraphQLParserConfig(target_datetime_class=DatetimeClassType.Awaredatetime)
     parser = GraphQLParser(source="type Query { id: ID }", config=config)
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
+
+
+def test_default_values_invalid_json(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --default-values with invalid JSON file returns error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--default-values", str(DEFAULT_VALUES_DATA_PATH / "invalid_json.json")],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unable to load default values mapping",
+    )
+
+
+def test_default_values_non_dict(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --default-values with non-dict JSON file returns error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--default-values", str(DEFAULT_VALUES_DATA_PATH / "non_dict.json")],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unable to load default values mapping: must be a JSON object",
+    )
+
+
+def test_custom_formatters_kwargs_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test --custom-formatters-kwargs with non-string values returns error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--custom-formatters-kwargs",
+            str(DEFAULT_VALUES_DATA_PATH / "invalid_formatters_kwargs.json"),
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unable to load custom_formatters_kwargs mapping: must be a JSON string mapping",
+    )

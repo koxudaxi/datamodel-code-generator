@@ -502,7 +502,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
-    def parse_all_parameters(  # noqa: PLR0912
+    def parse_all_parameters(  # noqa: PLR0912, PLR0914
         self,
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
@@ -535,14 +535,25 @@ class OpenAPIParser(JsonSchemaParser):
                 class_name=name,
             )
             if parameter.schema_:
+                effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+                    parameter_name,
+                    parameter.schema_.default,
+                    parameter.schema_.has_default,
+                    class_name=reference.name,
+                )
+                effective_required = parameter.required
+                if self.apply_default_values_for_required_fields and effective_has_default:
+                    effective_required = False
                 fields.append(
                     self.get_object_field(
                         field_name=field_name,
                         field=parameter.schema_,
                         field_type=self.parse_item(field_name, parameter.schema_, [*path, name, parameter_name]),
                         original_field_name=parameter_name,
-                        required=parameter.required,
+                        required=effective_required,
                         alias=alias,
+                        effective_default=effective_default,
+                        effective_has_default=effective_has_default,
                     )
                 )
             else:
@@ -571,6 +582,17 @@ class OpenAPIParser(JsonSchemaParser):
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None
+                original_default = object_schema.default if object_schema else None
+                original_has_default = object_schema.has_default if object_schema else False
+                effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+                    parameter_name,
+                    original_default,
+                    original_has_default,
+                    class_name=reference.name,
+                )
+                effective_required = parameter.required
+                if self.apply_default_values_for_required_fields and effective_has_default:
+                    effective_required = False
                 # Handle multiple aliases (Pydantic v2 AliasChoices)
                 single_alias: str | None = None
                 validation_aliases: list[str] | None = None
@@ -581,9 +603,9 @@ class OpenAPIParser(JsonSchemaParser):
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
-                        default=object_schema.default if object_schema else None,
+                        default=effective_default,
                         data_type=data_type,
-                        required=parameter.required,
+                        required=effective_required,
                         alias=single_alias,
                         validation_aliases=validation_aliases,
                         constraints=model_dump(object_schema, exclude_none=True)
@@ -593,9 +615,7 @@ class OpenAPIParser(JsonSchemaParser):
                         if object_schema and self.strict_nullable and object_schema.nullable is not None
                         else (
                             False
-                            if object_schema
-                            and self.strict_nullable
-                            and (object_schema.has_default or parameter.required)
+                            if object_schema and self.strict_nullable and (effective_has_default or effective_required)
                             else None
                         ),
                         strip_default_none=self.strip_default_none,
@@ -607,7 +627,7 @@ class OpenAPIParser(JsonSchemaParser):
                         use_inline_field_description=self.use_inline_field_description,
                         use_default_kwarg=self.use_default_kwarg,
                         original_name=parameter_name,
-                        has_default=object_schema.has_default if object_schema else False,
+                        has_default=effective_has_default,
                         type_has_null=object_schema.type_has_null if object_schema else None,
                     )
                 )

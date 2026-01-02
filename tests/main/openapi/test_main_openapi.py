@@ -35,6 +35,7 @@ from tests.main.conftest import (
     BLACK_PY313_SKIP,
     BLACK_PY314_SKIP,
     DATA_PATH,
+    DEFAULT_VALUES_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
@@ -4685,6 +4686,25 @@ def test_query_parameters_with_model_config(output_file: Path) -> None:
             "--extra-fields",
             "forbid",
             "--allow-population-by-field-name",
+        ],
+    )
+
+
+def test_main_openapi_use_default_with_default_values_parameters(output_file: Path) -> None:
+    """Test --use-default combined with --default-values on required OpenAPI parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "default_values_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="default_values_parameters_use_default.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            str(DEFAULT_VALUES_DATA_PATH / "openapi_params_defaults.json"),
+            "--openapi-scopes",
+            "paths",
+            "parameters",
         ],
     )
 

@@ -25,6 +25,7 @@ def watch_and_regenerate(
     extra_template_data: dict[str, Any] | None,
     aliases: dict[str, str] | None,
     custom_formatters_kwargs: dict[str, str] | None,
+    default_value_overrides: dict[str, Any] | None = None,
 ) -> Exit:
     """Watch input files and regenerate on changes."""
     from datamodel_code_generator.__main__ import Exit, run_generate_from_config  # noqa: PLC0415
@@ -55,6 +56,7 @@ def watch_and_regenerate(
                     aliases=aliases,
                     command_line=None,
                     custom_formatters_kwargs=custom_formatters_kwargs,
+                    default_value_overrides=default_value_overrides,
                 )
                 print("Done.")  # noqa: T201
             except Exception as e:  # noqa: BLE001
