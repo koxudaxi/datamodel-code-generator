@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -9,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import pydantic
 import pytest
-from inline_snapshot import snapshot
+from inline_snapshot import external_file
 
 from datamodel_code_generator import (
     DataModelType,
@@ -54,24 +55,17 @@ def make_config(
     )
 
 
-def generate_and_validate(
+def assert_dynamic_models(
     schema: dict[str, Any],
     validations: dict[str, dict[str, Any]],
+    expected_path: Path,
     *,
     config: GenerateConfig | None = None,
-) -> dict[str, Any]:
-    """Generate dynamic models and validate data, returning model_dump results.
-
-    Args:
-        schema: JSON Schema or OpenAPI schema as dict.
-        validations: Dict mapping model name to input data to validate.
-        config: Optional GenerateConfig for customization.
-
-    Returns:
-        Dict mapping model name to model_dump(mode='json') of validated instance.
-    """
+) -> None:
+    """Generate dynamic models, validate data, and assert with external file."""
     models = generate_dynamic_models(schema, config=config)
-    return {name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()}
+    result = {name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()}
+    assert json.dumps(result, indent=2, sort_keys=True) == external_file(expected_path)
 
 
 @pytest.fixture(autouse=True)
@@ -84,26 +78,20 @@ def _setup_and_clear_cache() -> None:
 def test_simple_model() -> None:
     """Test generating a simple model and validating data."""
     schema = make_object_schema({"name": {"type": "string"}, "age": {"type": "integer"}}, required=["name"])
-    assert generate_and_validate(schema, {"Model": {"name": "John", "age": 30}}) == snapshot({
-        "Model": {"name": "John", "age": 30}
-    })
-    assert generate_and_validate(schema, {"Model": {"name": "Jane"}}) == snapshot({
-        "Model": {"name": "Jane", "age": None}
-    })
+    assert_dynamic_models(schema, {"Model": {"name": "John", "age": 30}}, EXPECTED_PATH / "simple_model.json")
+    assert_dynamic_models(schema, {"Model": {"name": "Jane"}}, EXPECTED_PATH / "simple_model_optional.json")
 
 
 def test_nested_models() -> None:
     """Test generating nested models and validating nested data."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
-    assert generate_and_validate(schema, {"Model": {"user": {"name": "Alice"}}}) == snapshot({
-        "Model": {"user": {"name": "Alice"}}
-    })
+    assert_dynamic_models(schema, {"Model": {"user": {"name": "Alice"}}}, EXPECTED_PATH / "nested_models.json")
 
 
 def test_enum_model() -> None:
     """Test generating model with enum and validating enum values."""
     schema = make_object_schema({"status": {"type": "string", "enum": ["active", "inactive"]}})
-    assert generate_and_validate(schema, {"Model": {"status": "active"}}) == snapshot({"Model": {"status": "active"}})
+    assert_dynamic_models(schema, {"Model": {"status": "active"}}, EXPECTED_PATH / "enum_model.json")
 
     models = generate_dynamic_models(schema)
     with pytest.raises(pydantic.ValidationError):
@@ -124,7 +112,7 @@ def test_circular_reference() -> None:
         },
         "$ref": "#/$defs/Node",
     }
-    assert generate_and_validate(
+    assert_dynamic_models(
         schema,
         {
             "Node": {
@@ -132,12 +120,8 @@ def test_circular_reference() -> None:
                 "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}],
             }
         },
-    ) == snapshot({
-        "Node": {
-            "value": "root",
-            "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}],
-        }
-    })
+        EXPECTED_PATH / "circular_reference.json",
+    )
 
 
 def test_allof_inheritance() -> None:
@@ -151,9 +135,7 @@ def test_allof_inheritance() -> None:
         },
         "$ref": "#/$defs/Extended",
     }
-    assert generate_and_validate(schema, {"Extended": {"id": 42, "name": "test"}}) == snapshot({
-        "Extended": {"id": 42, "name": "test"}
-    })
+    assert_dynamic_models(schema, {"Extended": {"id": 42, "name": "test"}}, EXPECTED_PATH / "allof_inheritance.json")
 
 
 def test_validation_error() -> None:
@@ -274,7 +256,7 @@ def test_concurrent_different_schemas() -> None:
 def test_numeric_constraints() -> None:
     """Test models with numeric constraints validate properly."""
     schema = make_object_schema({"age": {"type": "integer", "minimum": 0, "maximum": 150}})
-    assert generate_and_validate(schema, {"Model": {"age": 30}}) == snapshot({"Model": {"age": 30}})
+    assert_dynamic_models(schema, {"Model": {"age": 30}}, EXPECTED_PATH / "numeric_constraints.json")
 
     models = generate_dynamic_models(schema)
     with pytest.raises(pydantic.ValidationError):
@@ -286,9 +268,7 @@ def test_numeric_constraints() -> None:
 def test_string_constraints() -> None:
     """Test models with string constraints validate properly."""
     schema = make_object_schema({"email": {"type": "string", "pattern": r"^[\w\.-]+@[\w\.-]+\.\w+$"}})
-    assert generate_and_validate(schema, {"Model": {"email": "test@example.com"}}) == snapshot({
-        "Model": {"email": "test@example.com"}
-    })
+    assert_dynamic_models(schema, {"Model": {"email": "test@example.com"}}, EXPECTED_PATH / "string_constraints.json")
 
     models = generate_dynamic_models(schema)
     with pytest.raises(pydantic.ValidationError):
@@ -318,9 +298,9 @@ def test_openapi_auto_detection() -> None:
             }
         },
     }
-    assert generate_and_validate(openapi_schema, {"User": {"id": 1, "name": "Alice"}}) == snapshot({
-        "User": {"id": 1, "name": "Alice"}
-    })
+    assert_dynamic_models(
+        openapi_schema, {"User": {"id": 1, "name": "Alice"}}, EXPECTED_PATH / "openapi_auto_detection.json"
+    )
 
 
 def test_config_with_auto_input_type() -> None:
@@ -399,17 +379,12 @@ def test_multi_module_output() -> None:
         },
         "$ref": "#/$defs/Order",
     }
-    assert generate_and_validate(
+    assert_dynamic_models(
         schema,
-        {
-            "User": {"name": "Alice", "age": 25},
-            "Order": {"id": 1, "user": {"name": "Bob", "age": 30}},
-        },
+        {"User": {"name": "Alice", "age": 25}, "Order": {"id": 1, "user": {"name": "Bob", "age": 30}}},
+        EXPECTED_PATH / "multi_module_output.json",
         config=make_config(module_split_mode=ModuleSplitMode.Single),
-    ) == snapshot({
-        "User": {"name": "Alice", "age": 25},
-        "Order": {"id": 1, "user": {"name": "Bob", "age": 30}},
-    })
+    )
 
 
 def test_generated_code_matches_expected() -> None:
@@ -440,13 +415,11 @@ def test_generated_code_matches_expected() -> None:
     assert isinstance(result, str)
     assert_output(result, EXPECTED_PATH / "complex_schema.py")
 
-    assert generate_and_validate(
+    assert_dynamic_models(
         schema,
         {
             "Person": {"name": "John", "address": {"street": "123 Main St", "city": "NYC"}},
             "Address": {"street": "456 Oak Ave", "city": "LA"},
         },
-    ) == snapshot({
-        "Person": {"name": "John", "address": {"street": "123 Main St", "city": "NYC"}},
-        "Address": {"street": "456 Oak Ave", "city": "LA"},
-    })
+        EXPECTED_PATH / "generated_code_validation.json",
+    )

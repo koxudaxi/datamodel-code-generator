@@ -1,0 +1,1 @@
+"{\n  \"Order\": {\n    \"id\": 1,\n    \"user\": {\n      \"age\": 30,\n      \"name\": \"Bob\"\n    }\n  },\n  \"User\": {\n    \"age\": 25,\n    \"name\": \"Alice\"\n  }\n}"

@@ -1,0 +1,1 @@
+"{\n  \"Address\": {\n    \"city\": \"LA\",\n    \"street\": \"456 Oak Ave\"\n  },\n  \"Person\": {\n    \"address\": {\n      \"city\": \"NYC\",\n      \"street\": \"123 Main St\"\n    },\n    \"name\": \"John\"\n  }\n}"

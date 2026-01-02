@@ -1,0 +1,1 @@
+"{\n  \"Node\": {\n    \"children\": [\n      {\n        \"children\": [],\n        \"value\": \"child1\"\n      },\n      {\n        \"children\": [],\n        \"value\": \"child2\"\n      }\n    ],\n    \"value\": \"root\"\n  }\n}"
