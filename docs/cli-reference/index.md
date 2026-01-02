@@ -14,7 +14,7 @@ This documentation is auto-generated from test cases.
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 18 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
-| ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 16 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
 
 ## All Options
@@ -215,6 +215,7 @@ This documentation is auto-generated from test cases.
 ### V {#v}
 
 - [`--validation`](openapi-only-options.md#validation)
+- [`--validators`](general-options.md#validators)
 - [`--version`](utility-options.md#version)
 
 ### W {#w}

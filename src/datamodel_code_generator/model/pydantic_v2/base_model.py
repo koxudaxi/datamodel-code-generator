@@ -287,6 +287,8 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
+        self._process_validators()
+
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")
         unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
@@ -335,6 +337,69 @@ class BaseModel(BaseModelBase):
                 if pattern and lookaround_regex.search(pattern):
                     return True
         return False
+
+    def _process_validators(self) -> None:
+        """Process validator definitions and prepare them for template rendering."""
+        from datamodel_code_generator.model.pydantic_v2.imports import (  # noqa: PLC0415
+            IMPORT_FIELD_VALIDATOR,
+            IMPORT_VALIDATION_INFO,
+        )
+
+        validators = self.extra_template_data.get("validators")
+        if not validators:
+            return
+
+        prepared_validators: list[dict[str, Any]] = []
+        for validator in validators:
+            fields = validator.get("fields") or [validator.get("field")]
+            fields = [f for f in fields if f]
+            if not fields:
+                continue
+
+            function_path = validator.get("function")
+            if not function_path:
+                continue
+
+            function_name = function_path.rsplit(".", 1)[-1]
+            mode = validator.get("mode", "after")
+
+            fields_str = ", ".join(f"'{f}'" for f in fields)
+
+            if len(fields) == 1:
+                method_name = f"{function_name}_{fields[0]}_validator"
+            else:
+                import hashlib  # noqa: PLC0415
+
+                fields_hash = hashlib.md5("_".join(sorted(fields)).encode()).hexdigest()[:6]  # noqa: S324
+                method_name = f"{function_name}_{fields_hash}_validator"
+
+            mode_str = f"mode='{mode}'"
+
+            prepared_validators.append({
+                "fields_str": fields_str,
+                "mode_str": mode_str,
+                "method_name": method_name,
+                "function_name": function_name,
+                "mode": mode,
+            })
+
+            self._additional_imports.append(Import.from_full_path(function_path))
+
+        if prepared_validators:
+            from datamodel_code_generator.imports import IMPORT_ANY  # noqa: PLC0415
+            from datamodel_code_generator.model.pydantic_v2.imports import (  # noqa: PLC0415
+                IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
+            )
+
+            self.extra_template_data["prepared_validators"] = prepared_validators  # pyright: ignore[reportArgumentType]
+            self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
+            self._additional_imports.append(IMPORT_ANY)
+
+            modes = {v["mode"] for v in prepared_validators}
+            if modes - {"plain"}:
+                self._additional_imports.append(IMPORT_VALIDATION_INFO)
+            if "wrap" in modes:
+                self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
 
     @classmethod
     def create_base_class_model(

@@ -176,7 +176,7 @@ class Config(BaseModel):
             """Get model fields."""
             return cls.__fields__
 
-    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", mode="before")
+    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", "validators", mode="before")
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
         """Validate and open file path."""
         if value is None:  # pragma: no cover
@@ -498,6 +498,7 @@ class Config(BaseModel):
     class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
+    validators: Optional[TextIOBase] = None  # noqa: UP045
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -862,6 +863,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
+    validators: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
     result = generate(
@@ -988,6 +990,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
+        validators=validators,  # pyright: ignore[reportCallIssue]
     )
 
     if output is None and result is not None:  # pragma: no cover
@@ -1211,6 +1214,23 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             )
             return Exit.ERROR
 
+    validators_config: dict[str, Any] | None
+    if config.validators is None:
+        validators_config = None
+    else:
+        with config.validators as data:
+            try:
+                validators_config = json.load(data)
+            except json.JSONDecodeError as e:
+                print(f"Unable to load validators configuration: {e}", file=sys.stderr)  # noqa: T201
+                return Exit.ERROR
+        if not isinstance(validators_config, dict):
+            print(  # noqa: T201
+                "Validators configuration must be a JSON object with model names as keys",
+                file=sys.stderr,
+            )
+            return Exit.ERROR
+
     if config.check:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
@@ -1255,6 +1275,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
             settings_path=config.output,
+            validators=validators_config,
         )
     except InvalidClassNameError as e:
         print(f"{e} You have to set `--class-name` option", file=sys.stderr)  # noqa: T201

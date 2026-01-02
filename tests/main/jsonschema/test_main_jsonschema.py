@@ -7557,3 +7557,107 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
         expected_file="reduce_duplicate_field_types.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-type-alias"],
     )
+
+
+@pytest.mark.cli_doc(
+    options=["--validators"],
+    option_description="""Add custom field validators to generated Pydantic v2 models.
+
+The `--validators` option takes a JSON file defining validators per model.
+Each validator specifies the field(s) to validate, the validation function
+to import, and optionally the mode (before/after/wrap/plain).
+This allows injecting custom validation logic into generated models.""",
+    input_schema="jsonschema/field_validators.json",
+    cli_args=[
+        "--validators",
+        "tests/data/jsonschema/field_validators_config.json",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/field_validators.py",
+)
+def test_field_validators(output_file: Path) -> None:
+    """Add custom field validators to generated Pydantic v2 models.
+
+    The `--validators` option takes a JSON file defining validators per model.
+    Each validator specifies the field(s) to validate, the validation function
+    to import, and optionally the mode (before/after/wrap/plain).
+    This allows injecting custom validation logic into generated models.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--validators",
+            str(JSON_SCHEMA_DATA_PATH / "field_validators_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+def test_field_validators_multi_fields(output_file: Path) -> None:
+    """Test validators with multiple fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_multi_fields.py",
+        extra_args=[
+            "--validators",
+            str(JSON_SCHEMA_DATA_PATH / "field_validators_multi_fields_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error handling for invalid validators JSON file."""
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("not valid json{")
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(invalid_json),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Unable to load validators configuration",
+    )
+
+
+def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error handling for validators JSON with invalid structure (not an object)."""
+    invalid_structure = tmp_path / "invalid_structure.json"
+    invalid_structure.write_text('["not", "an", "object"]')
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(invalid_structure),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Validators configuration must be a JSON object",
+    )

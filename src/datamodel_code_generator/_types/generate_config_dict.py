@@ -50,6 +50,7 @@ class GenerateConfigDict(TypedDict):
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]
     extra_template_data: NotRequired[defaultdict[str, dict[str, Any]] | None]
+    validators: NotRequired[dict[str, Any] | None]
     validation: NotRequired[bool]
     field_constraints: NotRequired[bool]
     snake_case_field: NotRequired[bool]
