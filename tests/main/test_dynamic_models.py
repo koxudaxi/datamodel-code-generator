@@ -413,3 +413,72 @@ def test_generated_code_matches_expected() -> None:
         },
         EXPECTED_PATH / "generated_code_validation.json",
     )
+
+
+def test_get_relative_imports_with_module_path() -> None:
+    """Test _get_relative_imports with 'from .module import X' style imports."""
+    from datamodel_code_generator.dynamic import _get_relative_imports
+
+    code = "from .user import User\nfrom .order import Order"
+    imports = _get_relative_imports(code)
+    assert imports == {"user", "order"}
+
+
+def test_get_relative_imports_with_dotted_module() -> None:
+    """Test _get_relative_imports with dotted module path."""
+    from datamodel_code_generator.dynamic import _get_relative_imports
+
+    code = "from .models.user import User"
+    imports = _get_relative_imports(code)
+    assert imports == {"models"}
+
+
+def test_build_module_edges_no_matching_import() -> None:
+    """Test _build_module_edges when import doesn't match any module."""
+    from datamodel_code_generator.dynamic import _build_module_edges
+
+    modules = {
+        ("user.py",): "class User: pass",
+        ("order.py",): "from .nonexistent import Something\nclass Order: pass",
+    }
+    edges = _build_module_edges(modules)
+    assert edges["user.py",] == set()
+    assert edges["order.py",] == set()
+
+
+def test_execute_multi_module_without_init() -> None:
+    """Test _execute_multi_module without __init__.py to cover package registration branch."""
+    from datamodel_code_generator.dynamic import _execute_multi_module
+
+    modules = {
+        ("user.py",): "from pydantic import BaseModel\n\nclass User(BaseModel):\n    name: str",
+    }
+    models = _execute_multi_module(modules)
+    assert "User" in models
+    user = models["User"](name="Alice")
+    assert user.name == "Alice"
+
+
+def test_execute_multi_module_no_models() -> None:
+    """Test _execute_multi_module with code that has no models."""
+    from datamodel_code_generator.dynamic import _execute_multi_module
+
+    modules = {
+        ("utils.py",): "def helper(): pass",
+    }
+    models = _execute_multi_module(modules)
+    assert models == {}
+
+
+def test_execute_multi_module_enum_only() -> None:
+    """Test _execute_multi_module with enum only to cover non-BaseModel branch."""
+    from datamodel_code_generator.dynamic import _execute_multi_module
+
+    modules = {
+        (
+            "status.py",
+        ): "from enum import Enum\n\nclass Status(Enum):\n    ACTIVE = 'active'\n    INACTIVE = 'inactive'",
+    }
+    models = _execute_multi_module(modules)
+    assert "Status" in models
+    assert models["Status"].ACTIVE.value == "active"
