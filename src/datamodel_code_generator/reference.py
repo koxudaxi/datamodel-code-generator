@@ -1204,12 +1204,13 @@ class ModelResolver:  # noqa: PLR0904
         class_name: str | None,
     ) -> tuple[Any, bool]:
         """Resolve default value for a field, applying overrides if configured."""
-        if not self.default_value_overrides or class_name is None:
+        if not self.default_value_overrides:
             return original_default, has_default
 
-        scoped_key = f"{class_name}.{field_name}"
-        if scoped_key in self.default_value_overrides:
-            return self.default_value_overrides[scoped_key], True
+        if class_name is not None:
+            scoped_key = f"{class_name}.{field_name}"
+            if scoped_key in self.default_value_overrides:
+                return self.default_value_overrides[scoped_key], True
 
         if field_name in self.default_value_overrides:
             return self.default_value_overrides[field_name], True
