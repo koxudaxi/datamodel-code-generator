@@ -338,8 +338,7 @@ def test_cache_hit_inside_lock() -> None:
     finally:
         cache_populated.set()
         dcg._dynamic_models_lock = original_lock
-        if cache_key and cache_key in dcg._dynamic_models_cache:
-            del dcg._dynamic_models_cache[cache_key]
+        dcg._dynamic_models_cache.pop(cache_key, None)  # type: ignore[arg-type]
 
 
 def test_multi_module_output() -> None:
