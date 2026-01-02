@@ -371,7 +371,6 @@ class BaseModel(BaseModelBase):
 
             fields_str = ", ".join(f"'{f}'" for f in fields)
 
-            # Generate unique method name using ModelResolver
             base_method_name = f"{function_name}_validator"
             method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
 
