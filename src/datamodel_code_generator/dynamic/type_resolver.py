@@ -2,33 +2,11 @@
 
 from __future__ import annotations
 
-import datetime
 import decimal
-import uuid
 from typing import TYPE_CHECKING, Any, ForwardRef, Literal, Union
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
-
-FORMAT_TYPE_MAP: dict[str, type[Any]] = {
-    "date": datetime.date,
-    "date-time": datetime.datetime,
-    "time": datetime.time,
-    "uuid": uuid.UUID,
-    "uuid1": uuid.UUID,
-    "uuid2": uuid.UUID,
-    "uuid3": uuid.UUID,
-    "uuid4": uuid.UUID,
-    "uuid5": uuid.UUID,
-    "decimal": decimal.Decimal,
-    "email": str,
-    "uri": str,
-    "hostname": str,
-    "ipv4": str,
-    "ipv6": str,
-    "binary": bytes,
-    "byte": bytes,
-}
 
 PRIMITIVE_TYPE_MAP: dict[str, type[Any]] = {
     "str": str,

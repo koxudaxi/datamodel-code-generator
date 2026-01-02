@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import Field, create_model
+from pydantic import BaseModel, Field, create_model
 
 from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
 from datamodel_code_generator.dynamic.exceptions import (
@@ -77,14 +77,12 @@ class DynamicModelCreator:
         base_classes = self._resolve_base_classes(data_model)
         module_name = self._get_module_name(data_model)
 
-        from pydantic import BaseModel as BaseModelCls  # noqa: PLC0415
-
         if len(base_classes) > 1:
             combined_base_name = f"_{data_model.class_name}Base"
             combined_base = type(combined_base_name, base_classes, {})
             effective_base: type[Any] = combined_base
         else:
-            effective_base = base_classes[0] if base_classes else BaseModelCls
+            effective_base = base_classes[0] if base_classes else BaseModel
 
         model = cast(
             "type[Any]",
@@ -141,8 +139,6 @@ class DynamicModelCreator:
 
     def _resolve_base_classes(self, data_model: DataModel) -> tuple[type, ...]:
         """Resolve base classes for the model."""
-        from pydantic import BaseModel  # noqa: PLC0415
-
         if not data_model.base_classes:
             return (BaseModel,)
 
@@ -185,8 +181,6 @@ class DynamicModelCreator:
 
     def _rebuild_models(self) -> None:
         """Resolve forward references by calling model_rebuild() on all models."""
-        from pydantic import BaseModel  # noqa: PLC0415
-
         namespace = {**self._short_name_lookup}
 
         for model in self._models.values():
