@@ -2636,6 +2636,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             dict_key=key_type,
         )
 
+    def _should_create_type_alias_for_title(self, item: JsonSchemaObject, name: str) -> bool:
+        """Check if a type alias should be created for an inline type with title.
+
+        When use_title_as_name is enabled and the item has a title, certain inline types
+        (array, dict, oneOf/anyOf unions, enum as literal) should create a type alias
+        instead of being inlined.
+        """
+        if not (self.use_title_as_name and item.title):
+            return False
+
+        if item.is_array:
+            return True
+        if item.anyOf or item.oneOf:
+            combined_items = item.anyOf or item.oneOf
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, item.type)
+            if const_enum_data is None:
+                return True
+            enum_values, varnames, enum_type, nullable = const_enum_data
+            synthetic_obj = self._create_synthetic_enum_obj(item, enum_values, varnames, enum_type, nullable)
+            if self.should_parse_enum_as_literal(synthetic_obj, property_name=name, property_obj=item):
+                return True
+        if (
+            item.is_object
+            and not item.properties
+            and not item.patternProperties
+            and not item.propertyNames
+            and isinstance(item.additionalProperties, JsonSchemaObject)
+        ):
+            return True
+        return bool(
+            item.enum
+            and not self.ignore_enum_constraints
+            and self.should_parse_enum_as_literal(item, property_name=name)
+        )
+
     def parse_item(  # noqa: PLR0911, PLR0912, PLR0914
         self,
         name: str,
@@ -2651,6 +2686,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         if self.use_title_as_name and item.title:
             name = sanitize_module_name(item.title, treat_dot_as_module=self.treat_dot_as_module)
             singular_name = False
+        if self._should_create_type_alias_for_title(item, name):
+            return self.parse_root_type(name, item, path)
         if parent and not item.enum and item.has_constraint and (parent.has_constraint or self.field_constraints):
             root_type_path = get_special_path("array", path)
             return self.parse_root_type(
@@ -2893,7 +2930,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         self.results.append(data_model_root)
         return self.data_type(reference=reference)
 
-    def parse_root_type(  # noqa: PLR0912, PLR0915
+    def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2939,6 +2976,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         elif obj.propertyNames:
             data_type = self.parse_property_names(
                 name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
+            )
+        elif obj.is_object and not obj.properties and isinstance(obj.additionalProperties, JsonSchemaObject):
+            python_type_flags = self._get_python_type_flags(obj)
+            dict_flags = python_type_flags or {"is_dict": True}
+            data_type = self.data_type(
+                data_types=[self.parse_item(name, obj.additionalProperties, path)],
+                **dict_flags,
             )
         elif obj.enum and not self.ignore_enum_constraints:
             if self.should_parse_enum_as_literal(obj, property_name=name):

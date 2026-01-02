@@ -3050,6 +3050,60 @@ def test_jsonschema_title_with_dots(output_file: Path) -> None:
     )
 
 
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_inline_types(output_file: Path) -> None:
+    """Test use-title-as-name creates type aliases for inline types.
+
+    When use_title_as_name is enabled and inline types (array, dict, oneOf, anyOf, enum)
+    have a title, type aliases should be created instead of using inline types directly.
+
+    Fixes: https://github.com/koxudaxi/datamodel-code-generator/issues/2887
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_inline_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_inline_types.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--skip-root-model",
+        ],
+    )
+
+
+@BLACK_PY313_SKIP
+def test_jsonschema_use_title_as_name_inline_types_pydantic(output_file: Path) -> None:
+    """Test use-title-as-name with Pydantic v2 creates named types for inline types.
+
+    This test covers the case where should_parse_enum_as_literal returns False
+    (for oneOf with const values), exercising the False branch in
+    _should_create_type_alias_for_title.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_title_as_name_inline_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_title_as_name_inline_types_pydantic.py",
+        extra_args=[
+            "--use-title-as-name",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.13",
+            "--use-union-operator",
+            "--use-standard-collections",
+        ],
+    )
+
+
 def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(
