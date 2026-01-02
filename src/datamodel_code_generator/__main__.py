@@ -74,7 +74,6 @@ from datamodel_code_generator import (
 )
 from datamodel_code_generator.arguments import DEFAULT_ENCODING, arg_parser, namespace
 from datamodel_code_generator.format import (
-    DEFAULT_FORMATTERS,
     DateClassType,
     DatetimeClassType,
     Formatter,
@@ -595,7 +594,7 @@ class Config(BaseModel):
     no_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
-    formatters: list[Formatter] = DEFAULT_FORMATTERS
+    formatters: list[Formatter] | None = None
     parent_scoped_naming: bool = False
     naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
     duplicate_name_suffix: Optional[dict[str, str]] = None  # noqa: UP045
