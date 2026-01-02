@@ -2759,12 +2759,12 @@ This allows injecting custom validation logic into generated models.
     
         @field_validator('name', mode='before')
         @classmethod
-        def validate_name_name_validator(cls, v: Any, info: ValidationInfo) -> Any:
+        def validate_name_validator(cls, v: Any, info: ValidationInfo) -> Any:
             return validate_name(v, info)
     
         @field_validator('email', mode='after')
         @classmethod
-        def validate_email_email_validator(cls, v: Any, info: ValidationInfo) -> Any:
+        def validate_email_validator(cls, v: Any, info: ValidationInfo) -> Any:
             return validate_email(v, info)
     ```
 
