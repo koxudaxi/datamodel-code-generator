@@ -2,17 +2,10 @@
 
 from __future__ import annotations
 
-import importlib
-import logging
 from enum import Enum
 from typing import TYPE_CHECKING, Any, cast
 
-from pydantic import ConfigDict, Field, create_model
-
-try:
-    from pydantic.errors import PydanticUndefinedAnnotation
-except ImportError:
-    PydanticUndefinedAnnotation = NameError  # type: ignore[misc,assignment]
+from pydantic import Field, create_model
 
 from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
 from datamodel_code_generator.dynamic.exceptions import (
@@ -25,8 +18,6 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
     from datamodel_code_generator.parser.base import Parser
-
-logger = logging.getLogger(__name__)
 
 
 class DynamicModelCreator:
@@ -84,7 +75,6 @@ class DynamicModelCreator:
             field_definitions[field.name] = (field_type, field_info)
 
         base_classes = self._resolve_base_classes(data_model)
-        model_config = self._build_model_config(data_model)
         module_name = self._get_module_name(data_model)
 
         from pydantic import BaseModel as BaseModelCls  # noqa: PLC0415
@@ -96,19 +86,12 @@ class DynamicModelCreator:
         else:
             effective_base = base_classes[0] if base_classes else BaseModelCls
 
-        create_kwargs: dict[str, Any] = {
-            "__base__": effective_base,
-            "__module__": module_name,
-        }
-
-        if model_config:
-            create_kwargs["__config__"] = model_config
-
         model = cast(
             "type[Any]",
             create_model(
                 data_model.class_name,
-                **create_kwargs,
+                __base__=effective_base,
+                __module__=module_name,
                 **cast("dict[str, Any]", field_definitions),
             ),
         )
@@ -157,21 +140,8 @@ class DynamicModelCreator:
         return Field(**kwargs)
 
     def _resolve_base_classes(self, data_model: DataModel) -> tuple[type, ...]:
-        """Resolve base classes for the model, including custom base classes."""
+        """Resolve base classes for the model."""
         from pydantic import BaseModel  # noqa: PLC0415
-
-        custom_base = getattr(data_model, "custom_base_class", None)
-        if custom_base and isinstance(custom_base, str):
-            if "." in custom_base:
-                try:
-                    module_path, class_name = custom_base.rsplit(".", 1)
-                    module = importlib.import_module(module_path)
-                    custom_base_cls = getattr(module, class_name)
-                    return (custom_base_cls,)  # noqa: TRY300
-                except (ValueError, ImportError, AttributeError) as e:
-                    logger.warning("Failed to import custom_base_class %s: %s", custom_base, e)
-            else:
-                logger.warning("Invalid custom_base_class format: %s. Expected 'module.ClassName'", custom_base)
 
         if not data_model.base_classes:
             return (BaseModel,)
@@ -180,41 +150,10 @@ class DynamicModelCreator:
         for base_class in data_model.base_classes:
             if base_class.reference and base_class.reference.short_name in self._short_name_lookup:
                 bases.append(self._short_name_lookup[base_class.reference.short_name])
-            elif hasattr(base_class, "type") and base_class.type:
-                type_name = base_class.type
-                if type_name in self._short_name_lookup:
-                    bases.append(self._short_name_lookup[type_name])
-                else:
-                    bases.append(BaseModel)
             else:
                 bases.append(BaseModel)
 
         return tuple(bases) if bases else (BaseModel,)
-
-    def _build_model_config(self, data_model: DataModel) -> ConfigDict | None:  # noqa: PLR6301
-        """Build Pydantic ConfigDict from DataModel settings."""
-        config_dict: dict[str, Any] = {}
-
-        extra_data = getattr(data_model, "extra_template_data", {}) or {}
-
-        if "config" in extra_data:
-            existing_config = extra_data["config"]
-            if isinstance(existing_config, dict):
-                config_dict.update(existing_config)
-
-        if "model_config" in extra_data:
-            config_dict.update(extra_data["model_config"])
-
-        if getattr(data_model, "allow_extra", False):
-            config_dict["extra"] = "allow"
-
-        if getattr(data_model, "use_enum_values", False):
-            config_dict["use_enum_values"] = True
-
-        if getattr(data_model, "populate_by_name", False):
-            config_dict["populate_by_name"] = True
-
-        return ConfigDict(**config_dict) if config_dict else None
 
     def _get_module_name(self, data_model: DataModel) -> str:  # noqa: PLR6301
         """Determine module name for the dynamic model."""
@@ -250,14 +189,6 @@ class DynamicModelCreator:
 
         namespace = {**self._short_name_lookup}
 
-        for model_key, model in self._models.items():
+        for model in self._models.values():
             if isinstance(model, type) and issubclass(model, BaseModel):
-                try:
-                    model.model_rebuild(_types_namespace=namespace)
-                except PydanticUndefinedAnnotation:
-                    pass
-                except (NameError, AttributeError) as e:
-                    logger.debug("Model %s rebuild skipped: %s", model_key, e)
-                except Exception as e:
-                    logger.warning("Unexpected error rebuilding model %s: %s: %s", model_key, type(e).__name__, e)
-                    raise
+                model.model_rebuild(_types_namespace=namespace)
