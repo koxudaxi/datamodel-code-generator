@@ -46,7 +46,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -93,6 +93,7 @@ from datamodel_code_generator.util import (
     load_toml,
     model_validator,
 )
+from datamodel_code_generator.validators import ValidatorsConfig
 
 if TYPE_CHECKING:
     from argparse import Namespace
@@ -1260,8 +1261,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    from datamodel_code_generator.validators import ValidatorsConfig  # noqa: PLC0415
-
     validators_config: dict[str, ModelValidators] | None = None
     if config.validators is not None:
         if ValidatorsConfig is None:
@@ -1270,8 +1269,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
                 file=sys.stderr,
             )
             return Exit.ERROR
-
-        from pydantic import ValidationError  # noqa: PLC0415
 
         with config.validators as f:
             try:
