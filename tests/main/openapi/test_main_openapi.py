@@ -4474,6 +4474,25 @@ def test_main_allof_enum_ref(output_file: Path) -> None:
     version.parse(pydantic.VERSION) < version.parse("2.0.0"),
     reason="Require Pydantic version 2.0.0 or later",
 )
+def test_main_openapi_allof_single_ref_inline(output_file: Path) -> None:
+    """Test that single $ref in allOf inline property does not create wrapper class."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_single_ref_inline.yaml",
+        output_path=output_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--enum-field-as-literal",
+            "all",
+        ],
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
 def test_main_openapi_module_class_name_collision_pydantic_v2(output_dir: Path) -> None:
     """Test Issue #1994: module and class name collision (e.g., A.A schema)."""
     run_main_and_assert(
