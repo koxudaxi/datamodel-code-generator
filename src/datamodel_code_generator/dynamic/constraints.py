@@ -21,8 +21,6 @@ CONSTRAINT_FIELD_MAP: dict[str, str] = {
     "pattern": "pattern",
     "min_items": "min_length",
     "max_items": "max_length",
-    "exclusive_minimum": "gt",
-    "exclusive_maximum": "lt",
 }
 
 JSON_SCHEMA_EXTRA_FIELDS: frozenset[str] = frozenset({

@@ -127,7 +127,7 @@ class DynamicModelCreator:
         if field.alias:
             kwargs["alias"] = field.alias
 
-        description = getattr(field, "description", None)
+        description = field.extras.get("description")
         if description:
             kwargs["description"] = description
 

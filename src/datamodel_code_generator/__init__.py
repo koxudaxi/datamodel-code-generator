@@ -938,20 +938,17 @@ def generate_dynamic_models(
     from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
     from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
-    # Convert input to source and determine file path for base_path resolution
     source: str | Path | dict[str, Any] | ParseResult
     if isinstance(input_, Mapping):
         source = dict(input_)
     elif isinstance(input_, Path):
-        source = input_  # Keep Path object for base_path resolution
+        source = input_
     elif isinstance(input_, str):
-        # Check if it's a file path - keep Path object for base_path resolution
         path = Path(input_)
         source = path if path.exists() and path.is_file() else input_
     else:
         source = input_
 
-    # Infer input type if not specified
     if input_file_type == InputFileType.Auto:
         if isinstance(source, Mapping):
             input_file_type = InputFileType.JsonSchema
@@ -960,7 +957,6 @@ def generate_dynamic_models(
         elif isinstance(source, str):
             input_file_type = infer_input_type(source)
         else:
-            # ParseResult - default to JsonSchema
             input_file_type = InputFileType.JsonSchema
 
     if input_file_type == InputFileType.OpenAPI:
