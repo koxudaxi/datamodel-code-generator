@@ -1359,6 +1359,36 @@ def test_no_alias(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--use-serialization-alias"],
+    option_description="""Use serialization_alias instead of alias for field aliasing (Pydantic v2 only).
+
+The `--use-serialization-alias` flag changes field aliasing to use `serialization_alias`
+instead of `alias`. This allows setting values using the Pythonic field name while
+serializing to the original JSON property name.""",
+    input_schema="jsonschema/no_alias.json",
+    cli_args=["--use-serialization-alias", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="main_kr/use_serialization_alias/output.py",
+    comparison_output="main_kr/no_alias/without_option.py",
+)
+@freeze_time("2019-07-26")
+def test_use_serialization_alias(output_file: Path) -> None:
+    """Use serialization_alias instead of alias for field aliasing (Pydantic v2 only).
+
+    The `--use-serialization-alias` flag changes field aliasing to use `serialization_alias`
+    instead of `alias`. This allows setting values using the Pythonic field name while
+    serializing to the original JSON property name.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "no_alias.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_serialization_alias" / "output.py",
+        extra_args=["--use-serialization-alias", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--custom-file-header"],
     option_description="""Add custom header text to the generated file.
 

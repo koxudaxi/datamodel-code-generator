@@ -1083,6 +1083,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             read_only=self._resolve_field_flag(field, "readOnly"),
             write_only=self._resolve_field_flag(field, "writeOnly"),
             use_frozen_field=self.use_frozen_field,
+            use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
         )
 
@@ -2221,6 +2222,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                                     alias=single_alias,
                                     validation_aliases=validation_aliases,
                                     data_type=data_type,
+                                    use_serialization_alias=self.use_serialization_alias,
                                 )
                             )
                             existing_field_names.update({request, field_name})

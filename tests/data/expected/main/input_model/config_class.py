@@ -222,6 +222,7 @@ class GenerateConfig(TypedDict):
     keyword_only: NotRequired[bool]
     frozen_dataclasses: NotRequired[bool]
     no_alias: NotRequired[bool]
+    use_serialization_alias: NotRequired[bool]
     use_frozen_field: NotRequired[bool]
     use_default_factory_for_optional_nested_models: NotRequired[bool]
     formatters: NotRequired[list[Formatter] | None]

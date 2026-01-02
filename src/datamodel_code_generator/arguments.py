@@ -790,6 +790,13 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-serialization-alias",
+    help="Use serialization_alias instead of alias for field aliasing (Pydantic v2 only). "
+    "This allows setting values using the Pythonic field name while serializing to the original name.",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--use-frozen-field",
     help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
     action="store_true",
