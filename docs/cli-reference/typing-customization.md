@@ -4198,6 +4198,8 @@ syntax. This feature is experimental.
 
 **Related:** [`--target-python-version`](model-customization.md#target-python-version)
 
+**See also:** [Model Reuse and Deduplication](../model-reuse.md)
+
 !!! tip "Usage"
 
     ```bash
