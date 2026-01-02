@@ -47,10 +47,7 @@ class TypeResolver:
         constraints: dict[str, Any] = {}
 
         if data_type.reference is not None:
-            model_name = data_type.reference.short_name
-            if model_name in self._models:
-                return self._models[model_name], constraints
-            return ForwardRef(model_name), constraints
+            return self._resolve_reference(data_type.reference.short_name), constraints
 
         if data_type.literals:
             return Literal[tuple(data_type.literals)], constraints
@@ -59,11 +56,30 @@ class TypeResolver:
             inner_types = [self.resolve(dt) for dt in data_type.data_types]
             return reduce(operator.or_, inner_types), constraints
 
-        if data_type.is_optional and data_type.data_types:
-            inner = self.resolve(data_type.data_types[0])
-            return inner | None, constraints
+        if data_type.data_types:
+            return self._resolve_container(data_type), constraints
 
         return self._resolve_type_string(data_type, constraints)
+
+    def _resolve_reference(self, model_name: str) -> Any:
+        """Resolve a model reference to a type or ForwardRef."""
+        if model_name in self._models:
+            return self._models[model_name]
+        return ForwardRef(model_name)
+
+    def _resolve_container(self, data_type: DataType) -> Any:
+        """Resolve container types (list, set, dict, optional)."""
+        inner = self.resolve(data_type.data_types[0])
+        if data_type.is_optional:
+            return inner | None
+        if data_type.is_list:
+            return list[inner]
+        if data_type.is_set:
+            return set[inner]
+        if data_type.is_dict:
+            key_type = self.resolve(data_type.dict_key) if data_type.dict_key else str
+            return dict[key_type, inner]
+        return inner
 
     def _resolve_type_string(self, data_type: DataType, constraints: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
         """Resolve type from type string."""
