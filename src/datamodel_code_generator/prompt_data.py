@@ -9,7 +9,6 @@ from __future__ import annotations
 OPTION_DESCRIPTIONS: dict[str, str] = {
     "--additional-imports": "Add custom imports to generated output files.",
     "--aliases": "Apply custom field and class name aliases from JSON file.",
-    "--default-values": "Override field default values from external JSON file.",
     "--all-exports-collision-strategy": "Handle name collisions when exporting recursive module hierarchies.",
     "--all-exports-scope": "Generate __all__ exports for child modules in __init__.py files.",
     "--allof-class-hierarchy": "Controls how allOf schemas are represented in the generated class hierarchy.",
@@ -34,6 +33,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--custom-formatters-kwargs": "Pass custom arguments to custom formatters via JSON file.",
     "--custom-template-dir": "Use custom Jinja2 templates for model generation.",
     "--dataclass-arguments": "Customize dataclass decorator arguments via JSON dictionary.",
+    "--default-values": "Override field default values from external JSON file.",
     "--disable-appending-item-suffix": "Disable appending 'Item' suffix to array item types.",
     "--disable-future-imports": "Prevent automatic addition of __future__ imports in generated code.",
     "--disable-timestamp": "Disable timestamp in generated file header for reproducible output.",
