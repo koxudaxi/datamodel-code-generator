@@ -55,6 +55,27 @@
                             "type": "integer"
                         }
                     }
+                },
+                "patternObj": {
+                    "title": "MyPatternObj",
+                    "type": "object",
+                    "patternProperties": {
+                        "^S_": {
+                            "title": "MyPatternValue",
+                            "type": "string"
+                        }
+                    }
+                },
+                "propNamesObj": {
+                    "title": "MyPropNamesObj",
+                    "type": "object",
+                    "propertyNames": {
+                        "pattern": "^[a-z]+$"
+                    },
+                    "additionalProperties": {
+                        "title": "MyPropValue",
+                        "type": "integer"
+                    }
                 }
             }
         }

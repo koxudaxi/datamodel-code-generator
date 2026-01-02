@@ -39,9 +39,23 @@ type MyNestedArrayItem = list[MyDeepItem]
 type MyNestedArray = list[MyNestedArrayItem]
 
 
+type MyPatternValue = str
+
+
+type MyPatternObj = dict[str, MyPatternValue]
+
+
+type MyPropValue = int
+
+
+type MyPropNamesObj = dict[str, MyPropValue]
+
+
 class Foo(TypedDict):
     array: NotRequired[MyArray]
     object: NotRequired[MyObject]
     oneOf: NotRequired[MyOneOf]
     anyOf: NotRequired[MyAnyOf]
     nestedArray: NotRequired[MyNestedArray]
+    patternObj: NotRequired[MyPatternObj]
+    propNamesObj: NotRequired[MyPropNamesObj]

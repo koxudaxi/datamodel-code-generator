@@ -2667,6 +2667,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             and isinstance(item.additionalProperties, JsonSchemaObject)
         ):
             return True
+        if item.patternProperties:
+            return True
+        if item.propertyNames:
+            return True
         if (
             item.enum
             and not self.ignore_enum_constraints

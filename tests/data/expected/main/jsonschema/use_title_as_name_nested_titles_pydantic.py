@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, RootModel, constr
 
 
 class Model(RootModel[Any]):
@@ -57,9 +57,31 @@ class MyNestedArray(RootModel[list[MyNestedArrayItem]]):
     root: list[MyNestedArrayItem] = Field(..., title='MyNestedArray')
 
 
+class MyPatternValue(RootModel[str]):
+    root: str = Field(..., title='MyPatternValue')
+
+
+class MyPatternObj(RootModel[dict[constr(pattern=r'^S_'), MyPatternValue]]):
+    root: dict[constr(pattern=r'^S_'), MyPatternValue] = Field(
+        ..., title='MyPatternObj'
+    )
+
+
+class MyPropValue(RootModel[int]):
+    root: int = Field(..., title='MyPropValue')
+
+
+class MyPropNamesObj(RootModel[dict[constr(pattern=r'^[a-z]+$'), MyPropValue]]):
+    root: dict[constr(pattern=r'^[a-z]+$'), MyPropValue] = Field(
+        ..., title='MyPropNamesObj'
+    )
+
+
 class Foo(BaseModel):
     array: MyArray | None = Field(None, title='MyArray')
     object: MyObject | None = Field(None, title='MyObject')
     oneOf: MyOneOf | None = Field(None, title='MyOneOf')
     anyOf: MyAnyOf | None = Field(None, title='MyAnyOf')
     nestedArray: MyNestedArray | None = Field(None, title='MyNestedArray')
+    patternObj: MyPatternObj | None = Field(None, title='MyPatternObj')
+    propNamesObj: MyPropNamesObj | None = Field(None, title='MyPropNamesObj')
