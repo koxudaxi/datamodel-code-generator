@@ -927,6 +927,149 @@ inferred_message = (
     "`--input-file-type` option."
 )
 
+
+_dynamic_models_cache: dict[str, dict[str, type]] = {}
+_dynamic_models_lock: Any = None
+_dynamic_models_lock_init: Any = None
+
+
+def _get_dynamic_models_lock() -> Any:
+    """Get or create the lock for dynamic models cache (thread-safe lazy initialization)."""
+    import threading  # noqa: PLC0415
+
+    global _dynamic_models_lock, _dynamic_models_lock_init  # noqa: PLW0603
+    if _dynamic_models_lock_init is None:
+        _dynamic_models_lock_init = threading.Lock()
+    if _dynamic_models_lock is None:
+        with _dynamic_models_lock_init:
+            if _dynamic_models_lock is None:
+                _dynamic_models_lock = threading.Lock()
+    return _dynamic_models_lock
+
+
+def _make_cache_key(schema: dict[str, Any], kwargs: dict[str, Any]) -> str | None:
+    """Create cache key from schema and kwargs.
+
+    Returns None if the schema is not JSON-serializable.
+    """
+    import hashlib  # noqa: PLC0415
+    import json  # noqa: PLC0415
+
+    try:
+        key_data = {
+            "schema": schema,
+            "kwargs": {k: repr(v) for k, v in sorted(kwargs.items())},
+        }
+        return hashlib.sha256(json.dumps(key_data, sort_keys=True).encode()).hexdigest()
+    except (TypeError, ValueError):
+        return None
+
+
+def generate_dynamic_models(
+    input_: dict[str, Any],
+    *,
+    cache_size: int = 128,
+    **kwargs: Any,
+) -> dict[str, type]:
+    """Generate actual Python model classes from schema at runtime.
+
+    This function creates real Python classes from JSON Schema or OpenAPI schemas
+    using Pydantic's model creation. The generated models can be used immediately
+    for validation and data processing.
+
+    Args:
+        input_: JSON Schema or OpenAPI schema as dict.
+        cache_size: Maximum number of schemas to cache. Set to 0 to disable caching.
+        **kwargs: Additional arguments passed to generate().
+
+    Returns:
+        Dictionary mapping class names to model classes.
+
+    Note:
+        - Thread-safe (uses internal lock and cache)
+        - Pydantic v2 only (v1 is not supported)
+        - Not pickle-able (use model_dump() to serialize instances)
+        - Cached by schema + kwargs hash with FIFO eviction when cache_size is exceeded
+
+    Example:
+        >>> schema = {
+        ...     "type": "object",
+        ...     "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+        ...     "required": ["name"],
+        ... }
+        >>> models = generate_dynamic_models(schema)
+        >>> User = models["Model"]
+        >>> user = User(name="John", age=30)
+        >>> user.model_dump()
+        {'name': 'John', 'age': 30}
+    """
+    import builtins  # noqa: PLC0415
+
+    import pydantic  # noqa: PLC0415
+
+    if pydantic.VERSION < "2.0.0":  # pragma: no cover
+        msg = f"generate_dynamic_models requires Pydantic v2, found v{pydantic.VERSION}"
+        raise Error(msg)
+
+    effective_kwargs = dict(kwargs)
+    if "input_file_type" not in effective_kwargs:
+        if is_openapi(input_):
+            effective_kwargs["input_file_type"] = InputFileType.OpenAPI
+        else:
+            effective_kwargs["input_file_type"] = InputFileType.JsonSchema
+    if "output_model_type" not in effective_kwargs:
+        effective_kwargs["output_model_type"] = DataModelType.PydanticV2BaseModel
+
+    cache_key = _make_cache_key(input_, effective_kwargs)
+    use_cache = cache_size > 0 and cache_key is not None
+
+    if use_cache and cache_key in _dynamic_models_cache:
+        return _dynamic_models_cache[cache_key]
+
+    lock = _get_dynamic_models_lock()
+    with lock:
+        if use_cache and cache_key in _dynamic_models_cache:
+            return _dynamic_models_cache[cache_key]
+
+        result = generate(input_=input_, **effective_kwargs)
+        if not isinstance(result, str):  # pragma: no cover
+            msg = "generate_dynamic_models only supports single-module output"
+            raise Error(msg)
+        code: str = result
+
+        namespace: dict[str, Any] = {"__builtins__": builtins.__dict__}
+        exec(code, namespace)  # noqa: S102
+
+        models = {k: v for k, v in namespace.items() if isinstance(v, type) and not k.startswith("_")}
+
+        from pydantic import BaseModel  # noqa: PLC0415
+
+        for obj in models.values():
+            if isinstance(obj, type) and issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
+                obj.model_rebuild(_types_namespace=namespace)
+
+        if use_cache:
+            while len(_dynamic_models_cache) >= cache_size:
+                oldest_key = next(iter(_dynamic_models_cache))
+                del _dynamic_models_cache[oldest_key]
+            _dynamic_models_cache[cache_key] = models  # type: ignore[index]
+
+        return models
+
+
+def clear_dynamic_models_cache() -> int:
+    """Clear the dynamic models cache.
+
+    Returns:
+        Number of cached entries that were cleared.
+    """
+    lock = _get_dynamic_models_lock()
+    with lock:
+        count = len(_dynamic_models_cache)
+        _dynamic_models_cache.clear()
+        return count
+
+
 __all__ = [
     "DEFAULT_FORMATTERS",
     "DEFAULT_SHARED_MODULE_NAME",
@@ -959,5 +1102,7 @@ __all__ = [
     "ReuseScope",
     "SchemaParseError",
     "TargetPydanticVersion",
+    "clear_dynamic_models_cache",
     "generate",
+    "generate_dynamic_models",
 ]
