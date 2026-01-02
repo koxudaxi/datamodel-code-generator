@@ -816,12 +816,13 @@ field_options.add_argument(
 template_options.add_argument(
     "--aliases",
     help="Alias mapping file (JSON) for renaming fields. "
+    "Format: {'<schema_field>': '<python_name>'} - the schema field name becomes the Pydantic alias. "
     "Supports hierarchical formats: "
-    "Flat: {'field': 'alias'} applies to all occurrences. "
-    "Scoped: {'ClassName.field': 'alias'} applies to specific class. "
+    "Flat: {'id': 'id_'} applies to all occurrences. "
+    "Scoped: {'User.name': 'user_name'} applies to specific class. "
     "Priority: scoped > flat. "
-    "Multiple aliases (Pydantic v2 only): {'field': ['alias1', 'alias2']} uses AliasChoices for validation. "
-    "Example: {'User.name': 'user_name', 'id': 'id_', 'field': ['my-field', 'my_field']}",
+    "Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. "
+    "Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.",
     type=Path,
 )
 template_options.add_argument(
