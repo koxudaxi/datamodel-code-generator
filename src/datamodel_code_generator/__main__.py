@@ -551,6 +551,7 @@ class Config(BaseModel):
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
     include_path_parameters: bool = False
     openapi_include_paths: Optional[list[str]] = None  # noqa: UP045
+    graphql_no_typename: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
@@ -929,6 +930,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         openapi_scopes=config.openapi_scopes,
         include_path_parameters=config.include_path_parameters,
         openapi_include_paths=config.openapi_include_paths,
+        graphql_no_typename=config.graphql_no_typename,
         wrap_string_literal=config.wrap_string_literal,
         use_title_as_name=config.use_title_as_name,
         use_operation_id_as_name=config.use_operation_id_as_name,
@@ -1000,6 +1002,9 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
 
 def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
     """Execute datamodel code generation from command-line arguments."""
+    vars(namespace).clear()
+    namespace.no_color = False
+
     if "_ARGCOMPLETE" in os.environ:  # pragma: no cover
         import argcomplete  # noqa: PLC0415
 

@@ -1,0 +1,12 @@
+type Book {
+  id: ID!
+  title: String
+}
+
+interface Node {
+  id: ID!
+}
+
+input BookInput {
+  title: String!
+}
