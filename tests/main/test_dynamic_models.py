@@ -63,9 +63,9 @@ def assert_dynamic_models(
 ) -> None:
     """Generate dynamic models, validate data, and assert with external file."""
     models = generate_dynamic_models(schema, config=config)
-    result = {name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()}
-    # external_file() automatically parses JSON files, so compare as dicts
-    assert result == external_file(expected_path)
+    assert {
+        name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()
+    } == external_file(expected_path)
 
 
 @pytest.fixture(autouse=True)
