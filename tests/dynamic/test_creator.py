@@ -943,3 +943,249 @@ class TestExceptions:
 
         error = DynamicModelError("base error message")
         assert str(error) == "base error message"
+
+
+@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
+class TestConstraints:
+    def test_constraints_none_input(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+
+        result = constraints_to_field_kwargs(None)
+        assert result == {}
+
+    def test_constraints_with_all_none_values(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+        from datamodel_code_generator.model.base import ConstraintsBase
+
+        constraints = ConstraintsBase()
+        result = constraints_to_field_kwargs(constraints)
+        assert result == {}
+
+    def test_constraints_with_ge_gt_le_lt(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+        from datamodel_code_generator.model.pydantic.base_model import Constraints
+
+        constraints = Constraints(minimum=1, maximum=10, exclusiveMinimum=0, exclusiveMaximum=11)
+        result = constraints_to_field_kwargs(constraints)
+        assert result["ge"] == 1
+        assert result["le"] == 10
+        assert result["gt"] == 0
+        assert result["lt"] == 11
+
+    def test_constraints_with_multiple_of(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+        from datamodel_code_generator.model.pydantic.base_model import Constraints
+
+        constraints = Constraints(multipleOf=5)
+        result = constraints_to_field_kwargs(constraints)
+        assert result["multiple_of"] == 5
+
+    def test_constraints_with_regex_pattern(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+        from datamodel_code_generator.model.pydantic.base_model import Constraints
+
+        constraints = Constraints(pattern="^[A-Z]+$")
+        result = constraints_to_field_kwargs(constraints)
+        assert result["pattern"] == "^[A-Z]+$"
+
+    def test_constraints_with_min_max_items(self) -> None:
+        from datamodel_code_generator.dynamic.constraints import constraints_to_field_kwargs
+        from datamodel_code_generator.model.pydantic.base_model import Constraints
+
+        constraints = Constraints(minItems=1, maxItems=10)
+        result = constraints_to_field_kwargs(constraints)
+        assert result["min_length"] == 1
+        assert result["max_length"] == 10
+
+
+@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
+class TestTypeResolverInternal:
+    def test_resolve_constrained_type_with_kwargs(self) -> None:
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type="constr", kwargs={"min_length": 1, "max_length": 10})
+        result_type, constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type is str
+        assert constraints.get("min_length") == 1
+        assert constraints.get("max_length") == 10
+
+    def test_resolve_constrained_type_with_regex(self) -> None:
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type="constr", kwargs={"regex": "r'^[A-Z]+$'"})
+        result_type, constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type is str
+        assert constraints.get("pattern") == "^[A-Z]+$"
+
+    def test_resolve_constrained_int(self) -> None:
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type="conint", kwargs={"ge": 0, "le": 100})
+        result_type, constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type is int
+        assert constraints.get("ge") == 0
+        assert constraints.get("le") == 100
+
+    def test_resolve_model_in_lookup(self) -> None:
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        class MockModel:
+            pass
+
+        resolver = TypeResolver({"MockModel": MockModel})
+        data_type = DataType(type="MockModel")
+        result_type, constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type == MockModel
+        assert constraints == {}
+
+    def test_resolve_forward_ref_not_in_lookup(self) -> None:
+        from typing import ForwardRef
+
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.reference import Reference
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        ref = Reference(path="#/$defs/UnknownModel", original_name="UnknownModel", name="UnknownModel")
+        data_type = DataType(reference=ref)
+        result_type, _constraints = resolver.resolve_with_constraints(data_type)
+        assert isinstance(result_type, ForwardRef)
+        assert result_type.__forward_arg__ == "UnknownModel"
+
+    def test_resolve_empty_type(self) -> None:
+        from typing import Any
+
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type=None)
+        result_type, _constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type == Any
+
+    def test_resolve_unknown_type_string(self) -> None:
+        from typing import Any
+
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type="totally_unknown_type_xyz")
+        result_type, _constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type == Any
+
+    def test_resolve_constrained_without_kwargs(self) -> None:
+        from datamodel_code_generator.dynamic.type_resolver import TypeResolver
+        from datamodel_code_generator.types import DataType
+
+        resolver = TypeResolver({})
+        data_type = DataType(type="constr", kwargs=None)
+        result_type, constraints = resolver.resolve_with_constraints(data_type)
+        assert result_type is str
+        assert constraints == {}
+
+
+@pytest.mark.skipif(not PYDANTIC_V2, reason="Dynamic models require Pydantic v2")
+class TestCreatorInternal:
+    def test_enum_with_path_reference(self) -> None:
+        schema = {
+            "$defs": {
+                "types": {
+                    "Status": {
+                        "type": "string",
+                        "enum": ["active", "inactive"],
+                    }
+                }
+            },
+            "type": "object",
+            "properties": {"status": {"$ref": "#/$defs/types/Status"}},
+        }
+
+        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        assert "Status" in models
+
+    def test_model_with_default_factory_like_list(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "default": [],
+                }
+            },
+        }
+
+        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        instance = models["Model"]()
+        assert instance.items == []
+
+    def test_base_class_without_reference(self) -> None:
+        schema = {
+            "$defs": {
+                "Base": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                },
+                "Child": {
+                    "allOf": [
+                        {"$ref": "#/$defs/Base"},
+                        {"type": "object", "properties": {"name": {"type": "string"}}},
+                    ]
+                },
+            },
+            "$ref": "#/$defs/Child",
+        }
+
+        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        assert "Child" in models
+        child = models["Child"](id=1, name="Test")
+        assert child.id == 1
+        assert child.name == "Test"
+
+    def test_field_without_name_skipped(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {
+                "valid_field": {"type": "string"},
+            },
+        }
+
+        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        assert "Model" in models
+
+    def test_multiple_inheritance_bases(self) -> None:
+        schema = {
+            "$defs": {
+                "Nameable": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                },
+                "Identifiable": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                },
+                "Entity": {
+                    "allOf": [
+                        {"$ref": "#/$defs/Nameable"},
+                        {"$ref": "#/$defs/Identifiable"},
+                        {"type": "object", "properties": {"active": {"type": "boolean"}}},
+                    ]
+                },
+            },
+            "$ref": "#/$defs/Entity",
+        }
+
+        models = generate_dynamic_models(schema, input_file_type=InputFileType.JsonSchema)
+        assert "Entity" in models
+        entity = models["Entity"](name="Test", id=1, active=True)
+        assert entity.name == "Test"
+        assert entity.id == 1
+        assert entity.active is True
