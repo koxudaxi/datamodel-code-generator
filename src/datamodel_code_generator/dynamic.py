@@ -83,17 +83,13 @@ def _build_module_edges(modules: dict[tuple[str, ...], str]) -> dict[tuple[str, 
     """
     name_to_path: dict[str, tuple[str, ...]] = {}
     for path in modules:
-        filepath = PurePath(path[-1])
-        if filepath.suffix == ".py":
-            name = filepath.stem
-            if name != "__init__":
-                name_to_path[name] = path
+        if (filepath := PurePath(path[-1])).suffix == ".py" and (name := filepath.stem) != "__init__":
+            name_to_path[name] = path
 
     edges: dict[tuple[str, ...], set[tuple[str, ...]]] = {path: set() for path in modules}
     for path, code in modules.items():
         for imported in _get_relative_imports(code):
-            if imported in name_to_path:
-                dep_path = name_to_path[imported]
+            if dep_path := name_to_path.get(imported):
                 edges[dep_path].add(path)
     return edges
 
@@ -114,7 +110,6 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
         edges = _build_module_edges(modules)
         sorted_paths = stable_toposort(nodes, edges, key=node_index.__getitem__)
 
-        # Create and register all modules first
         for path_tuple in sorted_paths:
             module_name = _path_to_module_name(package_name, path_tuple)
             module = types.ModuleType(module_name)
@@ -124,7 +119,6 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
             created_modules.append(module_name)
             all_namespaces[module_name] = module.__dict__
 
-        # Register package
         if package_name not in sys.modules:
             pkg = types.ModuleType(package_name)
             pkg.__path__ = []
@@ -132,26 +126,22 @@ def _execute_multi_module(modules: dict[tuple[str, ...], str]) -> dict[str, type
             sys.modules[package_name] = pkg
             created_modules.insert(0, package_name)
 
-        # Execute each module
         for path_tuple in sorted_paths:
             module_name = _path_to_module_name(package_name, path_tuple)
             exec(modules[path_tuple], all_namespaces[module_name])  # noqa: S102
 
-        # Collect all models from all namespaces
         models: dict[str, type] = {}
         combined_namespace: dict[str, Any] = {}
         for ns in all_namespaces.values():
             combined_namespace.update(ns)
             models.update(_extract_models(ns))
 
-        # Rebuild models with combined namespace
         for obj in models.values():
             if issubclass(obj, BaseModel) and hasattr(obj, "__pydantic_generic_metadata__"):
                 obj.model_rebuild(_types_namespace=combined_namespace)
 
         return models
     finally:
-        # Clean up sys.modules
         for module_name in reversed(created_modules):
             sys.modules.pop(module_name, None)
 
