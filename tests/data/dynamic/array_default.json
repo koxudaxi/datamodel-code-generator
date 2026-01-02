@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {"type": "string"},
+      "default": []
+    }
+  }
+}

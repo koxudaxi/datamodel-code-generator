@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import decimal
 import operator
 from functools import reduce
@@ -10,21 +11,14 @@ from typing import TYPE_CHECKING, Any, ForwardRef, Literal
 if TYPE_CHECKING:
     from datamodel_code_generator.types import DataType
 
-PRIMITIVE_TYPE_MAP: dict[str, type[Any]] = {
-    "str": str,
-    "string": str,
-    "int": int,
-    "integer": int,
-    "float": float,
-    "number": float,
-    "bool": bool,
-    "boolean": bool,
-    "bytes": bytes,
-    "None": type(None),
-    "Any": Any,
+TYPE_ALIASES: dict[str, str] = {
+    "string": "str",
+    "integer": "int",
+    "number": "float",
+    "boolean": "bool",
 }
 
-CONSTRAINED_TYPE_MAP: dict[str, type[Any]] = {
+CONSTRAINED_TYPE_BASE: dict[str, type[Any]] = {
     "conint": int,
     "confloat": float,
     "constr": str,
@@ -78,13 +72,14 @@ class TypeResolver:
 
         type_str = data_type.type
 
-        if type_str in CONSTRAINED_TYPE_MAP:
-            base_type = CONSTRAINED_TYPE_MAP[type_str]
+        if type_str in CONSTRAINED_TYPE_BASE:
+            base_type = CONSTRAINED_TYPE_BASE[type_str]
             self._extract_constraints(data_type, constraints)
             return base_type, constraints
 
-        if type_str in PRIMITIVE_TYPE_MAP:
-            return PRIMITIVE_TYPE_MAP[type_str], constraints
+        normalized = TYPE_ALIASES.get(type_str, type_str)
+        if builtin_type := getattr(builtins, normalized, None):
+            return builtin_type, constraints
 
         if type_str in self._models:
             return self._models[type_str], constraints
