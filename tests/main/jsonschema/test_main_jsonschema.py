@@ -1132,6 +1132,54 @@ def test_main_json_reuse_enum(output_file: Path) -> None:
     )
 
 
+def test_main_reuse_model_collapse_inline_definitions(output_file: Path) -> None:
+    """Test --reuse-model --collapse-reuse-models deduplicates identical inline definitions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_inline_definitions.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--reuse-model",
+            "--collapse-reuse-models",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_reuse_model_collapse_with_root(output_file: Path) -> None:
+    """Test --reuse-model --collapse-reuse-models skips RootModel deduplication."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_with_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--reuse-model",
+            "--collapse-reuse-models",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
+    """Test --reuse-model --collapse-reuse-models with deeply nested identical structures."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_nested.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--reuse-model",
+            "--collapse-reuse-models",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--capitalize-enum-members"],
     option_description="""Capitalize enum member names to UPPER_CASE format.
