@@ -23,6 +23,7 @@ from datamodel_code_generator.model.pydantic.base_model import (
 from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
+from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
@@ -174,14 +175,23 @@ class DataModelField(DataModelFieldV1):
     ) -> list[str]:
         return field_arguments
 
+    def _has_discriminator_in_data_type(self) -> bool:
+        """Check if any nested DataType has a discriminator."""
+        return any(dt.discriminator for dt in self.data_type.all_data_types)
+
     @property
     def imports(self) -> tuple[Import, ...]:
-        """Get all required imports including AliasChoices if needed."""
+        """Get all required imports including AliasChoices and Field for discriminator."""
         base_imports = super().imports
+        extra_imports: list[Import] = []
         if self.validation_aliases:
             from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
 
-            return chain_as_tuple(base_imports, (IMPORT_ALIAS_CHOICES,))
+            extra_imports.append(IMPORT_ALIAS_CHOICES)
+        if self._has_discriminator_in_data_type():
+            extra_imports.append(IMPORT_FIELD)
+        if extra_imports:
+            return chain_as_tuple(base_imports, tuple(extra_imports))
         return base_imports
 
 

@@ -48,6 +48,11 @@ from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_conte
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
+SKIP_PYDANTIC_V1 = pytest.mark.skipif(
+    pydantic.VERSION < "2.0.0",
+    reason="This test requires Pydantic v2",
+)
+
 
 @pytest.mark.benchmark
 def test_main(output_file: Path) -> None:
@@ -2580,26 +2585,24 @@ def test_main_openapi_discriminator(input_: str, output: str, output_file: Path)
 
 @freeze_time("2023-07-27")
 @pytest.mark.parametrize(
-    ("kind", "option", "expected"),
+    ("kind", "option", "output_model", "expected"),
     [
-        (
-            "anyOf",
-            "--collapse-root-models",
-            "in_array_collapse_root_models.py",
-        ),
-        (
-            "oneOf",
-            "--collapse-root-models",
-            "in_array_collapse_root_models.py",
-        ),
-        ("anyOf", None, "in_array.py"),
-        ("oneOf", None, "in_array.py"),
+        ("anyOf", "--collapse-root-models", None, "in_array_collapse_root_models.py"),
+        ("oneOf", "--collapse-root-models", None, "in_array_collapse_root_models.py"),
+        ("anyOf", None, None, "in_array.py"),
+        ("oneOf", None, None, "in_array.py"),
+        ("anyOf", "--collapse-root-models", "pydantic_v2.BaseModel", "in_array_collapse_root_models_pydantic_v2.py"),
+        ("oneOf", "--collapse-root-models", "pydantic_v2.BaseModel", "in_array_collapse_root_models_pydantic_v2.py"),
     ],
 )
-def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expected: str, output_file: Path) -> None:
+def test_main_openapi_discriminator_in_array(
+    kind: str, option: str | None, output_model: str | None, expected: str, output_file: Path
+) -> None:
     """Test OpenAPI generation with discriminator in array."""
     input_file = f"discriminator_in_array_{kind.lower()}.yaml"
     extra_args = [option] if option else []
+    if output_model:
+        extra_args.extend(["--output-model-type", output_model])
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / input_file,
         output_path=output_file,
@@ -2608,6 +2611,20 @@ def test_main_openapi_discriminator_in_array(kind: str, option: str | None, expe
         expected_file=f"discriminator/{expected}",
         extra_args=extra_args,
         transform=lambda s: s.replace(input_file, "discriminator_in_array.yaml"),
+    )
+
+
+@freeze_time("2023-07-27")
+@SKIP_PYDANTIC_V1
+def test_main_openapi_discriminator_in_array_underscore(output_file: Path) -> None:
+    """Test discriminator with underscore property name generates valid Pydantic v2 code."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_in_array_underscore.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator/in_array_underscore_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--collapse-root-models"],
     )
 
 

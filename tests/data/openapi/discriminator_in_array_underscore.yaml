@@ -1,0 +1,43 @@
+openapi: "3.0.0"
+components:
+  schemas:
+    StringAttr:
+      type: object
+      required:
+        - attr_type
+        - value
+      properties:
+        attr_type:
+          type: string
+          enum:
+            - string_val
+        value:
+          type: string
+    NumberAttr:
+      type: object
+      required:
+        - attr_type
+        - value
+      properties:
+        attr_type:
+          type: string
+          enum:
+            - number_val
+        value:
+          type: number
+    Container:
+      type: object
+      required:
+        - attributes
+      properties:
+        attributes:
+          type: array
+          items:
+            oneOf:
+              - $ref: "#/components/schemas/StringAttr"
+              - $ref: "#/components/schemas/NumberAttr"
+            discriminator:
+              propertyName: attr_type
+              mapping:
+                string_val: "#/components/schemas/StringAttr"
+                number_val: "#/components/schemas/NumberAttr"
