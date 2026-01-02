@@ -477,6 +477,27 @@ class JsonSchemaObject(BaseModel):
                 schema_affecting_fields |= {"extras"}
         return bool(schema_affecting_fields)
 
+    @cached_property
+    def is_ref_with_nullable_only(self) -> bool:
+        """Check if schema has $ref with only nullable: true (no other schema-affecting keywords).
+
+        This is used to avoid creating duplicate models when a $ref is combined
+        with nullable: true. In such cases, the reference should be used directly
+        with Optional type annotation instead of merging schemas.
+        """
+        if not self.ref or self.nullable is not True:
+            return False
+        other_fields = get_fields_set(self) - {"ref", "nullable"} - self.__metadata_only_fields__ - {"extras"}
+        if other_fields:
+            return False
+        if self.extras:
+            schema_affecting_extras = {
+                k for k in self.extras if k not in self.__metadata_only_fields__ and not k.startswith("x-")
+            }
+            if schema_affecting_extras:
+                return False
+        return True
+
 
 @lru_cache
 def get_ref_type(ref: str) -> JSONReference:
@@ -1805,7 +1826,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         if ref_value is None:
             return None  # pragma: no cover
 
-        if ref_item.has_ref_with_schema_keywords:
+        if ref_item.has_ref_with_schema_keywords and not ref_item.is_ref_with_nullable_only:
             ref_schema = self._merge_ref_with_schema(ref_item)
         else:
             ref_schema = self._load_ref_schema_object(ref_value)
@@ -1896,7 +1917,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if target_attribute.ref:
-                if target_attribute.has_ref_with_schema_keywords:
+                if target_attribute.has_ref_with_schema_keywords and not target_attribute.is_ref_with_nullable_only:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
                     combined_schemas.append(
                         model_validate(
@@ -2700,6 +2721,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 item,
                 root_type_path,
             )
+        if item.is_ref_with_nullable_only and item.ref:
+            ref_data_type = self.get_ref_data_type(item.ref)
+            if self.strict_nullable:
+                return self.data_type(data_types=[ref_data_type], is_optional=True)
+            return ref_data_type
         if item.has_ref_with_schema_keywords:
             item = self._merge_ref_with_schema(item)
         if item.ref:
@@ -3523,7 +3549,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         path: list[str],
     ) -> None:
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
-        if obj.has_ref_with_schema_keywords:
+        if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             obj = self._merge_ref_with_schema(obj)
 
         if obj.is_array:
