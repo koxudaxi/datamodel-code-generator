@@ -104,3 +104,32 @@ def test_create_data_model_class_decorators() -> None:
     result = parser._create_data_model(reference=reference, fields=[])
     assert isinstance(result, DataClass)
     assert result.decorators == ["@dataclass_json"]
+
+
+def test_graphql_no_typename(output_file: Path) -> None:
+    """Test that --graphql-no-typename excludes typename__ field from all types."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "no-typename.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="no_typename.py",
+        extra_args=["--graphql-no-typename"],
+    )
+
+
+def test_graphql_typename_included_by_default(output_file: Path) -> None:
+    """Regression test: typename__ field is included by default."""
+
+    def assert_typename_present(output_path: Path, _: str | None, **_kwargs: object) -> None:
+        content = output_path.read_text(encoding="utf-8")
+        assert "typename__" in content, "typename__ field should be present by default"
+        assert "__typename" in content, "__typename alias should be present by default"
+
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "no-typename.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_typename_present,
+        expected_file=None,
+    )

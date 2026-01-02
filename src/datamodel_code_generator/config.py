@@ -141,6 +141,7 @@ class GenerateConfig(BaseModel):
     include_path_parameters: bool = False
     openapi_include_paths: list[str] | None = None
     graphql_scopes: list[GraphQLScope] | None = None
+    graphql_no_typename: bool = False
     wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
@@ -336,6 +337,7 @@ class GraphQLParserConfig(ParserConfig):
 
     data_model_scalar_type: type[DataModel] = DataTypeScalar
     data_model_union_type: type[DataModel] = DataTypeUnion
+    graphql_no_typename: bool = False
 
 
 class JSONSchemaParserConfig(ParserConfig):

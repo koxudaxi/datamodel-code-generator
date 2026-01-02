@@ -207,6 +207,39 @@ class A(BaseModel):
 
 ---
 
+## 🚫 Excluding __typename Field
+
+When using generated models for GraphQL mutations, the `__typename` field may cause issues
+as GraphQL servers typically don't expect this field in input data.
+
+Use the `--graphql-no-typename` option to exclude this field:
+
+```bash
+datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py --graphql-no-typename
+```
+
+**Before (default):**
+```python
+class Book(BaseModel):
+    id: ID
+    title: String | None = None
+    typename__: Literal['Book'] | None = Field('Book', alias='__typename')
+```
+
+**After (with --graphql-no-typename):**
+```python
+class Book(BaseModel):
+    id: ID
+    title: String | None = None
+```
+
+!!! warning "Union Type Discrimination"
+    If your schema uses GraphQL union types and you rely on `__typename` for type
+    discrimination during deserialization, excluding this field may break that functionality.
+    Consider using this option only for input types or schemas without unions.
+
+---
+
 ## 📖 See Also
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference

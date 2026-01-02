@@ -24,6 +24,7 @@ class OptionCategory(str, Enum):
     MODEL = "Model Customization"
     TEMPLATE = "Template Customization"
     OPENAPI = "OpenAPI-only Options"
+    GRAPHQL = "GraphQL-only Options"
     GENERAL = "General Options"
 
 
@@ -243,6 +244,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         deprecated=True,
         deprecated_message="Use --field-constraints instead",
     ),
+    # ==========================================================================
+    # GraphQL-only Options
+    # ==========================================================================
+    "--graphql-no-typename": CLIOptionMeta(name="--graphql-no-typename", category=OptionCategory.GRAPHQL),
     # ==========================================================================
     # General Options
     # ==========================================================================
