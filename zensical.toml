@@ -47,6 +47,7 @@ nav = [
     { "Integration" = [
       { "One-liner Usage" = "oneliner.md" },
       { "Using as Module" = "using_as_module.md" },
+      { "Dynamic Model Generation" = "dynamic-model-generation.md" },
       { "pyproject.toml" = "pyproject_toml.md" },
       { "CI/CD Integration" = "ci-cd.md" },
       { "LLM Integration" = "llm-integration.md" }
