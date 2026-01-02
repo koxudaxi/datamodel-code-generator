@@ -16,11 +16,14 @@ from typing import TYPE_CHECKING, Any
 import pydantic
 from pydantic import BaseModel
 
+from datamodel_code_generator import Error, generate, is_openapi
+from datamodel_code_generator.config import GenerateConfig
+from datamodel_code_generator.enums import DataModelType, InputFileType
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
+from datamodel_code_generator.types import StrictTypes
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
-
-    from datamodel_code_generator.config import GenerateConfig
-
 
 _dynamic_models_cache: dict[str, dict[str, type]] = {}
 _dynamic_models_lock: threading.Lock | None = None
@@ -93,26 +96,20 @@ def generate_dynamic_models(
         >>> user.model_dump()
         {'name': 'John', 'age': 30}
     """
-    from datamodel_code_generator import Error, generate, is_openapi  # noqa: PLC0415
-    from datamodel_code_generator.config import GenerateConfig as GenerateConfigClass  # noqa: PLC0415
-    from datamodel_code_generator.enums import DataModelType, InputFileType  # noqa: PLC0415
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: PLC0415
-    from datamodel_code_generator.types import StrictTypes  # noqa: PLC0415
-
     if pydantic.VERSION < "2.0.0":  # pragma: no cover
         msg = f"generate_dynamic_models requires Pydantic v2, found v{pydantic.VERSION}"
         raise Error(msg)
 
-    GenerateConfigClass.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
     if config is None:
         if is_openapi(input_):
-            config = GenerateConfigClass(
+            config = GenerateConfig(
                 input_file_type=InputFileType.OpenAPI,
                 output_model_type=DataModelType.PydanticV2BaseModel,
             )
         else:
-            config = GenerateConfigClass(
+            config = GenerateConfig(
                 input_file_type=InputFileType.JsonSchema,
                 output_model_type=DataModelType.PydanticV2BaseModel,
             )

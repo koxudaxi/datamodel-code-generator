@@ -928,16 +928,10 @@ inferred_message = (
 )
 
 
-from datamodel_code_generator.util import create_module_getattr  # noqa: E402
-
-__getattr__ = create_module_getattr(
-    __name__,
-    {
-        "generate_dynamic_models": ("datamodel_code_generator.dynamic", "generate_dynamic_models"),
-        "clear_dynamic_models_cache": ("datamodel_code_generator.dynamic", "clear_dynamic_models_cache"),
-    },
+from datamodel_code_generator.dynamic import (  # noqa: E402
+    clear_dynamic_models_cache,
+    generate_dynamic_models,
 )
-
 
 __all__ = [
     "DEFAULT_FORMATTERS",
@@ -971,7 +965,7 @@ __all__ = [
     "ReuseScope",
     "SchemaParseError",
     "TargetPydanticVersion",
-    "clear_dynamic_models_cache",  # noqa: F822
+    "clear_dynamic_models_cache",
     "generate",
-    "generate_dynamic_models",  # noqa: F822
+    "generate_dynamic_models",
 ]
