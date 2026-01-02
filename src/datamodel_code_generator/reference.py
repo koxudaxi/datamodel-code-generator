@@ -1223,13 +1223,11 @@ class ModelResolver:  # noqa: PLR0904
         if not self.default_value_overrides:
             return original_default, has_default
 
-        # Try scoped lookup first (ClassName.field_name)
         if class_name:
             scoped_key = f"{class_name}.{field_name}"
             if scoped_key in self.default_value_overrides:
                 return self.default_value_overrides[scoped_key], True
 
-        # Fall back to flat lookup (field_name)
         if field_name in self.default_value_overrides:
             return self.default_value_overrides[field_name], True
 
