@@ -895,6 +895,33 @@ def _load_json_config(
     return result, None
 
 
+def _load_validators_config(
+    file_handle: TextIOBase | None,
+) -> tuple[dict[str, ModelValidators] | None, str | None]:
+    """Load and validate a validators configuration file.
+
+    Returns:
+        A tuple of (validators_dict, error_message). If successful, error_message is None.
+        If file_handle is None, returns (None, None).
+    """
+    if file_handle is None:
+        return None, None
+
+    if ValidatorsConfig is None:
+        return None, "--validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option."
+
+    with file_handle as data:
+        try:
+            raw = json.load(data)
+        except json.JSONDecodeError as e:
+            return None, f"Unable to load validators configuration: {e}"
+
+    try:
+        return ValidatorsConfig.model_validate(raw).root, None
+    except ValidationError as e:
+        return None, f"Invalid validators configuration: {e}"
+
+
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
@@ -1261,27 +1288,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
-    validators_config: dict[str, ModelValidators] | None = None
-    if config.validators is not None:
-        if ValidatorsConfig is None:
-            print(  # noqa: T201
-                "Error: --validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option.",
-                file=sys.stderr,
-            )
-            return Exit.ERROR
-
-        with config.validators as f:
-            try:
-                raw = json.load(f)
-            except json.JSONDecodeError as e:
-                print(f"Unable to load validators configuration: {e}", file=sys.stderr)  # noqa: T201
-                return Exit.ERROR
-
-        try:
-            validators_config = ValidatorsConfig.model_validate(raw).root
-        except ValidationError as e:
-            print(f"Invalid validators configuration: {e}", file=sys.stderr)  # noqa: T201
-            return Exit.ERROR
+    validators_config, error = _load_validators_config(config.validators)
+    if error:
+        print(error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
 
     if config.check:
         config_output = cast("Path", config.output)
