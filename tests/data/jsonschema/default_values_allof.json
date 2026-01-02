@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Base": {
+      "type": "object",
+      "properties": {
+        "base_field": {"type": "string"}
+      }
+    },
+    "Child": {
+      "allOf": [
+        {"$ref": "#/definitions/Base"},
+        {
+          "type": "object",
+          "properties": {
+            "child_field": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

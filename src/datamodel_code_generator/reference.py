@@ -1201,26 +1201,10 @@ class ModelResolver:  # noqa: PLR0904
         field_name: str,
         original_default: Any,
         has_default: bool,  # noqa: FBT001
-        class_name: str | None = None,
+        class_name: str | None,
     ) -> tuple[Any, bool]:
-        """Resolve default value for a field, applying overrides if configured.
-
-        Supports hierarchical override resolution with the following priority:
-        1. Scoped overrides (ClassName.field_name) - class-level specificity
-        2. Flat overrides (field_name) - applies to all occurrences
-
-        Args:
-            field_name: The original field name from the schema.
-            original_default: The default value from the schema.
-            has_default: Whether the schema defined a default value.
-            class_name: Optional class name for scoped override resolution.
-
-        Returns:
-            A tuple of (effective_default, effective_has_default) where:
-            - effective_default: The resolved default value to use.
-            - effective_has_default: Whether a default value is now present.
-        """
-        if not self.default_value_overrides:
+        """Resolve default value for a field, applying overrides if configured."""
+        if not self.default_value_overrides or class_name is None:
             return original_default, has_default
 
         scoped_key = f"{class_name}.{field_name}"

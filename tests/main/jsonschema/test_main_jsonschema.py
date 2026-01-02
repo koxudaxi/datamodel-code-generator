@@ -7483,6 +7483,22 @@ def test_main_jsonschema_default_values_override(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_default_values_allof(output_file: Path) -> None:
+    """Test default value overrides with allOf inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "default_values_allof.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_default_values_allof.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            str(DEFAULT_VALUES_DATA_PATH / "allof_defaults.json"),
+        ],
+    )
+
+
 def test_ref_nullable_only_no_duplicate_model(output_file: Path) -> None:
     """Test that $ref + nullable: true does not create duplicate models.
 
