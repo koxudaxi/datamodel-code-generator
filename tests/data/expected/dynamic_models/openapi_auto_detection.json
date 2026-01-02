@@ -1,1 +1,6 @@
-"{\n  \"User\": {\n    \"id\": 1,\n    \"name\": \"Alice\"\n  }\n}"
+{
+  "User": {
+    "id": 1,
+    "name": "Alice"
+  }
+}

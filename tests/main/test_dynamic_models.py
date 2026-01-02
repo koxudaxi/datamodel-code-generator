@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -65,7 +64,8 @@ def assert_dynamic_models(
     """Generate dynamic models, validate data, and assert with external file."""
     models = generate_dynamic_models(schema, config=config)
     result = {name: models[name].model_validate(data).model_dump(mode="json") for name, data in validations.items()}
-    assert json.dumps(result, indent=2, sort_keys=True) == external_file(expected_path)
+    # external_file() automatically parses JSON files, so compare as dicts
+    assert result == external_file(expected_path)
 
 
 @pytest.fixture(autouse=True)

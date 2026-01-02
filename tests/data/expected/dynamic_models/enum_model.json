@@ -1,1 +1,5 @@
-"{\n  \"Model\": {\n    \"status\": \"active\"\n  }\n}"
+{
+  "Model": {
+    "status": "active"
+  }
+}

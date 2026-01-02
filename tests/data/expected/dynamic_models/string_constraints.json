@@ -1,1 +1,5 @@
-"{\n  \"Model\": {\n    \"email\": \"test@example.com\"\n  }\n}"
+{
+  "Model": {
+    "email": "test@example.com"
+  }
+}

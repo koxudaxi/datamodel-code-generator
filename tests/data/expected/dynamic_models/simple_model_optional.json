@@ -1,1 +1,6 @@
-"{\n  \"Model\": {\n    \"age\": null,\n    \"name\": \"Jane\"\n  }\n}"
+{
+  "Model": {
+    "name": "Jane",
+    "age": null
+  }
+}
