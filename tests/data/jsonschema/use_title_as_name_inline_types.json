@@ -1,0 +1,61 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$defs": {
+        "Foo": {
+            "type": "object",
+            "properties": {
+                "array": {
+                    "title": "MyArrayName",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "object": {
+                    "title": "MyObjectName",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "enum": {
+                    "title": "MyEnumName",
+                    "enum": ["foo", "bar"]
+                },
+                "oneOf": {
+                    "title": "MyOneOfName",
+                    "oneOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        }
+                    ]
+                },
+                "anyOf": {
+                    "title": "MyAnyOfName",
+                    "anyOf": [
+                        {
+                            "type": "boolean"
+                        },
+                        {
+                            "type": "integer"
+                        }
+                    ]
+                },
+                "oneOfConst": {
+                    "title": "MyOneOfConstName",
+                    "oneOf": [
+                        {
+                            "const": "alpha"
+                        },
+                        {
+                            "const": "beta"
+                        }
+                    ]
+                }
+            }
+        }
+    }
+}

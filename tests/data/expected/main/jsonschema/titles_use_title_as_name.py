@@ -44,10 +44,17 @@ class ExtendedProcessingTasksTitle(BaseModel):
     )
 
 
+class ProcessingStatusUnionTitle(BaseModel):
+    __root__: (
+        ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle
+    ) = Field(..., title='Processing Status Union Title')
+
+
 class ProcessingTaskTitle(BaseModel):
-    processing_status_union: (
-        ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle | None
-    ) = Field('COMPLETED', title='Processing Status Union Title')
+    processing_status_union: ProcessingStatusUnionTitle | None = Field(
+        default_factory=lambda: ProcessingStatusUnionTitle.parse_obj('COMPLETED'),
+        title='Processing Status Union Title',
+    )
     processing_status: ProcessingStatusTitle | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None
