@@ -297,7 +297,7 @@ datamodel-codegen \
   --use-type-alias
 ```
 
-**Result: Single TypeAlias reused across classes**
+### Result: Single TypeAlias reused across classes
 
 ```python
 PlaceName = TypeAliasType(
