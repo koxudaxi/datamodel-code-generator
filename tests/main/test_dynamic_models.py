@@ -14,6 +14,7 @@ from datamodel_code_generator import (
     DataModelType,
     InputFileType,
     clear_dynamic_models_cache,
+    generate,
     generate_dynamic_models,
 )
 from datamodel_code_generator.config import GenerateConfig
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="generate_dynamic_models requires Pydantic v2")
 
-EXPECTED_PATH = Path(__file__).parent / "expected" / "dynamic_models"
+EXPECTED_PATH = Path(__file__).parent.parent / "data" / "expected" / "dynamic_models"
 
 
 def make_object_schema(properties: dict[str, Any], required: list[str] | None = None) -> dict[str, Any]:
@@ -60,28 +61,46 @@ def _setup_and_clear_cache() -> None:
 
 
 def test_simple_model() -> None:
-    """Test generating a simple model."""
+    """Test generating a simple model and validating data."""
     schema = make_object_schema({"name": {"type": "string"}, "age": {"type": "integer"}}, required=["name"])
     models = generate_dynamic_models(schema)
     assert sorted(models.keys()) == ["Model"]
-    instance = models["Model"](name="John", age=30)
-    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "simple_model_dump.txt")
+
+    Model = models["Model"]
+    instance = Model.model_validate({"name": "John", "age": 30})
+    assert instance.name == "John"
+    assert instance.age == 30
+
+    instance_optional = Model.model_validate({"name": "Jane"})
+    assert instance_optional.name == "Jane"
+    assert instance_optional.age is None
 
 
 def test_nested_models() -> None:
-    """Test generating nested models."""
+    """Test generating nested models and validating nested data."""
     schema = make_object_schema({"user": {"type": "object", "properties": {"name": {"type": "string"}}}})
     models = generate_dynamic_models(schema)
     assert sorted(models.keys()) == ["Model", "User"]
 
+    Model = models["Model"]
+    instance = Model.model_validate({"user": {"name": "Alice"}})
+    assert instance.user.name == "Alice"
+
 
 def test_enum_model() -> None:
-    """Test generating model with enum."""
+    """Test generating model with enum and validating enum values."""
     schema = make_object_schema({"status": {"type": "string", "enum": ["active", "inactive"]}})
     models = generate_dynamic_models(schema)
     assert sorted(models.keys()) == ["Model", "Status"]
-    instance = models["Model"](status=models["Status"].active)
+
+    Model = models["Model"]
+    Status = models["Status"]
+    instance = Model.model_validate({"status": "active"})
+    assert instance.status == Status.active
     assert instance.status.value == "active"
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({"status": "invalid"})
 
 
 def test_circular_reference() -> None:
@@ -100,8 +119,14 @@ def test_circular_reference() -> None:
     }
     models = generate_dynamic_models(schema)
     assert sorted(models.keys()) == ["Model", "Node", "RootModel"]
-    node = models["Node"](value="root", children=[models["Node"](value="child", children=[])])
-    assert_output(repr(node.model_dump()), EXPECTED_PATH / "circular_reference_dump.txt")
+
+    Node = models["Node"]
+    data = {"value": "root", "children": [{"value": "child1", "children": []}, {"value": "child2", "children": []}]}
+    instance = Node.model_validate(data)
+    assert instance.value == "root"
+    assert len(instance.children) == 2
+    assert instance.children[0].value == "child1"
+    assert instance.children[1].value == "child2"
 
 
 def test_allof_inheritance() -> None:
@@ -117,8 +142,24 @@ def test_allof_inheritance() -> None:
     }
     models = generate_dynamic_models(schema)
     assert sorted(models.keys()) == ["Base", "Extended", "Model", "RootModel"]
-    instance = models["Extended"](id=1, name="test")
-    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "allof_inheritance_dump.txt")
+
+    Extended = models["Extended"]
+    instance = Extended.model_validate({"id": 42, "name": "test"})
+    assert instance.id == 42
+    assert instance.name == "test"
+
+
+def test_validation_error() -> None:
+    """Test that validation errors are raised for invalid data."""
+    schema = make_object_schema({"count": {"type": "integer"}}, required=["count"])
+    models = generate_dynamic_models(schema)
+    Model = models["Model"]
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({"count": "not_an_integer"})
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({})
 
 
 def test_cache_hit() -> None:
@@ -224,18 +265,32 @@ def test_concurrent_different_schemas() -> None:
 
 
 def test_numeric_constraints() -> None:
-    """Test models with numeric constraints."""
+    """Test models with numeric constraints validate properly."""
     schema = make_object_schema({"age": {"type": "integer", "minimum": 0, "maximum": 150}})
     models = generate_dynamic_models(schema)
-    instance = models["Model"](age=30)
-    assert_output(repr(instance.model_dump()), EXPECTED_PATH / "numeric_constraints_dump.txt")
+    Model = models["Model"]
+
+    instance = Model.model_validate({"age": 30})
+    assert instance.age == 30
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({"age": -1})
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({"age": 200})
 
 
 def test_string_constraints() -> None:
-    """Test models with string constraints."""
+    """Test models with string constraints validate properly."""
     schema = make_object_schema({"email": {"type": "string", "pattern": r"^[\w\.-]+@[\w\.-]+\.\w+$"}})
     models = generate_dynamic_models(schema)
-    assert sorted(models.keys()) == ["Model"]
+    Model = models["Model"]
+
+    instance = Model.model_validate({"email": "test@example.com"})
+    assert instance.email == "test@example.com"
+
+    with pytest.raises(pydantic.ValidationError):
+        Model.model_validate({"email": "invalid-email"})
 
 
 def test_explicit_input_file_type() -> None:
@@ -246,15 +301,28 @@ def test_explicit_input_file_type() -> None:
 
 
 def test_openapi_auto_detection() -> None:
-    """Test that OpenAPI schemas are auto-detected."""
+    """Test that OpenAPI schemas are auto-detected and models work."""
     openapi_schema: dict[str, Any] = {
         "openapi": "3.0.0",
         "info": {"title": "Test API", "version": "1.0.0"},
         "paths": {},
-        "components": {"schemas": {"User": {"type": "object", "properties": {"name": {"type": "string"}}}}},
+        "components": {
+            "schemas": {
+                "User": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}, "name": {"type": "string"}},
+                    "required": ["id", "name"],
+                }
+            }
+        },
     }
     models = generate_dynamic_models(openapi_schema)
     assert sorted(models.keys()) == ["User"]
+
+    User = models["User"]
+    instance = User.model_validate({"id": 1, "name": "Alice"})
+    assert instance.id == 1
+    assert instance.name == "Alice"
 
 
 def test_config_with_auto_input_type() -> None:
@@ -336,7 +404,57 @@ def test_multi_module_output() -> None:
     models = generate_dynamic_models(schema, config=make_config(module_split_mode=ModuleSplitMode.Single))
     assert "User" in models
     assert "Order" in models
-    user = models["User"](name="Alice", age=25)
-    assert_output(repr(user.model_dump()), EXPECTED_PATH / "multi_module_user_dump.txt")
-    order = models["Order"](id=1, user=user)
-    assert_output(repr(order.model_dump()), EXPECTED_PATH / "multi_module_order_dump.txt")
+
+    User = models["User"]
+    Order = models["Order"]
+
+    user = User.model_validate({"name": "Alice", "age": 25})
+    assert user.name == "Alice"
+    assert user.age == 25
+
+    order = Order.model_validate({"id": 1, "user": {"name": "Bob", "age": 30}})
+    assert order.id == 1
+    assert order.user.name == "Bob"
+    assert order.user.age == 30
+
+
+def test_generated_code_matches_expected() -> None:
+    """Test that generate() produces expected code for a complex schema."""
+    schema: dict[str, Any] = {
+        "$defs": {
+            "Address": {
+                "type": "object",
+                "properties": {"street": {"type": "string"}, "city": {"type": "string"}},
+                "required": ["street", "city"],
+            },
+            "Person": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "address": {"$ref": "#/$defs/Address"},
+                },
+                "required": ["name"],
+            },
+        },
+        "$ref": "#/$defs/Person",
+    }
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+    result = generate(input_=schema, config=config)
+    assert isinstance(result, str)
+    assert_output(result, EXPECTED_PATH / "complex_schema.py")
+
+    models = generate_dynamic_models(schema)
+    Person = models["Person"]
+    Address = models["Address"]
+
+    person = Person.model_validate({"name": "John", "address": {"street": "123 Main St", "city": "NYC"}})
+    assert person.name == "John"
+    assert person.address.street == "123 Main St"
+    assert person.address.city == "NYC"
+
+    address = Address.model_validate({"street": "456 Oak Ave", "city": "LA"})
+    assert address.street == "456 Oak Ave"
+    assert address.city == "LA"
