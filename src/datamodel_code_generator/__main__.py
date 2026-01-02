@@ -1033,7 +1033,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
-        validators=validators,  # pyright: ignore[reportArgumentType]
+        validators=validators,
         default_value_overrides=default_value_overrides,
     )
 
