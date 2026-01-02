@@ -1,0 +1,13 @@
+{
+  "User": {
+    "name": "Alice",
+    "age": 25
+  },
+  "Order": {
+    "id": 1,
+    "user": {
+      "name": "Bob",
+      "age": 30
+    }
+  }
+}

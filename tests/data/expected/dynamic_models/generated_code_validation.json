@@ -1,0 +1,13 @@
+{
+  "Person": {
+    "name": "John",
+    "address": {
+      "street": "123 Main St",
+      "city": "NYC"
+    }
+  },
+  "Address": {
+    "street": "456 Oak Ave",
+    "city": "LA"
+  }
+}
