@@ -674,7 +674,31 @@ def test_dataclass_arguments_invalid(json_str: str, match: str) -> None:
 
 @pytest.mark.cli_doc(
     options=["--type-overrides"],
-    option_description="""Replace schema model types with custom Python types via JSON mapping.""",
+    option_description="""Replace schema model types with custom Python types via JSON mapping.
+
+This option is useful for importing models from external libraries (like `geojson-pydantic`)
+instead of generating them.
+
+**Override Formats:**
+
+| Format | Description |
+|--------|-------------|
+| `{"ModelName": "package.Type"}` | Model-level: Skip generating `ModelName` and import from `package` |
+| `{"Model.field": "package.Type"}` | Scoped: Override only specific field in specific model |
+
+!!! note "Model-level overrides skip generation"
+    When you specify a model-level override (without a dot in the key), the generator will
+    **skip generating that model entirely** and import it from the specified package instead.
+
+**Common Use Cases:**
+
+| Use Case | Example Override |
+|----------|------------------|
+| GeoJSON types | `{"Feature": "geojson_pydantic.Feature"}` |
+| Custom datetime | `{"Timestamp": "pendulum.DateTime"}` |
+| MongoDB ObjectId | `{"ObjectId": "bson.ObjectId"}` |
+| Custom validators | `{"Email": "my_app.types.ValidatedEmail"}` |
+""",
     input_schema="jsonschema/type_overrides_test.json",
     cli_args=["--type-overrides", '{"CustomType": "my_app.types.CustomType"}'],
     golden_output="main/type_overrides_model_level.py",
@@ -691,6 +715,31 @@ def test_type_overrides_model_level(output_file: Path) -> None:
         extra_args=[
             "--type-overrides",
             '{"CustomType": "my_app.types.CustomType"}',
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--type-overrides"],
+    option_description="""Replace schema model types with custom Python types via JSON mapping.""",
+    input_schema="jsonschema/type_overrides_external_lib.json",
+    cli_args=[
+        "--type-overrides",
+        '{"Feature": "geojson_pydantic.Feature", "FeatureCollection": "geojson_pydantic.FeatureCollection"}',
+    ],
+    golden_output="main/type_overrides_external_lib.py",
+)
+@freeze_time(TIMESTAMP)
+def test_type_overrides_external_lib(output_file: Path) -> None:
+    """Test --type-overrides with external library types like geojson-pydantic."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_overrides_external_lib.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--type-overrides",
+            '{"Feature": "geojson_pydantic.Feature", "FeatureCollection": "geojson_pydantic.FeatureCollection"}',
         ],
     )
 
