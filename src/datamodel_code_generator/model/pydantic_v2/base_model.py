@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field
 
-from datamodel_code_generator.imports import Import
+from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
@@ -24,7 +24,14 @@ from datamodel_code_generator.model.pydantic.base_model import (
     DataModelField as DataModelFieldV1,
 )
 from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
-from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_BASE_MODEL, IMPORT_CONFIG_DICT
+from datamodel_code_generator.model.pydantic_v2.imports import (
+    IMPORT_BASE_MODEL,
+    IMPORT_CONFIG_DICT,
+    IMPORT_FIELD_VALIDATOR,
+    IMPORT_VALIDATION_INFO,
+    IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
+)
+from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
 
@@ -300,6 +307,8 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # pyright: ignore[reportArgumentType]
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
+        self._process_validators()
+
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
         additional_properties = self.extra_template_data.get("additionalProperties")
         unevaluated_properties = self.extra_template_data.get("unevaluatedProperties")
@@ -348,6 +357,52 @@ class BaseModel(BaseModelBase):
                 if pattern and lookaround_regex.search(pattern):
                     return True
         return False
+
+    def _process_validators(self) -> None:
+        """Process validator definitions and prepare them for template rendering."""
+        validators = self.extra_template_data.get("validators")
+        if not validators:
+            return
+
+        prepared_validators: list[dict[str, Any]] = []
+        scoped_resolver = ModelResolver(custom_class_name_generator=lambda name: name)
+        for validator in validators:
+            fields = validator.get("fields") or [validator.get("field")]
+            fields = [f for f in fields if f]
+            if not fields:
+                continue
+
+            function_path: str = validator["function"]
+            function_name = function_path.rsplit(".", 1)[-1]
+            mode = validator.get("mode", "after")
+
+            fields_str = ", ".join(f"'{f}'" for f in fields)
+
+            base_method_name = f"{function_name}_validator"
+            method_name = scoped_resolver.add([base_method_name], base_method_name, unique=True, class_name=True).name
+
+            mode_str = f"mode='{mode}'"
+
+            prepared_validators.append({
+                "fields_str": fields_str,
+                "mode_str": mode_str,
+                "method_name": method_name,
+                "function_name": function_name,
+                "mode": mode,
+            })
+
+            self._additional_imports.append(Import.from_full_path(function_path))
+
+        if prepared_validators:
+            self.extra_template_data["prepared_validators"] = prepared_validators  # pyright: ignore[reportArgumentType]
+            self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
+            self._additional_imports.append(IMPORT_ANY)
+
+            modes = {v["mode"] for v in prepared_validators}
+            if modes - {"plain"}:
+                self._additional_imports.append(IMPORT_VALIDATION_INFO)
+            if "wrap" in modes:
+                self._additional_imports.append(IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER)
 
     @classmethod
     def create_base_class_model(

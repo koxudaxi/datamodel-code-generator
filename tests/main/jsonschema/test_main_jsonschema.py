@@ -24,6 +24,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
+from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
@@ -40,6 +41,9 @@ from tests.main.conftest import (
     run_main_with_args,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
+
+PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
+PYDANTIC_V1_ONLY = pytest.mark.skipif(is_pydantic_v2(), reason="Pydantic v1 only")
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -7646,4 +7650,263 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="reduce_duplicate_field_types.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-type-alias"],
+    )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--validators"],
+    option_description="""Add custom field validators to generated Pydantic v2 models.
+
+The `--validators` option takes a JSON file defining validators per model.
+Each validator specifies the field(s) to validate, the validation function
+to import, and optionally the mode (before/after/wrap/plain).
+This allows injecting custom validation logic into generated models.""",
+    input_schema="jsonschema/field_validators.json",
+    cli_args=[
+        "--validators",
+        "tests/data/jsonschema/field_validators_config.json",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ],
+    golden_output="jsonschema/field_validators.py",
+)
+def test_field_validators(output_file: Path) -> None:
+    """Add custom field validators to generated Pydantic v2 models.
+
+    The `--validators` option takes a JSON file defining validators per model.
+    Each validator specifies the field(s) to validate, the validation function
+    to import, and optionally the mode (before/after/wrap/plain).
+    This allows injecting custom validation logic into generated models.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators.py",
+        extra_args=[
+            "--validators",
+            str(JSON_SCHEMA_DATA_PATH / "field_validators_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_multi_fields(output_file: Path) -> None:
+    """Test validators with multiple fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_multi_fields.py",
+        extra_args=[
+            "--validators",
+            str(JSON_SCHEMA_DATA_PATH / "field_validators_multi_fields_config.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
+    """Test validators with wrap mode."""
+    config_file = tmp_path / "wrap_mode_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"field": "name", "function": "myapp.validators.validate_name_wrap", "mode": "wrap"}
+            ]
+        }
+    }"""
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_wrap_mode.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Path) -> None:
+    """Test that validators without fields are skipped gracefully."""
+    config_file = tmp_path / "no_field_validators_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"function": "myapp.validators.validate_something"},
+                {"field": "name", "function": "myapp.validators.validate_name"}
+            ]
+        }
+    }"""
+    )
+
+    result = run_main_with_args([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--validators",
+        str(config_file),
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ])
+
+    assert result == Exit.OK
+    content = output_file.read_text(encoding="utf-8")
+    assert "validate_name_validator" in content
+    assert "validate_something" not in content
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
+    """Test validators with plain mode (no ValidationInfo import)."""
+    config_file = tmp_path / "plain_mode_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"field": "name", "function": "myapp.validators.validate_name_plain", "mode": "plain"}
+            ]
+        }
+    }"""
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_plain_mode.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None:
+    """Test that when all validators have no fields, output has no validators."""
+    config_file = tmp_path / "all_skipped_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"function": "myapp.validators.validate_something"}
+            ]
+        }
+    }"""
+    )
+
+    result = run_main_with_args([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--validators",
+        str(config_file),
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ])
+
+    assert result == Exit.OK
+    content = output_file.read_text(encoding="utf-8")
+    assert "@field_validator" not in content
+    assert "validate_something" not in content
+
+
+@PYDANTIC_V2_SKIP
+def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error handling for invalid validators JSON file."""
+    invalid_json = tmp_path / "invalid.json"
+    invalid_json.write_text("not valid json{")
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(invalid_json),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Unable to load validators configuration",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test error handling for validators JSON with invalid structure (not an object)."""
+    invalid_structure = tmp_path / "invalid_structure.json"
+    invalid_structure.write_text('["not", "an", "object"]')
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(invalid_structure),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        capsys=capsys,
+        expected_stderr_contains="Invalid validators configuration",
+    )
+
+
+@PYDANTIC_V1_ONLY
+def test_validators_requires_pydantic_v2(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that validators option requires Pydantic v2."""
+    config_file = tmp_path / "validators.json"
+    config_file.write_text('{"User": {"validators": []}}')
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--validators",
+            str(config_file),
+        ],
+        capsys=capsys,
+        expected_stderr_contains="--validators option requires Pydantic v2",
     )

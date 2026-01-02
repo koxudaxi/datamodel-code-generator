@@ -39,14 +39,14 @@ import signal
 import tempfile
 import warnings
 from collections import defaultdict
-from collections.abc import Callable, Sequence  # noqa: TC003  # pydantic needs it
+from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
 from io import TextIOBase
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -93,11 +93,15 @@ from datamodel_code_generator.util import (
     load_toml,
     model_validator,
 )
+from datamodel_code_generator.validators import ValidatorsConfig
 
 if TYPE_CHECKING:
     from argparse import Namespace
 
     from typing_extensions import Self
+
+    from datamodel_code_generator.validators import ModelValidators
+
 
 # Options that should be excluded from pyproject.toml config generation
 EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
@@ -176,7 +180,9 @@ class Config(BaseModel):
             """Get model fields."""
             return cls.__fields__
 
-    @field_validator("aliases", "extra_template_data", "custom_formatters_kwargs", "default_values", mode="before")
+    @field_validator(
+        "aliases", "extra_template_data", "custom_formatters_kwargs", "validators", "default_values", mode="before"
+    )
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
         """Validate and open file path."""
         if value is None:  # pragma: no cover
@@ -498,6 +504,7 @@ class Config(BaseModel):
     class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045
     extra_template_data: Optional[TextIOBase] = None  # noqa: UP045
+    validators: Optional[TextIOBase] = None  # noqa: UP045
     validation: bool = False
     field_constraints: bool = False
     snake_case_field: bool = False
@@ -888,6 +895,33 @@ def _load_json_config(
     return result, None
 
 
+def _load_validators_config(
+    file_handle: TextIOBase | None,
+) -> tuple[dict[str, ModelValidators] | None, str | None]:
+    """Load and validate a validators configuration file.
+
+    Returns:
+        A tuple of (validators_dict, error_message). If successful, error_message is None.
+        If file_handle is None, returns (None, None).
+    """
+    if file_handle is None:
+        return None, None
+
+    if ValidatorsConfig is None:
+        return None, "--validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option."
+
+    with file_handle as data:
+        try:
+            raw = json.load(data)
+        except json.JSONDecodeError as e:
+            return None, f"Unable to load validators configuration: {e}"
+
+    try:
+        return ValidatorsConfig.model_validate(raw).root, None
+    except ValidationError as e:
+        return None, f"Invalid validators configuration: {e}"
+
+
 def run_generate_from_config(  # noqa: PLR0913, PLR0917
     config: Config,
     input_: Path | str | ParseResult,
@@ -897,6 +931,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
+    validators: Mapping[str, ModelValidators] | None = None,
     default_value_overrides: dict[str, Any] | None = None,
 ) -> None:
     """Run code generation with the given config and parameters."""
@@ -1026,6 +1061,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         all_exports_collision_strategy=config.all_exports_collision_strategy,
         field_type_collision_strategy=config.field_type_collision_strategy,
         module_split_mode=config.module_split_mode,
+        validators=validators,
         default_value_overrides=default_value_overrides,
     )
 
@@ -1252,6 +1288,11 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
+    validators_config, error = _load_validators_config(config.validators)
+    if error:
+        print(error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+
     if config.check:
         config_output = cast("Path", config.output)
         is_directory_output = not config_output.suffix
@@ -1296,6 +1337,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
             settings_path=config.output,
+            validators=validators_config,
             default_value_overrides=default_value_overrides,
         )
     except InvalidClassNameError as e:

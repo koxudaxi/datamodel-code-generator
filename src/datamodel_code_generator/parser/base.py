@@ -836,6 +836,13 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.source: str | Path | list[Path] | ParseResult | dict[str, YamlValue] = source
         self.custom_template_dir = config.custom_template_dir
         self.extra_template_data: defaultdict[str, Any] = config.extra_template_data or defaultdict(dict)
+        self.validators = config.validators
+
+        if self.validators:
+            for model_name, model_config in self.validators.items():
+                self.extra_template_data[model_name]["validators"] = [
+                    model_dump(v, mode="json") for v in model_config.validators
+                ]
 
         self.use_generic_base_class: bool = config.use_generic_base_class
         self.generic_base_class_config: dict[str, Any] = {}

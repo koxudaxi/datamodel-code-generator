@@ -1,0 +1,11 @@
+{
+  "User": {
+    "validators": [
+      {
+        "fields": ["name", "email"],
+        "function": "myapp.validators.validate_contact",
+        "mode": "after"
+      }
+    ]
+  }
+}

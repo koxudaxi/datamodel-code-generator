@@ -45,3 +45,20 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ method }}
 {%- endfor -%}
 {%- endfor -%}
+{%- if prepared_validators %}
+{% for v in prepared_validators %}
+
+    @field_validator({{ v.fields_str }}, {{ v.mode_str }})
+    @classmethod
+{%- if v.mode == 'wrap' %}
+    def {{ v.method_name }}(cls, v: Any, handler: ValidatorFunctionWrapHandler, info: ValidationInfo) -> Any:
+        return {{ v.function_name }}(v, handler, info)
+{%- elif v.mode == 'plain' %}
+    def {{ v.method_name }}(cls, v: Any) -> Any:
+        return {{ v.function_name }}(v)
+{%- else %}
+    def {{ v.method_name }}(cls, v: Any, info: ValidationInfo) -> Any:
+        return {{ v.function_name }}(v, info)
+{%- endif %}
+{%- endfor %}
+{%- endif %}
