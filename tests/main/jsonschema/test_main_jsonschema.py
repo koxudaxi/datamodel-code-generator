@@ -7784,6 +7784,71 @@ def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Pat
 
 
 @PYDANTIC_V2_SKIP
+def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
+    """Test validators with plain mode (no ValidationInfo import)."""
+    config_file = tmp_path / "plain_mode_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"field": "name", "function": "myapp.validators.validate_name_plain", "mode": "plain"}
+            ]
+        }
+    }"""
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_plain_mode.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None:
+    """Test that when all validators have no fields, output has no validators."""
+    config_file = tmp_path / "all_skipped_config.json"
+    config_file.write_text(
+        """{
+        "User": {
+            "validators": [
+                {"function": "myapp.validators.validate_something"}
+            ]
+        }
+    }"""
+    )
+
+    result = run_main_with_args([
+        "--input",
+        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
+        "--output",
+        str(output_file),
+        "--input-file-type",
+        "jsonschema",
+        "--validators",
+        str(config_file),
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--disable-timestamp",
+    ])
+
+    assert result == Exit.OK
+    content = output_file.read_text(encoding="utf-8")
+    assert "@field_validator" not in content
+    assert "validate_something" not in content
+
+
+@PYDANTIC_V2_SKIP
 def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test error handling for invalid validators JSON file."""
     invalid_json = tmp_path / "invalid.json"
