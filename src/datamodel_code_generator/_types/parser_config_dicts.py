@@ -135,6 +135,7 @@ class ParserConfigDict(TypedDict):
     keyword_only: NotRequired[bool]
     frozen_dataclasses: NotRequired[bool]
     no_alias: NotRequired[bool]
+    use_serialization_alias: NotRequired[bool]
     use_frozen_field: NotRequired[bool]
     use_default_factory_for_optional_nested_models: NotRequired[bool]
     formatters: NotRequired[list[Formatter] | None]
@@ -148,11 +149,13 @@ class ParserConfigDict(TypedDict):
     read_only_write_only_model_type: NotRequired[ReadOnlyWriteOnlyModelType | None]
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
+    default_value_overrides: NotRequired[Mapping[str, Any] | None]
 
 
 class GraphQLParserConfigDict(ParserConfigDict):
     data_model_scalar_type: NotRequired[type[DataModel]]
     data_model_union_type: NotRequired[type[DataModel]]
+    graphql_no_typename: NotRequired[bool]
 
 
 class JSONSchemaParserConfigDict(ParserConfigDict):

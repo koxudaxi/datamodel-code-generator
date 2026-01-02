@@ -1,0 +1,19 @@
+openapi: 3.0.0
+components:
+  schemas:
+    ACHClass:
+      type: string
+      title: ACHClass
+      enum:
+      - ccd
+    Foo:
+      type: object
+      properties:
+        ach_class:
+          $ref: '#/components/schemas/ACHClass'
+    Bar:
+      type: object
+      properties:
+        ach_class:
+          allOf:
+          - $ref: '#/components/schemas/ACHClass'

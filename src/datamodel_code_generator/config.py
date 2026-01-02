@@ -142,6 +142,7 @@ class GenerateConfig(BaseModel):
     include_path_parameters: bool = False
     openapi_include_paths: list[str] | None = None
     graphql_scopes: list[GraphQLScope] | None = None
+    graphql_no_typename: bool = False
     wrap_string_literal: bool | None = None
     use_title_as_name: bool = False
     use_operation_id_as_name: bool = False
@@ -184,6 +185,7 @@ class GenerateConfig(BaseModel):
     keyword_only: bool = False
     frozen_dataclasses: bool = False
     no_alias: bool = False
+    use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
@@ -201,6 +203,7 @@ class GenerateConfig(BaseModel):
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
+    default_value_overrides: Mapping[str, Any] | None = None
 
 
 class ParserConfig(BaseModel):
@@ -318,6 +321,7 @@ class ParserConfig(BaseModel):
     keyword_only: bool = False
     frozen_dataclasses: bool = False
     no_alias: bool = False
+    use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
@@ -331,6 +335,7 @@ class ParserConfig(BaseModel):
     read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     target_pydantic_version: TargetPydanticVersion | None = None
+    default_value_overrides: Mapping[str, Any] | None = None
 
 
 class GraphQLParserConfig(ParserConfig):
@@ -338,6 +343,7 @@ class GraphQLParserConfig(ParserConfig):
 
     data_model_scalar_type: type[DataModel] = DataTypeScalar
     data_model_union_type: type[DataModel] = DataTypeUnion
+    graphql_no_typename: bool = False
 
 
 class JSONSchemaParserConfig(ParserConfig):

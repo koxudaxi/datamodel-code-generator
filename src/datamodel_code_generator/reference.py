@@ -547,6 +547,7 @@ class ModelResolver:  # noqa: PLR0904
         class_name_suffix: str | None = None,
         class_name_affix_scope: ClassNameAffixScope | None = None,
         skip_affix_for_root: bool = False,  # noqa: FBT001, FBT002
+        default_value_overrides: Mapping[str, Any] | None = None,
     ) -> None:
         """Initialize model resolver with naming and resolution options."""
         self.references: dict[str, Reference] = {}
@@ -606,6 +607,11 @@ class ModelResolver:  # noqa: PLR0904
 
         # Incrementally maintained set of reference names for O(1) uniqueness checking
         self._reference_names_cache: set[str] = set()
+
+        # Default value overrides from external JSON file
+        self.default_value_overrides: Mapping[str, Any] = (
+            {} if default_value_overrides is None else {**default_value_overrides}
+        )
 
     def _get_reference_names(self) -> set[str]:
         """Get the set of all reference names for uniqueness checking."""
@@ -1189,6 +1195,26 @@ class ModelResolver:  # noqa: PLR0904
         return self.field_name_resolvers[model_type].get_valid_field_name_and_alias(
             field_name, excludes, class_name=class_name
         )
+
+    def resolve_default_value(
+        self,
+        field_name: str,
+        original_default: Any,
+        has_default: bool,  # noqa: FBT001
+        class_name: str | None,
+    ) -> tuple[Any, bool]:
+        """Resolve default value for a field, applying overrides if configured."""
+        if not self.default_value_overrides:
+            return original_default, has_default
+
+        scoped_key = f"{class_name}.{field_name}" if class_name else None
+        if scoped_key and scoped_key in self.default_value_overrides:
+            return self.default_value_overrides[scoped_key], True
+
+        if field_name in self.default_value_overrides:
+            return self.default_value_overrides[field_name], True
+
+        return original_default, has_default
 
 
 def _get_inflect_engine() -> inflect.engine:

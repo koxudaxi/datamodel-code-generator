@@ -24,6 +24,7 @@ class OptionCategory(str, Enum):
     MODEL = "Model Customization"
     TEMPLATE = "Template Customization"
     OPENAPI = "OpenAPI-only Options"
+    GRAPHQL = "GraphQL-only Options"
     GENERAL = "General Options"
 
 
@@ -139,7 +140,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--empty-enum-field-name": CLIOptionMeta(name="--empty-enum-field-name", category=OptionCategory.FIELD),
     "--set-default-enum-member": CLIOptionMeta(name="--set-default-enum-member", category=OptionCategory.FIELD),
     "--aliases": CLIOptionMeta(name="--aliases", category=OptionCategory.FIELD),
+    "--default-values": CLIOptionMeta(name="--default-values", category=OptionCategory.FIELD),
     "--no-alias": CLIOptionMeta(name="--no-alias", category=OptionCategory.FIELD),
+    "--use-serialization-alias": CLIOptionMeta(name="--use-serialization-alias", category=OptionCategory.FIELD),
     "--use-title-as-name": CLIOptionMeta(name="--use-title-as-name", category=OptionCategory.FIELD),
     "--use-schema-description": CLIOptionMeta(name="--use-schema-description", category=OptionCategory.FIELD),
     "--use-field-description": CLIOptionMeta(name="--use-field-description", category=OptionCategory.FIELD),
@@ -244,6 +247,10 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
         deprecated=True,
         deprecated_message="Use --field-constraints instead",
     ),
+    # ==========================================================================
+    # GraphQL-only Options
+    # ==========================================================================
+    "--graphql-no-typename": CLIOptionMeta(name="--graphql-no-typename", category=OptionCategory.GRAPHQL),
     # ==========================================================================
     # General Options
     # ==========================================================================

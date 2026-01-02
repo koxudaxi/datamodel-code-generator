@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import black
 import pytest
 
-from tests.main.conftest import GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
+from tests.main.conftest import DEFAULT_VALUES_DATA_PATH, GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
 from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -782,4 +782,44 @@ def test_main_graphql_split_graphql_schemas(output_file: Path) -> None:
         input_file_type="graphql",
         assert_func=assert_file_content,
         expected_file="split_graphql_schemas.py",
+    )
+
+
+def test_main_graphql_use_default_with_default_values(output_file: Path) -> None:
+    """Test --use-default combined with --default-values on required GraphQL fields."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "default_values_required.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="default_values_required_use_default.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            str(DEFAULT_VALUES_DATA_PATH / "graphql_user_defaults.json"),
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--graphql-no-typename"],
+    option_description="""Exclude __typename field from generated GraphQL models.
+
+The `--graphql-no-typename` flag prevents the generator from adding the
+`typename__` field (aliased to `__typename`) to generated models. This is
+useful when using generated models for GraphQL mutations, as servers typically
+don't expect this field in input data.""",
+    input_schema="graphql/no-typename.graphql",
+    cli_args=["--graphql-no-typename"],
+    golden_output="graphql/no_typename.py",
+)
+def test_main_graphql_no_typename(output_file: Path) -> None:
+    """Test that --graphql-no-typename excludes typename__ field from all types."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "no-typename.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="no_typename.py",
+        extra_args=["--graphql-no-typename"],
     )

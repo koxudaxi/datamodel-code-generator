@@ -198,6 +198,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             use_one_literal_as_default=True,
             use_default_kwarg=self.use_default_kwarg,
             has_default=True,
+            use_serialization_alias=self.use_serialization_alias,
         )
 
     def _get_default(  # noqa: PLR6301
@@ -336,6 +337,8 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         field_name: str,
         alias: str | list[str] | None,
         field: graphql.GraphQLField | graphql.GraphQLInputField,
+        original_field_name: str,
+        class_name: str | None = None,
     ) -> DataModelFieldBase:
         """Parse a GraphQL field and return a data model field."""
         final_data_type = DataType(
@@ -374,6 +377,18 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         required = (not self.force_optional_for_required_fields) and (not final_data_type.is_optional)
 
         default = self._get_default(field, final_data_type, required=required)
+        has_default = default is not None
+
+        effective_default, effective_has_default = self.model_resolver.resolve_default_value(
+            original_field_name,
+            default,
+            has_default,
+            class_name=class_name,
+        )
+
+        if self.apply_default_values_for_required_fields and effective_has_default:
+            required = False
+
         extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
 
         if field.description is not None:  # pragma: no cover
@@ -388,7 +403,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             single_alias = alias
         return self.data_model_field_type(
             name=field_name,
-            default=default,
+            default=effective_default,
             data_type=final_data_type,
             required=required,
             extras=extras,
@@ -402,7 +417,8 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             use_inline_field_description=self.use_inline_field_description,
             use_default_kwarg=self.use_default_kwarg,
             original_name=field_name,
-            has_default=default is not None,
+            has_default=effective_has_default,
+            use_serialization_alias=self.use_serialization_alias,
         )
 
     def parse_object_like(
@@ -413,19 +429,22 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         fields = []
         exclude_field_names: set[str] = set()
 
-        for field_name, field in obj.fields.items():
+        for original_field_name, field in obj.fields.items():
             field_name_, alias = self.model_resolver.get_valid_field_name_and_alias(
-                field_name,
+                original_field_name,
                 excludes=exclude_field_names,
                 model_type=self.field_name_model_type,
                 class_name=obj.name,
             )
             exclude_field_names.add(field_name_)
 
-            data_model_field_type = self.parse_field(field_name_, alias, field)
+            data_model_field_type = self.parse_field(
+                field_name_, alias, field, original_field_name, class_name=obj.name
+            )
             fields.append(data_model_field_type)
 
-        fields.append(self._typename_field(obj.name))
+        if not self.config.graphql_no_typename:
+            fields.append(self._typename_field(obj.name))
 
         base_classes = []
         if hasattr(obj, "interfaces"):  # pragma: no cover

@@ -35,6 +35,7 @@ from tests.main.conftest import (
     BLACK_PY313_SKIP,
     BLACK_PY314_SKIP,
     DATA_PATH,
+    DEFAULT_VALUES_DATA_PATH,
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     OPEN_API_DATA_PATH,
@@ -4474,6 +4475,25 @@ def test_main_allof_enum_ref(output_file: Path) -> None:
     version.parse(pydantic.VERSION) < version.parse("2.0.0"),
     reason="Require Pydantic version 2.0.0 or later",
 )
+def test_main_openapi_allof_single_ref_inline(output_file: Path) -> None:
+    """Test that single $ref in allOf inline property does not create wrapper class."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_single_ref_inline.yaml",
+        output_path=output_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--enum-field-as-literal",
+            "all",
+        ],
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
 def test_main_openapi_module_class_name_collision_pydantic_v2(output_dir: Path) -> None:
     """Test Issue #1994: module and class name collision (e.g., A.A schema)."""
     run_main_and_assert(
@@ -4685,6 +4705,25 @@ def test_query_parameters_with_model_config(output_file: Path) -> None:
             "--extra-fields",
             "forbid",
             "--allow-population-by-field-name",
+        ],
+    )
+
+
+def test_main_openapi_use_default_with_default_values_parameters(output_file: Path) -> None:
+    """Test --use-default combined with --default-values on required OpenAPI parameters."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "default_values_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="default_values_parameters_use_default.py",
+        extra_args=[
+            "--use-default",
+            "--default-values",
+            str(DEFAULT_VALUES_DATA_PATH / "openapi_params_defaults.json"),
+            "--openapi-scopes",
+            "paths",
+            "parameters",
         ],
     )
 

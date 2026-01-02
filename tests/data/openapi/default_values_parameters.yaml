@@ -1,0 +1,44 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test API
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: filter
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserList'
+components:
+  schemas:
+    UserList:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string

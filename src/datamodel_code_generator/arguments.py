@@ -103,6 +103,7 @@ model_options = arg_parser.add_argument_group("Model customization")
 extra_fields_model_options = model_options.add_mutually_exclusive_group()
 template_options = arg_parser.add_argument_group("Template customization")
 openapi_options = arg_parser.add_argument_group("OpenAPI-only options")
+graphql_options = arg_parser.add_argument_group("GraphQL-only options")
 general_options = arg_parser.add_argument_group("General options")
 
 # ======================================================================================
@@ -789,6 +790,13 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-serialization-alias",
+    help="Use serialization_alias instead of alias for field aliasing (Pydantic v2 only). "
+    "This allows setting values using the Pythonic field name while serializing to the original name.",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--use-frozen-field",
     help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
     action="store_true",
@@ -823,6 +831,18 @@ template_options.add_argument(
     "Priority: scoped > flat. "
     "Multiple aliases (Pydantic v2 only): {'field': ['alt1', 'alt2']} uses AliasChoices for validation. "
     "Example: {'User.name': 'user_name', 'id': 'id_'} generates `id_: ... = Field(alias='id')`.",
+    type=Path,
+)
+template_options.add_argument(
+    "--default-values",
+    help="Default value overrides file (JSON). "
+    "Supports hierarchical formats: "
+    "Flat: {'field': value} applies to all occurrences. "
+    "Scoped: {'ClassName.field': value} applies to specific class. "
+    "Priority: scoped > flat. "
+    "Note: Scoped keys use the generated class name for JSON Schema/OpenAPI. "
+    "Required fields remain required unless --use-default is also specified. "
+    "Example: {'User.status': 'active', 'page': 1, 'limit': 10}",
     type=Path,
 )
 template_options.add_argument(
@@ -960,6 +980,17 @@ openapi_options.add_argument(
 openapi_options.add_argument(
     "--use-status-code-in-response-name",
     help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
+    action="store_true",
+    default=None,
+)
+
+# ======================================================================================
+# Options specific to GraphQL input schemas
+# ======================================================================================
+graphql_options.add_argument(
+    "--graphql-no-typename",
+    help="Exclude __typename field from generated GraphQL models. "
+    "Useful when using generated models for GraphQL mutations.",
     action="store_true",
     default=None,
 )

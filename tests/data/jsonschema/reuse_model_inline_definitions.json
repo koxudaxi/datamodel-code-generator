@@ -1,0 +1,42 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "node1": {
+      "type": "object",
+      "properties": {
+        "pos": {
+          "type": "object",
+          "properties": {
+            "start": {"type": "integer"},
+            "end": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "node2": {
+      "type": "object",
+      "properties": {
+        "pos": {
+          "type": "object",
+          "properties": {
+            "start": {"type": "integer"},
+            "end": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "node3": {
+      "type": "object",
+      "properties": {
+        "pos": {
+          "type": "object",
+          "properties": {
+            "start": {"type": "integer"},
+            "end": {"type": "integer"}
+          }
+        }
+      }
+    }
+  }
+}
