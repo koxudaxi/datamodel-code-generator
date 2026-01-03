@@ -120,11 +120,6 @@ class PythonVersion(Enum):
         return self._is_py_310_or_later
 
     @property
-    def has_type_alias(self) -> bool:
-        """Check if Python version supports TypeAlias."""
-        return self._is_py_310_or_later
-
-    @property
     def has_type_statement(self) -> bool:
         """Check if Python version supports type statements."""
         return self._is_py_312_or_later

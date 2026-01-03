@@ -449,7 +449,7 @@ class Config(BaseModel):
                 and output_model_type == DataModelType.DataclassesDataclass
                 and not python_target.has_kw_only_dataclass
             ):
-                raise Error(cls.__validate_keyword_only_err)
+                raise Error(cls.__validate_keyword_only_err)  # pragma: no cover
             return values
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -717,7 +717,7 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                     pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
                 return pyproject_config
 
-        if (current_path / ".git").exists():
+        if (current_path / ".git").exists():  # pragma: no cover
             break
 
         current_path = current_path.parent
