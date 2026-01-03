@@ -111,6 +111,11 @@ class PythonVersion(Enum):
         .. deprecated::
             This property is unused and will be removed in a future version.
         """
+        warn(
+            "has_type_alias is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._is_py_310_or_later
 
     @property
