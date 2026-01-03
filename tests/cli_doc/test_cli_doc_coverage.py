@@ -60,27 +60,3 @@ class TestCLIDocCoverage:
                 "Options in both CLI_OPTION_META and MANUAL_DOCS:\n"
                 + "\n".join(f"  - {opt}" for opt in sorted(overlap))
             )
-
-
-class TestCoverageStats:
-    """Informational tests for coverage statistics."""
-
-    @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_coverage_stats(self, collected_options: set[str]) -> None:
-        """Display documentation coverage statistics."""
-        all_options = get_all_canonical_options()
-        documentable = all_options - MANUAL_DOCS
-        undocumented = documentable - collected_options
-
-        print(f"\nUndocumented options ({len(undocumented)}):")  # noqa: T201
-        for opt in sorted(undocumented):
-            print(f"  {opt}")  # noqa: T201
-
-    @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")
-    def test_show_documented_options(self, collected_options: set[str]) -> None:
-        """Display currently documented options."""
-        print(f"\nDocumented options ({len(collected_options)}):")  # noqa: T201
-        for opt in sorted(collected_options):
-            meta = CLI_OPTION_META.get(opt)
-            category = meta.category.value if meta else "General Options"
-            print(f"  {opt} ({category})")  # noqa: T201
