@@ -287,10 +287,15 @@ def test_snake_to_upper_camel(word: str, expected: str) -> None:
 class D(DataModel):
     """Test data model class D with custom render."""
 
-    def __init__(self, filename: str, data: str, fields: list[DataModelFieldBase]) -> None:  # noqa: ARG002
+    def __init__(  # pragma: no cover
+        self,
+        filename: str,  # noqa: ARG002
+        data: str,
+        fields: list[DataModelFieldBase],
+    ) -> None:
         """Initialize data model with custom data."""
         super().__init__(fields=fields, reference=Reference(""))
-        self._data = data  # pragma: no cover
+        self._data = data
 
     def render(self) -> str:  # pragma: no cover
         """Render the data model."""
