@@ -207,12 +207,13 @@ lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md'
+skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs/llms.txt,docs/llms-full.txt'
 
 [tool.pytest.ini_options]
 filterwarnings = [
   "error",
   "ignore:^.*Pydantic v1 runtime support is deprecated.*:DeprecationWarning",
+  "ignore:^.*No --output-model-type specified.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",
   "ignore:^.*--parent-scoped-naming is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",

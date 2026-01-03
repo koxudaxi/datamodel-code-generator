@@ -7,7 +7,11 @@ The `--aliases` option allows you to rename fields in the generated models. This
 ## 🚀 Basic Usage
 
 ```bash
-datamodel-codegen --input schema.json --output model.py --aliases aliases.json
+datamodel-codegen \
+    --input schema.json \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py \
+    --aliases aliases.json
 ```
 
 ## 📋 Alias File Format

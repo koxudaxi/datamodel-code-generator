@@ -15,9 +15,18 @@ nav = [
     { "Typing Customization" = "cli-reference/typing-customization.md" },
     { "Template Customization" = "cli-reference/template-customization.md" },
     { "OpenAPI Options" = "cli-reference/openapi-only-options.md" },
+    { "GraphQL Options" = "cli-reference/graphql-only-options.md" },
     { "General Options" = "cli-reference/general-options.md" },
     { "Utility Options" = "cli-reference/utility-options.md" },
-    { "Quick Reference" = "cli-reference/quick-reference.md" }
+    { "Quick Reference" = "cli-reference/quick-reference.md" },
+    { "Manual" = [
+      { "Help" = "cli-reference/manual/help.md" },
+      { "Version" = "cli-reference/manual/version.md" },
+      { "Debug" = "cli-reference/manual/debug.md" },
+      { "Profile" = "cli-reference/manual/profile.md" },
+      { "No Color" = "cli-reference/manual/no-color.md" },
+      { "Generate Prompt" = "cli-reference/manual/generate-prompt.md" }
+    ]}
   ]},
   { "Support data types" = "supported-data-types.md" },
   { "Usage" = [
@@ -37,6 +46,8 @@ nav = [
       { "Root Models and Type Aliases" = "root-model-and-type-alias.md" },
       { "Field Constraints" = "field-constraints.md" },
       { "Field Aliases" = "aliases.md" },
+      { "Validators" = "validators.md" },
+      { "Class Decorators" = "class-decorators.md" },
       { "OpenAPI-Specific Options" = "openapi-options.md" }
     ]},
     { "Templates and Formatting" = [
@@ -54,8 +65,7 @@ nav = [
     ]}
   ]},
   { "FAQ" = "faq.md" },
-  { "Development-Contributing" = "development-contributing.md" },
-  { "Changelog" = "changelog.md" }
+  { "Development-Contributing" = "development-contributing.md" }
 ]
 
 [project.theme]

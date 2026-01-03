@@ -63,6 +63,14 @@
 
 ---
 
+!!! warning "Omitting --output-model-type is deprecated"
+    Starting from version 0.53.0, omitting `--output-model-type` is deprecated.
+    The implicit default `pydantic.BaseModel` (Pydantic v1) will be removed in a future version.
+
+    We recommend using `--output-model-type pydantic_v2.BaseModel` for new projects.
+
+---
+
 ## 🏃 Quick Start
 
 ### 1️⃣ Create a schema file
