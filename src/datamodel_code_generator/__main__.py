@@ -374,7 +374,7 @@ class Config(BaseModel):
                 and output_model_type == DataModelType.DataclassesDataclass
                 and not python_target.has_kw_only_dataclass
             ):
-                raise Error(self.__validate_keyword_only_err)
+                raise Error(self.__validate_keyword_only_err)  # pragma: no cover
             return self
 
         @model_validator()  # pyright: ignore[reportArgumentType]

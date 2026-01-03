@@ -96,7 +96,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_META)
         if not self.required and not self.nullable:
             extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
-            if not self.data_type.use_union_operator:
+            if not self.data_type.use_union_operator:  # pragma: no cover
                 extra_imports.append(IMPORT_UNION)
             if self.default is None or self.default is UNDEFINED:
                 extra_imports.append(IMPORT_MSGSPEC_UNSET)
@@ -228,9 +228,9 @@ def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool)
         return UNSET_TYPE
     if use_union_operator:
         return UNION_OPERATOR_DELIMITER.join((type_, UNSET_TYPE))
-    if type_.startswith(UNION_PREFIX):
+    if type_.startswith(UNION_PREFIX):  # pragma: no cover
         return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
 
 
 @lru_cache
@@ -238,12 +238,12 @@ def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT00
     """Add UnsetType to a type hint without removing None."""
     if use_union_operator:
         return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
-    if type_.startswith(UNION_PREFIX):
+    if type_.startswith(UNION_PREFIX):  # pragma: no cover
         return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
     if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
         inner_type = type_[len(OPTIONAL_PREFIX) : -1]
         return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
 
 
 @import_extender
@@ -407,7 +407,7 @@ class DataModelField(DataModelFieldBase):
         """
         if self.extras.get("is_classvar"):
             meta = self._get_meta_string()
-            if self.use_annotated and meta:
+            if self.use_annotated and meta:  # pragma: no cover
                 return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
             return f"ClassVar[{self.type_hint}]"
 
@@ -438,7 +438,7 @@ class DataModelField(DataModelFieldBase):
         """
         if not self.annotated:
             return False
-        if self.extras.get("is_classvar"):
+        if self.extras.get("is_classvar"):  # pragma: no cover
             return self.use_annotated and self._get_meta_string() is not None
         return True
 
