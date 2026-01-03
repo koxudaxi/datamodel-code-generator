@@ -16,7 +16,6 @@ from datamodel_code_generator.imports import (
     IMPORT_DATETIME,
     IMPORT_TIME,
     IMPORT_TIMEDELTA,
-    IMPORT_UNION,
     Import,
 )
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -37,10 +36,7 @@ from datamodel_code_generator.model.types import DataTypeManager as _DataTypeMan
 from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
 from datamodel_code_generator.types import (
     NONE,
-    OPTIONAL_PREFIX,
-    UNION_DELIMITER,
     UNION_OPERATOR_DELIMITER,
-    UNION_PREFIX,
     DataType,
     StrictTypes,
     Types,
@@ -96,8 +92,6 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
             extra_imports.append(IMPORT_MSGSPEC_META)
         if not self.required and not self.nullable:
             extra_imports.append(IMPORT_MSGSPEC_UNSETTYPE)
-            if not self.data_type.use_union_operator:  # pragma: no cover
-                extra_imports.append(IMPORT_UNION)
             if self.default is None or self.default is UNDEFINED:
                 extra_imports.append(IMPORT_MSGSPEC_UNSET)
         return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
@@ -218,32 +212,18 @@ class Constraints(_Constraints):
 
 
 @lru_cache
-def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+def get_neither_required_nor_nullable_type(type_: str, use_union_operator: bool) -> str:  # noqa: ARG001, FBT001
     """Get type hint for fields that are neither required nor nullable, using UnsetType."""
-    type_ = _remove_none_from_union(type_, use_union_operator=use_union_operator)
-    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
-        type_ = type_[len(OPTIONAL_PREFIX) : -1]
-
+    type_ = _remove_none_from_union(type_, use_union_operator=True)
     if not type_ or type_ == NONE:
         return UNSET_TYPE
-    if use_union_operator:
-        return UNION_OPERATOR_DELIMITER.join((type_, UNSET_TYPE))
-    if type_.startswith(UNION_PREFIX):  # pragma: no cover
-        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
+    return UNION_OPERATOR_DELIMITER.join((type_, UNSET_TYPE))
 
 
 @lru_cache
-def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT001
+def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: ARG001, FBT001
     """Add UnsetType to a type hint without removing None."""
-    if use_union_operator:
-        return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
-    if type_.startswith(UNION_PREFIX):  # pragma: no cover
-        return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
-    if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
-        inner_type = type_[len(OPTIONAL_PREFIX) : -1]
-        return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
+    return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
 
 
 @import_extender
