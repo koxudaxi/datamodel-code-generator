@@ -520,8 +520,9 @@ typing_options.add_argument(
 )
 typing_options.add_argument(
     "--use-annotated",
-    help="Use typing.Annotated for Field(). Also, `--field-constraints` option will be enabled.",
-    action="store_true",
+    help="Use typing.Annotated for Field(). Also, `--field-constraints` option will be enabled. "
+    "Will become default for Pydantic v2 in a future version.",
+    action=BooleanOptionalAction,
     default=None,
 )
 typing_options.add_argument(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
@@ -2240,3 +2241,53 @@ def test_custom_formatters_kwargs_invalid(output_file: Path, capsys: pytest.Capt
         capsys=capsys,
         expected_stderr_contains="Unable to load custom_formatters_kwargs mapping: must be a JSON string mapping",
     )
+
+
+def test_use_annotated_deprecation_warning_pydantic_v2(output_file: Path) -> None:
+    """Test that deprecation warning is emitted for Pydantic v2 without --use-annotated."""
+    with pytest.warns(DeprecationWarning, match=r"--use-annotated will be enabled by default for Pydantic v2"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+def test_use_annotated_no_warning_with_flag(output_file: Path) -> None:
+    """Test that no warning is emitted when --use-annotated is explicitly set."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+        )
+    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+
+
+def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
+    """Test that no warning is emitted when --no-use-annotated is explicitly set."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--no-use-annotated"],
+        )
+    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+
+
+def test_use_annotated_no_warning_pydantic_v1(output_file: Path) -> None:
+    """Test that use_annotated warning is not emitted for Pydantic v1."""
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            extra_args=["--output-model-type", "pydantic.BaseModel"],
+        )
+    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
