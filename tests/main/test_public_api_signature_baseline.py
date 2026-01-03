@@ -366,7 +366,7 @@ def _normalize_union_str(type_str: str) -> str:
     """Normalize a union type string by sorting its components recursively."""
     try:
         tree = ast.parse(type_str, mode="eval")
-    except SyntaxError:
+    except SyntaxError:  # pragma: no cover
         return type_str
 
     def normalize_node(node: ast.expr) -> str:

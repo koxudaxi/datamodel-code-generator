@@ -663,7 +663,7 @@ def test_main_openapi_schema_extensions(
 )
 def test_pyproject(tmp_path: Path) -> None:
     """Test code generation using pyproject.toml configuration."""
-    if platform.system() == "Windows":
+    if platform.system() == "Windows":  # pragma: no cover
 
         def get_path(path: str) -> str:
             return str(path).replace("\\", "\\\\")

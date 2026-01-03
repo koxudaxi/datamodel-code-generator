@@ -30,21 +30,21 @@ SKIP_PYDANTIC_V1 = pytest.mark.skipif(
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
     """Assert exit code matches expected value."""
     __tracebackhide__ = True
-    if return_code != expected_exit:
+    if return_code != expected_exit:  # pragma: no cover
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
 def _assert_stderr_contains(captured_err: str, expected: str) -> None:
     """Assert stderr contains expected string."""
     __tracebackhide__ = True
-    if expected not in captured_err:
+    if expected not in captured_err:  # pragma: no cover
         pytest.fail(f"Expected stderr to contain: {expected!r}\n\nActual stderr:\n{captured_err}")
 
 
 def _assert_file_exists(path: Path) -> None:
     """Assert file exists."""
     __tracebackhide__ = True
-    if not path.exists():
+    if not path.exists():  # pragma: no cover
         pytest.fail(f"Expected file to exist: {path}")
 
 
