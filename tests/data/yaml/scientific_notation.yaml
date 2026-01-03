@@ -1,0 +1,15 @@
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+properties:
+  exponential_default:
+    type: number
+    default: 1e-5
+  positive_exp:
+    type: number
+    default: 2E+10
+  negative_prefix:
+    type: number
+    default: -3e4
+  with_decimal:
+    type: number
+    default: 1.5e-5
