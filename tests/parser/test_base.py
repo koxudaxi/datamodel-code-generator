@@ -36,10 +36,10 @@ class B(DataModel):
 class C(Parser):
     """Test parser class C."""
 
-    def parse_raw(self, name: str, raw: dict[str, Any]) -> None:  # pragma: no cover
+    def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         """Parse raw data into models."""
 
-    def parse(self) -> str:  # pragma: no cover
+    def parse(self) -> str:
         """Parse and return results."""
         return "parsed"
 
@@ -287,7 +287,7 @@ def test_snake_to_upper_camel(word: str, expected: str) -> None:
 class D(DataModel):
     """Test data model class D with custom render."""
 
-    def __init__(  # pragma: no cover
+    def __init__(
         self,
         filename: str,  # noqa: ARG002
         data: str,
@@ -297,7 +297,7 @@ class D(DataModel):
         super().__init__(fields=fields, reference=Reference(""))
         self._data = data
 
-    def render(self) -> str:  # pragma: no cover
+    def render(self) -> str:
         """Render the data model."""
         return self._data
 
@@ -494,7 +494,7 @@ def test_find_member_with_mixed_enum() -> None:
 
 
 @pytest.fixture
-def escape_map() -> dict[str, str]:  # pragma: no cover
+def escape_map() -> dict[str, str]:
     """Provide escape character mapping for tests."""
     return {
         "\u0000": r"\x00",  # Null byte

@@ -663,7 +663,7 @@ def test_main_openapi_schema_extensions(
 )
 def test_pyproject(tmp_path: Path) -> None:
     """Test code generation using pyproject.toml configuration."""
-    if platform.system() == "Windows":  # pragma: no cover
+    if platform.system() == "Windows":
 
         def get_path(path: str) -> str:
             return str(path).replace("\\", "\\\\")
@@ -3725,7 +3725,7 @@ def test_main_openapi_type_alias_py312(output_file: Path) -> None:
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:
     """Test mutual recursive type aliases render with quoted forward refs on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -3747,7 +3747,7 @@ def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> No
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:
     """Test mutual recursive type aliases render with quoted forward refs for TypeAliasType on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -3769,7 +3769,7 @@ def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_fil
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:
     """Test recursive type aliases render with quoted self references on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",

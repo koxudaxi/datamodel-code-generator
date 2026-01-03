@@ -131,7 +131,7 @@ def _copy_files(copy_files: CopyFilesMapping | None) -> None:
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
     """Assert exit code matches expected value."""
-    if return_code != expected_exit:  # pragma: no cover
+    if return_code != expected_exit:
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
@@ -159,7 +159,7 @@ def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
         )
         and arg not in _VALID_CLI_OPTIONS
     ]
-    if invalid_args:  # pragma: no cover
+    if invalid_args:
         pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(_VALID_CLI_OPTIONS)}")
 
 
@@ -234,8 +234,8 @@ def run_main_with_args(
     __tracebackhide__ = True
     return_code = main(list(args))
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
-    if expected_stdout_path is not None:  # pragma: no branch
-        if capsys is None:  # pragma: no cover
+    if expected_stdout_path is not None:
+        if capsys is None:
             pytest.fail("capsys is required when expected_stdout_path is set")
         captured = capsys.readouterr()
         assert_output(captured.out, expected_stdout_path)
@@ -321,7 +321,7 @@ def run_main_and_assert(  # noqa: PLR0912
 
     # Handle stdin input
     if stdin_path is not None:
-        if monkeypatch is None:  # pragma: no cover
+        if monkeypatch is None:
             pytest.fail("monkeypatch is required when using stdin_path")
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
@@ -329,14 +329,14 @@ def run_main_and_assert(  # noqa: PLR0912
         return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
-        if input_path is None:  # pragma: no cover
+        if input_path is None:
             pytest.fail("input_path is required when output_path is None")
         args = []
         _extend_args(args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args)
         return_code = main(args)
     # Standard file input
     else:
-        if input_path is None:  # pragma: no cover
+        if input_path is None:
             pytest.fail("input_path is required")
         return_code = _run_main(input_path, output_path, input_file_type, extra_args=extra_args, copy_files=copy_files)
 
@@ -352,11 +352,11 @@ def run_main_and_assert(  # noqa: PLR0912
         captured = capsys.readouterr()
         if expected_stdout_path is not None:
             assert_output(captured.out, expected_stdout_path)
-        if expected_stderr is not None and captured.err != expected_stderr:  # pragma: no cover
+        if expected_stderr is not None and captured.err != expected_stderr:
             pytest.fail(f"Expected stderr:\n{expected_stderr}\n\nActual stderr:\n{captured.err}")
-        if expected_stderr_contains is not None and expected_stderr_contains not in captured.err:  # pragma: no cover
+        if expected_stderr_contains is not None and expected_stderr_contains not in captured.err:
             pytest.fail(f"Expected stderr to contain: {expected_stderr_contains!r}\n\nActual stderr:\n{captured.err}")
-        if assert_no_stderr and captured.err:  # pragma: no cover
+        if assert_no_stderr and captured.err:
             pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
 
     # Skip output verification if expected_exit is not OK
@@ -365,40 +365,40 @@ def run_main_and_assert(  # noqa: PLR0912
 
     # Output verification
     if expected_directory is not None:
-        if output_path is None:  # pragma: no cover
+        if output_path is None:
             pytest.fail("output_path is required when using expected_directory")
         assert_directory_content(output_path, expected_directory)
     elif output_to_expected is not None:
-        if output_path is None:  # pragma: no cover
+        if output_path is None:
             pytest.fail("output_path is required when using output_to_expected")
-        if assert_func is None:  # pragma: no cover
+        if assert_func is None:
             pytest.fail("assert_func is required when using output_to_expected")
         for output_relative, exp_file in output_to_expected:
             assert_func(output_path / output_relative, exp_file)
     elif expected_output is not None:
-        if output_path is None:  # pragma: no cover
+        if output_path is None:
             pytest.fail("output_path is required when using expected_output")
         actual_output = output_path.read_text(encoding="utf-8")
         if ignore_whitespace:
-            if "".join(actual_output.split()) != "".join(expected_output.split()):  # pragma: no cover
+            if "".join(actual_output.split()) != "".join(expected_output.split()):
                 pytest.fail(
                     f"Output mismatch (ignoring whitespace)\nExpected:\n{expected_output}\n\nActual:\n{actual_output}"
                 )
-        elif actual_output != expected_output:  # pragma: no cover
+        elif actual_output != expected_output:
             pytest.fail(f"Output mismatch\nExpected:\n{expected_output}\n\nActual:\n{actual_output}")
     elif file_should_not_exist is not None:
-        if file_should_not_exist.exists():  # pragma: no cover
+        if file_should_not_exist.exists():
             pytest.fail(f"File should not exist: {file_should_not_exist}")
     elif assert_func is not None:
-        if output_path is None:  # pragma: no cover
+        if output_path is None:
             pytest.fail("output_path is required when using assert_func")
-        if expected_file is None:  # pragma: no branch
+        if expected_file is None:
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
             func_name = frame.f_back.f_code.co_name
             del frame
-            for prefix in ("test_main_", "test_"):  # pragma: no branch
+            for prefix in ("test_main_", "test_"):
                 if func_name.startswith(prefix):
                     func_name = func_name[len(prefix) :]
                     break
@@ -426,7 +426,7 @@ def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, i
         return None
     try:
         return tuple(int(part) for part in target_version.split("."))  # type: ignore[return-value]
-    except ValueError:  # pragma: no cover
+    except ValueError:
         return None
 
 
@@ -481,14 +481,14 @@ def _validate_output_files(
     should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():  # pragma: no cover
+    elif output_path.is_dir():
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
-        if should_exec:  # pragma: no cover
+        if should_exec:
             _import_package(output_path)
 
 
-def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR0912
+def _import_package(output_path: Path) -> None:  # noqa: PLR0912
     """Import generated packages to validate they can be loaded."""
     if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]

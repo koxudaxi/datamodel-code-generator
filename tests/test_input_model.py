@@ -30,21 +30,21 @@ SKIP_PYDANTIC_V1 = pytest.mark.skipif(
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
     """Assert exit code matches expected value."""
     __tracebackhide__ = True
-    if return_code != expected_exit:  # pragma: no cover
+    if return_code != expected_exit:
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
 def _assert_stderr_contains(captured_err: str, expected: str) -> None:
     """Assert stderr contains expected string."""
     __tracebackhide__ = True
-    if expected not in captured_err:  # pragma: no cover
+    if expected not in captured_err:
         pytest.fail(f"Expected stderr to contain: {expected!r}\n\nActual stderr:\n{captured_err}")
 
 
 def _assert_file_exists(path: Path) -> None:
     """Assert file exists."""
     __tracebackhide__ = True
-    if not path.exists():  # pragma: no cover
+    if not path.exists():
         pytest.fail(f"Expected file to exist: {path}")
 
 
@@ -1126,7 +1126,7 @@ def test_input_model_multiple_pydantic_v1_error(
         nonlocal call_count
         if name == "model_json_schema":
             call_count += 1
-            if call_count <= 2:  # pragma: no branch
+            if call_count <= 2:
                 return False
         return original_hasattr(obj, name)
 
@@ -1375,7 +1375,7 @@ def test_input_model_cwd_already_in_path(
 
     cwd = str(_Path.cwd())
     initial_count = sys.path.count(cwd)
-    if cwd not in sys.path:  # pragma: no cover
+    if cwd not in sys.path:
         sys.path.insert(0, cwd)
 
     run_multiple_input_models_and_assert(

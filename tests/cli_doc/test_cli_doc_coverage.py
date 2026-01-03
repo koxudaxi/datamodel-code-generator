@@ -21,7 +21,7 @@ from datamodel_code_generator.cli_options import (
 
 
 @pytest.fixture(scope="module")
-def collected_options(request: pytest.FixtureRequest) -> set[str]:  # pragma: no cover
+def collected_options(request: pytest.FixtureRequest) -> set[str]:
     """Extract canonical options from collected cli_doc markers.
 
     Uses config._cli_doc_items populated by conftest.py during test collection.
@@ -36,7 +36,7 @@ def collected_options(request: pytest.FixtureRequest) -> set[str]:  # pragma: no
     return options
 
 
-class TestCLIDocCoverage:  # pragma: no cover
+class TestCLIDocCoverage:
     """Documentation coverage tests."""
 
     def test_all_options_have_cli_doc_markers(self, collected_options: set[str]) -> None:
@@ -62,7 +62,7 @@ class TestCLIDocCoverage:  # pragma: no cover
             )
 
 
-class TestCoverageStats:  # pragma: no cover
+class TestCoverageStats:
     """Informational tests for coverage statistics."""
 
     @pytest.mark.skip(reason="Informational: run with -v --no-skip to see stats")

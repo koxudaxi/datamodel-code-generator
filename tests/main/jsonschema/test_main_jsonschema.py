@@ -286,7 +286,7 @@ def test_main_pydantic_v2_model_rebuild_inheritance(output_file: Path) -> None:
 
 
 @pytest.mark.skip(reason="pytest-xdist does not support the test")
-def test_main_without_arguments() -> None:  # pragma: no cover
+def test_main_without_arguments() -> None:
     """Test main function without arguments raises SystemExit."""
     with pytest.raises(SystemExit):
         main()

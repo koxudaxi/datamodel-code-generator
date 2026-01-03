@@ -29,7 +29,7 @@ def test_get_canonical_option() -> None:
     assert get_canonical_option("--unknown-option") == "--unknown-option"
 
 
-class TestCLIOptionMetaSync:  # pragma: no cover
+class TestCLIOptionMetaSync:
     """Synchronization tests for CLI_OPTION_META."""
 
     def test_all_registered_options_exist_in_argparse(self) -> None:

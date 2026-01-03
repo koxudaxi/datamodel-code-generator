@@ -100,7 +100,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config._cli_doc_items: list[dict[str, Any]] = []
 
 
-def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
+def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914
     """Validate marker required fields and types."""
     errors: list[str] = []
 
@@ -215,7 +215,7 @@ def pytest_collection_modifyitems(
     session: pytest.Session,  # noqa: ARG001
     config: pytest.Config,
     items: list[pytest.Item],
-) -> None:  # pragma: no cover
+) -> None:
     """Collect CLI doc metadata from tests with cli_doc marker.
 
     Always collects metadata for use by test_cli_doc_coverage.py.
@@ -252,14 +252,14 @@ def pytest_collection_modifyitems(
         pytest.fail(error_msg, pytrace=False)
 
 
-def pytest_runtestloop(session: pytest.Session) -> bool | None:  # pragma: no cover
+def pytest_runtestloop(session: pytest.Session) -> bool | None:
     """Skip test execution when --collect-cli-docs is used."""
     if session.config.getoption("--collect-cli-docs"):
         return True
     return None
 
 
-def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001  # pragma: no cover
+def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
     """Save collected CLI doc metadata to JSON file."""
     config = session.config
     if not config.getoption("--collect-cli-docs"):
@@ -298,7 +298,7 @@ class CodeValidationStats:
         self.exec_count += 1
         self.exec_time += elapsed
 
-    def record_error(self, file_path: str, error: str) -> None:  # pragma: no cover
+    def record_error(self, file_path: str, error: str) -> None:
         """Record a validation error."""
         self.errors.append((file_path, error))
 
@@ -306,7 +306,7 @@ class CodeValidationStats:
 _validation_stats = CodeValidationStats()
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001  # pragma: no cover
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001
     """Print code validation and CLI doc collection summary at the end of test run."""
     if config.getoption("--collect-cli-docs", default=False):
         items = getattr(config, "_cli_doc_items", [])
@@ -346,7 +346,7 @@ def _parse_time_string(time_str: str) -> datetime:
             return dt  # noqa: TRY300
         except ValueError:  # noqa: PERF203
             continue
-    return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
+    return datetime.fromisoformat(time_str.replace("Z", "+00:00"))
 
 
 def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
@@ -360,7 +360,7 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
-def _get_tox_env() -> str:  # pragma: no cover
+def _get_tox_env() -> str:
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
     Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
@@ -372,7 +372,7 @@ def _get_tox_env() -> str:  # pragma: no cover
     return env.removesuffix("-parallel")
 
 
-def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
+def _format_snapshot_hint(action: str) -> str:
     """Format a hint message for inline-snapshot commands with rich formatting."""
     from io import StringIO
 
@@ -393,7 +393,7 @@ def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
     return output.getvalue()
 
 
-def _format_new_content(content: str) -> str:  # pragma: no cover
+def _format_new_content(content: str) -> str:
     """Format new content (for create mode) with green color."""
     from io import StringIO
 
@@ -409,7 +409,7 @@ def _format_new_content(content: str) -> str:  # pragma: no cover
     return output.getvalue()
 
 
-def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
+def _format_diff(expected: str, actual: str, expected_path: Path) -> str:
     """Format a unified diff between expected and actual content with colors."""
     from io import StringIO
 
@@ -456,22 +456,22 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
     __tracebackhide__ = True
     try:
         expected = external_file(expected_path)
-    except FileNotFoundError:  # pragma: no cover
+    except FileNotFoundError:
         hint = _format_snapshot_hint("create")
         formatted_content = _format_new_content(content)
         msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
-        raise AssertionError(msg) from None  # pragma: no cover
+        raise AssertionError(msg) from None
     normalized_content = _normalize_line_endings(content)
-    if isinstance(expected, str):  # pragma: no branch
+    if isinstance(expected, str):
         normalized_expected = _normalize_line_endings(expected)
-        if normalized_content != normalized_expected:  # pragma: no cover
+        if normalized_content != normalized_expected:
             hint = _format_snapshot_hint("fix")
             diff = _format_diff(normalized_expected, normalized_content, expected_path)
             msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
     else:
         # we need to normalize the external_file object's content as well
-        assert _normalize_line_endings(expected._load_value()) == normalized_content  # pragma: no cover
+        assert _normalize_line_endings(expected._load_value()) == normalized_content
 
 
 class AssertFileContent(Protocol):
@@ -527,7 +527,7 @@ def create_assert_file_content(
             func_name = frame.f_back.f_code.co_name
             del frame
             name = func_name
-            for prefix in ("test_main_", "test_"):  # pragma: no branch
+            for prefix in ("test_main_", "test_"):
                 if name.startswith(prefix):
                     name = name[len(prefix) :]
                     break
@@ -709,9 +709,9 @@ def validate_generated_code(
             start = time.perf_counter()
             exec(compiled, {})
             _validation_stats.record_exec(time.perf_counter() - start)
-    except SyntaxError as e:  # pragma: no cover
+    except SyntaxError as e:
         _validation_stats.record_error(file_path, f"SyntaxError: {e}")
         raise
-    except Exception as e:  # pragma: no cover
+    except Exception as e:
         _validation_stats.record_error(file_path, f"{type(e).__name__}: {e}")
         raise
