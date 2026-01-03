@@ -601,7 +601,7 @@ class DataType(_BaseModel):
 
     def find_source(self, source_type: type[SourceT]) -> SourceT | None:
         """Find the first reference source matching the given type from all nested data types."""
-        for data_type in self.all_data_types:  # pragma: no branch
+        for data_type in self.all_data_types:
             if not data_type.reference:  # pragma: no cover
                 continue
             source = data_type.reference.source
