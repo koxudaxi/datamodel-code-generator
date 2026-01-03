@@ -7,20 +7,16 @@ branding:
 inputs:
   input:
     description: 'Input schema file or directory'
-    required: false
-    default: ''
+    required: true
   output:
     description: 'Output file or directory'
-    required: false
-    default: ''
+    required: true
   input-file-type:
     description: 'Input file type (openapi, jsonschema, json, yaml, csv, graphql)'
-    required: false
-    default: ''
+    required: true
   output-model-type:
     description: 'Output model type (pydantic_v2.BaseModel, pydantic.BaseModel, dataclasses.dataclass, typing.TypedDict, msgspec.Struct)'
-    required: false
-    default: ''
+    required: true
   check:
     description: 'Validate that existing output is up to date (no generation)'
     required: false
@@ -74,23 +70,12 @@ runs:
       shell: bash
 
     - run: |
-        ARGS=()
-
-        if [ -n "${{ inputs.input }}" ]; then
-          ARGS+=(--input "${{ inputs.input }}")
-        fi
-
-        if [ -n "${{ inputs.output }}" ]; then
-          ARGS+=(--output "${{ inputs.output }}")
-        fi
-
-        if [ -n "${{ inputs.input-file-type }}" ]; then
-          ARGS+=(--input-file-type "${{ inputs.input-file-type }}")
-        fi
-
-        if [ -n "${{ inputs.output-model-type }}" ]; then
-          ARGS+=(--output-model-type "${{ inputs.output-model-type }}")
-        fi
+        ARGS=(
+          --input "${{ inputs.input }}"
+          --output "${{ inputs.output }}"
+          --input-file-type "${{ inputs.input-file-type }}"
+          --output-model-type "${{ inputs.output-model-type }}"
+        )
 
         if [ "${{ inputs.check }}" = "true" ]; then
           ARGS+=(--check)

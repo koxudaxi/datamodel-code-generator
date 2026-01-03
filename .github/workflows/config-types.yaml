@@ -20,14 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./
+      - uses: astral-sh/setup-uv@v5
         with:
-          profile: generate-config-dict
+          enable-cache: true
 
-      - uses: ./
-        with:
-          profile: parser-config-dicts
+      - run: uv python install 3.14
 
-      - uses: ./
-        with:
-          profile: parse-config-dict
+      - run: uv tool install --python 3.14 tox --with tox-uv
+
+      - run: tox -e config-types -- --check
