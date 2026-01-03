@@ -213,6 +213,7 @@ skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs
 filterwarnings = [
   "error",
   "ignore:^.*Pydantic v1 runtime support is deprecated.*:DeprecationWarning",
+  "ignore:^.*No --output-model-type specified.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",
   "ignore:^.*--parent-scoped-naming is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",

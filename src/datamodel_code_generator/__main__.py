@@ -1193,6 +1193,22 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
     if config.disable_warnings:
         warnings.simplefilter("ignore")
 
+    if (
+        namespace.output_model_type is None
+        and pyproject_config.get("output_model_type") is None
+        and config.output_model_type == DataModelType.PydanticBaseModel
+    ):
+        warnings.warn(
+            "No --output-model-type specified. "
+            "The current default (pydantic.BaseModel, Pydantic v1) is deprecated "
+            "and will be removed in a future version. "
+            "Please explicitly specify --output-model-type. "
+            "Example: --output-model-type pydantic_v2.BaseModel. "
+            "See https://github.com/koxudaxi/datamodel-code-generator/issues/2466",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+
     if not is_pydantic_v2():
         warnings.warn(
             "Pydantic v1 runtime support is deprecated and will be removed in a future version. "

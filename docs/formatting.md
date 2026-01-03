@@ -15,7 +15,10 @@ Generated code is automatically formatted using code formatters. By default, `bl
     **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
 
 ```bash
-datamodel-codegen --input schema.yaml --output model.py
+datamodel-codegen \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 This runs the following formatters in order:
@@ -44,10 +47,18 @@ This runs the following formatters in order:
 
 ```bash
 # Use ruff for both linting and formatting
-datamodel-codegen --formatters ruff-check ruff-format --input schema.yaml --output model.py
+datamodel-codegen \
+    --formatters ruff-check ruff-format \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 
 # Use ruff-format as a black replacement
-datamodel-codegen --formatters isort ruff-format --input schema.yaml --output model.py
+datamodel-codegen \
+    --formatters isort ruff-format \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ### 🚫 Disable formatting
@@ -91,7 +102,11 @@ quote-style = "single"
 By default, string quote style is determined by your formatter configuration. To force double quotes regardless of configuration:
 
 ```bash
-datamodel-codegen --use-double-quotes --input schema.yaml --output model.py
+datamodel-codegen \
+    --use-double-quotes \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 This overrides `skip_string_normalization` in black config.
