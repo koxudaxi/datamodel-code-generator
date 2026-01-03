@@ -90,7 +90,7 @@ class Imports(defaultdict[str | None, set[str]]):
 
     def remove(self, imports: Import | Iterable[Import]) -> None:  # noqa: PLR0912
         """Remove one or more imports from the collection."""
-        if isinstance(imports, Import):  # pragma: no cover
+        if isinstance(imports, Import):
             imports = [imports]
         for import_ in imports:
             if "." in import_.import_:  # pragma: no cover
@@ -98,7 +98,7 @@ class Imports(defaultdict[str | None, set[str]]):
                 if self.counter.get(key, 0) <= 0:
                     continue
                 self.counter[key] -= 1
-                if self.counter[key] == 0:  # pragma: no cover
+                if self.counter[key] == 0:
                     del self.counter[key]
                     if None in self and import_.import_ in self[None]:
                         self[None].remove(import_.import_)
@@ -108,13 +108,12 @@ class Imports(defaultdict[str | None, set[str]]):
                 key = (import_.from_, import_.import_)
                 if self.counter.get(key, 0) <= 0:
                     continue
-                self.counter[key] -= 1  # pragma: no cover
-                if self.counter[key] == 0:  # pragma: no cover
+                self.counter[key] -= 1
+                if self.counter[key] == 0:
                     del self.counter[key]
-                    if import_.from_ in self and import_.import_ in self[import_.from_]:
-                        self[import_.from_].remove(import_.import_)
-                        if not self[import_.from_]:
-                            del self[import_.from_]
+                    self[import_.from_].remove(import_.import_)
+                    if not self[import_.from_]:
+                        del self[import_.from_]
                     if import_.alias and import_.from_ in self.alias and import_.import_ in self.alias[import_.from_]:
                         del self.alias[import_.from_][import_.import_]
                         if not self.alias[import_.from_]:

@@ -464,7 +464,7 @@ def _add_python_type_info(schema: dict[str, Any], model: type) -> dict[str, Any]
                 continue
             nested_model = nested_models[def_name]
             nested_fields = getattr(nested_model, "model_fields", None)
-            if nested_fields:  # pragma: no branch
+            if nested_fields:
                 _add_python_type_to_properties(def_schema["properties"], nested_fields)
 
     return schema
@@ -906,8 +906,7 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         if not hasattr(obj, "model_json_schema"):
             msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
             raise Error(msg)
-        if hasattr(obj, "model_rebuild"):  # pragma: no branch
-            _try_rebuild_model(obj)
+        _try_rebuild_model(obj)
         schema_generator = _get_input_model_json_schema_class()
         schema = obj.model_json_schema(schema_generator=schema_generator)
         schema = _add_python_type_for_unserializable(schema, obj)
