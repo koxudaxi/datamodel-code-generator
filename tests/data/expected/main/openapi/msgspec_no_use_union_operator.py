@@ -79,3 +79,4 @@ class Notes(Struct):
 class Options(Struct):
     comments: list[str]
     oneOfComments: list[Union[str, float]]
+    simpleUnion: Union[str, float, UnsetType] = UNSET

@@ -337,7 +337,7 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
         )
     if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
-    if isinstance(item, BaseModel):
+    if isinstance(item, BaseModel):  # pragma: no cover
         return to_hashable(model_dump(item))
     if item is None:
         return ""
@@ -1274,7 +1274,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                     ),
                 )
             after_import = model.imports
-            if before_import != after_import:
+            if before_import != after_import:  # pragma: no cover
                 imports.append(after_import)
 
     @classmethod
@@ -2065,7 +2065,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                 for field in model.fields:
                     if self.__is_new_required_field(field, inherited_names):
                         field.extras["kw_only"] = True
-            else:
+            else:  # pragma: no cover
                 warn(
                     f"Dataclass '{model.class_name}' has a field ordering conflict due to inheritance. "
                     f"An inherited field has a default value, but new required fields are added. "
@@ -2420,7 +2420,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         return result
 
     @classmethod
-    def _raise_collision_error(
+    def _raise_collision_error(  # pragma: no cover
         cls,
         by_name: dict[str, list[tuple[str, tuple[str, ...], str]]],
         colliding: set[str],

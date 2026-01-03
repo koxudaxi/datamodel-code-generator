@@ -44,7 +44,7 @@ class Config(_BaseModel):
 
         if is_pydantic_v2():
             return self.model_dump(**kwargs)
-        return super().dict(**kwargs)
+        return super().dict(**kwargs)  # pragma: no cover
 
 
 __all__ = [

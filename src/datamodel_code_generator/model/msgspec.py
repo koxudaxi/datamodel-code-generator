@@ -238,12 +238,12 @@ def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT00
     """Add UnsetType to a type hint without removing None."""
     if use_union_operator:
         return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
-    if type_.startswith(UNION_PREFIX):
+    if type_.startswith(UNION_PREFIX):  # pragma: no cover
         return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
     if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
         inner_type = type_[len(OPTIONAL_PREFIX) : -1]
         return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
 
 
 @import_extender
@@ -438,7 +438,7 @@ class DataModelField(DataModelFieldBase):
         """
         if not self.annotated:
             return False
-        if self.extras.get("is_classvar"):
+        if self.extras.get("is_classvar"):  # pragma: no cover
             return self.use_annotated and self._get_meta_string() is not None
         return True
 

@@ -65,3 +65,4 @@ class Notes(TypedDict):
 class Options(TypedDict):
     comments: list[str | None]
     oneOfComments: list[str | float | None]
+    simpleUnion: NotRequired[str | float]

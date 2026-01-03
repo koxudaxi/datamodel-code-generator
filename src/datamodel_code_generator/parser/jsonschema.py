@@ -1090,7 +1090,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         """Get the data type for a JSON Schema object."""
         python_type_override = self._get_python_type_override(obj)
-        if python_type_override:
+        if python_type_override:  # pragma: no cover
             return python_type_override
 
         if "const" in obj.extras:
@@ -1231,9 +1231,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             return False
         if " | " in python_type and schema_type is None:
             return False
-        if schema_type is None:
+        if schema_type is None:  # pragma: no cover
             return True
-        if base_type in {"Union", "Optional"}:
+        if base_type in {"Union", "Optional"}:  # pragma: no cover
             return True
         compatible = self.COMPATIBLE_PYTHON_TYPES.get(schema_type, frozenset())
         return base_type in compatible

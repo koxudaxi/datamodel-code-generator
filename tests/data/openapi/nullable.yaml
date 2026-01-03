@@ -117,6 +117,10 @@ components:
                 - type: string
                 - type: number
                nullable: true
+        simpleUnion:
+          oneOf:
+            - type: string
+            - type: number
       required:
         - comments
         - oneOfComments

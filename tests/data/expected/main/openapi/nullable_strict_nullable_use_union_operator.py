@@ -79,3 +79,4 @@ class Notes(BaseModel):
 class Options(BaseModel):
     comments: list[str | None]
     oneOfComments: list[str | float | None]
+    simpleUnion: str | float | None = None

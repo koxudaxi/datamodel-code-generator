@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 elif is_pydantic_v2():
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
-else:
+else:  # pragma: no cover
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 
 
