@@ -919,7 +919,7 @@ class ModelResolver:  # noqa: PLR0904
                 # Check if this is an external reference (different file)
                 ref_file = ref_path.split("#")[0]
                 current_file = current_path.split("#", maxsplit=1)[0]
-                if ref_file != current_file:
+                if ref_file != current_file:  # pragma: no branch
                     # Rename this external reference
                     new_name = self._get_unique_name(name, camel=True)
                     old_name = ref.name

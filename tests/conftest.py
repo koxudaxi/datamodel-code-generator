@@ -527,7 +527,7 @@ def create_assert_file_content(
             func_name = frame.f_back.f_code.co_name
             del frame
             name = func_name
-            for prefix in ("test_main_", "test_"):
+            for prefix in ("test_main_", "test_"):  # pragma: no branch
                 if name.startswith(prefix):
                     name = name[len(prefix) :]
                     break

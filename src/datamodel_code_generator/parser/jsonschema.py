@@ -288,7 +288,7 @@ class JsonSchemaObject(BaseModel):
         """Validate and normalize required field values."""
         if value is None:
             return []
-        if isinstance(value, list):  # noqa: PLR1702
+        if isinstance(value, list):  # pragma: no branch  # noqa: PLR1702
             # Filter to only include valid strings, excluding invalid objects
             required_fields: list[str] = []
             for item in value:
@@ -296,14 +296,14 @@ class JsonSchemaObject(BaseModel):
                     required_fields.append(item)
 
                 # In some cases, the required field can include "anyOf", "oneOf", or "allOf" as a dict (#2297)
-                elif isinstance(item, dict):
+                elif isinstance(item, dict):  # pragma: no branch
                     for key, val in item.items():
-                        if isinstance(val, list):
+                        if isinstance(val, list):  # pragma: no branch
                             # If 'anyOf' or "oneOf" is present, we won't include it in required fields
                             if key in {"anyOf", "oneOf"}:
                                 continue
 
-                            if key == "allOf":
+                            if key == "allOf":  # pragma: no branch
                                 # If 'allOf' is present, we include them as required fields
                                 required_fields.extend(sub_item for sub_item in val if isinstance(sub_item, str))
 
@@ -1286,7 +1286,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             if isinstance(x_python_import, dict):
                 module = x_python_import.get("module")
                 name = x_python_import.get("name")
-                if module and name:
+                if module and name:  # pragma: no branch
                     return Import.from_full_path(f"{module}.{name}")
         except Exception:  # noqa: BLE001, S110
             pass

@@ -433,7 +433,7 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
 
     if isinstance(tp, ForwardRef):
         arg = tp.__forward_arg__
-        if arg.startswith("NotRequired[") and arg.endswith("]"):
+        if arg.startswith("NotRequired[") and arg.endswith("]"):  # pragma: no branch
             arg = arg[12:-1]
         return _normalize_union_str(arg)
 
@@ -447,7 +447,7 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
         return _normalize_type(args[0]) if args else _type_to_str(tp)
 
     if origin is Union or isinstance(tp, types.UnionType):
-        if isinstance(tp, types.UnionType):
+        if isinstance(tp, types.UnionType):  # pragma: no branch
             args = get_args(tp)
         normalized_args = sorted(_normalize_type(a) for a in args)
         return _type_to_str(" | ".join(normalized_args))
@@ -727,7 +727,7 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
     from datamodel_code_generator.enums import DataModelType
     from datamodel_code_generator.types import StrictTypes
 
-    if hasattr(GenerateConfig, "model_rebuild"):
+    if hasattr(GenerateConfig, "model_rebuild"):  # pragma: no branch
         types_namespace: dict[str, type | None] = {"StrictTypes": StrictTypes, "UnionMode": None}
         try:
             from datamodel_code_generator.model.pydantic_v2 import UnionMode

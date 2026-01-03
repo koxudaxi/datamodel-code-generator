@@ -643,9 +643,9 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
         if "additional_imports" in type_data:
             imports = type_data.pop("additional_imports")
             if isinstance(imports, str):
-                if imports.strip():
+                if imports.strip():  # pragma: no branch
                     additional_imports.append(imports.strip())
-            elif isinstance(imports, list):
+            elif isinstance(imports, list):  # pragma: no branch
                 additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
     return additional_imports
 

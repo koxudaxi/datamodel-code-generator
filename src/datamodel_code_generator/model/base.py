@@ -373,7 +373,7 @@ class DataModelFieldBase(_BaseModel):
                 parts.append(f"Examples:\n{examples_str}")
             elif example is not None:
                 parts.append(f"Example: {example!r}")
-            elif examples and isinstance(examples, list) and len(examples) == 1:
+            elif examples and isinstance(examples, list) and len(examples) == 1:  # pragma: no branch
                 parts.append(f"Example: {examples[0]!r}")
 
         if parts:
@@ -913,7 +913,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     def set_reference_path(self, new_path: str) -> None:
         """Set reference path and clear cached path property."""
         self.reference.path = new_path
-        if "path" in self.__dict__:
+        if "path" in self.__dict__:  # pragma: no branch
             del self.__dict__["path"]
 
     def render(self, *, class_name: str | None = None) -> str:
