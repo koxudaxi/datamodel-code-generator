@@ -5,7 +5,11 @@ Generate Pydantic models from GraphQL schema definitions.
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 !!! note "📦 Installation"
@@ -148,7 +152,12 @@ print(books)
 ## 🎨 Custom Scalar Types
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py --extra-template-data data.json
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --extra-template-data data.json \
+    --output model.py
 ```
 
 **schema.graphql**
@@ -215,7 +224,12 @@ as GraphQL servers typically don't expect this field in input data.
 Use the `--graphql-no-typename` option to exclude this field:
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py --graphql-no-typename
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --graphql-no-typename \
+    --output model.py
 ```
 
 **Before (default):**
