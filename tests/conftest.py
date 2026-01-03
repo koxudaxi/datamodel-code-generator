@@ -309,7 +309,7 @@ class CodeValidationStats:
 _validation_stats = CodeValidationStats()
 
 
-def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001
+def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: pytest.Config) -> None:  # noqa: ARG001  # pragma: no cover
     """Print code validation and CLI doc collection summary at the end of test run."""
     if config.getoption("--collect-cli-docs", default=False):
         items = getattr(config, "_cli_doc_items", [])
@@ -347,9 +347,9 @@ def _parse_time_string(time_str: str) -> datetime:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt  # noqa: TRY300
-        except ValueError:  # noqa: PERF203
+        except ValueError:  # noqa: PERF203  # pragma: no branch
             continue
-    return datetime.fromisoformat(time_str.replace("Z", "+00:00"))
+    return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
 
 
 def freeze_time(time_to_freeze: str, **kwargs: Any) -> time_machine.travel:  # noqa: ARG001
@@ -482,7 +482,7 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
             diff = _format_diff(normalized_expected, normalized_content, expected_path)
             msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
-    else:
+    else:  # pragma: no cover
         # we need to normalize the external_file object's content as well
         assert _normalize_line_endings(expected._load_value()) == normalized_content
 
@@ -540,7 +540,7 @@ def create_assert_file_content(
             func_name = frame.f_back.f_code.co_name
             del frame
             name = func_name
-            for prefix in ("test_main_", "test_"):
+            for prefix in ("test_main_", "test_"):  # pragma: no branch
                 if name.startswith(prefix):
                     name = name[len(prefix) :]
                     break

@@ -1124,7 +1124,7 @@ def test_input_model_multiple_pydantic_v1_error(
 
     def mock_hasattr(obj: object, name: str) -> bool:
         nonlocal call_count
-        if name == "model_json_schema":
+        if name == "model_json_schema":  # pragma: no branch
             call_count += 1
             if call_count <= 2:
                 return False
@@ -1375,7 +1375,7 @@ def test_input_model_cwd_already_in_path(
 
     cwd = str(_Path.cwd())
     initial_count = sys.path.count(cwd)
-    if cwd not in sys.path:
+    if cwd not in sys.path:  # pragma: no branch
         sys.path.insert(0, cwd)
 
     run_multiple_input_models_and_assert(

@@ -398,7 +398,7 @@ def run_main_and_assert(  # noqa: PLR0912
             assert frame.f_back is not None
             func_name = frame.f_back.f_code.co_name
             del frame
-            for prefix in ("test_main_", "test_"):
+            for prefix in ("test_main_", "test_"):  # pragma: no branch
                 if func_name.startswith(prefix):
                     func_name = func_name[len(prefix) :]
                     break
@@ -481,7 +481,7 @@ def _validate_output_files(
     should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():
+    elif output_path.is_dir():  # pragma: no branch
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
         if should_exec:
@@ -534,10 +534,10 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
     finally:
-        for parent_directory, _ in packages:
+        for parent_directory, _ in packages:  # pragma: no branch
             if str(parent_directory) in sys.path:
                 sys.path.remove(str(parent_directory))
-        for module_name in imported_modules:
+        for module_name in imported_modules:  # pragma: no branch
             sys.modules.pop(module_name, None)
 
 
