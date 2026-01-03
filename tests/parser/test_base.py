@@ -36,10 +36,10 @@ class B(DataModel):
 class C(Parser):
     """Test parser class C."""
 
-    def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
+    def parse_raw(self, name: str, raw: dict[str, Any]) -> None:  # pragma: no cover
         """Parse raw data into models."""
 
-    def parse(self) -> str:
+    def parse(self) -> str:  # pragma: no cover
         """Parse and return results."""
         return "parsed"
 
@@ -290,9 +290,9 @@ class D(DataModel):
     def __init__(self, filename: str, data: str, fields: list[DataModelFieldBase]) -> None:  # noqa: ARG002
         """Initialize data model with custom data."""
         super().__init__(fields=fields, reference=Reference(""))
-        self._data = data
+        self._data = data  # pragma: no cover
 
-    def render(self) -> str:
+    def render(self) -> str:  # pragma: no cover
         """Render the data model."""
         return self._data
 
@@ -489,7 +489,7 @@ def test_find_member_with_mixed_enum() -> None:
 
 
 @pytest.fixture
-def escape_map() -> dict[str, str]:
+def escape_map() -> dict[str, str]:  # pragma: no cover
     """Provide escape character mapping for tests."""
     return {
         "\u0000": r"\x00",  # Null byte

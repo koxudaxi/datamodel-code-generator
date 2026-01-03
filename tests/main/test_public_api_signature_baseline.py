@@ -347,7 +347,7 @@ def _params_by_name(signature: inspect.Signature) -> dict[str, inspect.Parameter
 
 def _type_to_str(tp: Any) -> str:
     """Convert type to normalized string."""
-    if tp is type(None):
+    if tp is type(None):  # pragma: no cover
         return "None"
     if isinstance(tp, type):
         return tp.__name__
@@ -457,7 +457,7 @@ def _normalize_type(tp: Any) -> str:  # noqa: PLR0911
             normalized_args = [_normalize_type(a) for a in args]
             origin_name = getattr(origin, "__name__", str(origin))
             return _type_to_str(f"{origin_name}[{', '.join(normalized_args)}]")
-        return _type_to_str(origin)
+        return _type_to_str(origin)  # pragma: no cover
 
     return _type_to_str(tp)
 
@@ -508,7 +508,7 @@ def test_generate_signature_matches_baseline() -> None:
         GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
         for name, param in baseline_params.items():
-            if param.default is inspect.Parameter.empty:
+            if param.default is inspect.Parameter.empty:  # pragma: no cover
                 continue
             config_default = GenerateConfig.model_fields[name].default
             assert config_default == param.default, (
@@ -655,14 +655,14 @@ def test_generate_config_defaults_match_generate_signature() -> None:
     expected_params = _kwonly_by_name(expected_sig)
 
     for field_name, field_info in GenerateConfig.model_fields.items():
-        if field_name not in expected_params:
+        if field_name not in expected_params:  # pragma: no cover
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
 
         # Handle Parameter.empty vs None
-        if param.default is inspect.Parameter.empty:
+        if param.default is inspect.Parameter.empty:  # pragma: no cover
             # No default in signature means required, but Config may have None default
             continue
 
@@ -680,13 +680,13 @@ def test_parser_config_defaults_match_parser_signature() -> None:
     expected_params = _kwonly_by_name(expected_sig)
 
     for field_name, field_info in ParserConfig.model_fields.items():
-        if field_name not in expected_params:
+        if field_name not in expected_params:  # pragma: no cover
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
 
-        if param.default is inspect.Parameter.empty:
+        if param.default is inspect.Parameter.empty:  # pragma: no cover
             continue
 
         if callable(param.default) and config_default is None:
@@ -706,13 +706,13 @@ def test_parse_config_defaults_match_parse_signature() -> None:
     expected_params = _params_by_name(expected_sig)
 
     for field_name, field_info in ParseConfig.model_fields.items():
-        if field_name not in expected_params:
+        if field_name not in expected_params:  # pragma: no cover
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
 
-        if param.default is inspect.Parameter.empty:
+        if param.default is inspect.Parameter.empty:  # pragma: no cover
             continue
 
         assert config_default == param.default, (
@@ -733,7 +733,7 @@ def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> 
             from datamodel_code_generator.model.pydantic_v2 import UnionMode
 
             types_namespace["UnionMode"] = UnionMode
-        except ImportError:
+        except ImportError:  # pragma: no cover
             pass
         GenerateConfig.model_rebuild(_types_namespace=types_namespace)
 

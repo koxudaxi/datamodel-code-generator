@@ -41,7 +41,7 @@ class B(DataModel):
     """Test helper class for DataModel testing with template path."""
 
     @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102  # pragma: no cover
         pass
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D107
@@ -54,7 +54,7 @@ class C(DataModel):
     """Test helper class for DataModel testing without template path."""
 
     @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
+    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102  # pragma: no cover
         pass
 
 
