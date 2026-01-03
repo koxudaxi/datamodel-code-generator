@@ -59,6 +59,9 @@ def is_pydantic_v2() -> bool:
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
 _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
+# Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
+# Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
+_YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
 
 
 def _construct_yaml_bool_with_warning(loader: Any, node: Any) -> bool:
@@ -103,6 +106,13 @@ def get_safe_loader() -> type:
             _YAML_1_2_BOOL_PATTERN,
         ))
     CustomSafeLoader.yaml_constructors["tag:yaml.org,2002:bool"] = _construct_yaml_bool_with_warning
+
+    # Add scientific notation without decimal point (e.g., 1e-5) as float
+    for key in ["-", "+", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+        CustomSafeLoader.yaml_implicit_resolvers.setdefault(key, []).append((
+            "tag:yaml.org,2002:float",
+            _YAML_SCIENTIFIC_NOTATION_PATTERN,
+        ))
 
     return CustomSafeLoader
 

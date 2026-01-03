@@ -73,3 +73,19 @@ def test_main_yaml_deprecated_bool(output_file: Path) -> None:
             output_path=output_file,
             input_file_type="openapi",
         )
+
+
+def test_main_yaml_scientific_notation(output_file: Path) -> None:
+    """Test YAML file with scientific notation default values (issue #1955).
+
+    Scientific notation without decimal point (e.g., 1e-5) should be parsed as float,
+    not as string.
+    """
+    run_main_and_assert(
+        input_path=YAML_DATA_PATH / "scientific_notation.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        assert_func=assert_file_content,
+        expected_file="yaml/scientific_notation.py",
+    )
