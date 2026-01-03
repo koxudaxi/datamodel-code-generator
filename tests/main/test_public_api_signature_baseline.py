@@ -653,9 +653,6 @@ def test_generate_config_defaults_match_generate_signature() -> None:
     expected_params = _kwonly_by_name(expected_sig)
 
     for field_name, field_info in GenerateConfig.model_fields.items():
-        if field_name not in expected_params:
-            continue
-
         param = expected_params[field_name]
         config_default = field_info.default
 
@@ -673,9 +670,6 @@ def test_parser_config_defaults_match_parser_signature() -> None:
     expected_params = _kwonly_by_name(expected_sig)
 
     for field_name, field_info in ParserConfig.model_fields.items():
-        if field_name not in expected_params:
-            continue
-
         param = expected_params[field_name]
         config_default = field_info.default
 
@@ -696,9 +690,6 @@ def test_parse_config_defaults_match_parse_signature() -> None:
     expected_params = _params_by_name(expected_sig)
 
     for field_name, field_info in ParseConfig.model_fields.items():
-        if field_name not in expected_params:
-            continue
-
         param = expected_params[field_name]
         config_default = field_info.default
 
