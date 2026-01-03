@@ -40,10 +40,6 @@ class A(TemplateBase):
 class B(DataModel):
     """Test helper class for DataModel testing with template path."""
 
-    @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
-        pass
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:  # noqa: D107
         super().__init__(*args, **kwargs)
 
@@ -52,10 +48,6 @@ class B(DataModel):
 
 class C(DataModel):
     """Test helper class for DataModel testing without template path."""
-
-    @classmethod
-    def get_data_type(cls, types: Types, **kwargs: Any) -> DataType:  # noqa: D102
-        pass
 
 
 template: str = """{%- for decorator in decorators -%}
