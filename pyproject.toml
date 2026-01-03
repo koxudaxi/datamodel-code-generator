@@ -214,6 +214,7 @@ filterwarnings = [
   "error",
   "ignore:^.*Pydantic v1 runtime support is deprecated.*:DeprecationWarning",
   "ignore:^.*No --output-model-type specified.*:DeprecationWarning",
+  "ignore:^.*Pydantic v2 with --use-annotated is recommended.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",
   "ignore:^.*--parent-scoped-naming is deprecated.*",
   "ignore:^.*Field name `name` is duplicated on Pet.*",

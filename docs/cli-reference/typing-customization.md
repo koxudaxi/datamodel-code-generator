@@ -2823,8 +2823,6 @@ syntax instead of default values. This also enables `--field-constraints`.
 
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
 
-**See also:** [Python Version Compatibility](../python-version-compatibility.md)
-
 !!! tip "Usage"
 
     ```bash

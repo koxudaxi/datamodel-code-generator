@@ -1209,6 +1209,22 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             stacklevel=1,
         )
 
+    if (
+        config.output_model_type in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass}
+        and not config.use_annotated
+        and namespace.use_annotated is None
+        and pyproject_config.get("use_annotated") is None
+    ):
+        warnings.warn(
+            "Pydantic v2 with --use-annotated is recommended for correct type annotations. "
+            "The current default (use_annotated=False) generates constrained types like "
+            "'conint(ge=1, le=365)' which are discouraged in Pydantic v2. "
+            "In a future version, --use-annotated will be enabled by default for Pydantic v2. "
+            "Please explicitly specify --use-annotated or --no-use-annotated.",
+            DeprecationWarning,
+            stacklevel=1,
+        )
+
     if not is_pydantic_v2():
         warnings.warn(
             "Pydantic v1 runtime support is deprecated and will be removed in a future version. "
