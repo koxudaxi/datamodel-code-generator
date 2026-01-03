@@ -4945,17 +4945,6 @@ where optional fields have defaults but cannot accept `None` values.
                     - type: string
                     - type: number
                    nullable: true
-            maybeValue:
-              description: A value that can be string or integer, not nullable
-              oneOf:
-                - type: string
-                - type: integer
-            nullableUnion:
-              description: A nullable union of string or integer
-              oneOf:
-                - type: string
-                - type: integer
-              nullable: true
             simpleUnion:
               oneOf:
                 - type: string
@@ -5049,12 +5038,6 @@ where optional fields have defaults but cannot accept `None` values.
     class Options(BaseModel):
         comments: list[str | None]
         oneOfComments: list[str | float | None]
-        maybeValue: str | int | None = Field(
-            None, description='A value that can be string or integer, not nullable'
-        )
-        nullableUnion: str | int | None = Field(
-            None, description='A nullable union of string or integer'
-        )
         simpleUnion: str | float | None = None
     ```
 
