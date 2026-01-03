@@ -1189,6 +1189,23 @@ def test_all_exports_scope_recursive_with_full_prefix(output_dir: Path) -> None:
     )
 
 
+def test_all_exports_collision_resolved_successfully(output_dir: Path) -> None:
+    """Test collision resolution successfully adds prefix when no local model conflict."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "all_exports_collision_success.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "recursive",
+            "--all-exports-collision-strategy",
+            "minimal-prefix",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_collision_success",
+    )
+
+
 @pytest.mark.parametrize(
     "strategy",
     ["minimal-prefix", "full-prefix"],
