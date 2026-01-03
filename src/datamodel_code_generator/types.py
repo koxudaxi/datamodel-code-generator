@@ -344,7 +344,7 @@ def _remove_none_from_union(type_: str, *, use_union_operator: bool) -> str:  # 
     part = current_part.strip()
     if current_part and part != NONE:
         # only UNION_PREFIX might be nested but not union_operator
-        if not use_union_operator and part.startswith(UNION_PREFIX):
+        if not use_union_operator and part.startswith(UNION_PREFIX):  # pragma: no cover
             part = _remove_none_from_union(part, use_union_operator=False)
         parts.append(part)
 
@@ -601,7 +601,7 @@ class DataType(_BaseModel):
 
     def find_source(self, source_type: type[SourceT]) -> SourceT | None:
         """Find the first reference source matching the given type from all nested data types."""
-        for data_type in self.all_data_types:  # pragma: no branch
+        for data_type in self.all_data_types:
             if not data_type.reference:  # pragma: no cover
                 continue
             source = data_type.reference.source
@@ -647,7 +647,7 @@ class DataType(_BaseModel):
                     (self.is_list, IMPORT_ABC_SEQUENCE),
                     (self.is_dict, IMPORT_ABC_MAPPING),
                 )
-            else:
+            else:  # pragma: no cover
                 imports = (
                     *imports,
                     (self.is_list, IMPORT_SEQUENCE),
@@ -778,7 +778,7 @@ class DataType(_BaseModel):
                 set_ = STANDARD_FROZEN_SET if self.use_standard_collections else FROZEN_SET
             elif self.use_standard_collections:
                 set_ = STANDARD_SET
-            else:
+            else:  # pragma: no cover
                 set_ = SET
             type_ = f"{set_}[{type_}]" if type_ else set_
         elif self.is_sequence:

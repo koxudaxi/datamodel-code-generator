@@ -1120,14 +1120,10 @@ def test_input_model_multiple_pydantic_v1_error(
     import builtins
 
     original_hasattr = builtins.hasattr
-    call_count = 0
 
     def mock_hasattr(obj: object, name: str) -> bool:
-        nonlocal call_count
         if name == "model_json_schema":
-            call_count += 1
-            if call_count <= 2:  # pragma: no branch
-                return False
+            return False
         return original_hasattr(obj, name)
 
     monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
@@ -1375,8 +1371,6 @@ def test_input_model_cwd_already_in_path(
 
     cwd = str(_Path.cwd())
     initial_count = sys.path.count(cwd)
-    if cwd not in sys.path:  # pragma: no cover
-        sys.path.insert(0, cwd)
 
     run_multiple_input_models_and_assert(
         input_models=[

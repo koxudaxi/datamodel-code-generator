@@ -62,7 +62,7 @@ class _TarjanState:
             w: ModulePath = self.stack.pop()
             self.on_stack.remove(w)
             scc.add(w)
-            if w == root:  # pragma: no branch
+            if w == root:
                 break
         self.result.append(scc)
 

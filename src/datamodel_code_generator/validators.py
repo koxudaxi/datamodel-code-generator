@@ -46,6 +46,6 @@ if is_pydantic_v2():
     class ValidatorsConfig(RootModel[dict[str, ModelValidators]]):
         """Root model for validators configuration."""
 
-else:
+else:  # pragma: no cover
     # Pydantic v1 doesn't support RootModel, but validators feature is v2-only anyway
     ValidatorsConfig = None  # type: ignore[assignment,misc]

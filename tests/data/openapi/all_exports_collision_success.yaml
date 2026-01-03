@@ -1,0 +1,17 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Collision Success Test
+paths: {}
+components:
+  schemas:
+    foo.Message:
+      type: object
+      properties:
+        content:
+          type: string
+    bar.Message:
+      type: object
+      properties:
+        result:
+          type: string

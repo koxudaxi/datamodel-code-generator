@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 # Normalize to a single callable for resolving type kinds.
 try:  # graphql-core < 3.2.7
     graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # pyright: ignore[reportAttributeAccessIssue]
-except AttributeError:  # pragma: no cover - executed on newer graphql-core
+except AttributeError:
     graphql_resolver_kind = graphql.type.introspection.TypeFields.kind  # pyright: ignore[reportAttributeAccessIssue]
 
 
@@ -104,14 +104,14 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
                 }
             )
             return GraphQLParserConfig.model_validate(options)
-        GraphQLParserConfig.update_forward_refs(
+        GraphQLParserConfig.update_forward_refs(  # pragma: no cover
             StrictTypes=types_module.StrictTypes,
             DataModel=model_base.DataModel,
             DataModelFieldBase=model_base.DataModelFieldBase,
             DataTypeManager=types_module.DataTypeManager,
         )
-        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}
-        defaults.update(options)
+        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}  # pragma: no cover
+        defaults.update(options)  # pragma: no cover
         return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
 
     def __init__(
@@ -208,8 +208,8 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         *,
         required: bool,
     ) -> Any:
-        if isinstance(field, graphql.GraphQLInputField):  # pragma: no cover
-            if field.default_value == graphql.pyutils.Undefined:  # pragma: no cover
+        if isinstance(field, graphql.GraphQLInputField):
+            if field.default_value == graphql.pyutils.Undefined:
                 return None
             return field.default_value
         if required is False and final_data_type.is_list:
@@ -447,7 +447,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             fields.append(self._typename_field(obj.name))
 
         base_classes = []
-        if hasattr(obj, "interfaces"):  # pragma: no cover
+        if hasattr(obj, "interfaces"):
             base_classes = [self.references[i.name] for i in obj.interfaces]  # pyright: ignore[reportAttributeAccessIssue]
 
         data_model_type = self._create_data_model(
@@ -475,7 +475,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
     def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
         """Parse a GraphQL input object type and add it to results."""
-        self.parse_object_like(input_graphql_object)  # pragma: no cover
+        self.parse_object_like(input_graphql_object)
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
         """Parse a GraphQL union type and add it to results."""

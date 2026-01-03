@@ -39,10 +39,6 @@ class C(Parser):
     def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         """Parse raw data into models."""
 
-    def parse(self) -> str:
-        """Parse and return results."""
-        return "parsed"
-
 
 def test_parser() -> None:
     """Test parser initialization."""
@@ -285,16 +281,7 @@ def test_snake_to_upper_camel(word: str, expected: str) -> None:
 
 
 class D(DataModel):
-    """Test data model class D with custom render."""
-
-    def __init__(self, filename: str, data: str, fields: list[DataModelFieldBase]) -> None:  # noqa: ARG002
-        """Initialize data model with custom data."""
-        super().__init__(fields=fields, reference=Reference(""))
-        self._data = data
-
-    def render(self) -> str:
-        """Render the data model."""
-        return self._data
+    """Test data model class D."""
 
 
 @pytest.fixture
@@ -486,21 +473,6 @@ def test_find_member_with_mixed_enum() -> None:
     member = enum.find_member("'value_a'")
     assert member is not None
     assert member.field.name == "STR_VALUE"
-
-
-@pytest.fixture
-def escape_map() -> dict[str, str]:
-    """Provide escape character mapping for tests."""
-    return {
-        "\u0000": r"\x00",  # Null byte
-        "'": r"\'",
-        "\b": r"\b",
-        "\f": r"\f",
-        "\n": r"\n",
-        "\r": r"\r",
-        "\t": r"\t",
-        "\\": r"\\",
-    }
 
 
 @pytest.mark.parametrize(

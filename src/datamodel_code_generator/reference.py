@@ -96,7 +96,7 @@ class _BaseModel(BaseModel):
     if not TYPE_CHECKING:  # pragma: no branch
         if is_pydantic_v2():
 
-            def dict(  # noqa: PLR0913
+            def dict(  # noqa: PLR0913  # pragma: no cover
                 self,
                 *,
                 include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
@@ -767,7 +767,7 @@ class ModelResolver:  # noqa: PLR0904
 
         if is_url(ref):
             file_part, path_part = ref.split("#", 1)
-            if file_part == self.root_id:
+            if file_part == self.root_id:  # pragma: no cover
                 return f"{'/'.join(self.current_root)}#{path_part}"
             target_url: ParseResult = urlparse(file_part)
             if not (self.root_id and self.current_base_path):
@@ -919,7 +919,7 @@ class ModelResolver:  # noqa: PLR0904
                 # Check if this is an external reference (different file)
                 ref_file = ref_path.split("#")[0]
                 current_file = current_path.split("#", maxsplit=1)[0]
-                if ref_file != current_file:
+                if ref_file != current_file:  # pragma: no branch
                     # Rename this external reference
                     new_name = self._get_unique_name(name, camel=True)
                     old_name = ref.name

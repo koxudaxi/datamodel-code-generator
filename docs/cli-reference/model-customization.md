@@ -4945,6 +4945,10 @@ where optional fields have defaults but cannot accept `None` values.
                     - type: string
                     - type: number
                    nullable: true
+            simpleUnion:
+              oneOf:
+                - type: string
+                - type: number
           required:
             - comments
             - oneOfComments
@@ -5034,6 +5038,7 @@ where optional fields have defaults but cannot accept `None` values.
     class Options(BaseModel):
         comments: list[str | None]
         oneOfComments: list[str | float | None]
+        simpleUnion: str | float | None = None
     ```
 
 ---

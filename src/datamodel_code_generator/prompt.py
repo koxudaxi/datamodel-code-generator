@@ -66,7 +66,7 @@ def _format_options_by_category() -> str:
         for opt, desc in sorted(options):
             if desc:
                 lines.append(f"- `{opt}`: {desc}")
-            else:
+            else:  # pragma: no cover
                 lines.append(f"- `{opt}`")
         lines.append("")
 

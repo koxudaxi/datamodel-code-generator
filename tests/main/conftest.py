@@ -234,7 +234,7 @@ def run_main_with_args(
     __tracebackhide__ = True
     return_code = main(list(args))
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
-    if expected_stdout_path is not None:  # pragma: no branch
+    if expected_stdout_path is not None:
         if capsys is None:  # pragma: no cover
             pytest.fail("capsys is required when expected_stdout_path is set")
         captured = capsys.readouterr()
@@ -392,7 +392,7 @@ def run_main_and_assert(  # noqa: PLR0912
     elif assert_func is not None:
         if output_path is None:  # pragma: no cover
             pytest.fail("output_path is required when using assert_func")
-        if expected_file is None:  # pragma: no branch
+        if expected_file is None:
             frame = inspect.currentframe()
             assert frame is not None
             assert frame.f_back is not None
@@ -481,24 +481,24 @@ def _validate_output_files(
     should_exec = not _should_skip_exec(extra_arguments, force_exec=force_exec_validation)
     if output_path.is_file() and output_path.suffix == ".py":
         validate_generated_code(output_path.read_text(encoding="utf-8"), str(output_path), do_exec=should_exec)
-    elif output_path.is_dir():  # pragma: no cover
+    elif output_path.is_dir():  # pragma: no branch
         for python_file in output_path.rglob("*.py"):
             validate_generated_code(python_file.read_text(encoding="utf-8"), str(python_file), do_exec=False)
-        if should_exec:  # pragma: no cover
+        if should_exec:
             _import_package(output_path)
 
 
-def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR0912
+def _import_package(output_path: Path) -> None:
     """Import generated packages to validate they can be loaded."""
     if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]
     else:
-        packages = [
+        packages = [  # pragma: no cover
             (output_path, directory.name)
             for directory in output_path.iterdir()
             if directory.is_dir() and (directory / "__init__.py").exists()
         ]
-    if not packages:
+    if not packages:  # pragma: no cover
         return
 
     imported_modules: list[str] = []
@@ -510,7 +510,7 @@ def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR
             spec = importlib.util.spec_from_file_location(
                 package_name, package_path / "__init__.py", submodule_search_locations=[str(package_path)]
             )
-            if spec is None or spec.loader is None:
+            if spec is None or spec.loader is None:  # pragma: no cover
                 continue
             module = importlib.util.module_from_spec(spec)
             sys.modules[package_name] = module
@@ -523,20 +523,19 @@ def _import_package(output_path: Path) -> None:  # pragma: no cover  # noqa: PLR
                 relative_path = python_file.relative_to(package_path)
                 module_name = f"{package_name}.{'.'.join(relative_path.with_suffix('').parts)}"
                 submodule_spec = importlib.util.spec_from_file_location(module_name, python_file)
-                if submodule_spec is None or submodule_spec.loader is None:
+                if submodule_spec is None or submodule_spec.loader is None:  # pragma: no cover
                     continue
                 submodule = importlib.util.module_from_spec(submodule_spec)
                 sys.modules[module_name] = submodule
                 imported_modules.append(module_name)
                 submodule_spec.loader.exec_module(submodule)
         _validation_stats.record_exec(time.perf_counter() - start_time)
-    except Exception as exception:
+    except Exception as exception:  # pragma: no cover
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
     finally:
         for parent_directory, _ in packages:
-            if str(parent_directory) in sys.path:
-                sys.path.remove(str(parent_directory))
+            sys.path.remove(str(parent_directory))
         for module_name in imported_modules:
             sys.modules.pop(module_name, None)
 

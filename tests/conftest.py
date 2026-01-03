@@ -101,7 +101,10 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  # noqa: ARG001, PLR0912, PLR0914  # pragma: no cover
-    """Validate marker required fields and types."""
+    """Validate marker required fields and types.
+
+    Only called when --collect-cli-docs is used (cli-docs tox job, which doesn't contribute to coverage).
+    """
     errors: list[str] = []
 
     if "options" not in kwargs:
@@ -215,7 +218,7 @@ def pytest_collection_modifyitems(
     session: pytest.Session,  # noqa: ARG001
     config: pytest.Config,
     items: list[pytest.Item],
-) -> None:  # pragma: no cover
+) -> None:
     """Collect CLI doc metadata from tests with cli_doc marker.
 
     Always collects metadata for use by test_cli_doc_coverage.py.
@@ -229,7 +232,7 @@ def pytest_collection_modifyitems(
         if marker is None:
             continue
 
-        if collect_cli_docs:
+        if collect_cli_docs:  # pragma: no cover
             errors = _validate_cli_doc_marker(item.nodeid, cast("CliDocKwargs", marker.kwargs))
             if errors:
                 validation_errors.append((item.nodeid, errors))
@@ -244,7 +247,7 @@ def pytest_collection_modifyitems(
             "option_description": option_description,
         })
 
-    if validation_errors:
+    if validation_errors:  # pragma: no cover
         error_msg = "CLI doc marker validation errors:\n"
         for node_id, errors in validation_errors:
             error_msg += f"\n  {node_id}:\n"
@@ -344,7 +347,7 @@ def _parse_time_string(time_str: str) -> datetime:
             if dt.tzinfo is None:
                 dt = dt.replace(tzinfo=timezone.utc)
             return dt  # noqa: TRY300
-        except ValueError:  # noqa: PERF203
+        except ValueError:  # noqa: PERF203  # pragma: no branch
             continue
     return datetime.fromisoformat(time_str.replace("Z", "+00:00"))  # pragma: no cover
 
@@ -364,6 +367,7 @@ def _get_tox_env() -> str:  # pragma: no cover
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
     Strips '-parallel' suffix since inline-snapshot requires -n0 (single process).
+    Only called in assertion failure hints.
     """
     import os
 
@@ -373,7 +377,10 @@ def _get_tox_env() -> str:  # pragma: no cover
 
 
 def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
-    """Format a hint message for inline-snapshot commands with rich formatting."""
+    """Format a hint message for inline-snapshot commands with rich formatting.
+
+    Only called when assertions fail.
+    """
     from io import StringIO
 
     from rich.console import Console
@@ -394,7 +401,10 @@ def _format_snapshot_hint(action: str) -> str:  # pragma: no cover
 
 
 def _format_new_content(content: str) -> str:  # pragma: no cover
-    """Format new content (for create mode) with green color."""
+    """Format new content (for create mode) with green color.
+
+    Only called when expected file not found.
+    """
     from io import StringIO
 
     from rich.console import Console
@@ -410,7 +420,10 @@ def _format_new_content(content: str) -> str:  # pragma: no cover
 
 
 def _format_diff(expected: str, actual: str, expected_path: Path) -> str:  # pragma: no cover
-    """Format a unified diff between expected and actual content with colors."""
+    """Format a unified diff between expected and actual content with colors.
+
+    Only called when content differs from expected.
+    """
     from io import StringIO
 
     from rich.console import Console
@@ -460,18 +473,18 @@ def _assert_with_external_file(content: str, expected_path: Path) -> None:
         hint = _format_snapshot_hint("create")
         formatted_content = _format_new_content(content)
         msg = f"Expected file not found: {expected_path}\n{hint}\n{formatted_content}"
-        raise AssertionError(msg) from None  # pragma: no cover
+        raise AssertionError(msg) from None
     normalized_content = _normalize_line_endings(content)
-    if isinstance(expected, str):  # pragma: no branch
+    if isinstance(expected, str):
         normalized_expected = _normalize_line_endings(expected)
         if normalized_content != normalized_expected:  # pragma: no cover
             hint = _format_snapshot_hint("fix")
             diff = _format_diff(normalized_expected, normalized_content, expected_path)
             msg = f"Content mismatch for {expected_path}\n{hint}\n{diff}"
             raise AssertionError(msg) from None
-    else:
+    else:  # pragma: no cover
         # we need to normalize the external_file object's content as well
-        assert _normalize_line_endings(expected._load_value()) == normalized_content  # pragma: no cover
+        assert _normalize_line_endings(expected._load_value()) == normalized_content
 
 
 class AssertFileContent(Protocol):
@@ -527,7 +540,7 @@ def create_assert_file_content(
             func_name = frame.f_back.f_code.co_name
             del frame
             name = func_name
-            for prefix in ("test_main_", "test_"):
+            for prefix in ("test_main_", "test_"):  # pragma: no branch
                 if name.startswith(prefix):
                     name = name[len(prefix) :]
                     break

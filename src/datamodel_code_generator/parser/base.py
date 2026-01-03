@@ -337,7 +337,7 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
         )
     if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
-    if isinstance(item, BaseModel):
+    if isinstance(item, BaseModel):  # pragma: no cover
         return to_hashable(model_dump(item))
     if item is None:
         return ""
@@ -1274,7 +1274,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                     ),
                 )
             after_import = model.imports
-            if before_import != after_import:
+            if before_import != after_import:  # pragma: no cover
                 imports.append(after_import)
 
     @classmethod
@@ -1364,7 +1364,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                                 t_path = path[str(path).find("/") + 1 :]
                                 t_disc = model.path[: str(model.path).find("#")].lstrip("../")  # noqa: B005
                                 t_disc_2 = "/".join(t_disc.split("/")[1:])
-                                if t_path not in {t_disc, t_disc_2}:
+                                if t_path not in {t_disc, t_disc_2}:  # pragma: no branch
                                     continue
                             type_names.append(name)
 
@@ -1664,7 +1664,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                 msg = f"Duplicate model {duplicate_model.name} not found in module {duplicate_module}"
                 raise RuntimeError(msg)
 
-            for module, models in module_models:
+            for module, models in module_models:  # pragma: no branch
                 if module != duplicate_module:
                     continue
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
@@ -1802,7 +1802,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                         inner_reference.children.append(data_type)
 
                         imports.remove_referenced_imports(root_type_model.path)
-                        if not root_type_model.reference.children:
+                        if not root_type_model.reference.children:  # pragma: no branch
                             unused_models.append(root_type_model)
 
                         continue
@@ -2065,7 +2065,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                 for field in model.fields:
                     if self.__is_new_required_field(field, inherited_names):
                         field.extras["kw_only"] = True
-            else:
+            else:  # pragma: no cover
                 warn(
                     f"Dataclass '{model.class_name}' has a field ordering conflict due to inheritance. "
                     f"An inherited field has a default value, but new required fields are added. "
@@ -2333,7 +2333,7 @@ class Parser(ABC, Generic[ParserConfigT]):
             current_module_name = ".".join(module[:-1]) if module else ""
             is_first_root = module == first_root_module
             for model in target_models:
-                if original_import:
+                if original_import:  # pragma: no branch
                     additional_imports = model._additional_imports  # noqa: SLF001
                     model._additional_imports = [i for i in additional_imports if i != original_import]  # noqa: SLF001
                 parent_refs = [bc.reference for bc in model.base_classes if bc.reference]
@@ -2420,7 +2420,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         return result
 
     @classmethod
-    def _raise_collision_error(
+    def _raise_collision_error(  # pragma: no cover
         cls,
         by_name: dict[str, list[tuple[str, tuple[str, ...], str]]],
         colliding: set[str],

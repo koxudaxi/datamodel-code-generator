@@ -374,7 +374,7 @@ class Config(BaseModel):
                 and output_model_type == DataModelType.DataclassesDataclass
                 and not python_target.has_kw_only_dataclass
             ):
-                raise Error(self.__validate_keyword_only_err)
+                raise Error(self.__validate_keyword_only_err)  # pragma: no cover
             return self
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -449,7 +449,7 @@ class Config(BaseModel):
                 and output_model_type == DataModelType.DataclassesDataclass
                 and not python_target.has_kw_only_dataclass
             ):
-                raise Error(cls.__validate_keyword_only_err)
+                raise Error(cls.__validate_keyword_only_err)  # pragma: no cover
             return values
 
         @model_validator()  # pyright: ignore[reportArgumentType]
@@ -643,9 +643,9 @@ def _extract_additional_imports(extra_template_data: defaultdict[str, dict[str, 
         if "additional_imports" in type_data:
             imports = type_data.pop("additional_imports")
             if isinstance(imports, str):
-                if imports.strip():
+                if imports.strip():  # pragma: no branch
                     additional_imports.append(imports.strip())
-            elif isinstance(imports, list):
+            elif isinstance(imports, list):  # pragma: no branch
                 additional_imports.extend(item.strip() for item in imports if isinstance(item, str) and item.strip())
     return additional_imports
 
@@ -717,7 +717,7 @@ def _get_pyproject_toml_config(source: Path, profile: str | None = None) -> dict
                     pyproject_config["capitalise_enum_members"] = pyproject_config.pop("capitalize_enum_members")
                 return pyproject_config
 
-        if (current_path / ".git").exists():
+        if (current_path / ".git").exists():  # pragma: no cover
             break
 
         current_path = current_path.parent

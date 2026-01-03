@@ -663,7 +663,7 @@ def test_main_openapi_schema_extensions(
 )
 def test_pyproject(tmp_path: Path) -> None:
     """Test code generation using pyproject.toml configuration."""
-    if platform.system() == "Windows":
+    if platform.system() == "Windows":  # pragma: no cover
 
         def get_path(path: str) -> str:
             return str(path).replace("\\", "\\\\")
@@ -3519,6 +3519,59 @@ def test_main_openapi_msgspec_oneof_with_null_union_operator(output_file: Path) 
     )
 
 
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_no_use_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation without union operator (Union[X, Y] syntax)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_no_use_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--no-use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null_no_use_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null without union operator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null_no_use_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--no-use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_openapi_msgspec_inline_const(output_file: Path) -> None:
+    """Test msgspec Struct generation with inline const field."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_inline_const.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_inline_const.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+    )
+
+
 def test_main_openapi_referenced_default(output_file: Path) -> None:
     """Test OpenAPI generation with referenced default values."""
     run_main_and_assert(
@@ -3672,7 +3725,7 @@ def test_main_openapi_type_alias_py312(output_file: Path) -> None:
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> None:
     """Test mutual recursive type aliases render with quoted forward refs on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -3694,7 +3747,7 @@ def test_main_openapi_type_alias_mutual_recursive_py311(output_file: Path) -> No
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_file: Path) -> None:
     """Test mutual recursive type aliases render with quoted forward refs for TypeAliasType on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_mutual_recursive.yaml",
@@ -3716,7 +3769,7 @@ def test_main_openapi_type_alias_mutual_recursive_typealiastype_py311(output_fil
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the target python version",
 )
-def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:  # pragma: no cover
+def test_main_openapi_type_alias_recursive_py311(output_file: Path) -> None:
     """Test recursive type aliases render with quoted self references on Python 3.11."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "type_alias_recursive.yaml",

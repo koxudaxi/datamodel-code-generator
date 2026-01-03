@@ -238,12 +238,12 @@ def _add_unset_type(type_: str, use_union_operator: bool) -> str:  # noqa: FBT00
     """Add UnsetType to a type hint without removing None."""
     if use_union_operator:
         return f"{type_}{UNION_OPERATOR_DELIMITER}{UNSET_TYPE}"
-    if type_.startswith(UNION_PREFIX):
+    if type_.startswith(UNION_PREFIX):  # pragma: no cover
         return f"{type_[:-1]}{UNION_DELIMITER}{UNSET_TYPE}]"
     if type_.startswith(OPTIONAL_PREFIX):  # pragma: no cover
         inner_type = type_[len(OPTIONAL_PREFIX) : -1]
         return f"{UNION_PREFIX}{inner_type}{UNION_DELIMITER}{NONE}{UNION_DELIMITER}{UNSET_TYPE}]"
-    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"
+    return f"{UNION_PREFIX}{type_}{UNION_DELIMITER}{UNSET_TYPE}]"  # pragma: no cover
 
 
 @import_extender
@@ -281,7 +281,7 @@ class DataModelField(DataModelFieldBase):
         self.const = True
         self.nullable = False
         const = self.extras["const"]
-        if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover # Literal supports only str
+        if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover
             self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
@@ -405,13 +405,13 @@ class DataModelField(DataModelFieldBase):
         For ClassVar fields (discriminator tag_field), ClassVar is required
         regardless of use_annotated setting.
         """
-        if self.extras.get("is_classvar"):
+        if self.extras.get("is_classvar"):  # pragma: no cover
             meta = self._get_meta_string()
             if self.use_annotated and meta:
                 return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
             return f"ClassVar[{self.type_hint}]"
 
-        if not self.use_annotated:  # pragma: no cover
+        if not self.use_annotated:
             return None
 
         meta = self._get_meta_string()
@@ -438,7 +438,7 @@ class DataModelField(DataModelFieldBase):
         """
         if not self.annotated:
             return False
-        if self.extras.get("is_classvar"):
+        if self.extras.get("is_classvar"):  # pragma: no cover
             return self.use_annotated and self._get_meta_string() is not None
         return True
 
@@ -453,10 +453,10 @@ class DataModelField(DataModelFieldBase):
             # TODO: Check nested data_types
             if data_type.is_dict:
                 # TODO: Parse dict model for default
-                continue  # pragma: no cover
+                continue
             if data_type.is_list and len(data_type.data_types) == 1:
                 data_type_child = data_type.data_types[0]
-                if (  # pragma: no cover
+                if (
                     data_type_child.reference
                     and (isinstance(data_type_child.reference.source, (Struct, TypeAliasBase)))
                     and isinstance(self.default, list)

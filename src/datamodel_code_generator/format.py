@@ -105,6 +105,20 @@ class PythonVersion(Enum):
         return self._is_py_310_or_later
 
     @property
+    def has_type_alias(self) -> bool:  # pragma: no cover
+        """Check if Python version supports TypeAlias.
+
+        .. deprecated::
+            This property is unused and will be removed in a future version.
+        """
+        warn(
+            "has_type_alias is deprecated and will be removed in a future version.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self._is_py_310_or_later
+
+    @property
     def has_typed_dict_non_required(self) -> bool:
         """Check if Python version supports TypedDict NotRequired."""
         return self._is_py_311_or_later
@@ -117,11 +131,6 @@ class PythonVersion(Enum):
     @property
     def has_kw_only_dataclass(self) -> bool:
         """Check if Python version supports kw_only in dataclasses."""
-        return self._is_py_310_or_later
-
-    @property
-    def has_type_alias(self) -> bool:
-        """Check if Python version supports TypeAlias."""
         return self._is_py_310_or_later
 
     @property
@@ -243,7 +252,7 @@ class CodeFormatter:
             black_kwargs: dict[str, Any] = {}
             if wrap_string_literal is not None:
                 experimental_string_processing = wrap_string_literal
-            elif black.__version__ < "24.1.0":
+            elif black.__version__ < "24.1.0":  # pragma: no cover
                 experimental_string_processing = config.get("experimental-string-processing")
             else:
                 experimental_string_processing = config.get("preview", False) and (  # pragma: no cover
