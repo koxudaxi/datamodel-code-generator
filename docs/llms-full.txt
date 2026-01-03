@@ -65,6 +65,14 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 ---
 
+!!! warning "Omitting --output-model-type is deprecated"
+    Starting from version 0.53.0, omitting `--output-model-type` is deprecated.
+    The implicit default `pydantic.BaseModel` (Pydantic v1) will be removed in a future version.
+
+    We recommend using `--output-model-type pydantic_v2.BaseModel` for new projects.
+
+---
+
 ## 🏃 Quick Start
 
 ### 1️⃣ Create a schema file
@@ -24041,7 +24049,11 @@ Generate Pydantic models from JSON Schema definitions. See [Supported Data Types
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input person.json --input-file-type jsonschema --output model.py
+datamodel-codegen \
+    --input person.json \
+    --input-file-type jsonschema \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ## 📝 Example
@@ -24174,7 +24186,11 @@ Generate Pydantic models directly from JSON data. Under the hood, the generator 
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input pets.json --input-file-type json --output model.py
+datamodel-codegen \
+    --input pets.json \
+    --input-file-type json \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ## 📝 Example
@@ -24244,8 +24260,16 @@ Generate Pydantic models from GraphQL schema definitions.
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
+
+!!! tip "Why `--output-model-type`?"
+    Starting from version 0.53.0, explicitly specifying `--output-model-type` is recommended.
+    See [Omitting --output-model-type is deprecated](index.md#omitting---output-model-type-is-deprecated) for details.
 
 !!! note "📦 Installation"
     GraphQL support requires the `graphql` extra:
@@ -24387,7 +24411,12 @@ print(books)
 ## 🎨 Custom Scalar Types
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py --extra-template-data data.json
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --extra-template-data data.json \
+    --output model.py
 ```
 
 **schema.graphql**
@@ -24454,7 +24483,12 @@ as GraphQL servers typically don't expect this field in input data.
 Use the `--graphql-no-typename` option to exclude this field:
 
 ```bash
-datamodel-codegen --input schema.graphql --input-file-type graphql --output model.py --graphql-no-typename
+datamodel-codegen \
+    --input schema.graphql \
+    --input-file-type graphql \
+    --output-model-type pydantic_v2.BaseModel \
+    --graphql-no-typename \
+    --output model.py
 ```
 
 **Before (default):**
@@ -26773,7 +26807,11 @@ The `--aliases` option allows you to rename fields in the generated models. This
 ## 🚀 Basic Usage
 
 ```bash
-datamodel-codegen --input schema.json --output model.py --aliases aliases.json
+datamodel-codegen \
+    --input schema.json \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py \
+    --aliases aliases.json
 ```
 
 ## 📋 Alias File Format
@@ -27792,7 +27830,10 @@ Generated code is automatically formatted using code formatters. By default, `bl
     **Library users**: Explicitly pass `formatters=[Formatter.BLACK, Formatter.ISORT]` to suppress this warning.
 
 ```bash
-datamodel-codegen --input schema.yaml --output model.py
+datamodel-codegen \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 This runs the following formatters in order:
@@ -27821,10 +27862,18 @@ This runs the following formatters in order:
 
 ```bash
 # Use ruff for both linting and formatting
-datamodel-codegen --formatters ruff-check ruff-format --input schema.yaml --output model.py
+datamodel-codegen \
+    --formatters ruff-check ruff-format \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 
 # Use ruff-format as a black replacement
-datamodel-codegen --formatters isort ruff-format --input schema.yaml --output model.py
+datamodel-codegen \
+    --formatters isort ruff-format \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ### 🚫 Disable formatting
@@ -27868,7 +27917,11 @@ quote-style = "single"
 By default, string quote style is determined by your formatter configuration. To force double quotes regardless of configuration:
 
 ```bash
-datamodel-codegen --use-double-quotes --input schema.yaml --output model.py
+datamodel-codegen \
+    --use-double-quotes \
+    --input schema.yaml \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 This overrides `skip_string_normalization` in black config.
