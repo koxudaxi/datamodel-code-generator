@@ -530,6 +530,7 @@ DEFAULT_FIELD_KEYS: set[str] = {
     "title",
     "const",
     "default_factory",
+    "deprecated",
 }
 
 EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: set[str] = {

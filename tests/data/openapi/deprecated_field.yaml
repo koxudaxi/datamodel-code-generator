@@ -1,0 +1,22 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Deprecated Field Test
+paths: {}
+components:
+  schemas:
+    Service:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the service
+        location:
+          type: string
+          description: Location of the service (deprecated)
+          deprecated: true
+        old_id:
+          type: integer
+          deprecated: true
+      required:
+        - name

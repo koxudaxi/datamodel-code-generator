@@ -120,6 +120,7 @@ class DataModelField(DataModelFieldV1):
         "min_length",
         "max_length",
         "union_mode",
+        "deprecated",
     }
     constraints: Optional[Constraints] = None  # pyright: ignore[reportIncompatibleVariableOverride]  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "model_validate"
