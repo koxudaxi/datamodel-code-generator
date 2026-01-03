@@ -3538,6 +3538,40 @@ def test_main_openapi_msgspec_no_use_union_operator(output_file: Path) -> None:
     )
 
 
+@MSGSPEC_LEGACY_BLACK_SKIP
+def test_main_openapi_msgspec_oneof_with_null_no_use_union_operator(output_file: Path) -> None:
+    """Test msgspec Struct generation with oneOf containing null without union operator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_oneof_with_null.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_oneof_with_null_no_use_union_operator.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+            "--no-use-union-operator",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+def test_main_openapi_msgspec_inline_const(output_file: Path) -> None:
+    """Test msgspec Struct generation with inline const field."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "msgspec_inline_const.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="msgspec_inline_const.py",
+        extra_args=[
+            "--output-model-type",
+            "msgspec.Struct",
+        ],
+    )
+
+
 def test_main_openapi_referenced_default(output_file: Path) -> None:
     """Test OpenAPI generation with referenced default values."""
     run_main_and_assert(

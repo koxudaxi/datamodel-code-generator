@@ -281,7 +281,7 @@ class DataModelField(DataModelFieldBase):
         self.const = True
         self.nullable = False
         const = self.extras["const"]
-        if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover # Literal supports only str
+        if self.data_type.type == "str" and isinstance(const, str):  # pragma: no cover
             self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
 
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
@@ -411,7 +411,7 @@ class DataModelField(DataModelFieldBase):
                 return f"ClassVar[Annotated[{self.type_hint}, {meta}]]"
             return f"ClassVar[{self.type_hint}]"
 
-        if not self.use_annotated:  # pragma: no cover
+        if not self.use_annotated:
             return None
 
         meta = self._get_meta_string()
@@ -453,10 +453,10 @@ class DataModelField(DataModelFieldBase):
             # TODO: Check nested data_types
             if data_type.is_dict:
                 # TODO: Parse dict model for default
-                continue  # pragma: no cover
+                continue
             if data_type.is_list and len(data_type.data_types) == 1:
                 data_type_child = data_type.data_types[0]
-                if (  # pragma: no cover
+                if (
                     data_type_child.reference
                     and (isinstance(data_type_child.reference.source, (Struct, TypeAliasBase)))
                     and isinstance(self.default, list)
