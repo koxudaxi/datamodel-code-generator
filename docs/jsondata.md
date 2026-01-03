@@ -5,7 +5,11 @@ Generate Pydantic models directly from JSON data. Under the hood, the generator 
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input pets.json --input-file-type json --output model.py
+datamodel-codegen \
+    --input pets.json \
+    --input-file-type json \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ## 📝 Example

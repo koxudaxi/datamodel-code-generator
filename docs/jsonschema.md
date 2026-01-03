@@ -5,7 +5,11 @@ Generate Pydantic models from JSON Schema definitions. See [Supported Data Types
 ## 🚀 Quick Start
 
 ```bash
-datamodel-codegen --input person.json --input-file-type jsonschema --output model.py
+datamodel-codegen \
+    --input person.json \
+    --input-file-type jsonschema \
+    --output-model-type pydantic_v2.BaseModel \
+    --output model.py
 ```
 
 ## 📝 Example
