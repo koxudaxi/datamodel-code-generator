@@ -507,9 +507,7 @@ def test_generate_signature_matches_baseline() -> None:
 
         GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
-        for name, param in baseline_params.items():  # pragma: no branch
-            if param.default is inspect.Parameter.empty:
-                continue
+        for name, param in baseline_params.items():
             config_default = GenerateConfig.model_fields[name].default
             assert config_default == param.default, (
                 f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
@@ -654,17 +652,12 @@ def test_generate_config_defaults_match_generate_signature() -> None:
     expected_sig = inspect.signature(_baseline_generate)
     expected_params = _kwonly_by_name(expected_sig)
 
-    for field_name, field_info in GenerateConfig.model_fields.items():  # pragma: no branch
+    for field_name, field_info in GenerateConfig.model_fields.items():
         if field_name not in expected_params:
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
-
-        # Handle Parameter.empty vs None
-        if param.default is inspect.Parameter.empty:
-            # No default in signature means required, but Config may have None default
-            continue
 
         assert config_default == param.default, (
             f"Default mismatch for {field_name}: Config={config_default}, generate()={param.default}"
@@ -679,15 +672,12 @@ def test_parser_config_defaults_match_parser_signature() -> None:
     expected_sig = inspect.signature(_BaselineParser.__init__)
     expected_params = _kwonly_by_name(expected_sig)
 
-    for field_name, field_info in ParserConfig.model_fields.items():  # pragma: no branch
+    for field_name, field_info in ParserConfig.model_fields.items():
         if field_name not in expected_params:
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
-
-        if param.default is inspect.Parameter.empty:
-            continue
 
         if callable(param.default) and config_default is None:
             continue
@@ -705,15 +695,12 @@ def test_parse_config_defaults_match_parse_signature() -> None:
     expected_sig = inspect.signature(_BaselineParser.parse)
     expected_params = _params_by_name(expected_sig)
 
-    for field_name, field_info in ParseConfig.model_fields.items():  # pragma: no branch
+    for field_name, field_info in ParseConfig.model_fields.items():
         if field_name not in expected_params:
             continue
 
         param = expected_params[field_name]
         config_default = field_info.default
-
-        if param.default is inspect.Parameter.empty:
-            continue
 
         assert config_default == param.default, (
             f"Default mismatch for {field_name}: Config={config_default}, Parser.parse()={param.default}"

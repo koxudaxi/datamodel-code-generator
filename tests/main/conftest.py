@@ -488,7 +488,7 @@ def _validate_output_files(
             _import_package(output_path)
 
 
-def _import_package(output_path: Path) -> None:  # noqa: PLR0912
+def _import_package(output_path: Path) -> None:
     """Import generated packages to validate they can be loaded."""
     if (output_path / "__init__.py").exists():
         packages = [(output_path.parent, output_path.name)]
@@ -534,10 +534,9 @@ def _import_package(output_path: Path) -> None:  # noqa: PLR0912
         _validation_stats.record_error(str(output_path), f"{type(exception).__name__}: {exception}")
         raise
     finally:
-        for parent_directory, _ in packages:  # pragma: no branch
-            if str(parent_directory) in sys.path:
-                sys.path.remove(str(parent_directory))
-        for module_name in imported_modules:  # pragma: no branch
+        for parent_directory, _ in packages:
+            sys.path.remove(str(parent_directory))
+        for module_name in imported_modules:
             sys.modules.pop(module_name, None)
 
 
