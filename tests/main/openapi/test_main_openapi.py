@@ -4856,3 +4856,16 @@ def test_main_openapi_include_paths_warning_without_paths_scope() -> None:
         assert any(
             "--openapi-include-paths has no effect without --openapi-scopes paths" in msg for msg in warning_messages
         )
+
+
+@SKIP_PYDANTIC_V1
+def test_main_openapi_deprecated_field(output_file: Path) -> None:
+    """Test OpenAPI generation with deprecated field property."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "deprecated_field.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="deprecated_field.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
