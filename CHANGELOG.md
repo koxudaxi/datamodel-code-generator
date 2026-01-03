@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.52.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.52.1) - 2026-01-03
+
+## What's Changed
+* Add --validators option for Pydantic v2 field validators by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2906
+* Add dynamic model generation support by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2901
+* Sync zensical.toml nav with docs directory by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2908
+* Add deprecation warning for default output-model-type by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2910
+* Add deprecation warning and explicit --output-model-type to docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2911
+* Add llms.txt generator for LLM-friendly documentation by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2912
+* Move coverage fail_under check to combined coverage environment by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2909
+* Fix YAML scientific notation parsing as float by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2913
+* Add deprecated field support for Pydantic v2 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2915
+* Add deprecation warning for Pydantic v2 without --use-annotated by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2914
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.52.0...0.52.1
+
+---
+
 ## [0.52.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.52.0) - 2026-01-02
 
 ## Breaking Changes
