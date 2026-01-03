@@ -12,6 +12,10 @@ datamodel-codegen \
     --output model.py
 ```
 
+!!! tip "Why `--output-model-type`?"
+    Starting from version 0.53.0, explicitly specifying `--output-model-type` is recommended.
+    See [Omitting --output-model-type is deprecated](index.md#omitting---output-model-type-is-deprecated) for details.
+
 !!! note "📦 Installation"
     GraphQL support requires the `graphql` extra:
     ```bash
