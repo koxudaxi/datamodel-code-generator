@@ -27,4 +27,4 @@ jobs:
         uses: codespell-project/actions-codespell@v2
         with:
           exclude_file: CODE_OF_CONDUCT.md
-          skip: ./docs/cli-reference
+          skip: ./docs/cli-reference,./docs/llms.txt,./docs/llms-full.txt
