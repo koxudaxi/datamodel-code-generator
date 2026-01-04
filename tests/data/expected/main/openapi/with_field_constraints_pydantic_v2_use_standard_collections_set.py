@@ -8,6 +8,7 @@ from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
+    __hash__ = object.__hash__
     id: int = Field(..., ge=0, le=9223372036854775807)
     name: str = Field(..., max_length=256)
     tag: str | None = Field(None, max_length=64)

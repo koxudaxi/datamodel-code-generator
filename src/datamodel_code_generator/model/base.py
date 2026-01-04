@@ -678,6 +678,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
         self.reference.source = self
 
+        self.extra_template_data: dict[str, Any]
         if extra_template_data is not None:
             # The supplied defaultdict will either create a new entry,
             # or already contain a predefined entry for this type
