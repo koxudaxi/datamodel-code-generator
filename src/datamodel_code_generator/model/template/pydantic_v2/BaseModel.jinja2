@@ -7,13 +7,16 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ description | escape_docstring | indent(4) }}
     """
 {%- endif %}
-{%- if not fields and not description and not config %}
+{%- if not fields and not description and not config and not set_item_hashable %}
     pass
 {%- endif %}
 {%- if config %}
 {%- filter indent(4) %}
 {% include 'ConfigDict.jinja2' %}
 {%- endfilter %}
+{%- endif %}
+{%- if set_item_hashable %}
+    __hash__ = object.__hash__
 {%- endif %}
 {%- for field in fields %}
     {%- if not field.annotated and field.field %}

@@ -7903,3 +7903,21 @@ def test_validators_requires_pydantic_v2(output_file: Path, tmp_path: Path, caps
         capsys=capsys,
         expected_stderr_contains="--validators option requires Pydantic v2",
     )
+
+
+@PYDANTIC_V2_SKIP
+def test_unique_items_enum_set(output_file: Path) -> None:
+    """Test set with enum items does not add __hash__ to enum (already hashable)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unique_items_enum_set.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unique_items_enum_set.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-unique-items-as-set",
+            "--use-standard-collections",
+        ],
+    )

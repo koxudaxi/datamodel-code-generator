@@ -1548,6 +1548,25 @@ class Parser(ABC, Generic[ParserConfigT]):
                         model_field.default = converted_default
                     model_field.replace_data_type(set_data_type)
 
+    def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
+        """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
+        set_item_references: set[str] = set()
+
+        for model in models:
+            for model_field in model.fields:
+                for data_type in model_field.data_type.all_data_types:
+                    if data_type.is_set or data_type.is_frozen_set:
+                        for item_type in data_type.data_types:
+                            for nested_type in item_type.all_data_types:
+                                if nested_type.reference:
+                                    set_item_references.add(nested_type.reference.path)
+
+        for model in models:
+            if model.reference.path in set_item_references:
+                if isinstance(model, Enum):
+                    continue
+                model.extra_template_data["set_item_hashable"] = True
+
     @classmethod
     def __set_reference_default_value_to_field(cls, models: list[DataModel]) -> None:
         for model in models:
@@ -2932,6 +2951,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.__alias_shadowed_imports(models, all_module_fields)
         self.__override_required_field(models)
         self.__replace_unique_list_to_set(models)
+        self.__mark_set_item_models_hashable(models)
         self.__change_from_import(
             models,
             imports,
