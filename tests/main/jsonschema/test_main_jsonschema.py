@@ -2959,6 +2959,47 @@ def test_main_jsonschema_base_class_map(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
+    """Test customBasePath with list of base classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_base_paths_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_base_paths_list.py",
+    )
+
+
+def test_main_jsonschema_base_class_map_list(output_file: Path) -> None:
+    """Test base_class_map with list values for multiple inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"], "Admin": "admin.AdminBase"}',
+        ],
+    )
+
+
+def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
+    """Test base_class_map with empty strings list (falls back to default)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": ["", ""]}',
+        ],
+    )
+
+
 def test_long_description(output_file: Path) -> None:
     """Test long description handling."""
     run_main_and_assert(

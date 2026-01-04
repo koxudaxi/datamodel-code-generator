@@ -780,7 +780,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.class_decorators: list[str] = config.class_decorators or []
 
         self.base_class: str | None = config.base_class
-        self.base_class_map: dict[str, str] | None = config.base_class_map
+        self.base_class_map: dict[str, str | list[str]] | None = config.base_class_map
         self.target_python_version: PythonVersion = config.target_python_version
         self.results: list[DataModel] = []
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
@@ -1033,11 +1033,27 @@ class Parser(ABC, Generic[ParserConfigT]):
             new_import = Import.from_full_path(additional_import_string)
             self.imports.append(new_import)
 
-    def _resolve_base_class(self, class_name: str, custom_base_path: str | None = None) -> str | None:
-        """Resolve base class with priority: base_class_map > customBasePath > base_class."""
+    def _resolve_base_class(
+        self, class_name: str, custom_base_path: str | list[str] | None = None
+    ) -> str | list[str] | None:
+        """Resolve base class(es) with priority: base_class_map > customBasePath > base_class."""
+
+        def normalize(value: str | list[str] | None) -> str | list[str] | None:
+            if value is None:  # pragma: no cover
+                return None
+            if isinstance(value, list):
+                seen: set[str] = set()
+                result = [v for v in value if isinstance(v, str) and v and v not in seen and not seen.add(v)]  # type: ignore[func-returns-value]
+                if not result:
+                    return None
+                return result[0] if len(result) == 1 else result
+            return value or None
+
         if self.base_class_map and class_name in self.base_class_map:
-            return self.base_class_map[class_name]
-        return custom_base_path or self.base_class
+            return normalize(self.base_class_map[class_name])
+        if custom_base_path:
+            return normalize(custom_base_path)
+        return self.base_class or None
 
     def _get_text_from_url(self, url: str) -> str:
         from datamodel_code_generator.http import DEFAULT_HTTP_TIMEOUT, get_body  # noqa: PLC0415

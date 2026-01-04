@@ -83,7 +83,7 @@ class GenerateConfig(BaseModel):
     target_python_version: PythonVersion = PythonVersionMin
     target_pydantic_version: TargetPydanticVersion | None = None
     base_class: str = ""
-    base_class_map: dict[str, str] | None = None
+    base_class_map: dict[str, str | list[str]] | None = None
     additional_imports: list[str] | None = None
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
@@ -225,7 +225,7 @@ class ParserConfig(BaseModel):
     data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager
     data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField
     base_class: str | None = None
-    base_class_map: dict[str, str] | None = None
+    base_class_map: dict[str, str | list[str]] | None = None
     additional_imports: list[str] | None = None
     class_decorators: list[str] | None = None
     custom_template_dir: Path | None = None
