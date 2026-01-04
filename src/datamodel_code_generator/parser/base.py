@@ -1571,7 +1571,8 @@ class Parser(ABC, Generic[ParserConfigT]):
             if model.reference.path in set_item_references:
                 if isinstance(model, Enum):
                     continue
-                model.extra_template_data["set_item_hashable"] = True
+                class_body_lines = model.extra_template_data.setdefault("class_body_lines", [])
+                class_body_lines.append("__hash__ = object.__hash__")
 
     @classmethod
     def __set_reference_default_value_to_field(cls, models: list[DataModel]) -> None:
