@@ -1565,6 +1565,32 @@ class Parser(ABC, Generic[ParserConfigT]):
                     model_field.replace_data_type(set_data_type)
 
     @classmethod
+    def __collect_set_item_references(cls, models: list[DataModel]) -> set[str]:
+        """Collect reference paths of all types used as set/frozenset items."""
+        references: set[str] = set()
+        for model in models:
+            for field in model.fields:
+                for data_type in field.data_type.all_data_types:
+                    if data_type.is_set or data_type.is_frozen_set:
+                        for item_type in data_type.data_types:
+                            references.update(
+                                nested.reference.path for nested in item_type.all_data_types if nested.reference
+                            )
+        return references
+
+    @classmethod
+    def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
+        """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
+        set_item_references = cls.__collect_set_item_references(models)
+
+        for model in models:
+            if model.reference.path in set_item_references:
+                if isinstance(model, Enum):
+                    continue
+                class_body_lines = model.extra_template_data.setdefault("class_body_lines", [])
+                class_body_lines.append("__hash__ = object.__hash__")
+
+    @classmethod
     def __set_reference_default_value_to_field(cls, models: list[DataModel]) -> None:
         for model in models:
             for model_field in model.fields:
@@ -2981,6 +3007,8 @@ class Parser(ABC, Generic[ParserConfigT]):
         module_to_import: dict[ModulePath, Imports],
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
+        all_models = [model for ctx in contexts for model in ctx.models]
+        self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
 
         for ctx in contexts:

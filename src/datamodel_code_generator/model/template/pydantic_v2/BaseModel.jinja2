@@ -7,7 +7,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ description | escape_docstring | indent(4) }}
     """
 {%- endif %}
-{%- if not fields and not description and not config %}
+{%- if not fields and not description and not config and not class_body_lines %}
     pass
 {%- endif %}
 {%- if config %}
@@ -15,6 +15,9 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
 {% include 'ConfigDict.jinja2' %}
 {%- endfilter %}
 {%- endif %}
+{%- for line in class_body_lines %}
+    {{ line }}
+{%- endfor %}
 {%- for field in fields %}
     {%- if not field.annotated and field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}

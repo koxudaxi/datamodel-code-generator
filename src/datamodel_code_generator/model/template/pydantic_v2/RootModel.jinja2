@@ -27,7 +27,10 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
 {% include 'ConfigDict.jinja2' %}
 {%- endfilter %}
 {%- endif %}
-{%- if not fields and not description %}
+{%- for line in class_body_lines %}
+    {{ line }}
+{%- endfor %}
+{%- if not fields and not description and not config and not class_body_lines %}
     pass
 {%- else %}
     {%- set field = fields[0] %}
