@@ -806,6 +806,8 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.use_subclass_enum: bool = config.use_subclass_enum
         self.use_specialized_enum: bool = config.use_specialized_enum
         self.strict_nullable: bool = config.strict_nullable
+        self.jsonschema_version = config.jsonschema_version
+        self.openapi_version = config.openapi_version
         self.use_generic_container_types: bool = config.use_generic_container_types
         self.use_union_operator: bool = config.use_union_operator
         self.enable_faux_immutability: bool = config.enable_faux_immutability
