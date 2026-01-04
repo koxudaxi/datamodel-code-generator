@@ -1548,18 +1548,24 @@ class Parser(ABC, Generic[ParserConfigT]):
                         model_field.default = converted_default
                     model_field.replace_data_type(set_data_type)
 
-    def __mark_set_item_models_hashable(self, models: list[DataModel]) -> None:
-        """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
-        set_item_references: set[str] = set()
-
+    @classmethod
+    def __collect_set_item_references(cls, models: list[DataModel]) -> set[str]:
+        """Collect reference paths of all types used as set/frozenset items."""
+        references: set[str] = set()
         for model in models:
-            for model_field in model.fields:
-                for data_type in model_field.data_type.all_data_types:
+            for field in model.fields:
+                for data_type in field.data_type.all_data_types:
                     if data_type.is_set or data_type.is_frozen_set:
                         for item_type in data_type.data_types:
-                            for nested_type in item_type.all_data_types:
-                                if nested_type.reference:
-                                    set_item_references.add(nested_type.reference.path)
+                            references.update(
+                                nested.reference.path for nested in item_type.all_data_types if nested.reference
+                            )
+        return references
+
+    @classmethod
+    def __mark_set_item_models_hashable(cls, models: list[DataModel]) -> None:
+        """Mark models used as set/frozenset items with hash flag for __hash__ generation."""
+        set_item_references = cls.__collect_set_item_references(models)
 
         for model in models:
             if model.reference.path in set_item_references:
