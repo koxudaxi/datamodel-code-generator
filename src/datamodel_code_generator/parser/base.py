@@ -2957,7 +2957,6 @@ class Parser(ABC, Generic[ParserConfigT]):
         self.__alias_shadowed_imports(models, all_module_fields)
         self.__override_required_field(models)
         self.__replace_unique_list_to_set(models)
-        self.__mark_set_item_models_hashable(models)
         self.__change_from_import(
             models,
             imports,
@@ -2991,6 +2990,8 @@ class Parser(ABC, Generic[ParserConfigT]):
         module_to_import: dict[ModulePath, Imports],
     ) -> None:
         """Finalize module processing: apply generic base class and remove unused imports."""
+        all_models = [model for ctx in contexts for model in ctx.models]
+        self.__mark_set_item_models_hashable(all_models)
         self.__apply_generic_base_class(contexts)
 
         for ctx in contexts:
