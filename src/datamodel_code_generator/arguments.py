@@ -26,9 +26,11 @@ from datamodel_code_generator.enums import (
     FieldTypeCollisionStrategy,
     InputFileType,
     InputModelRefStrategy,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     StrictTypes,
@@ -145,6 +147,24 @@ base_options.add_argument(
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
     choices=[i.value for i in InputFileType],
+)
+base_options.add_argument(
+    "--jsonschema-version",
+    help=(
+        "JSON Schema version (default: auto). "
+        "When 'auto', version is detected from $schema field. "
+        "Specify explicitly to override detection or when $schema is missing."
+    ),
+    choices=[v.value for v in JsonSchemaVersion],
+)
+base_options.add_argument(
+    "--openapi-version",
+    help=(
+        "OpenAPI version (default: auto). "
+        "When 'auto', version is detected from openapi/swagger field. "
+        "Specify explicitly to override detection."
+    ),
+    choices=[v.value for v in OpenAPIVersion],
 )
 base_options.add_argument(
     "--output",
