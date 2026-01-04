@@ -52,6 +52,9 @@ MANUAL_DOCS: frozenset[str] = frozenset({
     "--profile",
     "--no-color",
     "--generate-prompt",
+    # Schema version options - placeholders for future version-specific behavior
+    "--jsonschema-version",
+    "--openapi-version",
 })
 
 # Backward compatibility alias

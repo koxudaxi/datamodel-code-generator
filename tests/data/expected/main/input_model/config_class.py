@@ -77,6 +77,11 @@ InputFileType: TypeAlias = Literal[
 ]
 
 
+JsonSchemaVersion: TypeAlias = Literal[
+    'auto', 'draft-04', 'draft-07', '2019-09', '2020-12'
+]
+
+
 LiteralType: TypeAlias = Literal['all', 'one', 'none']
 
 
@@ -91,6 +96,9 @@ NamingStrategy: TypeAlias = Literal[
 OpenAPIScope: TypeAlias = Literal[
     'schemas', 'paths', 'tags', 'parameters', 'webhooks', 'requestbodies'
 ]
+
+
+OpenAPIVersion: TypeAlias = Literal['auto', '2.0', '3.0', '3.1']
 
 
 PythonVersion: TypeAlias = Literal['3.10', '3.11', '3.12', '3.13', '3.14']
@@ -117,6 +125,8 @@ ValidatorMode: TypeAlias = Literal['before', 'after', 'wrap', 'plain']
 class GenerateConfig(TypedDict):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
+    jsonschema_version: NotRequired[JsonSchemaVersion]
+    openapi_version: NotRequired[OpenAPIVersion]
     output: NotRequired[str | None]
     output_model_type: NotRequired[DataModelType]
     target_python_version: NotRequired[PythonVersion]

@@ -63,9 +63,11 @@ from datamodel_code_generator import (
     InputFileType,
     InputModelRefStrategy,
     InvalidClassNameError,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -491,6 +493,8 @@ class Config(BaseModel):
     input_model: Optional[list[str]] = None  # noqa: UP045
     input_model_ref_strategy: Optional[InputModelRefStrategy] = None  # noqa: UP045
     input_file_type: InputFileType = InputFileType.Auto
+    jsonschema_version: JsonSchemaVersion = JsonSchemaVersion.Auto
+    openapi_version: OpenAPIVersion = OpenAPIVersion.Auto
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     output: Optional[Path] = None  # noqa: UP045
     check: bool = False
@@ -938,6 +942,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     result = generate(
         input_=input_,
         input_file_type=config.input_file_type,
+        jsonschema_version=config.jsonschema_version,
+        openapi_version=config.openapi_version,
         output=output,
         output_model_type=config.output_model_type,
         target_python_version=config.target_python_version,

@@ -24,9 +24,11 @@ if TYPE_CHECKING:
         FieldTypeCollisionStrategy,
         GraphQLScope,
         InputFileType,
+        JsonSchemaVersion,
         ModuleSplitMode,
         NamingStrategy,
         OpenAPIScope,
+        OpenAPIVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -41,6 +43,8 @@ if TYPE_CHECKING:
 class GenerateConfigDict(TypedDict):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
+    jsonschema_version: NotRequired[JsonSchemaVersion]
+    openapi_version: NotRequired[OpenAPIVersion]
     output: NotRequired[Path | None]
     output_model_type: NotRequired[DataModelType]
     target_python_version: NotRequired[PythonVersion]

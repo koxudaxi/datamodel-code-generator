@@ -19,8 +19,10 @@ if TYPE_CHECKING:
         CollapseRootModelsNameStrategy,
         DataclassArguments,
         FieldTypeCollisionStrategy,
+        JsonSchemaVersion,
         NamingStrategy,
         OpenAPIScope,
+        OpenAPIVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -45,6 +47,8 @@ class ParserConfigDict(TypedDict):
     data_model_root_type: NotRequired[type[DataModel]]
     data_type_manager_type: NotRequired[type[DataTypeManager]]
     data_model_field_type: NotRequired[type[DataModelFieldBase]]
+    jsonschema_version: NotRequired[JsonSchemaVersion]
+    openapi_version: NotRequired[OpenAPIVersion]
     base_class: NotRequired[str | None]
     base_class_map: NotRequired[dict[str, str] | None]
     additional_imports: NotRequired[list[str] | None]

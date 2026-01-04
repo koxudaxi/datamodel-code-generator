@@ -22,9 +22,11 @@ from datamodel_code_generator.enums import (
     FieldTypeCollisionStrategy,
     GraphQLScope,
     InputFileType,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -78,6 +80,8 @@ class GenerateConfig(BaseModel):
 
     input_filename: str | None = None
     input_file_type: InputFileType = InputFileType.Auto
+    jsonschema_version: JsonSchemaVersion = JsonSchemaVersion.Auto
+    openapi_version: OpenAPIVersion = OpenAPIVersion.Auto
     output: Path | None = None
     output_model_type: DataModelType = DataModelType.PydanticBaseModel
     target_python_version: PythonVersion = PythonVersionMin
@@ -224,6 +228,8 @@ class ParserConfig(BaseModel):
     data_model_root_type: type[DataModel] = pydantic_model.CustomRootType
     data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager
     data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField
+    jsonschema_version: JsonSchemaVersion = JsonSchemaVersion.Auto
+    openapi_version: OpenAPIVersion = OpenAPIVersion.Auto
     base_class: str | None = None
     base_class_map: dict[str, str] | None = None
     additional_imports: list[str] | None = None

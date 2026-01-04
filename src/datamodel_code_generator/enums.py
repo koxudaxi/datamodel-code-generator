@@ -240,6 +240,33 @@ class StrictTypes(Enum):
     bool = "bool"
 
 
+class JsonSchemaVersion(Enum):
+    """JSON Schema draft versions.
+
+    Used to specify which JSON Schema draft to use for parsing and validation.
+    Different drafts have different features and semantics.
+    """
+
+    Auto = "auto"
+    Draft04 = "draft-04"
+    Draft07 = "draft-07"
+    Draft201909 = "2019-09"
+    Draft202012 = "2020-12"
+
+
+class OpenAPIVersion(Enum):
+    """OpenAPI specification versions.
+
+    Used to specify which OpenAPI version to use for parsing.
+    Different versions have different schema semantics (e.g., nullable handling).
+    """
+
+    Auto = "auto"
+    V20 = "2.0"
+    V30 = "3.0"
+    V31 = "3.1"
+
+
 __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
@@ -256,9 +283,11 @@ __all__ = [
     "GraphQLScope",
     "InputFileType",
     "InputModelRefStrategy",
+    "JsonSchemaVersion",
     "ModuleSplitMode",
     "NamingStrategy",
     "OpenAPIScope",
+    "OpenAPIVersion",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "StrictTypes",
