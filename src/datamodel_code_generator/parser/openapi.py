@@ -230,6 +230,7 @@ class OpenAPIParser(JsonSchemaParser):
         # https://swagger.io/docs/specification/data-models/data-types/#null
         # OpenAPI 3.1 does allow `null` in the `type` field and is equivalent to
         # a `nullable` flag on the property itself
+        # For backward compatibility, process nullable the same way for all versions
         if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
             obj.type = [obj.type, "null"]
 

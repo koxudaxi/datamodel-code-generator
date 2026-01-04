@@ -4869,3 +4869,22 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
         expected_file="deprecated_field.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+@SKIP_PYDANTIC_V1
+def test_main_openapi_version_nullable_v31(output_file: Path) -> None:
+    """Test that nullable is processed correctly in OpenAPI 3.1 mode with --openapi-version."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "openapi_version_nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="openapi_version_nullable_v31.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--strict-nullable",
+            "--openapi-version",
+            "3.1",
+        ],
+    )

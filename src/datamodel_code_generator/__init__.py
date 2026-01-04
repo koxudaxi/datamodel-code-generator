@@ -290,42 +290,6 @@ def is_schema(data: dict) -> bool:
     return isinstance(data.get("properties"), dict)
 
 
-def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
-    """Detect JSON Schema version from $schema field.
-
-    Returns Auto if version cannot be detected, allowing all features.
-    """
-    schema = data.get("$schema", "")
-    if not isinstance(schema, str):
-        return JsonSchemaVersion.Auto
-    if "draft-04" in schema:
-        return JsonSchemaVersion.Draft04
-    if "draft-07" in schema:
-        return JsonSchemaVersion.Draft07
-    if "2019-09" in schema:
-        return JsonSchemaVersion.Draft201909
-    if "2020-12" in schema:
-        return JsonSchemaVersion.Draft202012
-    return JsonSchemaVersion.Auto
-
-
-def detect_openapi_version(data: dict[str, Any]) -> OpenAPIVersion:
-    """Detect OpenAPI version from openapi/swagger field.
-
-    Returns Auto if version cannot be detected, allowing all features.
-    """
-    if "swagger" in data:
-        return OpenAPIVersion.V20
-    openapi = data.get("openapi", "")
-    if not isinstance(openapi, str):
-        return OpenAPIVersion.Auto
-    if openapi.startswith("3.1"):
-        return OpenAPIVersion.V31
-    if openapi.startswith("3.0"):
-        return OpenAPIVersion.V30
-    return OpenAPIVersion.Auto
-
-
 RAW_DATA_TYPES: list[InputFileType] = [
     InputFileType.Json,
     InputFileType.Yaml,
@@ -374,35 +338,6 @@ class InvalidFileFormatError(Error):
         else:
             message = f"Invalid file format: {error_detail}"
         super().__init__(message=message)
-
-
-class SchemaVersionError(Error):
-    """Base exception for schema version-related errors."""
-
-
-class UnsupportedVersionError(SchemaVersionError):
-    """Raised when an unsupported schema version is encountered."""
-
-    def __init__(self, version: str, supported: list[str]) -> None:
-        """Initialize with version and list of supported versions."""
-        self.version = version
-        self.supported = supported
-        message = f"Unsupported schema version: {version}. Supported versions: {', '.join(supported)}"
-        super().__init__(message=message)
-
-
-class SchemaValidationError(SchemaVersionError):
-    """Raised when strict validation fails for a schema construct."""
-
-    def __init__(self, message: str, version: str, feature: str) -> None:
-        """Initialize with message, version, and feature name."""
-        self.version = version
-        self.feature = feature
-        super().__init__(message=f"[{version}] {message}")
-
-
-class VersionMismatchWarning(UserWarning):
-    """Warning for version-specific feature usage in wrong version."""
 
 
 class SchemaParseError(Error):
@@ -1044,14 +979,8 @@ __all__ = [
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "SchemaParseError",
-    "SchemaValidationError",
-    "SchemaVersionError",
     "TargetPydanticVersion",
-    "UnsupportedVersionError",
-    "VersionMismatchWarning",
     "clear_dynamic_models_cache",  # noqa: F822
-    "detect_jsonschema_version",
-    "detect_openapi_version",
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]
