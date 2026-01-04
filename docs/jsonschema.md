@@ -124,9 +124,90 @@ class Defaults(BaseModel):
 
 ---
 
+## Custom Base Class with `customBasePath`
+
+You can specify custom base classes directly in your JSON Schema using the `customBasePath` extension. This allows you to define base classes at the schema level without using CLI options.
+
+### Single Base Class
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "customBasePath": "myapp.models.UserBase",
+  "properties": {
+    "name": {"type": "string"},
+    "email": {"type": "string"}
+  },
+  "required": ["name", "email"]
+}
+```
+
+**Generated Output:**
+
+```python
+from __future__ import annotations
+
+from myapp.models import UserBase
+
+
+class User(UserBase):
+    name: str
+    email: str
+```
+
+### Multiple Base Classes (Mixins)
+
+You can also specify multiple base classes as a list to implement mixin patterns:
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "User",
+  "type": "object",
+  "customBasePath": ["mixins.AuditMixin", "mixins.TimestampMixin"],
+  "properties": {
+    "name": {"type": "string"},
+    "email": {"type": "string"}
+  },
+  "required": ["name", "email"]
+}
+```
+
+**Generated Output:**
+
+```python
+from __future__ import annotations
+
+from mixins import AuditMixin, TimestampMixin
+
+
+class User(AuditMixin, TimestampMixin):
+    name: str
+    email: str
+```
+
+!!! note "Mixin Usage"
+    When using multiple base classes, the specified classes are used directly without adding `BaseModel`.
+    Ensure your mixins inherit from `pydantic.BaseModel` if you need Pydantic model behavior.
+
+### Priority Resolution
+
+When multiple base class configurations are present, they are resolved in this order:
+
+1. **`--base-class-map`** (CLI option) - Highest priority
+2. **`customBasePath`** (JSON Schema extension)
+3. **`--base-class`** (CLI option) - Lowest priority (default for all models)
+
+This allows you to set a default base class with `--base-class`, override specific models in the schema with `customBasePath`, and further override at the CLI level with `--base-class-map`.
+
+---
+
 ## 📖 See Also
 
 - 🖥️ [CLI Reference](cli-reference/index.md) - Complete CLI options reference
 - 🔧 [CLI Reference: Typing Customization](cli-reference/typing-customization.md) - Type annotation options
 - 🏷️ [CLI Reference: Field Customization](cli-reference/field-customization.md) - Field naming and constraint options
 - 📊 [Supported Data Types](supported-data-types.md) - JSON Schema data type support
+- 🏗️ [CLI Reference: Model Customization](cli-reference/model-customization.md) - Base class and model customization options
