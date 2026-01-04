@@ -499,7 +499,7 @@ class Config(BaseModel):
     target_python_version: PythonVersion = PythonVersionMin
     target_pydantic_version: Optional[TargetPydanticVersion] = None  # noqa: UP045
     base_class: str = ""
-    base_class_map: Optional[dict[str, str]] = None  # noqa: UP045
+    base_class_map: Optional[dict[str, str | list[str]]] = None  # noqa: UP045
     additional_imports: Optional[list[str]] = None  # noqa: UP045
     class_decorators: Optional[list[str]] = None  # noqa: UP045
     custom_template_dir: Optional[Path] = None  # noqa: UP045

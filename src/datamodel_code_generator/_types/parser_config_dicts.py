@@ -46,7 +46,7 @@ class ParserConfigDict(TypedDict):
     data_type_manager_type: NotRequired[type[DataTypeManager]]
     data_model_field_type: NotRequired[type[DataModelFieldBase]]
     base_class: NotRequired[str | None]
-    base_class_map: NotRequired[dict[str, str] | None]
+    base_class_map: NotRequired[dict[str, str | list[str]] | None]
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[Path | None]

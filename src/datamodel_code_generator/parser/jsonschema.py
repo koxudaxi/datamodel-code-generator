@@ -361,7 +361,7 @@ class JsonSchemaObject(BaseModel):
     default: Any = None
     id: Optional[str] = Field(default=None, alias="$id")  # noqa: UP045
     custom_type_path: Optional[str] = Field(default=None, alias="customTypePath")  # noqa: UP045
-    custom_base_path: Optional[str] = Field(default=None, alias="customBasePath")  # noqa: UP045
+    custom_base_path: str | list[str] | None = Field(default=None, alias="customBasePath")
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
     if is_pydantic_v2():

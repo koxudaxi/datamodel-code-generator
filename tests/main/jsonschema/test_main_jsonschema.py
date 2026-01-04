@@ -2931,7 +2931,20 @@ def test_main_jsonschema_custom_base_path(output_file: Path) -> None:
     option_description="""Specify different base classes for specific models via JSON mapping.
 
 The `--base-class-map` option allows you to assign different base classes
-to specific models. Priority: base-class-map > customBasePath > base-class.""",
+to specific models. This is useful when you want selective base class inheritance,
+for example, applying custom base classes only to specific models while leaving
+others with the default `BaseModel`.
+
+Priority: `--base-class-map` > `customBasePath` (schema extension) > `--base-class`
+
+You can specify either a single base class as a string, or multiple base classes
+(mixins) as a list:
+
+- Single: `{"Person": "custom.bases.PersonBase"}`
+- Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
+
+When using multiple base classes, the specified classes are used directly without
+adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.""",
     input_schema="jsonschema/base_class_map.json",
     cli_args=[
         "--base-class-map",
@@ -2955,6 +2968,47 @@ def test_main_jsonschema_base_class_map(output_file: Path) -> None:
         extra_args=[
             "--base-class-map",
             '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
+        ],
+    )
+
+
+def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
+    """Test customBasePath with list of base classes."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "custom_base_paths_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="custom_base_paths_list.py",
+    )
+
+
+def test_main_jsonschema_base_class_map_list(output_file: Path) -> None:
+    """Test base_class_map with list values for multiple inheritance."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"], "Admin": "admin.AdminBase"}',
+        ],
+    )
+
+
+def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
+    """Test base_class_map with empty strings list (falls back to default)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": ["", ""]}',
         ],
     )
 

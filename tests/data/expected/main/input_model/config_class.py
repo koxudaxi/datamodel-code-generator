@@ -122,7 +122,7 @@ class GenerateConfig(TypedDict):
     target_python_version: NotRequired[PythonVersion]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
     base_class: NotRequired[str]
-    base_class_map: NotRequired[dict[str, str] | None]
+    base_class_map: NotRequired[dict[str, str | list[str]] | None]
     additional_imports: NotRequired[list[str] | None]
     class_decorators: NotRequired[list[str] | None]
     custom_template_dir: NotRequired[str | None]
