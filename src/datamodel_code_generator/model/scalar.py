@@ -67,9 +67,9 @@ class _DataTypeScalarBase(DataModel):
             extra_template_data[scalar_name] = defaultdict(dict)
 
         # py_type
-        py_type = extra_template_data[scalar_name].get(
+        py_type = extra_template_data[reference.original_name].get(
             "py_type",
-            DEFAULT_GRAPHQL_SCALAR_TYPES.get(reference.name, DEFAULT_GRAPHQL_SCALAR_TYPE),
+            DEFAULT_GRAPHQL_SCALAR_TYPES.get(reference.original_name, DEFAULT_GRAPHQL_SCALAR_TYPE),
         )
         extra_template_data[scalar_name]["py_type"] = py_type
 
