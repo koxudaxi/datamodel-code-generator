@@ -762,6 +762,21 @@ def test_main_graphql_dataclass_frozen_keyword_only(output_file: Path) -> None:
     )
 
 
+def test_main_graphql_class_name_prefix(output_file: Path) -> None:
+    """Test GraphQL code generation with class name prefixing."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "simple-star-wars.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="simple_star_wars_class_name_prefix.py",
+        extra_args=[
+            "--class-name-prefix",
+            "Foo",
+        ],
+    )
+
+
 def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
     """Test that union type references are not converted to snake_case."""
     run_main_and_assert(
