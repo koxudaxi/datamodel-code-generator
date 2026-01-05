@@ -38,42 +38,43 @@ class JsonSchemaFeatures:
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
         """Create JsonSchemaFeatures from a JSON Schema version."""
-        if version == JsonSchemaVersion.Draft4:
-            return cls(
-                null_in_type_array=False,
-                defs_not_definitions=False,
-                prefix_items=False,
-                boolean_schemas=False,
-                id_field="id",
-                definitions_key="definitions",
-            )
-        if version in {JsonSchemaVersion.Draft6, JsonSchemaVersion.Draft7}:
-            return cls(
-                null_in_type_array=False,
-                defs_not_definitions=False,
-                prefix_items=False,
-                boolean_schemas=True,
-                id_field="$id",
-                definitions_key="definitions",
-            )
-        if version == JsonSchemaVersion.Draft201909:
-            return cls(
-                null_in_type_array=False,
-                defs_not_definitions=True,
-                prefix_items=False,
-                boolean_schemas=True,
-                id_field="$id",
-                definitions_key="$defs",
-            )
-        # Draft 2020-12 or Auto (default to latest features in lenient mode)
-        return cls(
-            null_in_type_array=True,
-            defs_not_definitions=True,
-            prefix_items=True,
-            boolean_schemas=True,
-            id_field="$id",
-            definitions_key="$defs",
-        )
+        match version:
+            case JsonSchemaVersion.Draft4:
+                return cls(
+                    null_in_type_array=False,
+                    defs_not_definitions=False,
+                    prefix_items=False,
+                    boolean_schemas=False,
+                    id_field="id",
+                    definitions_key="definitions",
+                )
+            case JsonSchemaVersion.Draft6 | JsonSchemaVersion.Draft7:
+                return cls(
+                    null_in_type_array=False,
+                    defs_not_definitions=False,
+                    prefix_items=False,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="definitions",
+                )
+            case JsonSchemaVersion.Draft201909:
+                return cls(
+                    null_in_type_array=False,
+                    defs_not_definitions=True,
+                    prefix_items=False,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="$defs",
+                )
+            case _:
+                return cls(
+                    null_in_type_array=True,
+                    defs_not_definitions=True,
+                    prefix_items=True,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="$defs",
+                )
 
 
 @dataclass(frozen=True)
@@ -93,36 +94,43 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
     @classmethod
     def from_openapi_version(cls, version: OpenAPIVersion) -> OpenAPISchemaFeatures:
         """Create OpenAPISchemaFeatures from an OpenAPI version."""
-        if version == OpenAPIVersion.V30:
-            # OpenAPI 3.0 does not support boolean schemas (only 3.1+ does)
-            return cls(
-                null_in_type_array=False,
-                defs_not_definitions=False,
-                prefix_items=False,
-                boolean_schemas=False,
-                id_field="$id",
-                definitions_key="definitions",
-                nullable_keyword=True,
-                discriminator_support=True,
-            )
-        # OpenAPI 3.1 or Auto (default to latest features in lenient mode)
-        return cls(
-            null_in_type_array=True,
-            defs_not_definitions=True,
-            prefix_items=True,
-            boolean_schemas=True,
-            id_field="$id",
-            definitions_key="$defs",
-            nullable_keyword=False,
-            discriminator_support=True,
-        )
+        match version:
+            case OpenAPIVersion.V30:
+                return cls(
+                    null_in_type_array=False,
+                    defs_not_definitions=False,
+                    prefix_items=False,
+                    boolean_schemas=False,
+                    id_field="$id",
+                    definitions_key="definitions",
+                    nullable_keyword=True,
+                    discriminator_support=True,
+                )
+            case _:
+                return cls(
+                    null_in_type_array=True,
+                    defs_not_definitions=True,
+                    prefix_items=True,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="$defs",
+                    nullable_keyword=False,
+                    discriminator_support=True,
+                )
 
 
-# Type variable for SchemaFeatures subclasses
 SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound=JsonSchemaFeatures)
 
+_JSONSCHEMA_VERSION_PATTERNS: dict[str, JsonSchemaVersion] = {
+    "draft-04": JsonSchemaVersion.Draft4,
+    "draft-06": JsonSchemaVersion.Draft6,
+    "draft-07": JsonSchemaVersion.Draft7,
+    "2019-09": JsonSchemaVersion.Draft201909,
+    "2020-12": JsonSchemaVersion.Draft202012,
+}
 
-def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:  # noqa: PLR0911
+
+def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
     """Detect JSON Schema version from $schema field or heuristics.
 
     Detection priority:
@@ -139,30 +147,15 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:  # noq
     Returns:
         The detected JSON Schema version.
     """
-    schema_url = data.get("$schema", "")
-    if isinstance(schema_url, str):
-        if "draft-04" in schema_url:
-            return JsonSchemaVersion.Draft4
-        if "draft-06" in schema_url:
-            return JsonSchemaVersion.Draft6
-        if "draft-07" in schema_url:
-            return JsonSchemaVersion.Draft7
-        if "2019-09" in schema_url:
-            return JsonSchemaVersion.Draft201909
-        if "2020-12" in schema_url:
-            return JsonSchemaVersion.Draft202012
+    if isinstance(schema_url := data.get("$schema", ""), str):
+        for pattern, version in _JSONSCHEMA_VERSION_PATTERNS.items():
+            if pattern in schema_url:
+                return version
 
-    # Heuristic detection (when $schema is missing)
     if "$defs" in data:
-        # $defs was introduced in Draft 2019-09
-        # prefixItems is specific to Draft 2020-12
-        if "prefixItems" in data:
-            return JsonSchemaVersion.Draft202012
-        return JsonSchemaVersion.Draft201909
+        return JsonSchemaVersion.Draft202012 if "prefixItems" in data else JsonSchemaVersion.Draft201909
     if "definitions" in data:
         return JsonSchemaVersion.Draft7
-
-    # Fallback: Draft7 is the most widely used
     return JsonSchemaVersion.Draft7
 
 
@@ -175,13 +168,11 @@ def detect_openapi_version(data: dict[str, Any]) -> OpenAPIVersion:
     Returns:
         The detected OpenAPI version.
     """
-    version = data.get("openapi", "")
-    if isinstance(version, str):
+    if isinstance(version := data.get("openapi", ""), str):
         if version.startswith("3.1"):
             return OpenAPIVersion.V31
         if version.startswith("3.0"):
             return OpenAPIVersion.V30
-    # Fallback: 3.1 (latest, best JSON Schema compatibility)
     return OpenAPIVersion.V31
 
 
