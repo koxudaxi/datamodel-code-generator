@@ -55,6 +55,18 @@ def test_graphql_union_commented(output_file: Path) -> None:
     )
 
 
+def test_graphql_union_with_prefix(output_file: Path) -> None:
+    """Test parsing GraphQL union with class name prefix (Unions should reference prefixed class names)."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union_with_prefix.py",
+        extra_args=["--class-name-prefix", "Foo"],
+    )
+
+
 @pytest.mark.parametrize(
     ("frozen_dataclasses", "keyword_only", "parser_dataclass_args", "kwargs_dataclass_args", "expected"),
     [
