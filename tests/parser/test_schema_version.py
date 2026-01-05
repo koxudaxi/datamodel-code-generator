@@ -273,3 +273,40 @@ def test_lazy_import_openapi_version_enum() -> None:
 def test_lazy_import_version_mode_enum() -> None:
     """Test that VersionMode is exported from main module."""
     assert datamodel_code_generator.VersionMode is VersionMode
+
+
+def test_get_data_formats_jsonschema() -> None:
+    """Test that JsonSchema formats exclude OpenAPI-specific formats."""
+    from datamodel_code_generator.parser.schema_version import get_data_formats
+    from datamodel_code_generator.types import Types
+
+    formats = get_data_formats(is_openapi=False)
+    assert "binary" not in formats["string"]
+    assert "password" not in formats["string"]
+    assert formats["string"]["byte"] == snapshot(Types.byte)
+    assert formats["string"]["date-time"] == snapshot(Types.date_time)
+
+
+def test_get_data_formats_openapi() -> None:
+    """Test that OpenAPI formats include OpenAPI-specific formats."""
+    from datamodel_code_generator.parser.schema_version import get_data_formats
+    from datamodel_code_generator.types import Types
+
+    formats = get_data_formats(is_openapi=True)
+    assert formats["string"]["binary"] == snapshot(Types.binary)
+    assert formats["string"]["password"] == snapshot(Types.password)
+    assert formats["string"]["byte"] == snapshot(Types.byte)
+
+
+def test_get_data_formats_common_types() -> None:
+    """Test that common types are present in both modes."""
+    from datamodel_code_generator.parser.schema_version import get_data_formats
+    from datamodel_code_generator.types import Types
+
+    jsonschema_formats = get_data_formats(is_openapi=False)
+    openapi_formats = get_data_formats(is_openapi=True)
+
+    assert jsonschema_formats["integer"]["default"] == snapshot(Types.integer)
+    assert openapi_formats["integer"]["default"] == snapshot(Types.integer)
+    assert jsonschema_formats["boolean"]["default"] == snapshot(Types.boolean)
+    assert openapi_formats["boolean"]["default"] == snapshot(Types.boolean)
