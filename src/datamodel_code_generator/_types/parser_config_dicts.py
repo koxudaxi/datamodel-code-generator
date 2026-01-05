@@ -19,8 +19,10 @@ if TYPE_CHECKING:
         CollapseRootModelsNameStrategy,
         DataclassArguments,
         FieldTypeCollisionStrategy,
+        JsonSchemaVersion,
         NamingStrategy,
         OpenAPIScope,
+        OpenAPIVersion,
         ReadOnlyWriteOnlyModelType,
         ReuseScope,
         StrictTypes,
@@ -167,7 +169,7 @@ class GraphQLParserConfigDict(ParserConfigDict, closed=True):
 
 
 class JSONSchemaParserConfigDict(ParserConfigDict):
-    pass
+    jsonschema_version: NotRequired[JsonSchemaVersion | None]
 
 
 class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
@@ -175,6 +177,7 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
+    openapi_version: NotRequired[OpenAPIVersion | None]
 
 
 ModelDict: TypeAlias = ParserConfigDict | GraphQLParserConfigDict | JSONSchemaParserConfigDict | OpenAPIParserConfigDict
