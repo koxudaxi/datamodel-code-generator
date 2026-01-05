@@ -814,6 +814,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
         return JsonSchemaFeatures.from_version(version)
 
+    @cached_property
+    def schema_features(self) -> JsonSchemaFeatures:
+        """Get schema features based on detected version."""
+        from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
+            JsonSchemaFeatures,
+            detect_jsonschema_version,
+        )
+
+        version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
+        return JsonSchemaFeatures.from_version(version)
+
     @property
     def root_id(self) -> str | None:
         """Get the root $id from the model resolver."""
