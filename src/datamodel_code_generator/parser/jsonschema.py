@@ -192,7 +192,12 @@ class JSONReference(_enum.Enum):
 
 
 class Discriminator(BaseModel):
-    """Represent OpenAPI discriminator object."""
+    """Represent OpenAPI discriminator object.
+
+    This is an OpenAPI-specific concept for supporting polymorphism.
+    It identifies which schema applies based on a property value.
+    Kept in jsonschema.py to avoid circular imports with openapi.py.
+    """
 
     propertyName: str  # noqa: N815
     mapping: Optional[dict[str, str]] = None  # noqa: UP045
@@ -517,7 +522,7 @@ def _get_type(
     data_formats: dict[str, dict[str, Types]] | None = None,
 ) -> Types:
     """Get the appropriate Types enum for a given JSON Schema type and format."""
-    if data_formats is None:
+    if data_formats is None:  # pragma: no cover
         data_formats = json_schema_data_formats
     if type_ not in data_formats:
         return Types.any
@@ -3575,9 +3580,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
     @contextmanager
     def root_id_context(self, root_raw: dict[str, Any]) -> Generator[None, None, None]:
-        """Context manager to temporarily set the root $id during parsing."""
+        """Context manager to temporarily set the root $id during parsing.
+
+        Uses schema_features.id_field to support both "id" (Draft 4) and "$id" (Draft 6+).
+        Falls back to checking both fields for lenient compatibility.
+        """
         previous_root_id = self.root_id
-        self.root_id = root_raw.get("$id") or None
+        # Try version-specific field first, then fallback to alternative for compatibility
+        id_field = self.schema_features.id_field
+        self.root_id = root_raw.get(id_field) or root_raw.get("$id") or root_raw.get("id") or None
         yield
         self.root_id = previous_root_id
 
