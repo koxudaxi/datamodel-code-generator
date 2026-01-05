@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -160,7 +160,7 @@ class ParserConfigDict(TypedDict):
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
 
 
-class GraphQLParserConfigDict(ParserConfigDict):
+class GraphQLParserConfigDict(ParserConfigDict, closed=True):
     data_model_scalar_type: NotRequired[type[DataModel]]
     data_model_union_type: NotRequired[type[DataModel]]
     graphql_no_typename: NotRequired[bool]
@@ -170,7 +170,7 @@ class JSONSchemaParserConfigDict(ParserConfigDict):
     pass
 
 
-class OpenAPIParserConfigDict(JSONSchemaParserConfigDict):
+class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]

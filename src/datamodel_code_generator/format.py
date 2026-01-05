@@ -129,6 +129,14 @@ class PythonVersion(Enum):
         return self._is_py_313_or_later
 
     @property
+    def has_typed_dict_closed(self) -> bool:
+        """Check if Python version supports TypedDict closed/extra_items (PEP 728).
+
+        PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
+        """
+        return False
+
+    @property
     def has_kw_only_dataclass(self) -> bool:
         """Check if Python version supports kw_only in dataclasses."""
         return self._is_py_310_or_later

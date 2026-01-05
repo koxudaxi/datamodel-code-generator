@@ -653,6 +653,7 @@ def _transform_single_model_to_inheritance(
         defs.update(parent_defs)
 
     parent_def = {k: v for k, v in parent_schema.items() if k != "$defs"}
+    parent_def["x-is-base-class"] = True
     defs[parent_name] = parent_def
 
     original_props = cast("dict[str, object]", schema.get("properties", {}))
@@ -801,7 +802,10 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         if "$defs" in schema:
             schema_defs = cast("dict[str, object]", schema["$defs"])
             for k, v in schema_defs.items():
-                if k not in merged_defs:
+                new_is_base = isinstance(v, dict) and v.get("x-is-base-class")
+                existing = merged_defs.get(k)
+                existing_is_base = isinstance(existing, dict) and existing.get("x-is-base-class") if existing else False
+                if k not in merged_defs or (new_is_base and not existing_is_base):
                     merged_defs[k] = v
 
         model_def = {k: v for k, v in schema.items() if k != "$defs"}

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypedDict
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.validators import ModelValidators, ValidatorMode
 
 
-class GenerateConfigDict(TypedDict):
+class GenerateConfigDict(TypedDict, closed=True):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[Path | None]

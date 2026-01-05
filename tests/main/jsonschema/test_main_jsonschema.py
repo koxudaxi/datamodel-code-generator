@@ -4259,6 +4259,48 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_closed(output_file: Path) -> None:
+    """Test TypedDict with additionalProperties: false generates closed=True (PEP 728)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_closed.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_closed.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_extra_items(output_file: Path) -> None:
+    """Test TypedDict with additionalProperties type generates extra_items (PEP 728)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_extra_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_extra_items.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--enum-field-as-literal-map"],
     option_description="""Override enum/literal generation per-field via JSON mapping.
