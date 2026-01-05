@@ -80,23 +80,23 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value != self.PY_310.value
+        return self.value != self.PY_310.value  # ty: ignore
 
     @cached_property
     def _is_py_312_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_310.value, self.PY_311.value}
+        return self.value not in {self.PY_310.value, self.PY_311.value}  # ty: ignore
 
     @cached_property
     def _is_py_313_or_later(self) -> bool:
-        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}
+        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}  # ty: ignore
 
     @cached_property
     def _is_py_314_or_later(self) -> bool:
-        return self.value not in {
-            self.PY_310.value,
-            self.PY_311.value,
-            self.PY_312.value,
-            self.PY_313.value,
+        return self.value not in {  # ty: ignore
+            self.PY_310.value,  # ty: ignore
+            self.PY_311.value,  # ty: ignore
+            self.PY_312.value,  # ty: ignore
+            self.PY_313.value,  # ty: ignore
         }
 
     @property

@@ -104,7 +104,7 @@ class ConstraintsBase(_BaseModel):
     unique_items: Optional[bool] = Field(None, alias="uniqueItems")  # noqa: UP045
     _exclude_fields: ClassVar[set[str]] = {"has_constraints"}
     if is_pydantic_v2():
-        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
+        model_config = ConfigDict(  # ty: ignore
             arbitrary_types_allowed=True, ignored_types=(cached_property,)
         )
     else:
@@ -152,7 +152,7 @@ class DataModelFieldBase(_BaseModel):
     """Base class for model field representation and rendering."""
 
     if is_pydantic_v2():
-        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
+        model_config = ConfigDict(  # ty: ignore
             arbitrary_types_allowed=True,
             defer_build=True,
         )

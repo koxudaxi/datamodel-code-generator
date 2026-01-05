@@ -418,4 +418,4 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic import Config  # noqa: PLC0415
 
-            self.extra_template_data["config"] = model_validate(Config, config_parameters)  # pyright: ignore[reportArgumentType]
+            self.extra_template_data["config"] = model_validate(Config, config_parameters)  # ty: ignore

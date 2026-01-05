@@ -168,7 +168,7 @@ class OpenAPIParser(JsonSchemaParser):
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
 
     @classmethod
-    def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:
+    def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:  # ty: ignore
         """Create an OpenAPIParserConfig from options."""
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
@@ -192,7 +192,7 @@ class OpenAPIParser(JsonSchemaParser):
             DataTypeManager=types_module.DataTypeManager,
         )
         defaults = {name: field.default for name, field in OpenAPIParserConfig.__fields__.items()}
-        defaults.update(options)
+        defaults.update(options)  # ty: ignore
         return OpenAPIParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
 
     def __init__(
@@ -206,10 +206,10 @@ class OpenAPIParser(JsonSchemaParser):
         if config is None and options.get("wrap_string_literal") is None:
             options["wrap_string_literal"] = False
         super().__init__(source=source, config=config, **options)  # type: ignore[arg-type]
-        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]
-        self.include_path_parameters: bool = self.config.include_path_parameters
-        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name
-        self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths
+        self.open_api_scopes: list[OpenAPIScope] = self.config.openapi_scopes or [OpenAPIScope.Schemas]  # ty: ignore
+        self.include_path_parameters: bool = self.config.include_path_parameters  # ty: ignore
+        self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name  # ty: ignore
+        self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths  # ty: ignore
         if self.openapi_include_paths and OpenAPIScope.Paths not in self.open_api_scopes:
             warn(
                 "--openapi-include-paths has no effect without --openapi-scopes paths",
@@ -306,7 +306,7 @@ class OpenAPIParser(JsonSchemaParser):
 
         result_fields: list[DataModelFieldBase] = []
         for field_obj in fields:
-            field = properties.get(field_obj.original_name)
+            field = properties.get(field_obj.original_name)  # ty: ignore
 
             if (
                 isinstance(field, JsonSchemaObject)
@@ -315,7 +315,7 @@ class OpenAPIParser(JsonSchemaParser):
             ):
                 new_field_type = self._get_discriminator_union_type(field.ref) or field_obj.data_type
                 normalized_discriminator = self._normalize_discriminator(discriminator)
-                field_obj = self.data_model_field_type(**{  # noqa: PLW2901
+                field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore
                     **field_obj.__dict__,
                     "data_type": new_field_type,
                     "extras": {**field_obj.extras, "discriminator": normalized_discriminator},
@@ -480,7 +480,7 @@ class OpenAPIParser(JsonSchemaParser):
                 response_path: list[str] = [*path, str(status_code), str(content_type)]
                 data_type = self._parse_schema_or_ref(response_name, obj.schema_, response_path)
                 if data_type:
-                    data_types[status_code][content_type] = data_type  # pyright: ignore[reportArgumentType]
+                    data_types[status_code][content_type] = data_type  # ty: ignore
 
         return data_types
 

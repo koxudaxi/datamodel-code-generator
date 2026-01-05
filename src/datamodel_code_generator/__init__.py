@@ -743,7 +743,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             **additional_options,
         }
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
-        parser = OpenAPIParser(source=source, config=parser_config)
+        parser = OpenAPIParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -753,12 +753,12 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             **additional_options,
         }
         parser_config = _create_parser_config(GraphQLParserConfig, config, graphql_additional_options)
-        parser = GraphQLParser(source=source, config=parser_config)
+        parser = GraphQLParser(source=source, config=parser_config)  # ty: ignore
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
         parser_config = _create_parser_config(JSONSchemaParserConfig, config, additional_options)
-        parser = JsonSchemaParser(source=source, config=parser_config)
+        parser = JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
 
     with chdir(config.output):
         results = parser.parse(

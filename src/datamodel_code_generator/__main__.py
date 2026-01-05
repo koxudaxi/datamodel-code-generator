@@ -147,7 +147,7 @@ class Config(BaseModel):
     """Configuration model for code generation."""
 
     if is_pydantic_v2():
-        model_config = ConfigDict(arbitrary_types_allowed=True)  # pyright: ignore[reportAssignmentType]
+        model_config = ConfigDict(arbitrary_types_allowed=True)  # ty: ignore
 
         def get(self, item: str) -> Any:  # pragma: no cover
             """Get attribute value by name."""
@@ -155,7 +155,7 @@ class Config(BaseModel):
 
         def __getitem__(self, item: str) -> Any:  # pragma: no cover
             """Get item by key."""
-            return self.get(item)
+            return self.get(item)  # ty: ignore
 
         @classmethod
         def parse_obj(cls, obj: Any) -> Self:
@@ -261,7 +261,7 @@ class Config(BaseModel):
         msg = f"Invalid http_query_parameters value: {value!r}"  # pragma: no cover
         raise Error(msg)  # pragma: no cover
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_additional_imports(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split additional imports."""
         additional_imports = values.get("additional_imports")
@@ -269,7 +269,7 @@ class Config(BaseModel):
             values["additional_imports"] = additional_imports.split(",")
         return values
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_custom_formatters(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split custom formatters."""
         custom_formatters = values.get("custom_formatters")
@@ -277,7 +277,7 @@ class Config(BaseModel):
             values["custom_formatters"] = custom_formatters.split(",")
         return values
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_duplicate_name_suffix(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and parse duplicate_name_suffix JSON string."""
         duplicate_name_suffix = values.get("duplicate_name_suffix")
@@ -289,7 +289,7 @@ class Config(BaseModel):
                 raise Error(msg) from e
         return values
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_naming_strategy_migration(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Migrate deprecated --parent-scoped-naming to --naming-strategy."""
         if values.get("parent_scoped_naming") and not values.get("naming_strategy"):
@@ -301,7 +301,7 @@ class Config(BaseModel):
             )
         return values
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_class_decorators(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Validate and split class decorators, adding @ prefix if missing."""
         class_decorators = values.get("class_decorators")
@@ -338,8 +338,8 @@ class Config(BaseModel):
 
     if is_pydantic_v2():
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_output_datetime_class(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
             """Validate output datetime class compatibility."""
             datetime_class_type: DatetimeClassType | None = self.output_datetime_class
             if (
@@ -350,22 +350,22 @@ class Config(BaseModel):
                 raise Error(self.__validate_output_datetime_class_err)
             return self
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_original_field_name_delimiter(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_original_field_name_delimiter(self: Self) -> Self:  # ty: ignore
             """Validate original field name delimiter requires snake case."""
             if self.original_field_name_delimiter is not None and not self.snake_case_field:
                 raise Error(self.__validate_original_field_name_delimiter_err)
             return self
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_custom_file_header(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_custom_file_header(self: Self) -> Self:  # ty: ignore
             """Validate custom file header options are mutually exclusive."""
             if self.custom_file_header and self.custom_file_header_path:
                 raise Error(self.__validate_custom_file_header_err)
             return self
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_keyword_only(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_keyword_only(self: Self) -> Self:  # ty: ignore
             """Validate keyword-only compatibility with target Python version."""
             output_model_type: DataModelType = self.output_model_type
             python_target: PythonVersion = self.target_python_version
@@ -377,15 +377,15 @@ class Config(BaseModel):
                 raise Error(self.__validate_keyword_only_err)  # pragma: no cover
             return self
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_root(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_root(self: Self) -> Self:  # ty: ignore
             """Validate root model configuration."""
             if self.use_annotated:
                 self.field_constraints = True
             return self
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
-        def validate_all_exports_collision_strategy(self: Self) -> Self:  # pyright: ignore[reportRedeclaration]
+        @model_validator()  # ty: ignore
+        def validate_all_exports_collision_strategy(self: Self) -> Self:  # ty: ignore
             """Validate all_exports_collision_strategy requires recursive scope."""
             if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
                 raise Error(self.__validate_all_exports_collision_strategy_err)
@@ -395,7 +395,7 @@ class Config(BaseModel):
 
         @_field_validator("input_model", mode="before")
         @classmethod
-        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # pyright: ignore[reportRedeclaration]
+        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # ty: ignore
             """Convert string input_model to list for backwards compatibility."""
             if isinstance(v, str):
                 return [v]
@@ -403,7 +403,7 @@ class Config(BaseModel):
 
         @_field_validator("class_name_affix_scope", mode="before")
         @classmethod
-        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # pyright: ignore[reportRedeclaration]
+        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
             """Convert string to ClassNameAffixScope enum."""
             if v is None:  # pragma: no cover
                 return ClassNameAffixScope.All
@@ -413,7 +413,7 @@ class Config(BaseModel):
 
     else:
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_output_datetime_class(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate output datetime class compatibility."""
             datetime_class_type: DatetimeClassType | None = values.get("output_datetime_class")
@@ -425,21 +425,21 @@ class Config(BaseModel):
                 raise Error(cls.__validate_output_datetime_class_err)
             return values
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_original_field_name_delimiter(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate original field name delimiter requires snake case."""
             if values.get("original_field_name_delimiter") is not None and not values.get("snake_case_field"):
                 raise Error(cls.__validate_original_field_name_delimiter_err)
             return values
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_custom_file_header(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate custom file header options are mutually exclusive."""
             if values.get("custom_file_header") and values.get("custom_file_header_path"):
                 raise Error(cls.__validate_custom_file_header_err)
             return values
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_keyword_only(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate keyword-only compatibility with target Python version."""
             output_model_type: DataModelType = cast("DataModelType", values.get("output_model_type"))
@@ -452,14 +452,14 @@ class Config(BaseModel):
                 raise Error(cls.__validate_keyword_only_err)  # pragma: no cover
             return values
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_root(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate root model configuration."""
             if values.get("use_annotated"):
                 values["field_constraints"] = True
             return values
 
-        @model_validator()  # pyright: ignore[reportArgumentType]
+        @model_validator()  # ty: ignore
         def validate_all_exports_collision_strategy(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
             """Validate all_exports_collision_strategy requires recursive scope."""
             if (
@@ -951,7 +951,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         field_constraints=config.field_constraints,
         snake_case_field=config.snake_case_field,
         strip_default_none=config.strip_default_none,
-        extra_template_data=extra_template_data,  # pyright: ignore[reportArgumentType]
+        extra_template_data=extra_template_data,  # ty: ignore
         aliases=aliases,
         disable_timestamp=config.disable_timestamp,
         enable_version_header=config.enable_version_header,

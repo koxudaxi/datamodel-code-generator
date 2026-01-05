@@ -404,7 +404,7 @@ class DataType(_BaseModel):
     if is_pydantic_v2():
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
+        model_config = ConfigDict(  # ty: ignore
             extra="forbid",
             revalidate_instances="never",
         )
@@ -599,7 +599,7 @@ class DataType(_BaseModel):
         if self.dict_key:
             self.dict_key.walk(visitor, visited)
 
-    def find_source(self, source_type: type[SourceT]) -> SourceT | None:
+    def find_source(self, source_type: type[SourceT]) -> SourceT | None:  # ty: ignore
         """Find the first reference source matching the given type from all nested data types."""
         for data_type in self.all_data_types:
             if not data_type.reference:  # pragma: no cover

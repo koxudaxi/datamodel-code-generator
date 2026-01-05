@@ -107,7 +107,7 @@ class _BaseModel(BaseModel):
                 exclude_none: bool = False,
             ) -> DictStrAny:
                 return self.model_dump(
-                    include=include,
+                    include=include,  # ty: ignore
                     exclude=set(exclude or ()) | self._exclude_fields,
                     by_alias=by_alias,
                     exclude_unset=exclude_unset,
@@ -129,10 +129,10 @@ class _BaseModel(BaseModel):
                 exclude_none: bool = False,
             ) -> DictStrAny:
                 return super().dict(
-                    include=include,
+                    include=include,  # ty: ignore
                     exclude=set(exclude or ()) | self._exclude_fields,
                     by_alias=by_alias,
-                    skip_defaults=skip_defaults,
+                    skip_defaults=skip_defaults,  # ty: ignore
                     exclude_unset=exclude_unset,
                     exclude_defaults=exclude_defaults,
                     exclude_none=exclude_none,
@@ -154,7 +154,7 @@ class Reference(_BaseModel):
     children: list[ReferenceChild] = Field(default_factory=list)
     _exclude_fields: ClassVar[set[str]] = {"children"}
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_original_name(cls, values: Any) -> Any:  # noqa: N805
         """Assign name to original_name if original_name is empty."""
         if not isinstance(values, dict):  # pragma: no cover
@@ -169,7 +169,7 @@ class Reference(_BaseModel):
     if is_pydantic_v2():
         # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
         # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(  # pyright: ignore[reportAssignmentType]
+        model_config = ConfigDict(  # ty: ignore
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
             revalidate_instances="never",
@@ -650,7 +650,7 @@ class ModelResolver:  # noqa: PLR0904
         """Temporarily set the current base path within a context."""
         if base_path:
             base_path = (self._base_path / base_path).resolve()
-        with context_variable(self.set_current_base_path, self.current_base_path, base_path):
+        with context_variable(self.set_current_base_path, self.current_base_path, base_path):  # ty: ignore
             yield
 
     @contextmanager
@@ -664,7 +664,7 @@ class ModelResolver:  # noqa: PLR0904
         this method was previously a no-op.
         """
         if self._base_url or (base_url and is_url(base_url)):
-            with context_variable(self.set_base_url, self.base_url, base_url):
+            with context_variable(self.set_base_url, self.base_url, base_url):  # ty: ignore
                 yield
         else:
             yield
@@ -681,7 +681,7 @@ class ModelResolver:  # noqa: PLR0904
     @contextmanager
     def current_root_context(self, current_root: Sequence[str]) -> Generator[None, None, None]:
         """Temporarily set the current root path within a context."""
-        with context_variable(self.set_current_root, self.current_root, current_root):
+        with context_variable(self.set_current_root, self.current_root, current_root):  # ty: ignore
             yield
 
     @property
@@ -1233,10 +1233,10 @@ _inflect_engine: inflect.engine | None = None
 @lru_cache
 def get_singular_name(name: str, suffix: str = SINGULAR_NAME_SUFFIX) -> str:
     """Convert a plural name to singular form."""
-    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))
+    singular_name = _get_inflect_engine().singular_noun(cast("inflect.Word", name))  # ty: ignore
     if singular_name is False:
         singular_name = f"{name}{suffix}"
-    return singular_name  # pyright: ignore[reportReturnType]
+    return singular_name  # ty: ignore
 
 
 @lru_cache

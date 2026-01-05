@@ -117,7 +117,7 @@ def get_safe_loader() -> type:
     return CustomSafeLoader
 
 
-Model = TypeVar("Model", bound="_BaseModel")  # pyright: ignore[reportInvalidTypeForm]
+Model = TypeVar("Model", bound="_BaseModel")  # ty: ignore
 T = TypeVar("T")
 
 
@@ -148,7 +148,7 @@ def model_validator() -> (
 ): ...
 
 
-def model_validator(  # pyright: ignore[reportInconsistentOverload]
+def model_validator(  # ty: ignore
     mode: Literal["before", "after"] = "after",
 ) -> (
     Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
@@ -177,7 +177,7 @@ def model_validator(  # pyright: ignore[reportInconsistentOverload]
             return model_validator_v2(mode=mode)(method)  # type: ignore[reportReturnType]
         from pydantic import root_validator  # noqa: PLC0415  # pragma: no cover
 
-        return root_validator(method, pre=mode == "before")  # pyright: ignore[reportCallIssue]  # pragma: no cover
+        return root_validator(method, pre=mode == "before")  # ty: ignore  # pragma: no cover
 
     return inner
 
@@ -193,10 +193,10 @@ def field_validator(
         if is_pydantic_v2():
             from pydantic import field_validator as field_validator_v2  # noqa: PLC0415
 
-            return field_validator_v2(field_name, *fields, mode=mode)(method)
+            return field_validator_v2(field_name, *fields, mode=mode)(method)  # ty: ignore
         from pydantic import validator  # noqa: PLC0415  # pragma: no cover
 
-        return validator(field_name, *fields, pre=mode == "before")(method)  # pyright: ignore[reportReturnType]  # pragma: no cover
+        return validator(field_name, *fields, pre=mode == "before")(method)  # ty: ignore  # pragma: no cover
 
     return inner
 
@@ -292,29 +292,29 @@ def camel_to_snake(string: str) -> str:
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
-def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # pyright: ignore[reportInvalidTypeForm]
+def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # ty: ignore
     """Version-compatible model serialization (dict/model_dump)."""
     if is_pydantic_v2():
-        return obj.model_dump(**kwargs)
+        return obj.model_dump(**kwargs)  # ty: ignore
     return obj.dict(**kwargs)  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
 def model_validate(cls: type[Model], obj: Any) -> Model:
     """Version-compatible model validation (parse_obj/model_validate)."""
     if is_pydantic_v2():
-        return cls.model_validate(obj)
+        return cls.model_validate(obj)  # ty: ignore
     return cls.parse_obj(obj)  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
-def get_fields_set(obj: _BaseModel) -> set[str]:  # pyright: ignore[reportInvalidTypeForm]
+def get_fields_set(obj: _BaseModel) -> set[str]:  # ty: ignore
     """Version-compatible access to fields set (__fields_set__/model_fields_set)."""
     if is_pydantic_v2():
-        return obj.model_fields_set
+        return obj.model_fields_set  # ty: ignore
     return obj.__fields_set__  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
 def model_copy(obj: Model, **kwargs: Any) -> Model:
     """Version-compatible model copy (copy/model_copy)."""
     if is_pydantic_v2():
-        return obj.model_copy(**kwargs)
+        return obj.model_copy(**kwargs)  # ty: ignore
     return obj.copy(**kwargs)  # type: ignore[reportDeprecated]  # pragma: no cover
