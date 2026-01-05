@@ -10,7 +10,7 @@ from typing import Any, Literal, TypeAlias, TypedDict
 
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.validators import ModelValidators
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 AllExportsCollisionStrategy: TypeAlias = Literal[
     'error', 'minimal-prefix', 'full-prefix'
@@ -42,7 +42,7 @@ DataModelType: TypeAlias = Literal[
 ]
 
 
-class DataclassArguments(TypedDict):
+class DataclassArguments(TypedDict, closed=True):
     init: NotRequired[bool]
     repr: NotRequired[bool]
     eq: NotRequired[bool]
@@ -114,7 +114,7 @@ UnionMode: TypeAlias = Literal['smart', 'left_to_right']
 ValidatorMode: TypeAlias = Literal['before', 'after', 'wrap', 'plain']
 
 
-class GenerateConfig(TypedDict):
+class GenerateConfig(TypedDict, closed=True):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
     output: NotRequired[str | None]

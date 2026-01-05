@@ -47,9 +47,9 @@ if TYPE_CHECKING:
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
 try:  # graphql-core < 3.2.7
-    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # pyright: ignore[reportAttributeAccessIssue]
+    graphql_resolver_kind = graphql.type.introspection.TypeResolvers().kind  # ty: ignore
 except AttributeError:
-    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind  # pyright: ignore[reportAttributeAccessIssue]
+    graphql_resolver_kind = graphql.type.introspection.TypeFields.kind  # ty: ignore
 
 
 def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
@@ -111,7 +111,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             DataTypeManager=types_module.DataTypeManager,
         )
         defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}  # pragma: no cover
-        defaults.update(options)  # pragma: no cover
+        defaults.update(options)  # pragma: no cover  # ty: ignore
         return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
 
     def __init__(
@@ -217,7 +217,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
         return None
 
-    def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:
+    def parse_scalar(self, scalar_graphql_object: graphql.GraphQLScalarType) -> None:  # ty: ignore
         """Parse a GraphQL scalar type and add it to results."""
         self.results.append(
             self.data_model_scalar_type(
@@ -237,7 +237,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             return len(obj.values) == 1
         return False
 
-    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:
+    def parse_enum(self, enum_object: graphql.GraphQLEnumType) -> None:  # ty: ignore
         """Parse a GraphQL enum type and add it to results."""
         if self.ignore_enum_constraints:
             return self.parse_enum_as_str_type(enum_object)
@@ -448,7 +448,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
         base_classes = []
         if hasattr(obj, "interfaces"):
-            base_classes = [self.references[i.name] for i in obj.interfaces]  # pyright: ignore[reportAttributeAccessIssue]
+            base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore
 
         data_model_type = self._create_data_model(
             reference=self.references[obj.name],
@@ -465,22 +465,24 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         )
         self.results.append(data_model_type)
 
-    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:
+    def parse_interface(self, interface_graphql_object: graphql.GraphQLInterfaceType) -> None:  # ty: ignore
         """Parse a GraphQL interface type and add it to results."""
         self.parse_object_like(interface_graphql_object)
 
-    def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:
+    def parse_object(self, graphql_object: graphql.GraphQLObjectType) -> None:  # ty: ignore
         """Parse a GraphQL object type and add it to results."""
         self.parse_object_like(graphql_object)
 
-    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:
+    def parse_input_object(self, input_graphql_object: graphql.GraphQLInputObjectType) -> None:  # ty: ignore
         """Parse a GraphQL input object type and add it to results."""
         self.parse_object_like(input_graphql_object)
 
-    def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:
+    def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:  # ty: ignore
         """Parse a GraphQL union type and add it to results."""
-        fields = [self.data_model_field_type(name=type_.name, data_type=DataType()) for type_ in union_object.types]
-
+        fields = [
+            self.data_model_field_type(name=self.references[type_.name].name, data_type=DataType())
+            for type_ in union_object.types
+        ]
         data_model_type = self.data_model_union_type(
             reference=self.references[union_object.name],
             fields=fields,
@@ -525,4 +527,4 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         for next_type in self.parse_order:
             for obj in self.support_graphql_types[next_type]:
                 parser_ = mapper_from_graphql_type_to_parser_method[next_type]
-                parser_(obj)
+                parser_(obj)  # ty: ignore

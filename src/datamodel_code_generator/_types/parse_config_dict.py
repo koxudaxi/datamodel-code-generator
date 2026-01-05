@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
-from typing_extensions import NotRequired
+from typing_extensions import NotRequired, TypedDict
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator.enums import AllExportsCollisionStrategy, AllExportsScope, ModuleSplitMode
 
 
-class ParseConfigDict(TypedDict):
+class ParseConfigDict(TypedDict, closed=True):
     with_import: NotRequired[bool | None]
     format_: NotRequired[bool | None]
     settings_path: NotRequired[Path | None]

@@ -80,23 +80,23 @@ class PythonVersion(Enum):
 
     @cached_property
     def _is_py_311_or_later(self) -> bool:  # pragma: no cover
-        return self.value != self.PY_310.value
+        return self.value != self.PY_310.value  # ty: ignore
 
     @cached_property
     def _is_py_312_or_later(self) -> bool:  # pragma: no cover
-        return self.value not in {self.PY_310.value, self.PY_311.value}
+        return self.value not in {self.PY_310.value, self.PY_311.value}  # ty: ignore
 
     @cached_property
     def _is_py_313_or_later(self) -> bool:
-        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}
+        return self.value not in {self.PY_310.value, self.PY_311.value, self.PY_312.value}  # ty: ignore
 
     @cached_property
     def _is_py_314_or_later(self) -> bool:
-        return self.value not in {
-            self.PY_310.value,
-            self.PY_311.value,
-            self.PY_312.value,
-            self.PY_313.value,
+        return self.value not in {  # ty: ignore
+            self.PY_310.value,  # ty: ignore
+            self.PY_311.value,  # ty: ignore
+            self.PY_312.value,  # ty: ignore
+            self.PY_313.value,  # ty: ignore
         }
 
     @property
@@ -127,6 +127,14 @@ class PythonVersion(Enum):
     def has_typed_dict_read_only(self) -> bool:
         """Check if Python version supports TypedDict ReadOnly (PEP 705)."""
         return self._is_py_313_or_later
+
+    @property
+    def has_typed_dict_closed(self) -> bool:
+        """Check if Python version supports TypedDict closed/extra_items (PEP 728).
+
+        PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
+        """
+        return False
 
     @property
     def has_kw_only_dataclass(self) -> bool:

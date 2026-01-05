@@ -26,4 +26,4 @@ def apply_patch() -> None:
     if sys.version_info >= (3, 12):
         import pydantic.typing  # noqa: PLC0415
 
-        pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref  # pyright: ignore[reportAttributeAccessIssue]
+        pydantic.typing.evaluate_forwardref = patched_evaluate_forwardref  # ty: ignore

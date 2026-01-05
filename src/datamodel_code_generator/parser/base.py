@@ -696,7 +696,7 @@ class Parser(ABC, Generic[ParserConfigT]):
     """
 
     @classmethod
-    def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:
+    def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore
         """Create a default config from options.
 
         Subclasses should override this to return their own config type.
@@ -723,7 +723,7 @@ class Parser(ABC, Generic[ParserConfigT]):
             DataTypeManager=types_module.DataTypeManager,
         )
         defaults = {name: field.default for name, field in ParserConfig.__fields__.items()}
-        defaults.update(options)
+        defaults.update(options)  # ty: ignore
         return ParserConfig.construct(**defaults)  # type: ignore[return-value]
 
     def __init__(  # noqa: PLR0912, PLR0915
@@ -748,7 +748,7 @@ class Parser(ABC, Generic[ParserConfigT]):
             raise ValueError(msg)
 
         if config is None:
-            config = self._create_default_config(options)
+            config = self._create_default_config(options)  # ty: ignore
 
         self.config = config
 
@@ -1070,7 +1070,7 @@ class Parser(ABC, Generic[ParserConfigT]):
     def get_url_path_parts(cls, url: ParseResult) -> list[str]:
         """Split URL into scheme/host and path components."""
         return [
-            f"{url.scheme}://{url.hostname}",
+            f"{url.scheme}://{url.netloc}",
             *url.path.split("/")[1:],
         ]
 
@@ -1396,12 +1396,12 @@ class Parser(ABC, Generic[ParserConfigT]):
                     if not type_names:
                         # Check the main discriminator model path
                         if mapping:
-                            check_paths(discriminator_model, mapping)  # pyright: ignore[reportArgumentType]
+                            check_paths(discriminator_model, mapping)  # ty: ignore
 
                             # Check the base_classes if they exist
                             if len(type_names) == 0:
                                 for base_class in discriminator_model.base_classes:
-                                    check_paths(base_class.reference, mapping)  # pyright: ignore[reportArgumentType]
+                                    check_paths(base_class.reference, mapping)  # ty: ignore
                         else:
                             for discriminator_field in discriminator_model.fields:
                                 if field_name not in {discriminator_field.original_name, discriminator_field.name}:
@@ -1953,7 +1953,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                 if data_type.alias:
                     if isinstance(enum_member, list):
                         for enum_member_ in enum_member:
-                            enum_member_.alias = data_type.alias
+                            enum_member_.alias = data_type.alias  # ty: ignore
                     else:
                         enum_member.alias = data_type.alias
 
@@ -2068,7 +2068,7 @@ class Parser(ABC, Generic[ParserConfigT]):
                     )
                     source = cast("DataModel", colliding_reference.source)
                     resolver.exclude_names.add(cast("str", filed_name))
-                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name
+                    new_class_name = resolver.add(["type"], cast("str", source.class_name)).name  # ty: ignore
                     source.class_name = new_class_name
                     all_class_names.add(new_class_name)
                 elif not rename_type:

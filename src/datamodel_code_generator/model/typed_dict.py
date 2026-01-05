@@ -16,6 +16,7 @@ from datamodel_code_generator.model.imports import (
     IMPORT_READ_ONLY,
     IMPORT_READ_ONLY_BACKPORT,
     IMPORT_TYPED_DICT,
+    IMPORT_TYPED_DICT_BACKPORT,
 )
 from datamodel_code_generator.types import NOT_REQUIRED_PREFIX, READ_ONLY_PREFIX
 
@@ -88,6 +89,68 @@ class TypedDict(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
+        self._setup_closed_extra_items()
+
+    def _setup_closed_extra_items(self) -> None:
+        """Set up closed and extra_items kwargs based on additionalProperties.
+
+        For PEP 728 TypedDict support:
+        - additionalProperties: false -> closed=True
+        - additionalProperties: { type: X } -> extra_items=X
+
+        Note: closed=True is not applied to TypedDicts used as base classes,
+        as PEP 728 doesn't allow child TypedDicts to add new fields when
+        parent has closed=True.
+        """
+        additional_props = self.extra_template_data.get("additionalProperties")
+        additional_props_type = self.extra_template_data.get("additionalPropertiesType")
+        is_base_class = self.extra_template_data.get("is_base_class", False)
+
+        typed_dict_kwargs: dict[str, str] = {}
+
+        if additional_props is False and not is_base_class:
+            typed_dict_kwargs["closed"] = "True"
+        elif additional_props_type and not is_base_class:
+            typed_dict_kwargs["extra_items"] = additional_props_type
+
+        if typed_dict_kwargs:
+            self.extra_template_data["typed_dict_kwargs"] = typed_dict_kwargs
+            kwargs_str = ", ".join(f"{k}={v}" for k, v in typed_dict_kwargs.items())
+            self.extra_template_data["typed_dict_kwargs_suffix"] = f", {kwargs_str}"
+
+    @property
+    def _has_typed_dict_kwargs(self) -> bool:
+        """Check if this TypedDict has closed or extra_items kwargs."""
+        return bool(self.extra_template_data.get("typed_dict_kwargs"))
+
+    @property
+    def _use_typeddict_backport(self) -> bool:
+        """Check if this TypedDict needs typing_extensions.TypedDict for closed/extra_items."""
+        return bool(self.extra_template_data.get("use_typeddict_backport"))
+
+    @property
+    def base_class(self) -> str:
+        """Get base class string with kwargs if needed.
+
+        For PEP 728 support, includes closed=True or extra_items=X in the base class.
+        """
+        base = super().base_class
+        typed_dict_kwargs = self.extra_template_data.get("typed_dict_kwargs")
+        if typed_dict_kwargs:
+            kwargs_str = ", ".join(f"{k}={v}" for k, v in typed_dict_kwargs.items())
+            return f"{base}, {kwargs_str}"
+        return base
+
+    @property
+    def imports(self) -> tuple[Import, ...]:
+        """Get imports, using backport TypedDict when closed/extra_items are used on Python < 3.13."""
+        base_imports = list(super().imports)
+
+        if self._use_typeddict_backport and self._has_typed_dict_kwargs:
+            base_imports = [i for i in base_imports if i != IMPORT_TYPED_DICT]
+            base_imports.append(IMPORT_TYPED_DICT_BACKPORT)
+
+        return tuple(base_imports)
 
     @property
     def is_functional_syntax(self) -> bool:

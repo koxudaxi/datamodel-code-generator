@@ -96,7 +96,7 @@ test = [
   { include-group = "coverage" },
 ]
 type = [
-  "pyright>=1.1.393",
+  "ty>=0.0.8",
   "types-jinja2",
   "types-pyyaml",
   "types-setuptools>=67.6.0.5,<70",
@@ -256,8 +256,14 @@ run.plugins = [
 ]
 covdefaults.subtract_omit = "*/__main__.py"
 
-[tool.pyright]
-reportPrivateImportUsage = false
+[tool.ty.src]
+include = [ "src" ]
+
+[tool.ty.environment]
+python-version = "3.10"
+
+[tool.ty.rules]
+deprecated = "ignore"
 
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true

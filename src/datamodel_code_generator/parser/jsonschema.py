@@ -365,7 +365,7 @@ class JsonSchemaObject(BaseModel):
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
     if is_pydantic_v2():
-        model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
+        model_config = ConfigDict(  # ty: ignore
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
         )
@@ -539,7 +539,7 @@ EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: set[str] = {
 }
 
 EXCLUDE_FIELD_KEYS = (
-    set(JsonSchemaObject.get_fields())  # pyright: ignore[reportAttributeAccessIssue]
+    set(JsonSchemaObject.get_fields())  # ty: ignore
     - DEFAULT_FIELD_KEYS
     - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
 ) | {
@@ -678,8 +678,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             DataModelFieldBase=model_base.DataModelFieldBase,
             DataTypeManager=types_module.DataTypeManager,
         )
-        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}
-        defaults.update(options)
+        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}  # ty: ignore
+        defaults.update(options)  # ty: ignore
         return JSONSchemaParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
 
     def __init__(
@@ -1136,9 +1136,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         return self.data_type(reference=reference, is_optional=is_optional)
 
     def set_additional_properties(self, path: str, obj: JsonSchemaObject) -> None:
-        """Set additional properties flag in extra template data."""
+        """Set additional properties flag in extra template data.
+
+        For TypedDict with PEP 728 support:
+        - additionalProperties: false -> closed=True
+        - additionalProperties: { type: X } -> extra_items=X
+        """
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
+            if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
+                self.extra_template_data[path]["use_typeddict_backport"] = True
+        elif isinstance(obj.additionalProperties, JsonSchemaObject):
+            additional_props_type = self._build_lightweight_type(obj.additionalProperties)
+            if additional_props_type:  # pragma: no branch
+                self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
+                if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
+                    self.extra_template_data[path]["use_typeddict_backport"] = True
 
     def set_unevaluated_properties(self, path: str, obj: JsonSchemaObject) -> None:
         """Set unevaluated properties flag in extra template data."""
@@ -1167,6 +1180,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         extensions = {k: v for k, v in obj.extras.items() if k.startswith("x-")}
         if extensions:
             self.extra_template_data[path]["extensions"] = extensions
+
+        if obj.extras.get("x-is-base-class"):
+            self.extra_template_data[path]["is_base_class"] = True
 
         # Process model_extra_keys for json_schema_extra in ConfigDict
         if self.model_extra_keys or self.model_extra_keys_without_x_prefix:
@@ -2167,6 +2183,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                     ref = self.model_resolver.add_ref(all_of_item.ref)
                     if ref.path not in {b.path for b in base_classes}:
                         base_classes.append(ref)
+                        self.extra_template_data[ref.path]["is_base_class"] = True
             else:
                 # Merge child properties with parent constraints before processing
                 merged_item = self._merge_properties_with_parent_constraints(all_of_item, parent_refs)

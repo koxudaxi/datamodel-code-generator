@@ -81,7 +81,7 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
     """Extend imports property with msgspec-specific imports."""
     original_imports: property = cls.imports
 
-    @wraps(original_imports.fget)  # pyright: ignore[reportArgumentType]
+    @wraps(original_imports.fget)  # ty: ignore
     def new_imports(self: DataModelFieldBaseT) -> tuple[Import, ...]:
         if self.extras.get("is_classvar"):
             return ()
@@ -100,9 +100,9 @@ def import_extender(cls: type[DataModelFieldBaseT]) -> type[DataModelFieldBaseT]
                 extra_imports.append(IMPORT_UNION)
             if self.default is None or self.default is UNDEFINED:
                 extra_imports.append(IMPORT_MSGSPEC_UNSET)
-        return chain_as_tuple(original_imports.fget(self), extra_imports)  # pyright: ignore[reportOptionalCall]
+        return chain_as_tuple(original_imports.fget(self), extra_imports)  # ty: ignore
 
-    cls.imports = property(new_imports)  # pyright: ignore[reportAttributeAccessIssue]
+    cls.imports = property(new_imports)  # ty: ignore
     return cls
 
 
