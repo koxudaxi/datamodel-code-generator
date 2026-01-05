@@ -1,0 +1,10 @@
+{
+    "type": "object",
+    "properties": {
+        "namespace": {
+            "type": "string",
+            "x-is_classvar": true,
+            "default": "test"
+        }
+    }
+}

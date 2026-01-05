@@ -31,6 +31,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
+from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
@@ -188,10 +189,20 @@ class DataModelField(DataModelFieldV1):
         return any(dt.discriminator for dt in self.data_type.all_data_types)
 
     @property
+    def class_var_type_hint(self) -> str:
+        return f"ClassVar[{self.type_hint}]"
+
+    @property
+    def is_class_var(self) -> bool:
+        return self.extras.get("x-is_classvar") is True
+
+    @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including AliasChoices and Field for discriminator."""
         base_imports = super().imports
         extra_imports: list[Import] = []
+        if self.is_class_var:
+            extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:
             from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
 
