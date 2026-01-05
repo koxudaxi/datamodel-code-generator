@@ -1144,15 +1144,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         """
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
-            # Set backport flag for TypedDict closed/extra_items on Python < 3.15
             if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
                 self.extra_template_data[path]["use_typeddict_backport"] = True
         elif isinstance(obj.additionalProperties, JsonSchemaObject):
-            # Parse additionalProperties schema to get type hint for extra_items
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                # Set backport flag for TypedDict closed/extra_items on Python < 3.15
                 if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
                     self.extra_template_data[path]["use_typeddict_backport"] = True
 
@@ -1184,7 +1181,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         if extensions:
             self.extra_template_data[path]["extensions"] = extensions
 
-        # Check for x-is-base-class marker (used to prevent closed=True for TypedDict inheritance)
         if obj.extras.get("x-is-base-class"):
             self.extra_template_data[path]["is_base_class"] = True
 
@@ -2187,7 +2183,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                     ref = self.model_resolver.add_ref(all_of_item.ref)
                     if ref.path not in {b.path for b in base_classes}:
                         base_classes.append(ref)
-                        # Mark as base class to prevent closed=True for TypedDict inheritance
                         self.extra_template_data[ref.path]["is_base_class"] = True
             else:
                 # Merge child properties with parent constraints before processing

@@ -89,7 +89,6 @@ class TypedDict(DataModel):
             keyword_only=keyword_only,
             treat_dot_as_module=treat_dot_as_module,
         )
-        # Set up closed/extra_items kwargs for PEP 728 support
         self._setup_closed_extra_items()
 
     def _setup_closed_extra_items(self) -> None:
@@ -109,7 +108,6 @@ class TypedDict(DataModel):
 
         typed_dict_kwargs: dict[str, str] = {}
 
-        # Don't apply closed=True to base classes as child TypedDicts need to add fields
         if additional_props is False and not is_base_class:
             typed_dict_kwargs["closed"] = "True"
         elif additional_props_type and not is_base_class:
@@ -117,7 +115,6 @@ class TypedDict(DataModel):
 
         if typed_dict_kwargs:
             self.extra_template_data["typed_dict_kwargs"] = typed_dict_kwargs
-            # For functional syntax, also set the kwargs suffix string
             kwargs_str = ", ".join(f"{k}={v}" for k, v in typed_dict_kwargs.items())
             self.extra_template_data["typed_dict_kwargs_suffix"] = f", {kwargs_str}"
 
@@ -150,7 +147,6 @@ class TypedDict(DataModel):
         base_imports = list(super().imports)
 
         if self._use_typeddict_backport and self._has_typed_dict_kwargs:
-            # Replace typing.TypedDict with typing_extensions.TypedDict
             base_imports = [i for i in base_imports if i != IMPORT_TYPED_DICT]
             base_imports.append(IMPORT_TYPED_DICT_BACKPORT)
 

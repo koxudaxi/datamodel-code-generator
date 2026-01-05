@@ -653,7 +653,6 @@ def _transform_single_model_to_inheritance(
         defs.update(parent_defs)
 
     parent_def = {k: v for k, v in parent_schema.items() if k != "$defs"}
-    # Mark parent as base class to prevent closed=True for TypedDict inheritance (PEP 728)
     parent_def["x-is-base-class"] = True
     defs[parent_name] = parent_def
 
@@ -803,7 +802,6 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
         if "$defs" in schema:
             schema_defs = cast("dict[str, object]", schema["$defs"])
             for k, v in schema_defs.items():
-                # Prefer schemas with x-is-base-class marker (for TypedDict inheritance)
                 new_is_base = isinstance(v, dict) and v.get("x-is-base-class")
                 existing = merged_defs.get(k)
                 existing_is_base = isinstance(existing, dict) and existing.get("x-is-base-class") if existing else False

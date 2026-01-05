@@ -134,7 +134,6 @@ class PythonVersion(Enum):
 
         PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
         """
-        # PEP 728 is targeted for Python 3.15, not available in stdlib yet
         return False
 
     @property
