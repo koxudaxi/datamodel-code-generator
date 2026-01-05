@@ -272,7 +272,7 @@ def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
         for type_key, type_formats in _get_openapi_only_formats().items():
             if type_key in formats:
                 formats[type_key] = {**formats[type_key], **type_formats}
-            else:
+            else:  # pragma: no cover
                 formats[type_key] = type_formats
     return formats
 
