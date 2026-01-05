@@ -10,6 +10,8 @@
 | [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
 | [`--input-model-ref-strategy`](#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
+| [`--schema-version`](#schema-version) | Schema version to use for parsing. |
+| [`--schema-version-mode`](#schema-version-mode) | Schema version validation mode. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
 ---
@@ -323,6 +325,76 @@ is written to stdout.
         name: str | None = None
         tag: str | None = None
     ```
+
+---
+
+## `--schema-version` {#schema-version}
+
+Schema version to use for parsing.
+
+The `--schema-version` option specifies the schema version to use instead of auto-detection.
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version draft-07 # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "type": "object",
+      "properties": {"s": {"type": ["string"]}},
+      "required": ["s"]
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: jsonschema/simple_string.py
+
+---
+
+## `--schema-version-mode` {#schema-version-mode}
+
+Schema version validation mode.
+
+The `--schema-version-mode` option controls how schema version validation is performed.
+'lenient' (default): accept all features regardless of version.
+'strict': warn on features outside the declared/detected version.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version-mode lenient # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version-mode` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "type": "object",
+      "properties": {"s": {"type": ["string"]}},
+      "required": ["s"]
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: jsonschema/simple_string.py
 
 ---
 
