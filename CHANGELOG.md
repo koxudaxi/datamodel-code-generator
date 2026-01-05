@@ -4,6 +4,22 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.52.2](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.52.2) - 2026-01-05
+
+## What's Changed
+* Add support for multiple base classes in base_class_map and customBasePath by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2916
+* Add __hash__ to Pydantic v2 models used in sets by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2918
+* fix: Handle class name prefix correctly in GraphQL parser by @siminn-arnorgj in https://github.com/koxudaxi/datamodel-code-generator/pull/2926
+* Add TypedDict closed and extra_items support (PEP 728) by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2922
+* Fix release-draft workflow to use pull_request_target and increase max_turns to 50 by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2930
+* Migrate from pyright to ty type checker by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2928
+* Fix URL port handling in get_url_path_parts by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2933
+
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.52.1...0.52.2
+
+---
+
 ## [0.52.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.52.1) - 2026-01-03
 
 ## What's Changed
