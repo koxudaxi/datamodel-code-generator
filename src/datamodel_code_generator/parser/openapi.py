@@ -11,6 +11,7 @@ import re
 from collections import defaultdict
 from contextlib import nullcontext
 from enum import Enum
+from functools import cached_property
 from pathlib import Path
 from re import Pattern
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeVar, Union
@@ -26,6 +27,7 @@ from datamodel_code_generator import (
     load_data,
     snooper_to_methods,
 )
+from datamodel_code_generator.enums import OpenAPIVersion
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -45,6 +47,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types import OpenAPIParserConfigDict
     from datamodel_code_generator.config import OpenAPIParserConfig
     from datamodel_code_generator.model import DataModelFieldBase
+    from datamodel_code_generator.parser.schema_version import OpenAPISchemaFeatures
 
 
 RE_APPLICATION_JSON_PATTERN: Pattern[str] = re.compile(r"^application/.*json$")
@@ -166,6 +169,17 @@ class OpenAPIParser(JsonSchemaParser):
     """Parser for OpenAPI 2.0/3.0/3.1 and Swagger specifications."""
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/components/schemas"]
+
+    @cached_property
+    def schema_features(self) -> OpenAPISchemaFeatures:
+        """Get schema features based on detected OpenAPI version."""
+        from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
+            OpenAPISchemaFeatures,
+            detect_openapi_version,
+        )
+
+        version = detect_openapi_version(self.raw_obj) if self.raw_obj else OpenAPIVersion.Auto
+        return OpenAPISchemaFeatures.from_openapi_version(version)
 
     @classmethod
     def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:

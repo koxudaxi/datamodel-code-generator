@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     AllOfClassHierarchy,
     AllOfMergeMode,
     InvalidClassNameError,
+    JsonSchemaVersion,
     ReadOnlyWriteOnlyModelType,
     SchemaParseError,
     YamlValue,
@@ -87,6 +88,7 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import JSONSchemaParserConfigDict
     from datamodel_code_generator.config import JSONSchemaParserConfig
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 
 def unescape_json_pointer_segment(segment: str) -> str:
@@ -768,6 +770,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     def schema_paths(self) -> list[tuple[str, list[str]]]:
         """Get schema paths for definitions and defs."""
         return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
+
+    @cached_property
+    def schema_features(self) -> JsonSchemaFeatures:
+        """Get schema features based on detected version."""
+        from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
+            JsonSchemaFeatures,
+            detect_jsonschema_version,
+        )
+
+        version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
+        return JsonSchemaFeatures.from_version(version)
 
     @property
     def root_id(self) -> str | None:
