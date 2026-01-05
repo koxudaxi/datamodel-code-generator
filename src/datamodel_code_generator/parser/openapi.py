@@ -172,12 +172,15 @@ class OpenAPIParser(JsonSchemaParser):
 
     @cached_property
     def schema_features(self) -> OpenAPISchemaFeatures:
-        """Get schema features based on detected OpenAPI version."""
+        """Get schema features based on config or detected OpenAPI version."""
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             OpenAPISchemaFeatures,
             detect_openapi_version,
         )
 
+        config_version = getattr(self.config, "openapi_version", None)
+        if config_version is not None and config_version != OpenAPIVersion.Auto:
+            return OpenAPISchemaFeatures.from_openapi_version(config_version)
         version = detect_openapi_version(self.raw_obj) if self.raw_obj else OpenAPIVersion.Auto
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
