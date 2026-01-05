@@ -69,6 +69,7 @@ from datamodel_code_generator import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    VersionMode,
     enable_debug_message,
     generate,
 )
@@ -620,6 +621,8 @@ class Config(BaseModel):
     module_split_mode: Optional[ModuleSplitMode] = None  # noqa: UP045
     watch: bool = False
     watch_delay: float = 0.5
+    schema_version: Optional[str] = None  # noqa: UP045
+    schema_version_mode: Optional[VersionMode] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -1063,6 +1066,8 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         module_split_mode=config.module_split_mode,
         validators=validators,
         default_value_overrides=default_value_overrides,
+        schema_version=config.schema_version,
+        schema_version_mode=config.schema_version_mode,
     )
 
     if output is None and result is not None:  # pragma: no cover

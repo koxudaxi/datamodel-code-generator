@@ -28,6 +28,7 @@ from datamodel_code_generator.enums import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    VersionMode,
 )
 from datamodel_code_generator.format import PythonVersionMin
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
@@ -187,6 +188,8 @@ def _baseline_generate(
     all_exports_collision_strategy: AllExportsCollisionStrategy | None = None,
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
     module_split_mode: ModuleSplitMode | None = None,
+    schema_version: str | None = None,
+    schema_version_mode: VersionMode | None = None,
 ) -> str | object | None:
     raise NotImplementedError
 
