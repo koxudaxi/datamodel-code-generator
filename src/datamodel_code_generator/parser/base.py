@@ -1070,7 +1070,7 @@ class Parser(ABC, Generic[ParserConfigT]):
     def get_url_path_parts(cls, url: ParseResult) -> list[str]:
         """Split URL into scheme/host and path components."""
         return [
-            f"{url.scheme}://{url.hostname}",
+            f"{url.scheme}://{url.netloc}",
             *url.path.split("/")[1:],
         ]
 
