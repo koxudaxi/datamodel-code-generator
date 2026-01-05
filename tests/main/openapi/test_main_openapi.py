@@ -1813,6 +1813,53 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
     ])
 
 
+def test_main_http_openapi_with_custom_port(mocker: MockerFixture, output_file: Path) -> None:
+    """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
+    schema_content = """\
+openapi: "3.0.0"
+info:
+  title: Minimal API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        owner:
+          $ref: "#/components/schemas/User"
+    User:
+      type: object
+      properties:
+        name:
+          type: string
+"""
+    mock_response = mocker.Mock()
+    mock_response.text = schema_content
+
+    httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
+
+    from datamodel_code_generator.__main__ import main
+
+    return_code = main(["--url", "http://127.0.0.1:8123/openapi.json", "--output", str(output_file)])
+    assert return_code == Exit.OK
+
+    result = output_file.read_text(encoding="utf-8")
+    assert "class Item" in result
+    assert "class User" in result
+
+    httpx_get_mock.assert_called_once_with(
+        "http://127.0.0.1:8123/openapi.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--disable-appending-item-suffix"],
     option_description="""Disable appending 'Item' suffix to array item types.
