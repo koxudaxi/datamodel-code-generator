@@ -816,12 +816,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
     @cached_property
     def schema_features(self) -> JsonSchemaFeatures:
-        """Get schema features based on detected version."""
+        """Get schema features based on config or detected version."""
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             JsonSchemaFeatures,
             detect_jsonschema_version,
         )
 
+        config_version = getattr(self.config, "jsonschema_version", None)
+        if config_version is not None and config_version != JsonSchemaVersion.Auto:
+            return JsonSchemaFeatures.from_version(config_version)
         version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
         return JsonSchemaFeatures.from_version(version)
 
