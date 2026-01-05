@@ -509,15 +509,21 @@ def get_ref_type(ref: str) -> JSONReference:
     return JSONReference.REMOTE
 
 
-def _get_type(type_: str, format__: str | None = None) -> Types:
+def _get_type(
+    type_: str,
+    format__: str | None = None,
+    data_formats: dict[str, dict[str, Types]] | None = None,
+) -> Types:
     """Get the appropriate Types enum for a given JSON Schema type and format."""
-    if type_ not in json_schema_data_formats:
+    if data_formats is None:
+        data_formats = json_schema_data_formats
+    if type_ not in data_formats:
         return Types.any
-    if (data_formats := json_schema_data_formats[type_].get("default" if format__ is None else format__)) is not None:
-        return data_formats
+    if (type_format := data_formats[type_].get("default" if format__ is None else format__)) is not None:
+        return type_format
 
     warn(f"format of {format__!r} not understood for {type_!r} - using default", stacklevel=2)
-    return json_schema_data_formats[type_]["default"]
+    return data_formats[type_]["default"]
 
 
 JsonSchemaObject.model_rebuild()
@@ -732,21 +738,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             extras.update(self.default_field_extras)
         return extras
 
+    @cached_property
+    def _data_formats(self) -> dict[str, dict[str, Types]]:
+        """Get data format mappings for this parser type.
+
+        Returns all formats for backward compatibility.
+        OpenAPI-specific formats will be separated in Strict mode (future).
+        """
+        return json_schema_data_formats
+
     def _get_type_with_mappings(self, type_: str, format_: str | None = None) -> Types:
         """Get the Types enum for a given type and format, applying custom type mappings.
 
         Custom mappings from --type-mappings are checked first, then falls back to
-        the default json_schema_data_formats mappings.
+        the parser's data format mappings.
         """
+        data_formats = self._data_formats
         if self.type_mappings and format_ is not None and (type_, format_) in self.type_mappings:
             target_format = self.type_mappings[type_, format_]
-            for type_formats in json_schema_data_formats.values():
+            for type_formats in data_formats.values():
                 if target_format in type_formats:
                     return type_formats[target_format]
-            if target_format in json_schema_data_formats:
-                return json_schema_data_formats[target_format]["default"]
+            if target_format in data_formats:
+                return data_formats[target_format]["default"]
 
-        return _get_type(type_, format_)
+        return _get_type(type_, format_, data_formats)
 
     @cached_property
     def schema_paths(self) -> list[tuple[str, list[str]]]:
