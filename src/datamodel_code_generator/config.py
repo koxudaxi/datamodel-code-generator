@@ -22,9 +22,11 @@ from datamodel_code_generator.enums import (
     FieldTypeCollisionStrategy,
     GraphQLScope,
     InputFileType,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
@@ -350,6 +352,8 @@ class GraphQLParserConfig(ParserConfig):
 class JSONSchemaParserConfig(ParserConfig):
     """Configuration model for JsonSchemaParser.__init__()."""
 
+    jsonschema_version: JsonSchemaVersion | None = None
+
 
 class OpenAPIParserConfig(JSONSchemaParserConfig):
     """Configuration model for OpenAPIParser.__init__()."""
@@ -358,6 +362,7 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
     include_path_parameters: bool = False
     use_status_code_in_response_name: bool = False
     openapi_include_paths: list[str] | None = None
+    openapi_version: OpenAPIVersion | None = None
 
 
 class ParseConfig(BaseModel):

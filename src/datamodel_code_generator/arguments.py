@@ -26,9 +26,11 @@ from datamodel_code_generator.enums import (
     FieldTypeCollisionStrategy,
     InputFileType,
     InputModelRefStrategy,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     StrictTypes,
@@ -982,6 +984,24 @@ openapi_options.add_argument(
     "--use-status-code-in-response-name",
     help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
     action="store_true",
+    default=None,
+)
+openapi_options.add_argument(
+    "--openapi-version",
+    help="OpenAPI version to use (default: auto-detect from 'openapi' field). "
+    "Use 'auto' for auto-detection, '3.0' for OpenAPI 3.0.x, '3.1' for OpenAPI 3.1.x.",
+    choices=[v.value for v in OpenAPIVersion],
+    default=None,
+)
+
+# ======================================================================================
+# Options specific to JSON Schema input
+# ======================================================================================
+base_options.add_argument(
+    "--jsonschema-version",
+    help="JSON Schema version to use (default: auto-detect from '$schema' field). "
+    "Use 'auto' for auto-detection, or specify a draft version explicitly.",
+    choices=[v.value for v in JsonSchemaVersion],
     default=None,
 )
 
