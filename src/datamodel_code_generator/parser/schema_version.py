@@ -7,7 +7,7 @@ and utility functions for detecting schema versions.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TypeVar
+from typing import Any, TypeAlias, TypeVar
 
 from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion
 
@@ -121,7 +121,9 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
 
 SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound=JsonSchemaFeatures)
 
-_JSONSCHEMA_VERSION_PATTERNS: dict[str, JsonSchemaVersion] = {
+_JsonSchemaVersionPatterns: TypeAlias = dict[str, JsonSchemaVersion]
+
+_JSONSCHEMA_VERSION_PATTERNS: _JsonSchemaVersionPatterns = {
     "draft-04": JsonSchemaVersion.Draft4,
     "draft-06": JsonSchemaVersion.Draft6,
     "draft-07": JsonSchemaVersion.Draft7,
