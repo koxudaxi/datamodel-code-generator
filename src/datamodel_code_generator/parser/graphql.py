@@ -479,8 +479,10 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
     def parse_union(self, union_object: graphql.GraphQLUnionType) -> None:  # ty: ignore
         """Parse a GraphQL union type and add it to results."""
-        fields = [self.data_model_field_type(name=type_.name, data_type=DataType()) for type_ in union_object.types]
-
+        fields = [
+            self.data_model_field_type(name=self.references[type_.name].name, data_type=DataType())
+            for type_ in union_object.types
+        ]
         data_model_type = self.data_model_union_type(
             reference=self.references[union_object.name],
             fields=fields,
