@@ -155,7 +155,7 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
                 return version
 
     if "$defs" in data:
-        return JsonSchemaVersion.Draft202012 if "prefixItems" in data else JsonSchemaVersion.Draft201909
+        return JsonSchemaVersion.Draft202012
     if "definitions" in data:
         return JsonSchemaVersion.Draft7
     return JsonSchemaVersion.Draft7

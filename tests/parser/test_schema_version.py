@@ -50,16 +50,9 @@ def test_detect_jsonschema_version_2020_12() -> None:
     )
 
 
-def test_detect_jsonschema_version_defs_with_prefix_items() -> None:
-    """Test detection using $defs with prefixItems heuristic."""
-    assert detect_jsonschema_version({"$defs": {"Foo": {"type": "string"}}, "prefixItems": [{"type": "string"}]}) == (
-        snapshot(JsonSchemaVersion.Draft202012)
-    )
-
-
-def test_detect_jsonschema_version_defs_without_prefix_items() -> None:
-    """Test detection using $defs without prefixItems heuristic."""
-    assert detect_jsonschema_version({"$defs": {"Foo": {"type": "string"}}}) == snapshot(JsonSchemaVersion.Draft201909)
+def test_detect_jsonschema_version_defs_heuristic() -> None:
+    """Test detection using $defs heuristic defaults to latest."""
+    assert detect_jsonschema_version({"$defs": {"Foo": {"type": "string"}}}) == snapshot(JsonSchemaVersion.Draft202012)
 
 
 def test_detect_jsonschema_version_definitions_heuristic() -> None:
