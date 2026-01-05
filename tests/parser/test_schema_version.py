@@ -280,11 +280,61 @@ def test_get_data_formats_jsonschema() -> None:
     from datamodel_code_generator.parser.schema_version import get_data_formats
     from datamodel_code_generator.types import Types
 
-    formats = get_data_formats(is_openapi=False)
-    assert "binary" not in formats["string"]
-    assert "password" not in formats["string"]
-    assert formats["string"]["byte"] == snapshot(Types.byte)
-    assert formats["string"]["date-time"] == snapshot(Types.date_time)
+    assert get_data_formats(is_openapi=False) == snapshot({
+        "integer": {
+            "int32": Types.int32,
+            "int64": Types.int64,
+            "default": Types.integer,
+            "date-time": Types.date_time,
+            "unix-time": Types.int64,
+            "unixtime": Types.int64,
+        },
+        "number": {
+            "float": Types.float,
+            "double": Types.double,
+            "decimal": Types.decimal,
+            "date-time": Types.date_time,
+            "time": Types.time,
+            "time-delta": Types.timedelta,
+            "default": Types.number,
+            "unixtime": Types.int64,
+        },
+        "string": {
+            "default": Types.string,
+            "byte": Types.byte,
+            "date": Types.date,
+            "date-time": Types.date_time,
+            "timestamp with time zone": Types.date_time,
+            "date-time-local": Types.date_time_local,
+            "duration": Types.timedelta,
+            "time": Types.time,
+            "time-local": Types.time_local,
+            "path": Types.path,
+            "email": Types.email,
+            "idn-email": Types.email,
+            "uuid": Types.uuid,
+            "uuid1": Types.uuid1,
+            "uuid2": Types.uuid2,
+            "uuid3": Types.uuid3,
+            "uuid4": Types.uuid4,
+            "uuid5": Types.uuid5,
+            "uri": Types.uri,
+            "uri-reference": Types.string,
+            "hostname": Types.hostname,
+            "ipv4": Types.ipv4,
+            "ipv4-network": Types.ipv4_network,
+            "ipv6": Types.ipv6,
+            "ipv6-network": Types.ipv6_network,
+            "decimal": Types.decimal,
+            "integer": Types.integer,
+            "unixtime": Types.int64,
+            "ulid": Types.ulid,
+        },
+        "boolean": {"default": Types.boolean},
+        "object": {"default": Types.object},
+        "null": {"default": Types.null},
+        "array": {"default": Types.array},
+    })
 
 
 def test_get_data_formats_openapi() -> None:
@@ -292,21 +342,60 @@ def test_get_data_formats_openapi() -> None:
     from datamodel_code_generator.parser.schema_version import get_data_formats
     from datamodel_code_generator.types import Types
 
-    formats = get_data_formats(is_openapi=True)
-    assert formats["string"]["binary"] == snapshot(Types.binary)
-    assert formats["string"]["password"] == snapshot(Types.password)
-    assert formats["string"]["byte"] == snapshot(Types.byte)
-
-
-def test_get_data_formats_common_types() -> None:
-    """Test that common types are present in both modes."""
-    from datamodel_code_generator.parser.schema_version import get_data_formats
-    from datamodel_code_generator.types import Types
-
-    jsonschema_formats = get_data_formats(is_openapi=False)
-    openapi_formats = get_data_formats(is_openapi=True)
-
-    assert jsonschema_formats["integer"]["default"] == snapshot(Types.integer)
-    assert openapi_formats["integer"]["default"] == snapshot(Types.integer)
-    assert jsonschema_formats["boolean"]["default"] == snapshot(Types.boolean)
-    assert openapi_formats["boolean"]["default"] == snapshot(Types.boolean)
+    assert get_data_formats(is_openapi=True) == snapshot({
+        "integer": {
+            "int32": Types.int32,
+            "int64": Types.int64,
+            "default": Types.integer,
+            "date-time": Types.date_time,
+            "unix-time": Types.int64,
+            "unixtime": Types.int64,
+        },
+        "number": {
+            "float": Types.float,
+            "double": Types.double,
+            "decimal": Types.decimal,
+            "date-time": Types.date_time,
+            "time": Types.time,
+            "time-delta": Types.timedelta,
+            "default": Types.number,
+            "unixtime": Types.int64,
+        },
+        "string": {
+            "default": Types.string,
+            "byte": Types.byte,
+            "date": Types.date,
+            "date-time": Types.date_time,
+            "timestamp with time zone": Types.date_time,
+            "date-time-local": Types.date_time_local,
+            "duration": Types.timedelta,
+            "time": Types.time,
+            "time-local": Types.time_local,
+            "path": Types.path,
+            "email": Types.email,
+            "idn-email": Types.email,
+            "uuid": Types.uuid,
+            "uuid1": Types.uuid1,
+            "uuid2": Types.uuid2,
+            "uuid3": Types.uuid3,
+            "uuid4": Types.uuid4,
+            "uuid5": Types.uuid5,
+            "uri": Types.uri,
+            "uri-reference": Types.string,
+            "hostname": Types.hostname,
+            "ipv4": Types.ipv4,
+            "ipv4-network": Types.ipv4_network,
+            "ipv6": Types.ipv6,
+            "ipv6-network": Types.ipv6_network,
+            "decimal": Types.decimal,
+            "integer": Types.integer,
+            "unixtime": Types.int64,
+            "ulid": Types.ulid,
+            "binary": Types.binary,
+            "password": Types.password,
+        },
+        "boolean": {"default": Types.boolean},
+        "object": {"default": Types.object},
+        "null": {"default": Types.null},
+        "array": {"default": Types.array},
+    })
