@@ -30,6 +30,7 @@ from datamodel_code_generator.enums import (
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    VersionMode,
 )
 from datamodel_code_generator.format import (
     DateClassType,
@@ -207,6 +208,8 @@ class GenerateConfig(BaseModel):
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     module_split_mode: ModuleSplitMode | None = None
     default_value_overrides: Mapping[str, Any] | None = None
+    schema_version: str | None = None
+    schema_version_mode: VersionMode | None = None
 
 
 class ParserConfig(BaseModel):

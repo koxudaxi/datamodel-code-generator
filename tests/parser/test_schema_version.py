@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from inline_snapshot import snapshot
 
@@ -13,6 +15,9 @@ from datamodel_code_generator.parser.schema_version import (
     detect_jsonschema_version,
     detect_openapi_version,
 )
+
+# Path to test data
+JSON_SCHEMA_DATA_PATH = Path(__file__).parent.parent / "data" / "jsonschema"
 
 
 def test_detect_jsonschema_version_draft4() -> None:
@@ -421,3 +426,72 @@ def test_openapi_parser_schema_features_detection() -> None:
     features = parser.schema_features
     assert features.nullable_keyword == snapshot(False)
     assert features.null_in_type_array == snapshot(True)
+
+
+def test_jsonschema_parser_config_version_override() -> None:
+    """Test that JsonSchemaParser uses config version over auto-detection."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft4)
+    parser.raw_obj = {"$schema": "http://json-schema.org/draft-07/schema#"}
+    features = parser.schema_features
+    assert features.id_field == snapshot("id")
+    assert features.boolean_schemas == snapshot(False)
+
+
+def test_openapi_parser_config_version_override() -> None:
+    """Test that OpenAPIParser uses config version over auto-detection."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser("", openapi_version=OpenAPIVersion.V30)
+    parser.raw_obj = {"openapi": "3.1.0"}
+    features = parser.schema_features
+    assert features.nullable_keyword == snapshot(True)
+    assert features.null_in_type_array == snapshot(False)
+
+
+@pytest.mark.cli_doc(
+    options=["--schema-version"],
+    option_description="""Schema version to use for parsing.
+
+The `--schema-version` option specifies the schema version to use instead of auto-detection.
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=["--schema-version", "draft-07"],
+    golden_output="jsonschema/simple_string.py",
+)
+def test_cli_schema_version_jsonschema() -> None:
+    """Test --schema-version option with JSON Schema input."""
+    from datamodel_code_generator import generate
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+        schema_version="draft-07",
+    )
+    assert result is not None
+    assert "class Model" in result or "Model" in result
+
+
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode.
+
+The `--schema-version-mode` option controls how schema version validation is performed.
+'lenient' (default): accept all features regardless of version.
+'strict': warn on features outside the declared/detected version.""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=["--schema-version-mode", "lenient"],
+    golden_output="jsonschema/simple_string.py",
+)
+def test_cli_schema_version_mode() -> None:
+    """Test --schema-version-mode option."""
+    from datamodel_code_generator import generate
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+        schema_version_mode=VersionMode.Lenient,
+    )
+    assert result is not None

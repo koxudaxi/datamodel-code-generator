@@ -26,16 +26,15 @@ from datamodel_code_generator.enums import (
     FieldTypeCollisionStrategy,
     InputFileType,
     InputModelRefStrategy,
-    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
-    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     StrictTypes,
     TargetPydanticVersion,
     UnionMode,
+    VersionMode,
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.parser import LiteralType
@@ -986,22 +985,23 @@ openapi_options.add_argument(
     action="store_true",
     default=None,
 )
-openapi_options.add_argument(
-    "--openapi-version",
-    help="OpenAPI version to use (default: auto-detect from 'openapi' field). "
-    "Use 'auto' for auto-detection, '3.0' for OpenAPI 3.0.x, '3.1' for OpenAPI 3.1.x.",
-    choices=[v.value for v in OpenAPIVersion],
-    default=None,
-)
-
 # ======================================================================================
-# Options specific to JSON Schema input
+# Schema version options (for both JSON Schema and OpenAPI)
 # ======================================================================================
 base_options.add_argument(
-    "--jsonschema-version",
-    help="JSON Schema version to use (default: auto-detect from '$schema' field). "
-    "Use 'auto' for auto-detection, or specify a draft version explicitly.",
-    choices=[v.value for v in JsonSchemaVersion],
+    "--schema-version",
+    help="Schema version. Valid values depend on input type: "
+    "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "
+    "OpenAPI: auto, 3.0, 3.1. "
+    "(default: auto - detected from $schema or openapi field)",
+    default=None,
+)
+base_options.add_argument(
+    "--schema-version-mode",
+    help="Schema version validation mode. "
+    "'lenient': accept all features regardless of version (default). "
+    "'strict': warn on features outside declared/detected version.",
+    choices=[m.value for m in VersionMode],
     default=None,
 )
 
