@@ -1,7 +1,10 @@
 name: Release Draft
 
 on:
-  pull_request:
+  # Use pull_request_target to always use the workflow file from main branch
+  # This ensures new PRs from branches that don't have the latest workflow will still work
+  # Security note: This is safe because we only run on merged PRs (code is already in main)
+  pull_request_target:
     types: [closed]
     branches: [main]
 
@@ -76,7 +79,7 @@ jobs:
 
           claude_args: |
             --model claude-opus-4-5-20251101
-            --max-turns 20
+            --max-turns 50
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
       - name: Parse Claude output
