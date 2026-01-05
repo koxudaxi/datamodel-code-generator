@@ -664,7 +664,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     })
 
     @classmethod
-    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:
+    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:  # type: ignore[override]
         """Create a JSONSchemaParserConfig from options."""
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415

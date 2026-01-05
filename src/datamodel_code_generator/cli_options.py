@@ -70,6 +70,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--input-model-ref-strategy": CLIOptionMeta(name="--input-model-ref-strategy", category=OptionCategory.BASE),
     "--input-file-type": CLIOptionMeta(name="--input-file-type", category=OptionCategory.BASE),
     "--encoding": CLIOptionMeta(name="--encoding", category=OptionCategory.BASE),
+    "--schema-version": CLIOptionMeta(name="--schema-version", category=OptionCategory.BASE),
+    "--schema-version-mode": CLIOptionMeta(name="--schema-version-mode", category=OptionCategory.BASE),
     # ==========================================================================
     # Model Customization
     # ==========================================================================
