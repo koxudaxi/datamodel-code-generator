@@ -62,7 +62,7 @@ def test_graphql_union_with_prefix(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="graphql",
         assert_func=assert_file_content,
-        expected_file="union-with-prefix.py",
+        expected_file="union_with_prefix.py",
         extra_args=["--class-name-prefix", "Foo"],
     )
 
