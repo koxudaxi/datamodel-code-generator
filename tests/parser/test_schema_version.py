@@ -399,3 +399,25 @@ def test_get_data_formats_openapi() -> None:
         "null": {"default": Types.null},
         "array": {"default": Types.array},
     })
+
+
+def test_jsonschema_parser_schema_features_detection() -> None:
+    """Test that JsonSchemaParser detects schema version from $schema."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("")
+    parser.raw_obj = {"$schema": "http://json-schema.org/draft-07/schema#"}
+    features = parser.schema_features
+    assert features.boolean_schemas == snapshot(True)
+    assert features.definitions_key == snapshot("definitions")
+
+
+def test_openapi_parser_schema_features_detection() -> None:
+    """Test that OpenAPIParser detects OpenAPI version from openapi field."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser("")
+    parser.raw_obj = {"openapi": "3.1.0"}
+    features = parser.schema_features
+    assert features.nullable_keyword == snapshot(False)
+    assert features.null_in_type_array == snapshot(True)
