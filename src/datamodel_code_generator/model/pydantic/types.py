@@ -321,7 +321,7 @@ class DataTypeManager(_DataTypeManager):
         strict = StrictTypes.str in self.strict_types
         if data_type_kwargs:
             if strict:
-                data_type_kwargs["strict"] = True
+                data_type_kwargs["strict"] = True  # ty: ignore
             if self.PATTERN_KEY in data_type_kwargs:
                 escaped_regex = data_type_kwargs[self.PATTERN_KEY].translate(escape_characters)
                 # TODO: remove unneeded escaped characters

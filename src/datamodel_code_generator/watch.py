@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 def _get_watchfiles() -> Any:
     """Lazily import watchfiles."""
     try:
-        import watchfiles  # noqa: PLC0415  # pyright: ignore[reportMissingImports]
+        import watchfiles  # noqa: PLC0415  # ty: ignore
     except ImportError as exc:
         msg = "Please run `pip install 'datamodel-code-generator[watch]'` to use watch mode"
         raise Exception(msg) from exc  # noqa: TRY002
@@ -50,7 +50,7 @@ def watch_and_regenerate(
             try:
                 run_generate_from_config(
                     config=config,
-                    input_=config.input,  # pyright: ignore[reportArgumentType]
+                    input_=config.input,  # ty: ignore
                     output=config.output,
                     extra_template_data=extra_template_data,
                     aliases=aliases,

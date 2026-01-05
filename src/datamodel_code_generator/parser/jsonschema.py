@@ -365,7 +365,7 @@ class JsonSchemaObject(BaseModel):
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
     if is_pydantic_v2():
-        model_config = ConfigDict(  # pyright: ignore[reportPossiblyUnboundVariable]
+        model_config = ConfigDict(  # ty: ignore
             arbitrary_types_allowed=True,
             ignored_types=(cached_property,),
         )
@@ -539,7 +539,7 @@ EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: set[str] = {
 }
 
 EXCLUDE_FIELD_KEYS = (
-    set(JsonSchemaObject.get_fields())  # pyright: ignore[reportAttributeAccessIssue]
+    set(JsonSchemaObject.get_fields())  # ty: ignore
     - DEFAULT_FIELD_KEYS
     - EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA
 ) | {
@@ -678,8 +678,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
             DataModelFieldBase=model_base.DataModelFieldBase,
             DataTypeManager=types_module.DataTypeManager,
         )
-        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}
-        defaults.update(options)
+        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}  # ty: ignore
+        defaults.update(options)  # ty: ignore
         return JSONSchemaParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
 
     def __init__(

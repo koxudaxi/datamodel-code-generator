@@ -40,7 +40,7 @@ def get_body(
         headers=headers,
         verify=not ignore_tls,
         follow_redirects=True,
-        params=query_parameters,  # pyright: ignore[reportArgumentType]
+        params=query_parameters,  # ty: ignore
         timeout=timeout,
     ).text
 

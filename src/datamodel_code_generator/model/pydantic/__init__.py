@@ -38,7 +38,7 @@ class Config(_BaseModel):
 
     def dict(  # type: ignore[override]
         self, **kwargs: Any
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any]:  # ty: ignore
         """Version-compatible dict method for templates."""
         from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 

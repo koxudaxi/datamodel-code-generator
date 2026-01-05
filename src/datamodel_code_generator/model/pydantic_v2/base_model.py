@@ -60,7 +60,7 @@ class Constraints(_Constraints):
     regex: Optional[str] = Field(None, alias="regex")  # noqa: UP045
     pattern: Optional[str] = Field(None, alias="pattern")  # noqa: UP045
 
-    @model_validator(mode="before")
+    @model_validator(mode="before")  # ty: ignore
     def validate_min_max_items(cls, values: Any) -> dict[str, Any]:  # noqa: N805
         """Validate and convert minItems/maxItems to minLength/maxLength."""
         if not isinstance(values, dict):  # pragma: no cover
@@ -122,7 +122,7 @@ class DataModelField(DataModelFieldV1):
         "union_mode",
         "deprecated",
     }
-    constraints: Optional[Constraints] = None  # pyright: ignore[reportIncompatibleVariableOverride]  # noqa: UP045
+    constraints: Optional[Constraints] = None  # ty: ignore  # noqa: UP045
     _PARSE_METHOD: ClassVar[str] = "model_validate"
     can_have_extra_keys: ClassVar[bool] = False
 
@@ -305,7 +305,7 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
-            self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # pyright: ignore[reportArgumentType]
+            self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
         self._process_validators()
@@ -395,7 +395,7 @@ class BaseModel(BaseModelBase):
             self._additional_imports.append(Import.from_full_path(function_path))
 
         if prepared_validators:
-            self.extra_template_data["prepared_validators"] = prepared_validators  # pyright: ignore[reportArgumentType]
+            self.extra_template_data["prepared_validators"] = prepared_validators  # ty: ignore
             self._additional_imports.append(IMPORT_FIELD_VALIDATOR)
             self._additional_imports.append(IMPORT_ANY)
 

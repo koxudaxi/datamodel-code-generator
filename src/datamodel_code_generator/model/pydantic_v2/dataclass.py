@@ -151,7 +151,7 @@ class DataModelField(DataModelFieldV2):
     Inherits pydantic v2 Field() constraint handling from DataModelFieldV2.
     """
 
-    constraints: Constraints | None = None  # pyright: ignore[reportIncompatibleVariableOverride]
+    constraints: Constraints | None = None  # ty: ignore
 
     def process_const(self) -> None:
         """Process const field constraint using literal type."""
