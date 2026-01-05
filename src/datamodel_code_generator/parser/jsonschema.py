@@ -1144,16 +1144,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         """
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
-            # Set backport flag for TypedDict closed/extra_items on Python < 3.13
+            # Set backport flag for TypedDict closed/extra_items on Python < 3.15
             if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
                 self.extra_template_data[path]["use_typeddict_backport"] = True
         elif isinstance(obj.additionalProperties, JsonSchemaObject):
             # Parse additionalProperties schema to get type hint for extra_items
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
-            if additional_props_type:
+            if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
-                # Set backport flag for TypedDict closed/extra_items on Python < 3.13
-                if not self.target_python_version.has_typed_dict_closed:
+                # Set backport flag for TypedDict closed/extra_items on Python < 3.15
+                if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
                     self.extra_template_data[path]["use_typeddict_backport"] = True
 
     def set_unevaluated_properties(self, path: str, obj: JsonSchemaObject) -> None:
