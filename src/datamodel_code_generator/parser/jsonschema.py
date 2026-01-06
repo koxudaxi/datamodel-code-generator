@@ -3697,7 +3697,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
                 stacklevel=3,
             )
 
-        # Check exclusive min/max format (Draft 4 uses boolean, Draft 6+ uses number)
+        # Check nullable keyword (OpenAPI-only, not valid in pure JsonSchema)
+        # Note: OpenAPIParser overrides this to allow nullable in OpenAPI 3.0
+        if raw.get("nullable") is not None:
+            warn(
+                "nullable keyword is an OpenAPI extension, not valid in pure JSON Schema. "
+                f'Use type: ["string", "null"] instead. Schema path: {"/".join(path)}',
+                stacklevel=3,
+            )
+
+        # Check OpenAPI-only formats (binary, password)
+        format_value = raw.get("format")
+        if format_value in {"binary", "password"}:
+            warn(
+                f"format '{format_value}' is an OpenAPI extension, not valid in pure JSON Schema. "
+                f"Schema path: {'/'.join(path)}",
+                stacklevel=3,
+            )
+
+        # Check exclusive min/max format
+        self._check_exclusive_minmax_style(raw, path)
+
+    def _check_exclusive_minmax_style(
+        self,
+        raw: dict[str, Any],
+        path: list[str],
+    ) -> None:
+        """Check exclusiveMinimum/Maximum style matches schema version."""
         exclusive_min = raw.get("exclusiveMinimum")
         exclusive_max = raw.get("exclusiveMaximum")
         if self.schema_features.exclusive_as_number:

@@ -756,3 +756,86 @@ def test_version_checks_lenient_no_warnings() -> None:
         parser._check_version_specific_features(True, ["test"])
         user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
         assert len(user_warnings) == 0
+
+
+def test_nullable_in_jsonschema_strict_warning() -> None:
+    """Test that nullable keyword emits warning in JsonSchema Strict mode."""
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "nullable": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "nullable keyword is an OpenAPI extension" in str(user_warnings[0].message)
+
+
+def test_nullable_in_openapi_no_warning() -> None:
+    """Test that nullable keyword does NOT emit warning in OpenAPI."""
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "nullable": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_binary_format_in_jsonschema_strict_warning() -> None:
+    """Test that binary format emits warning in JsonSchema Strict mode."""
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "format": "binary"}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "format 'binary' is an OpenAPI extension" in str(user_warnings[0].message)
+
+
+def test_password_format_in_jsonschema_strict_warning() -> None:
+    """Test that password format emits warning in JsonSchema Strict mode."""
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "format": "password"}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "format 'password' is an OpenAPI extension" in str(user_warnings[0].message)
+
+
+def test_binary_format_in_openapi_no_warning() -> None:
+    """Test that binary format does NOT emit warning in OpenAPI."""
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "format": "binary"}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0

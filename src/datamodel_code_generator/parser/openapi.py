@@ -187,6 +187,74 @@ class OpenAPIParser(JsonSchemaParser):
         version = detect_openapi_version(self.raw_obj) if self.raw_obj is not None else OpenAPIVersion.Auto
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
+    def _check_version_specific_features(
+        self,
+        raw: dict[str, Any] | Any,
+        path: list[str],
+    ) -> None:
+        """Check for version-specific features and warn in Strict mode.
+
+        OpenAPI version: skips warnings for OpenAPI-valid features (nullable, binary, password)
+        that would warn in pure JSON Schema. Still applies JSON Schema version checks.
+        """
+        version_mode = getattr(self.config, "schema_version_mode", None)
+        if version_mode != VersionMode.Strict:
+            return
+
+        # Check boolean schemas (Draft 6+)
+        if isinstance(raw, bool):
+            if not self.schema_features.boolean_schemas:
+                warn(
+                    f"Boolean schemas are not supported in this OpenAPI version. Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            return
+
+        if not isinstance(raw, dict):
+            return
+
+        # Check null in type array - only warn if not supported by this OpenAPI version
+        type_value = raw.get("type")
+        if isinstance(type_value, list) and "null" in type_value and not self.schema_features.null_in_type_array:
+            warn(
+                'null in type array (e.g., type: ["string", "null"]) is not supported '
+                f"in OpenAPI 3.0. Use nullable: true instead. Schema path: {'/'.join(path)}",
+                stacklevel=3,
+            )
+
+        # Check exclusive min/max format (Draft 4 uses boolean, Draft 6+ uses number)
+        # OpenAPI 3.0 inherits Draft 4 semantics (boolean), OpenAPI 3.1 uses Draft 2020-12 (numeric)
+        exclusive_min = raw.get("exclusiveMinimum")
+        exclusive_max = raw.get("exclusiveMaximum")
+        if self.schema_features.exclusive_as_number:
+            # OpenAPI 3.1: should be numeric, not boolean
+            if isinstance(exclusive_min, bool):
+                warn(
+                    f"exclusiveMinimum as boolean is not supported in OpenAPI 3.1. Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if isinstance(exclusive_max, bool):
+                warn(
+                    f"exclusiveMaximum as boolean is not supported in OpenAPI 3.1. Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+        else:
+            # OpenAPI 3.0: should be boolean, not numeric
+            if exclusive_min is not None and not isinstance(exclusive_min, bool):
+                warn(
+                    f"exclusiveMinimum as number is OpenAPI 3.1 style, but schema is OpenAPI 3.0. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if exclusive_max is not None and not isinstance(exclusive_max, bool):
+                warn(
+                    f"exclusiveMaximum as number is OpenAPI 3.1 style, but schema is OpenAPI 3.0. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+
+        # Note: nullable, binary, password are valid in OpenAPI - no warnings needed
+
     @classmethod
     def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:  # ty: ignore
         """Create an OpenAPIParserConfig from options."""
