@@ -34,6 +34,7 @@ from datamodel_code_generator.enums import (
     StrictTypes,
     TargetPydanticVersion,
     UnionMode,
+    VersionMode,
 )
 from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
 from datamodel_code_generator.parser import LiteralType
@@ -982,6 +983,25 @@ openapi_options.add_argument(
     "--use-status-code-in-response-name",
     help="Include HTTP status code in response model names (e.g., ResourceGetResponse200, ResourceGetResponseDefault)",
     action="store_true",
+    default=None,
+)
+# ======================================================================================
+# Schema version options (for both JSON Schema and OpenAPI)
+# ======================================================================================
+base_options.add_argument(
+    "--schema-version",
+    help="Schema version. Valid values depend on input type: "
+    "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "
+    "OpenAPI: auto, 3.0, 3.1. "
+    "(default: auto - detected from $schema or openapi field)",
+    default=None,
+)
+base_options.add_argument(
+    "--schema-version-mode",
+    help="Schema version validation mode. "
+    "'lenient': accept all features regardless of version (default). "
+    "'strict': warn on features outside declared/detected version.",
+    choices=[m.value for m in VersionMode],
     default=None,
 )
 

@@ -31,6 +31,7 @@ from datamodel_code_generator import (
     JsonSchemaVersion,
     ReadOnlyWriteOnlyModelType,
     SchemaParseError,
+    VersionMode,
     YamlValue,
     load_data,
     load_data_from_path,
@@ -192,7 +193,12 @@ class JSONReference(_enum.Enum):
 
 
 class Discriminator(BaseModel):
-    """Represent OpenAPI discriminator object."""
+    """Represent OpenAPI discriminator object.
+
+    This is an OpenAPI-specific concept for supporting polymorphism.
+    It identifies which schema applies based on a property value.
+    Kept in jsonschema.py to avoid circular imports with openapi.py.
+    """
 
     propertyName: str  # noqa: N815
     mapping: Optional[dict[str, str]] = None  # noqa: UP045
@@ -517,7 +523,7 @@ def _get_type(
     data_formats: dict[str, dict[str, Types]] | None = None,
 ) -> Types:
     """Get the appropriate Types enum for a given JSON Schema type and format."""
-    if data_formats is None:
+    if data_formats is None:  # pragma: no cover
         data_formats = json_schema_data_formats
     if type_ not in data_formats:
         return Types.any
@@ -664,7 +670,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
     })
 
     @classmethod
-    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:
+    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:  # type: ignore[override]
         """Create a JSONSchemaParserConfig from options."""
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
@@ -768,17 +774,43 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
     @cached_property
     def schema_paths(self) -> list[tuple[str, list[str]]]:
-        """Get schema paths for definitions and defs."""
-        return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
+        """Get schema paths for definitions and defs.
+
+        For JsonSchema, uses schema_features.definitions_key to determine
+        the primary path, with fallback to the alternative in Lenient mode.
+        OpenAPI subclass uses its own SCHEMA_PATHS (#/components/schemas).
+        """
+        # OpenAPI and other subclasses use their own SCHEMA_PATHS
+        if self.SCHEMA_PATHS != ["#/definitions", "#/$defs"]:
+            return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
+
+        # JsonSchema: use definitions_key from schema_features
+        primary_key = self.schema_features.definitions_key
+        primary_path = f"#/{primary_key}"
+        fallback_key = "$defs" if primary_key == "definitions" else "definitions"
+        fallback_path = f"#/{fallback_key}"
+
+        # Strict mode: only use version-specific path
+        if self.config.schema_version_mode == VersionMode.Strict:
+            return [(str(primary_path), [str(primary_key)])]
+
+        # Lenient mode (default): check both paths, primary first
+        return [
+            (str(primary_path), [str(primary_key)]),
+            (str(fallback_path), [str(fallback_key)]),
+        ]
 
     @cached_property
     def schema_features(self) -> JsonSchemaFeatures:
-        """Get schema features based on detected version."""
+        """Get schema features based on config or detected version."""
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             JsonSchemaFeatures,
             detect_jsonschema_version,
         )
 
+        config_version = getattr(self.config, "jsonschema_version", None)
+        if config_version is not None and config_version != JsonSchemaVersion.Auto:
+            return JsonSchemaFeatures.from_version(config_version)
         version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
         return JsonSchemaFeatures.from_version(version)
 
@@ -2918,6 +2950,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         singular_name: bool = True,  # noqa: FBT001, FBT002
     ) -> DataModelFieldBase:
         """Parse array schema into a data model field with list type."""
+        # Strict mode: check for version-specific array features
+        self._check_array_version_features(obj, path)
+
         if self.force_optional_for_required_fields:
             required: bool = False
             nullable: Optional[bool] = None  # noqa: UP045
@@ -3589,9 +3624,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
     @contextmanager
     def root_id_context(self, root_raw: dict[str, Any]) -> Generator[None, None, None]:
-        """Context manager to temporarily set the root $id during parsing."""
+        """Context manager to temporarily set the root $id during parsing.
+
+        Uses schema_features.id_field to support both "id" (Draft 4) and "$id" (Draft 6+).
+        Falls back to checking both fields for lenient compatibility.
+        """
         previous_root_id = self.root_id
-        self.root_id = root_raw.get("$id") or None
+        # Try version-specific field first, then fallback to alternative for compatibility
+        id_field = self.schema_features.id_field
+        self.root_id = root_raw.get(id_field) or root_raw.get("$id") or root_raw.get("id") or None
         yield
         self.root_id = previous_root_id
 
@@ -3622,8 +3663,108 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         if isinstance(raw, dict) and "x-python-import" in raw:
             self._handle_python_import(name, path)
             return
+
+        # Strict mode: check for version-specific features before validation
+        self._check_version_specific_features(raw, path)
+
         obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
+
+    def _check_version_specific_features(
+        self,
+        raw: dict[str, YamlValue] | YamlValue,
+        path: list[str],
+    ) -> None:
+        """Check for version-specific features and warn in Strict mode.
+
+        This method checks the raw schema data before Pydantic validation
+        to detect features that may not be valid for the declared version.
+        """
+        if self.config.schema_version_mode != VersionMode.Strict:
+            return
+
+        # Check boolean schemas (Draft 6+)
+        if isinstance(raw, bool):
+            if not self.schema_features.boolean_schemas:
+                version_name = "Draft 4" if self.schema_features.id_field == "id" else "this version"
+                warn(
+                    f"Boolean schemas are not supported in {version_name}. Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            return
+
+        if not isinstance(raw, dict):
+            return
+
+        # Check null in type array (Draft 2020-12 / OpenAPI 3.1+)
+        type_value = raw.get("type")
+        if isinstance(type_value, list) and "null" in type_value and not self.schema_features.null_in_type_array:
+            warn(
+                'null in type array (e.g., type: ["string", "null"]) is not supported '
+                f"in this schema version. Use nullable: true instead. Schema path: {'/'.join(path)}",
+                stacklevel=3,
+            )
+
+        # Check exclusive min/max format (Draft 4 uses boolean, Draft 6+ uses number)
+        exclusive_min = raw.get("exclusiveMinimum")
+        exclusive_max = raw.get("exclusiveMaximum")
+        if self.schema_features.exclusive_as_number:
+            # Draft 6+: should be numeric, not boolean
+            if isinstance(exclusive_min, bool):
+                warn(
+                    f"exclusiveMinimum as boolean is Draft 4 style, but schema version uses numeric style. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if isinstance(exclusive_max, bool):
+                warn(
+                    f"exclusiveMaximum as boolean is Draft 4 style, but schema version uses numeric style. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+        else:
+            # Draft 4: should be boolean, not numeric
+            if exclusive_min is not None and not isinstance(exclusive_min, bool):
+                warn(
+                    f"exclusiveMinimum as number is Draft 6+ style, but schema version is Draft 4. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if exclusive_max is not None and not isinstance(exclusive_max, bool):
+                warn(
+                    f"exclusiveMaximum as number is Draft 6+ style, but schema version is Draft 4. "
+                    f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+
+    def _check_array_version_features(
+        self,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> None:
+        """Check for version-specific array features and warn in Strict mode.
+
+        Warns when prefixItems is used in versions that don't support it,
+        or when items as array (tuple style) is used in Draft 2020-12+.
+        """
+        if self.config.schema_version_mode != VersionMode.Strict:
+            return
+
+        # Check prefixItems usage (Draft 2020-12+ only)
+        if obj.prefixItems is not None and not self.schema_features.prefix_items:
+            warn(
+                f"prefixItems is not supported in this schema version. "
+                f"Use items as array for tuple validation. Schema path: {'/'.join(path)}",
+                stacklevel=4,
+            )
+
+        # Check items as array usage (deprecated in Draft 2020-12)
+        if isinstance(obj.items, list) and self.schema_features.prefix_items:
+            warn(
+                f"items as array (tuple validation) is deprecated in Draft 2020-12. "
+                f"Use prefixItems instead. Schema path: {'/'.join(path)}",
+                stacklevel=4,
+            )
 
     def _handle_python_import(
         self,

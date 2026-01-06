@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 9 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
@@ -161,6 +161,8 @@ This documentation is auto-generated from test cases.
 
 ### S {#s}
 
+- [`--schema-version`](base-options.md#schema-version)
+- [`--schema-version-mode`](base-options.md#schema-version-mode)
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member)
 - [`--shared-module-name`](general-options.md#shared-module-name)
 - [`--skip-root-model`](model-customization.md#skip-root-model)

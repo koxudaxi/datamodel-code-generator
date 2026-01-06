@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from inline_snapshot import snapshot
 
@@ -13,6 +15,9 @@ from datamodel_code_generator.parser.schema_version import (
     detect_jsonschema_version,
     detect_openapi_version,
 )
+
+# Path to test data
+JSON_SCHEMA_DATA_PATH = Path(__file__).parent.parent / "data" / "jsonschema"
 
 
 def test_detect_jsonschema_version_draft4() -> None:
@@ -51,7 +56,11 @@ def test_detect_jsonschema_version_2020_12() -> None:
 
 
 def test_detect_jsonschema_version_defs_heuristic() -> None:
-    """Test detection using $defs heuristic defaults to latest."""
+    """Test detection using $defs heuristic.
+
+    $defs was introduced in Draft 2019-09, but Draft 2020-12 also uses it.
+    Since 2020-12 is a superset, default to 2020-12 to avoid false warnings.
+    """
     assert detect_jsonschema_version({"$defs": {"Foo": {"type": "string"}}}) == snapshot(JsonSchemaVersion.Draft202012)
 
 
@@ -105,6 +114,7 @@ def test_jsonschema_features_draft4() -> None:
             boolean_schemas=False,
             id_field="id",
             definitions_key="definitions",
+            exclusive_as_number=False,
         )
     )
 
@@ -119,6 +129,7 @@ def test_jsonschema_features_draft6() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=True,
         )
     )
 
@@ -133,6 +144,7 @@ def test_jsonschema_features_draft7() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=True,
         )
     )
 
@@ -147,6 +159,7 @@ def test_jsonschema_features_2019_09() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -161,6 +174,7 @@ def test_jsonschema_features_2020_12() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -175,6 +189,7 @@ def test_jsonschema_features_auto() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -196,6 +211,7 @@ def test_openapi_features_v30() -> None:
             boolean_schemas=False,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=False,
             nullable_keyword=True,
             discriminator_support=True,
         )
@@ -212,6 +228,7 @@ def test_openapi_features_v31() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -228,6 +245,7 @@ def test_openapi_features_auto() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -421,3 +439,393 @@ def test_openapi_parser_schema_features_detection() -> None:
     features = parser.schema_features
     assert features.nullable_keyword == snapshot(False)
     assert features.null_in_type_array == snapshot(True)
+
+
+def test_jsonschema_parser_config_version_override() -> None:
+    """Test that JsonSchemaParser uses config version over auto-detection."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft4)
+    parser.raw_obj = {"$schema": "http://json-schema.org/draft-07/schema#"}
+    features = parser.schema_features
+    assert features.id_field == snapshot("id")
+    assert features.boolean_schemas == snapshot(False)
+
+
+def test_openapi_parser_config_version_override() -> None:
+    """Test that OpenAPIParser uses config version over auto-detection."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser("", openapi_version=OpenAPIVersion.V30)
+    parser.raw_obj = {"openapi": "3.1.0"}
+    features = parser.schema_features
+    assert features.nullable_keyword == snapshot(True)
+    assert features.null_in_type_array == snapshot(False)
+
+
+@pytest.mark.cli_doc(
+    options=["--schema-version"],
+    option_description="""Schema version to use for parsing.
+
+The `--schema-version` option specifies the schema version to use instead of auto-detection.
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=["--schema-version", "draft-07"],
+    golden_output="jsonschema/simple_string.py",
+)
+def test_cli_schema_version_jsonschema() -> None:
+    """Test --schema-version option with JSON Schema input."""
+    from datamodel_code_generator import generate
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+        schema_version="draft-07",
+    )
+    assert result is not None
+    assert "class Model" in result or "Model" in result
+
+
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode.
+
+The `--schema-version-mode` option controls how schema version validation is performed.
+'lenient' (default): accept all features regardless of version.
+'strict': warn on features outside the declared/detected version.""",
+    input_schema="jsonschema/simple_string.json",
+    cli_args=["--schema-version-mode", "lenient"],
+    golden_output="jsonschema/simple_string.py",
+)
+def test_cli_schema_version_mode() -> None:
+    """Test --schema-version-mode option."""
+    from datamodel_code_generator import generate
+
+    result = generate(
+        JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+        schema_version_mode=VersionMode.Lenient,
+    )
+    assert result is not None
+
+
+def test_schema_paths_lenient_mode_draft7() -> None:
+    """Test schema_paths returns both paths in Lenient mode for Draft 7."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft7)
+    paths = parser.schema_paths
+    assert paths == snapshot([
+        ("#/definitions", ["definitions"]),
+        ("#/$defs", ["$defs"]),
+    ])
+
+
+def test_schema_paths_lenient_mode_2020_12() -> None:
+    """Test schema_paths returns $defs first in Lenient mode for 2020-12."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft202012)
+    paths = parser.schema_paths
+    assert paths == snapshot([
+        ("#/$defs", ["$defs"]),
+        ("#/definitions", ["definitions"]),
+    ])
+
+
+def test_schema_paths_strict_mode_draft7() -> None:
+    """Test schema_paths returns only definitions in Strict mode for Draft 7."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/definitions", ["definitions"])])
+
+
+def test_schema_paths_strict_mode_2020_12() -> None:
+    """Test schema_paths returns only $defs in Strict mode for 2020-12."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/$defs", ["$defs"])])
+
+
+def test_openapi_schema_paths_unchanged() -> None:
+    """Test that OpenAPI schema_paths uses SCHEMA_PATHS regardless of version mode."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/components/schemas", ["components", "schemas"])])
+
+
+def test_nullable_keyword_openapi_31_strict_warning() -> None:
+    """Test that nullable keyword emits warning in OpenAPI 3.1 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "nullable keyword is deprecated" in str(w[0].message)
+
+
+def test_nullable_keyword_openapi_30_no_warning() -> None:
+    """Test that nullable keyword does NOT emit warning in OpenAPI 3.0."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(deprecation_warnings) == 0
+
+
+def test_nullable_keyword_openapi_31_lenient_no_warning() -> None:
+    """Test that nullable keyword does NOT emit warning in OpenAPI 3.1 Lenient mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Lenient,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(deprecation_warnings) == 0
+
+
+def test_null_in_type_array_strict_warning_draft7() -> None:
+    """Test that null in type array emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": ["string", "null"]}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "null in type array" in str(user_warnings[0].message)
+
+
+def test_null_in_type_array_no_warning_2020_12() -> None:
+    """Test that null in type array does NOT emit warning in Draft 2020-12."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": ["string", "null"]}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_exclusive_as_number_strict_warning_draft4() -> None:
+    """Test that numeric exclusiveMinimum emits warning in Draft 4 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "number", "exclusiveMinimum": 5}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "exclusiveMinimum as number" in str(user_warnings[0].message)
+
+
+def test_exclusive_as_bool_strict_warning_draft7() -> None:
+    """Test that boolean exclusiveMinimum emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "number", "minimum": 5, "exclusiveMinimum": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "exclusiveMinimum as boolean" in str(user_warnings[0].message)
+
+
+def test_prefix_items_strict_warning_draft7() -> None:
+    """Test that prefixItems emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    obj = JsonSchemaObject(
+        type="array",
+        prefixItems=[JsonSchemaObject(type="string"), JsonSchemaObject(type="number")],
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_array_version_features(obj, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "prefixItems is not supported" in str(user_warnings[0].message)
+
+
+def test_items_array_strict_warning_2020_12() -> None:
+    """Test that items as array emits warning in Draft 2020-12 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    obj = JsonSchemaObject(
+        type="array",
+        items=[JsonSchemaObject(type="string"), JsonSchemaObject(type="number")],
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_array_version_features(obj, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "items as array" in str(user_warnings[0].message)
+
+
+def test_boolean_schema_strict_warning_draft4() -> None:
+    """Test that boolean schema emits warning in Draft 4 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "Boolean schemas" in str(user_warnings[0].message)
+
+
+def test_boolean_schema_no_warning_draft7() -> None:
+    """Test that boolean schema does NOT emit warning in Draft 7."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_version_checks_lenient_no_warnings() -> None:
+    """Test that version checks do NOT emit warnings in Lenient mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Lenient,
+    )
+    raw_schema = {"type": ["string", "null"], "exclusiveMinimum": 5}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0

@@ -27,7 +27,7 @@ from datamodel_code_generator import (
     load_data,
     snooper_to_methods,
 )
-from datamodel_code_generator.enums import OpenAPIVersion
+from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -172,12 +172,15 @@ class OpenAPIParser(JsonSchemaParser):
 
     @cached_property
     def schema_features(self) -> OpenAPISchemaFeatures:
-        """Get schema features based on detected OpenAPI version."""
+        """Get schema features based on config or detected OpenAPI version."""
         from datamodel_code_generator.parser.schema_version import (  # noqa: PLC0415
             OpenAPISchemaFeatures,
             detect_openapi_version,
         )
 
+        config_version = getattr(self.config, "openapi_version", None)
+        if config_version is not None and config_version != OpenAPIVersion.Auto:
+            return OpenAPISchemaFeatures.from_openapi_version(config_version)
         version = detect_openapi_version(self.raw_obj) if self.raw_obj else OpenAPIVersion.Auto
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
@@ -239,13 +242,28 @@ class OpenAPIParser(JsonSchemaParser):
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
-        """Get data type from JSON schema object, handling OpenAPI nullable semantics."""
-        # OpenAPI 3.0 doesn't allow `null` in the `type` field and list of types
-        # https://swagger.io/docs/specification/data-models/data-types/#null
-        # OpenAPI 3.1 does allow `null` in the `type` field and is equivalent to
-        # a `nullable` flag on the property itself
-        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
-            obj.type = [obj.type, "null"]
+        """Get data type from JSON schema object, handling OpenAPI nullable semantics.
+
+        Uses schema_features.nullable_keyword to handle version differences:
+        - OpenAPI 3.0: nullable: true is valid, convert to type array when strict_nullable
+        - OpenAPI 3.1: nullable is deprecated, use type: ["string", "null"] instead
+        """
+        if obj.nullable:
+            if self.schema_features.nullable_keyword:
+                # OpenAPI 3.0: nullable: true is the standard way
+                if self.strict_nullable and isinstance(obj.type, str):
+                    obj.type = [obj.type, "null"]
+            else:
+                # OpenAPI 3.1+: nullable is deprecated, still process but warn in Strict mode
+                if self.config.schema_version_mode == VersionMode.Strict:
+                    warn(
+                        'nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead',
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                # Still convert to type array for compatibility
+                if self.strict_nullable and isinstance(obj.type, str):
+                    obj.type = [obj.type, "null"]
 
         return super().get_data_type(obj)
 
