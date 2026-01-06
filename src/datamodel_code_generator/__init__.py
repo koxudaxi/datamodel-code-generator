@@ -43,12 +43,15 @@ from datamodel_code_generator.enums import (
     GraphQLScope,
     InputFileType,
     InputModelRefStrategy,
+    JsonSchemaVersion,
     ModuleSplitMode,
     NamingStrategy,
     OpenAPIScope,
+    OpenAPIVersion,
     ReadOnlyWriteOnlyModelType,
     ReuseScope,
     TargetPydanticVersion,
+    VersionMode,
 )
 from datamodel_code_generator.format import (
     DEFAULT_FORMATTERS,
@@ -930,6 +933,8 @@ inferred_message = (
 
 _LAZY_IMPORTS = {
     "clear_dynamic_models_cache": "datamodel_code_generator.dynamic",
+    "detect_jsonschema_version": "datamodel_code_generator.parser.schema_version",
+    "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
 }
 
@@ -966,17 +971,22 @@ __all__ = [
     "InputModelRefStrategy",
     "InvalidClassNameError",
     "InvalidFileFormatError",
+    "JsonSchemaVersion",
     "LiteralType",
     "ModuleSplitMode",
     "NamingStrategy",
     "OpenAPIScope",
+    "OpenAPIVersion",
     "PythonVersion",
     "PythonVersionMin",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "SchemaParseError",
     "TargetPydanticVersion",
+    "VersionMode",
     "clear_dynamic_models_cache",  # noqa: F822
+    "detect_jsonschema_version",  # noqa: F822
+    "detect_openapi_version",  # noqa: F822
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]

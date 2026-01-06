@@ -240,6 +240,42 @@ class StrictTypes(Enum):
     bool = "bool"
 
 
+class JsonSchemaVersion(Enum):
+    """JSON Schema draft versions.
+
+    Auto: Auto-detect from $schema field or heuristics (default).
+    """
+
+    Draft4 = "draft-04"
+    Draft6 = "draft-06"
+    Draft7 = "draft-07"
+    Draft201909 = "2019-09"
+    Draft202012 = "2020-12"
+    Auto = "auto"
+
+
+class OpenAPIVersion(Enum):
+    """OpenAPI specification versions.
+
+    Auto: Auto-detect from openapi field (default).
+    """
+
+    V30 = "3.0"
+    V31 = "3.1"
+    Auto = "auto"
+
+
+class VersionMode(Enum):
+    """Schema version validation mode.
+
+    Lenient: Accept all features regardless of declared version (default).
+    Strict: Warn on features outside declared/detected version.
+    """
+
+    Lenient = "lenient"
+    Strict = "strict"
+
+
 __all__ = [
     "DEFAULT_SHARED_MODULE_NAME",
     "MAX_VERSION",
@@ -256,12 +292,15 @@ __all__ = [
     "GraphQLScope",
     "InputFileType",
     "InputModelRefStrategy",
+    "JsonSchemaVersion",
     "ModuleSplitMode",
     "NamingStrategy",
     "OpenAPIScope",
+    "OpenAPIVersion",
     "ReadOnlyWriteOnlyModelType",
     "ReuseScope",
     "StrictTypes",
     "TargetPydanticVersion",
     "UnionMode",
+    "VersionMode",
 ]
