@@ -163,6 +163,22 @@ datamodel-codegen --input schema.json --schema-version-mode strict
 
 ## See Also
 
-- [JSON Schema Specification](https://json-schema.org/)
-- [OpenAPI Specification](https://spec.openapis.org/oas/latest.html)
+### JSON Schema Specifications
+
+- [JSON Schema Home](https://json-schema.org/)
+- [Draft 4](https://json-schema.org/specification-links#draft-4)
+- [Draft 6](https://json-schema.org/specification-links#draft-6)
+- [Draft 7](https://json-schema.org/specification-links#draft-7)
+- [Draft 2019-09](https://json-schema.org/specification-links#2019-09-formerly-known-as-draft-8)
+- [Draft 2020-12](https://json-schema.org/specification-links#2020-12)
+
+### OpenAPI Specifications
+
+- [OpenAPI Initiative](https://www.openapis.org/)
+- [OpenAPI 3.0.3](https://spec.openapis.org/oas/v3.0.3)
+- [OpenAPI 3.1.0](https://spec.openapis.org/oas/v3.1.0)
+
+### datamodel-code-generator
+
 - [CLI Reference](cli-reference/index.md)
+- [GitHub Repository](https://github.com/koxudaxi/datamodel-code-generator)
