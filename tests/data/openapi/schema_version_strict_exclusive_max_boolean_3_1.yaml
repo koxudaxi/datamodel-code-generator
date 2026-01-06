@@ -1,0 +1,16 @@
+openapi: "3.1.0"
+info:
+  title: ExclusiveMaxBooleanTest
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Root:
+      type: object
+      properties:
+        value:
+          $ref: "#/components/schemas/BoundedInt"
+    BoundedInt:
+      type: integer
+      maximum: 100
+      exclusiveMaximum: true

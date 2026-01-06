@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "Root",
+  "type": "object",
+  "properties": {
+    "value": {
+      "$ref": "#/definitions/BoundedInt"
+    }
+  },
+  "definitions": {
+    "BoundedInt": {
+      "type": "integer",
+      "exclusiveMaximum": 100
+    }
+  }
+}
