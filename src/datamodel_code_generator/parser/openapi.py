@@ -184,12 +184,7 @@ class OpenAPIParser(JsonSchemaParser):
         version = detect_openapi_version(self.raw_obj) if self.raw_obj else OpenAPIVersion.Auto
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
-    @classmethod
-    def _get_config_class(cls) -> type[OpenAPIParserConfig]:
-        """Return the OpenAPIParserConfig class."""
-        from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
-
-        return OpenAPIParserConfig
+    _config_class_name: ClassVar[str] = "OpenAPIParserConfig"
 
     def __init__(
         self,

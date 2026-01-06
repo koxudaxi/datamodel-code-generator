@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     NamedTuple,
     Optional,
@@ -711,15 +712,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         ...
 
+    _config_class_name: ClassVar[str] = "ParserConfig"
+
     @classmethod
     def _get_config_class(cls) -> type[ParserConfig]:
         """Return the config class for this parser.
 
-        Subclasses should override this to return their specific config class.
+        Uses _config_class_name class variable to dynamically import the config class.
+        Subclasses should set _config_class_name to their config class name.
         """
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
+        import importlib  # noqa: PLC0415
 
-        return ParserConfig
+        module = importlib.import_module("datamodel_code_generator.config")
+        return getattr(module, cls._config_class_name)
 
     @classmethod
     def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore

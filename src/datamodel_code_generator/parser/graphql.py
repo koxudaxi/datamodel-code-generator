@@ -10,6 +10,7 @@ from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
 )
 
 from typing_extensions import Unpack
@@ -97,12 +98,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
         graphql.type.introspection.TypeKind.UNION,
     ]
 
-    @classmethod
-    def _get_config_class(cls) -> type[GraphQLParserConfig]:
-        """Return the GraphQLParserConfig class."""
-        from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
-
-        return GraphQLParserConfig
+    _config_class_name: ClassVar[str] = "GraphQLParserConfig"
 
     def __init__(
         self,

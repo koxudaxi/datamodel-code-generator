@@ -669,12 +669,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         "ChainMap",
     })
 
-    @classmethod
-    def _get_config_class(cls) -> type[JSONSchemaParserConfig]:
-        """Return the JSONSchemaParserConfig class."""
-        from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
-
-        return JSONSchemaParserConfig
+    _config_class_name: ClassVar[str] = "JSONSchemaParserConfig"
 
     def __init__(
         self,
