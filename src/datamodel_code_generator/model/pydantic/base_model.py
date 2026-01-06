@@ -256,6 +256,8 @@ class DataModelField(DataModelFieldBase):
             field_arguments = [default_repr, *field_arguments]
 
         if self.is_class_var:
+            if self.default is UNDEFINED:  # pragma: no cover
+                return ""
             return repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
 
         return f"Field({', '.join(field_arguments)})"
@@ -275,10 +277,8 @@ class DataModelField(DataModelFieldBase):
     @property
     def annotated(self) -> str | None:
         """Get the Annotated type hint if use_annotated is enabled."""
-        if not self.use_annotated or not str(self):
+        if not self.use_annotated or not str(self) or self.is_class_var:
             return None
-        if self.is_class_var:
-            return self.type_hint
         return f"Annotated[{self.type_hint}, {self!s}]"
 
     @property
