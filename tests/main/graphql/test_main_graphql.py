@@ -777,6 +777,32 @@ def test_main_graphql_class_name_prefix(output_file: Path) -> None:
     )
 
 
+@LEGACY_BLACK_SKIP
+def test_main_graphql_union_class_name_prefix(output_file: Path) -> None:
+    """Test that union type members get class name prefix applied.
+
+    When using --class-name-prefix, the prefix should be applied to both
+    the union type name and all its member type references.
+
+    This test verifies fix for issue #2939.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "union_class_name_prefix.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="union_class_name_prefix.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--class-name-prefix",
+            "Foo",
+            "--use-annotated",
+            "--snake-case-field",
+        ],
+    )
+
+
 def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
     """Test that union type references are not converted to snake_case."""
     run_main_and_assert(
@@ -786,6 +812,32 @@ def test_main_graphql_union_snake_case_field(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="union_snake_case_field.py",
         extra_args=["--snake-case-field", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_graphql_interface_mro(output_file: Path) -> None:
+    """Test that interface inheritance is ordered correctly for Python MRO.
+
+    When a class implements multiple interfaces where some interfaces extend others,
+    the base classes must be ordered so that subclasses come before their parent classes.
+    For example, if Notification implements Node, and a class implements both
+    Node and Notification, the order should be (Notification, Node) not (Node, Notification).
+
+    This test verifies fix for issue #2938.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "interface_mro.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="interface_mro.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--snake-case-field",
+        ],
     )
 
 

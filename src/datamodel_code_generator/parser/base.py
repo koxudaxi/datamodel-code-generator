@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     NamedTuple,
     Optional,
@@ -89,8 +90,10 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
+SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound="JsonSchemaFeatures")
 
 
 @runtime_checkable
@@ -485,6 +488,71 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
+def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
+    """Sort base classes in each model to ensure valid Python MRO.
+
+    When a class inherits from multiple base classes where some bases inherit
+    from others, Python's C3 linearization requires that child classes appear
+    before their parent classes in the inheritance list.
+
+    For example, if B inherits from A, then class C(A, B) is invalid but
+    class C(B, A) is valid.
+    """
+    for model in sorted_data_models.values():
+        base_classes = model.base_classes
+        if len(base_classes) <= 1:
+            continue
+
+        # Build set of base class paths for quick lookup
+        base_class_paths = {b.reference.path for b in base_classes if b.reference}
+
+        def get_ancestors(
+            ref_path: str,
+            base_class_paths: set[str] = base_class_paths,
+        ) -> set[str]:
+            """Get all ancestor paths that are in our base class list."""
+            ancestors: set[str] = set()
+            source_model = sorted_data_models.get(ref_path)
+            if source_model is None:  # pragma: no cover
+                return ancestors
+            to_visit = [
+                bc.reference.path
+                for bc in source_model.base_classes
+                if bc.reference and bc.reference.path in base_class_paths
+            ]
+            while to_visit:
+                parent_path = to_visit.pop()
+                if parent_path in ancestors:
+                    continue
+                ancestors.add(parent_path)
+                parent_model = sorted_data_models.get(parent_path)
+                if not parent_model:
+                    continue
+                to_visit.extend(
+                    bc.reference.path
+                    for bc in parent_model.base_classes
+                    if bc.reference and bc.reference.path in base_class_paths
+                )
+            return ancestors
+
+        # Build ancestor map for each base class
+        ancestor_map = {b.reference.path: get_ancestors(b.reference.path) for b in base_classes if b.reference}
+
+        def sort_key(
+            bc: BaseClassDataType,
+            ancestor_map: dict[str, set[str]] = ancestor_map,
+        ) -> int:
+            """Sort key: classes that are ancestors of others come later."""
+            if not bc.reference:
+                return 0
+            path = bc.reference.path
+            # Count how many other base classes have this one as an ancestor
+            return sum(1 for other_path in ancestor_map if path in ancestor_map.get(other_path, set()))
+
+        # Use stable sort to preserve original order for elements with equal keys
+        model.base_classes = sorted(base_classes, key=sort_key)
+
+
 def relative(
     current_module: str,
     reference: str,
@@ -688,26 +756,55 @@ class Source(BaseModel):
         return cls(path=Path(), raw_data=data)
 
 
-class Parser(ABC, Generic[ParserConfigT]):
+class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
     Provides the parsing algorithm and code generation. Subclasses implement
     parse_raw() to handle specific schema formats.
+
+    Type Parameters:
+        ParserConfigT: The configuration type for this parser.
+        SchemaFeaturesT: The schema features type (JsonSchemaFeatures or subclass).
     """
+
+    @property
+    @abstractmethod
+    def schema_features(self) -> SchemaFeaturesT:
+        """Get schema features based on detected version.
+
+        Returns:
+            Schema features instance with version-specific flags.
+        """
+        ...
+
+    _config_class_name: ClassVar[str] = "ParserConfig"
+
+    @classmethod
+    def _get_config_class(cls) -> type[ParserConfig]:
+        """Return the config class for this parser.
+
+        Uses _config_class_name class variable to dynamically import the config class.
+        Subclasses should set _config_class_name to their config class name.
+        """
+        import importlib  # noqa: PLC0415
+
+        module = importlib.import_module("datamodel_code_generator.config")
+        return getattr(module, cls._config_class_name)
 
     @classmethod
     def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore
         """Create a default config from options.
 
-        Subclasses should override this to return their own config type.
+        Uses _get_config_class() to determine which config class to instantiate.
         """
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
         from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
         from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
+        config_class = cls._get_config_class()
+
         if is_pydantic_v2():
-            ParserConfig.model_rebuild(
+            config_class.model_rebuild(
                 _types_namespace={
                     "StrictTypes": types_module.StrictTypes,
                     "DataModel": model_base.DataModel,
@@ -715,16 +812,16 @@ class Parser(ABC, Generic[ParserConfigT]):
                     "DataTypeManager": types_module.DataTypeManager,
                 }
             )
-            return ParserConfig.model_validate(options)  # type: ignore[return-value]
-        ParserConfig.update_forward_refs(
+            return config_class.model_validate(options)  # type: ignore[return-value]
+        config_class.update_forward_refs(
             StrictTypes=types_module.StrictTypes,
             DataModel=model_base.DataModel,
             DataModelFieldBase=model_base.DataModelFieldBase,
             DataTypeManager=types_module.DataTypeManager,
         )
-        defaults = {name: field.default for name, field in ParserConfig.__fields__.items()}
+        defaults = {name: field.default for name, field in config_class.__fields__.items()}
         defaults.update(options)  # ty: ignore
-        return ParserConfig.construct(**defaults)  # type: ignore[return-value]
+        return config_class.construct(**defaults)  # type: ignore[return-value]
 
     def __init__(  # noqa: PLR0912, PLR0915
         self,
@@ -3161,6 +3258,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         )
 
         _, sorted_data_models, require_update_action_models = sort_data_models(self.results)
+        sort_base_classes_for_mro(sorted_data_models)
 
         (
             module_models,

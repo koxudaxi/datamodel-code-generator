@@ -65,7 +65,12 @@ from datamodel_code_generator.format import (
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
 if TYPE_CHECKING:
-    from datamodel_code_generator._types import GraphQLParserConfigDict, OpenAPIParserConfigDict, ParserConfigDict
+    from datamodel_code_generator._types import (
+        GraphQLParserConfigDict,
+        JSONSchemaParserConfigDict,
+        OpenAPIParserConfigDict,
+        ParserConfigDict,
+    )
     from datamodel_code_generator._types.generate_config_dict import GenerateConfigDict
     from datamodel_code_generator.config import GenerateConfig, ParserConfig
 
@@ -456,7 +461,10 @@ def _build_module_content(
 def _create_parser_config(
     config_class: type[_ConfigT],
     generate_config: GenerateConfig,
-    additional_options: ParserConfigDict | OpenAPIParserConfigDict | GraphQLParserConfigDict,
+    additional_options: ParserConfigDict
+    | JSONSchemaParserConfigDict
+    | OpenAPIParserConfigDict
+    | GraphQLParserConfigDict,
 ) -> _ConfigT:
     """Create a parser config from GenerateConfig with additional options.
 
@@ -735,6 +743,28 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         ),
     }
 
+    # Convert schema_version string to appropriate enum based on input type
+    jsonschema_version: JsonSchemaVersion | None = None
+    openapi_version: OpenAPIVersion | None = None
+    if config.schema_version and config.schema_version != "auto":
+        if input_file_type == InputFileType.OpenAPI:
+            try:
+                openapi_version = OpenAPIVersion(config.schema_version)
+            except ValueError:
+                valid = [v.value for v in OpenAPIVersion]
+                msg = f"Invalid OpenAPI version: {config.schema_version}. Valid values: {valid}"
+                raise Error(msg) from None
+        elif input_file_type == InputFileType.GraphQL:
+            msg = f"--schema-version is not supported for {input_file_type.value}"
+            raise Error(msg)
+        else:
+            try:
+                jsonschema_version = JsonSchemaVersion(config.schema_version)
+            except ValueError:
+                valid = [v.value for v in JsonSchemaVersion]
+                msg = f"Invalid JSON Schema version: {config.schema_version}. Valid values: {valid}"
+                raise Error(msg) from None
+
     if input_file_type == InputFileType.OpenAPI:
         from datamodel_code_generator.parser.openapi import OpenAPIParser  # noqa: PLC0415
 
@@ -743,6 +773,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             "include_path_parameters": config.include_path_parameters,
             "use_status_code_in_response_name": config.use_status_code_in_response_name,
             "openapi_include_paths": config.openapi_include_paths,
+            "openapi_version": openapi_version,
             **additional_options,
         }
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
@@ -760,7 +791,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     else:
         from datamodel_code_generator.parser.jsonschema import JsonSchemaParser  # noqa: PLC0415
 
-        parser_config = _create_parser_config(JSONSchemaParserConfig, config, additional_options)
+        jsonschema_additional_options: JSONSchemaParserConfigDict = {
+            "jsonschema_version": jsonschema_version,
+            **additional_options,
+        }
+        parser_config = _create_parser_config(JSONSchemaParserConfig, config, jsonschema_additional_options)
         parser = JsonSchemaParser(source=source, config=parser_config)  # ty: ignore
 
     with chdir(config.output):
