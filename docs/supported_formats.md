@@ -138,7 +138,7 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 | `deprecated` | 2019-09 | ⚠️ Partial | Recognized but not enforced |
 | `examples` (array) | Draft 6 | ⚠️ Partial | Only first example used for Field default |
 | Recursive `$ref` | Draft 4+ | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
-| `propertyNames` | Draft 6 | ❌ Not supported | Property name validation ignored |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
 | `dependentRequired` | 2019-09 | ❌ Not supported | Dependent requirements ignored |
 | `dependentSchemas` | 2019-09 | ❌ Not supported | Dependent schemas ignored |
 
