@@ -242,14 +242,31 @@ class OpenAPIParser(JsonSchemaParser):
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
-        """Get data type from JSON schema object, handling OpenAPI nullable semantics."""
-        # OpenAPI 3.0 uses `nullable: true` flag for null support (nullable_keyword=True)
-        # OpenAPI 3.1 uses `type: ["string", "null"]` instead (nullable_keyword=False)
-        # https://swagger.io/docs/specification/data-models/data-types/#null
-        # When strict_nullable is enabled, convert nullable flag to type array for
-        # consistent handling regardless of OpenAPI version
-        if obj.nullable and self.strict_nullable and isinstance(obj.type, str):
-            obj.type = [obj.type, "null"]
+        """Get data type from JSON schema object, handling OpenAPI nullable semantics.
+
+        Uses schema_features.nullable_keyword to handle version differences:
+        - OpenAPI 3.0: nullable: true is valid, convert to type array when strict_nullable
+        - OpenAPI 3.1: nullable is deprecated, use type: ["string", "null"] instead
+        """
+        from datamodel_code_generator.enums import VersionMode  # noqa: PLC0415
+
+        if obj.nullable:
+            if self.schema_features.nullable_keyword:
+                # OpenAPI 3.0: nullable: true is the standard way
+                if self.strict_nullable and isinstance(obj.type, str):
+                    obj.type = [obj.type, "null"]
+            else:
+                # OpenAPI 3.1+: nullable is deprecated, still process but warn in Strict mode
+                version_mode = getattr(self.config, "schema_version_mode", None)
+                if version_mode == VersionMode.Strict:
+                    warn(
+                        'nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead',
+                        DeprecationWarning,
+                        stacklevel=2,
+                    )
+                # Still convert to type array for compatibility
+                if self.strict_nullable and isinstance(obj.type, str):
+                    obj.type = [obj.type, "null"]
 
         return super().get_data_type(obj)
 

@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         ReuseScope,
         StrictTypes,
         TargetPydanticVersion,
+        VersionMode,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
@@ -170,6 +171,7 @@ class GraphQLParserConfigDict(ParserConfigDict, closed=True):
 
 class JSONSchemaParserConfigDict(ParserConfigDict):
     jsonschema_version: NotRequired[JsonSchemaVersion | None]
+    schema_version_mode: NotRequired[VersionMode | None]
 
 
 class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):

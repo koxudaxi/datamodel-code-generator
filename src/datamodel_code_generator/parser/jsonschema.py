@@ -773,8 +773,34 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
 
     @cached_property
     def schema_paths(self) -> list[tuple[str, list[str]]]:
-        """Get schema paths for definitions and defs."""
-        return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
+        """Get schema paths for definitions and defs.
+
+        For JsonSchema, uses schema_features.definitions_key to determine
+        the primary path, with fallback to the alternative in Lenient mode.
+        OpenAPI subclass uses its own SCHEMA_PATHS (#/components/schemas).
+        """
+        from datamodel_code_generator.enums import VersionMode  # noqa: PLC0415
+
+        # OpenAPI and other subclasses use their own SCHEMA_PATHS
+        if self.SCHEMA_PATHS != ["#/definitions", "#/$defs"]:
+            return [(s, s.lstrip("#/").split("/")) for s in self.SCHEMA_PATHS]
+
+        # JsonSchema: use definitions_key from schema_features
+        primary_key = self.schema_features.definitions_key
+        primary_path = f"#/{primary_key}"
+        fallback_key = "$defs" if primary_key == "definitions" else "definitions"
+        fallback_path = f"#/{fallback_key}"
+
+        # Strict mode: only use version-specific path
+        version_mode = getattr(self.config, "schema_version_mode", None)
+        if version_mode == VersionMode.Strict:
+            return [(str(primary_path), [str(primary_key)])]
+
+        # Lenient mode (default): check both paths, primary first
+        return [
+            (str(primary_path), [str(primary_key)]),
+            (str(fallback_path), [str(fallback_key)]),
+        ]
 
     @cached_property
     def schema_features(self) -> JsonSchemaFeatures:
