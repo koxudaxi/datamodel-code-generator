@@ -783,8 +783,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         fallback_path = f"#/{fallback_key}"
 
         # Strict mode: only use version-specific path
-        version_mode = getattr(self.config, "schema_version_mode", None)
-        if version_mode == VersionMode.Strict:
+        if self.config.schema_version_mode == VersionMode.Strict:
             return [(str(primary_path), [str(primary_key)])]
 
         # Lenient mode (default): check both paths, primary first
@@ -3656,8 +3655,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         This method checks the raw schema data before Pydantic validation
         to detect features that may not be valid for the declared version.
         """
-        version_mode = getattr(self.config, "schema_version_mode", None)
-        if version_mode != VersionMode.Strict:
+        if self.config.schema_version_mode != VersionMode.Strict:
             return
 
         # Check boolean schemas (Draft 6+)
@@ -3750,8 +3748,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         Warns when prefixItems is used in versions that don't support it,
         or when items as array (tuple style) is used in Draft 2020-12+.
         """
-        version_mode = getattr(self.config, "schema_version_mode", None)
-        if version_mode != VersionMode.Strict:
+        if self.config.schema_version_mode != VersionMode.Strict:
             return
 
         # Check prefixItems usage (Draft 2020-12+ only)

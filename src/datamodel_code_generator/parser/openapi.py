@@ -197,8 +197,7 @@ class OpenAPIParser(JsonSchemaParser):
         OpenAPI version: skips warnings for OpenAPI-valid features (nullable, binary, password)
         that would warn in pure JSON Schema. Still applies JSON Schema version checks.
         """
-        version_mode = getattr(self.config, "schema_version_mode", None)
-        if version_mode != VersionMode.Strict:
+        if self.config.schema_version_mode != VersionMode.Strict:
             return
 
         # Check boolean schemas (Draft 6+)
@@ -326,8 +325,7 @@ class OpenAPIParser(JsonSchemaParser):
                     obj.type = [obj.type, "null"]
             else:
                 # OpenAPI 3.1+: nullable is deprecated, still process but warn in Strict mode
-                version_mode = getattr(self.config, "schema_version_mode", None)
-                if version_mode == VersionMode.Strict:
+                if self.config.schema_version_mode == VersionMode.Strict:
                     warn(
                         'nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead',
                         DeprecationWarning,
