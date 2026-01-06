@@ -1,0 +1,61 @@
+interface Entity {
+    id: ID!
+}
+
+interface Node {
+    id: ID!
+}
+
+interface Notification implements Node {
+    id: ID!
+    readAt: String
+}
+
+type CustomerNeedNotification implements Entity & Node & Notification {
+    id: ID!
+    readAt: String
+    customer: String
+}
+
+interface BaseInterface {
+    baseField: String
+}
+
+interface LeftBranch implements BaseInterface {
+    baseField: String
+    leftField: String
+}
+
+interface RightBranch implements BaseInterface {
+    baseField: String
+    rightField: String
+}
+
+type DiamondType implements BaseInterface & LeftBranch & RightBranch {
+    baseField: String
+    leftField: String
+    rightField: String
+    diamondField: String
+}
+
+interface GrandParent {
+    grandField: String
+}
+
+interface Parent implements GrandParent {
+    grandField: String
+    parentField: String
+}
+
+interface Child implements GrandParent & Parent {
+    grandField: String
+    parentField: String
+    childField: String
+}
+
+type LeafType implements GrandParent & Parent & Child {
+    grandField: String
+    parentField: String
+    childField: String
+    leafField: String
+}

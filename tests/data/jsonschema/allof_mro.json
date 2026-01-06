@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BaseInterface": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "LeftBranch": {
+      "allOf": [
+        {"$ref": "#/definitions/BaseInterface"}
+      ],
+      "properties": {
+        "left_value": {
+          "type": "string"
+        }
+      }
+    },
+    "RightBranch": {
+      "allOf": [
+        {"$ref": "#/definitions/BaseInterface"}
+      ],
+      "properties": {
+        "right_value": {
+          "type": "string"
+        }
+      }
+    },
+    "DiamondType": {
+      "description": "Diamond inheritance pattern - inherits from both LeftBranch and RightBranch which both inherit from BaseInterface",
+      "allOf": [
+        {"$ref": "#/definitions/BaseInterface"},
+        {"$ref": "#/definitions/LeftBranch"},
+        {"$ref": "#/definitions/RightBranch"}
+      ],
+      "properties": {
+        "diamond_value": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {"$ref": "#/definitions/DiamondType"}
+  ]
+}

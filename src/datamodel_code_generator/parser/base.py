@@ -485,6 +485,71 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
+def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
+    """Sort base classes in each model to ensure valid Python MRO.
+
+    When a class inherits from multiple base classes where some bases inherit
+    from others, Python's C3 linearization requires that child classes appear
+    before their parent classes in the inheritance list.
+
+    For example, if B inherits from A, then class C(A, B) is invalid but
+    class C(B, A) is valid.
+    """
+    for model in sorted_data_models.values():
+        base_classes = model.base_classes
+        if len(base_classes) <= 1:
+            continue
+
+        # Build set of base class paths for quick lookup
+        base_class_paths = {b.reference.path for b in base_classes if b.reference}
+
+        def get_ancestors(
+            ref_path: str,
+            base_class_paths: set[str] = base_class_paths,
+        ) -> set[str]:
+            """Get all ancestor paths that are in our base class list."""
+            ancestors: set[str] = set()
+            source_model = sorted_data_models.get(ref_path)
+            if source_model is None:  # pragma: no cover
+                return ancestors
+            to_visit = [
+                bc.reference.path
+                for bc in source_model.base_classes
+                if bc.reference and bc.reference.path in base_class_paths
+            ]
+            while to_visit:
+                parent_path = to_visit.pop()
+                if parent_path in ancestors:
+                    continue
+                ancestors.add(parent_path)
+                parent_model = sorted_data_models.get(parent_path)
+                if not parent_model:
+                    continue
+                to_visit.extend(
+                    bc.reference.path
+                    for bc in parent_model.base_classes
+                    if bc.reference and bc.reference.path in base_class_paths
+                )
+            return ancestors
+
+        # Build ancestor map for each base class
+        ancestor_map = {b.reference.path: get_ancestors(b.reference.path) for b in base_classes if b.reference}
+
+        def sort_key(
+            bc: BaseClassDataType,
+            ancestor_map: dict[str, set[str]] = ancestor_map,
+        ) -> int:
+            """Sort key: classes that are ancestors of others come later."""
+            if not bc.reference:
+                return 0
+            path = bc.reference.path
+            # Count how many other base classes have this one as an ancestor
+            return sum(1 for other_path in ancestor_map if path in ancestor_map.get(other_path, set()))
+
+        # Use stable sort to preserve original order for elements with equal keys
+        model.base_classes = sorted(base_classes, key=sort_key)
+
+
 def relative(
     current_module: str,
     reference: str,
@@ -3161,6 +3226,7 @@ class Parser(ABC, Generic[ParserConfigT]):
         )
 
         _, sorted_data_models, require_update_action_models = sort_data_models(self.results)
+        sort_base_classes_for_mro(sorted_data_models)
 
         (
             module_models,
