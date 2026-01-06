@@ -993,11 +993,138 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _should_generate_base_model(self, *, generates_separate_models: bool = False) -> bool:
         """Determine if Base model should be generated."""
+        if getattr(self, "_force_base_model_generation", False):
+            return True
         if self.read_only_write_only_model_type is None:
             return True
         if self.read_only_write_only_model_type == ReadOnlyWriteOnlyModelType.All:
             return True
         return not generates_separate_models
+
+    def _ref_schema_generates_variant(self, ref_path: str, suffix: str) -> bool:
+        """Check if a referenced schema will generate a specific variant (Request or Response).
+
+        For Request variant: schema must have readOnly fields AND at least one non-readOnly field.
+        For Response variant: schema must have writeOnly fields AND at least one non-writeOnly field.
+        """
+        try:
+            ref_schema = self._load_ref_schema_object(ref_path)
+        except Exception:  # noqa: BLE001  # pragma: no cover
+            return False
+
+        has_read_only = False
+        has_write_only = False
+        has_non_read_only = False
+        has_non_write_only = False
+
+        for prop in (ref_schema.properties or {}).values():
+            if not isinstance(prop, JsonSchemaObject):  # pragma: no cover
+                continue
+            is_read_only = self._resolve_field_flag(prop, "readOnly")
+            is_write_only = self._resolve_field_flag(prop, "writeOnly")
+            if is_read_only:
+                has_read_only = True
+            else:
+                has_non_read_only = True
+            if is_write_only:
+                has_write_only = True
+            else:
+                has_non_write_only = True
+
+        if suffix == "Request":
+            return has_read_only and has_non_read_only
+        if suffix == "Response":
+            return has_write_only and has_non_write_only
+        return False  # pragma: no cover
+
+    def _ref_schema_has_model(self, ref_path: str) -> bool:
+        """Check if a referenced schema will have a model (base or variant) generated.
+
+        Returns False if the schema has only readOnly or only writeOnly fields in request-response mode,
+        which would result in no model being generated at all.
+        """
+        try:
+            ref_schema = self._load_ref_schema_object(ref_path)
+        except Exception:  # noqa: BLE001  # pragma: no cover
+            return True
+
+        has_read_only = False
+        has_write_only = False
+
+        for prop in (ref_schema.properties or {}).values():
+            if not isinstance(prop, JsonSchemaObject):  # pragma: no cover
+                continue
+            is_read_only = self._resolve_field_flag(prop, "readOnly")
+            is_write_only = self._resolve_field_flag(prop, "writeOnly")
+            if is_read_only:
+                has_read_only = True
+            elif is_write_only:
+                has_write_only = True
+            else:  # pragma: no cover
+                return True
+
+        if has_read_only and not has_write_only:
+            return False
+        return not (has_write_only and not has_read_only)
+
+    def _update_data_type_ref_for_variant(self, data_type: DataType, suffix: str) -> None:
+        """Recursively update data type references to point to variant models."""
+        if data_type.reference:
+            ref_path = data_type.reference.path
+            if self._ref_schema_generates_variant(ref_path, suffix):
+                path_parts = ref_path.split("/")
+                base_name = path_parts[-1]
+                variant_name = f"{base_name}{suffix}"
+                unique_name = self.model_resolver.get_class_name(variant_name, unique=False).name
+                path_parts[-1] = unique_name
+                variant_ref = self.model_resolver.add(path_parts, unique_name, class_name=True, unique=False)
+                data_type.reference = variant_ref
+            elif not self._ref_schema_has_model(ref_path):  # pragma: no branch
+                if not hasattr(self, "_force_base_model_refs"):
+                    self._force_base_model_refs: set[str] = set()
+                self._force_base_model_refs.add(ref_path)
+        for nested_dt in data_type.data_types:
+            self._update_data_type_ref_for_variant(nested_dt, suffix)
+
+    def _update_field_refs_for_variant(
+        self, model_fields: list[DataModelFieldBase], suffix: str
+    ) -> list[DataModelFieldBase]:
+        """Update field references in model_fields to point to variant models.
+
+        For Request models, refs should point to Request variants.
+        For Response models, refs should point to Response variants.
+        """
+        if self.read_only_write_only_model_type != ReadOnlyWriteOnlyModelType.RequestResponse:
+            return model_fields
+        for field in model_fields:
+            if field.data_type:  # pragma: no branch
+                self._update_data_type_ref_for_variant(field.data_type, suffix)
+        return model_fields
+
+    def _generate_forced_base_models(self) -> None:
+        """Generate base models for schemas that are referenced as property types but lack models."""
+        if not hasattr(self, "_force_base_model_refs"):
+            return
+        if not self._force_base_model_refs:  # pragma: no cover
+            return
+
+        existing_model_paths = {result.path for result in self.results}
+
+        for ref_path in sorted(self._force_base_model_refs):
+            if ref_path in existing_model_paths:  # pragma: no cover
+                continue
+            try:
+                ref_schema = self._load_ref_schema_object(ref_path)
+                path_parts = ref_path.split("/")
+                schema_name = path_parts[-1]
+
+                self._force_base_model_generation = True
+                try:
+                    self.parse_obj(schema_name, ref_schema, path_parts)
+                finally:
+                    self._force_base_model_generation = False
+            except Exception:  # noqa: BLE001, S110  # pragma: no cover
+                pass
 
     def _create_variant_model(  # noqa: PLR0913, PLR0917
         self,
@@ -1011,6 +1138,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Create a Request or Response model variant."""
         if not model_fields:
             return
+        # Update field refs to point to variant models when in request-response mode
+        self._update_field_refs_for_variant(model_fields, suffix)
         variant_name = f"{base_name}{suffix}"
         unique_name = self.model_resolver.get_class_name(variant_name, unique=True).name
         model_path = [*path[:-1], unique_name]
@@ -3645,7 +3774,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
 
-    def _check_version_specific_features(
+    def _check_version_specific_features(  # noqa: PLR0912
         self,
         raw: dict[str, YamlValue] | YamlValue,
         path: list[str],
@@ -3706,6 +3835,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 warn(
                     f"exclusiveMaximum as number is Draft 6+ style, but schema version is Draft 4. "
                     f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+
+        if not self.schema_features.read_only_write_only:
+            if raw.get("readOnly") is True:
+                warn(
+                    f"readOnly is not supported in this schema version (Draft 7+ only). Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if raw.get("writeOnly") is True:
+                warn(
+                    f"writeOnly is not supported in this schema version (Draft 7+ only). Schema path: {'/'.join(path)}",
                     stacklevel=3,
                 )
 
@@ -3846,6 +3987,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self._parse_file(self.raw_obj, obj_name, path_parts)
 
         self._resolve_unparsed_json_pointer()
+        self._generate_forced_base_models()
 
     def _resolve_unparsed_json_pointer(self) -> None:
         """Resolve any remaining unparsed JSON pointer references recursively."""

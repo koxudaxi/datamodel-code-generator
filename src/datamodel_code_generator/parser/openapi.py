@@ -800,6 +800,7 @@ class OpenAPIParser(JsonSchemaParser):
                         )
 
         self._resolve_unparsed_json_pointer()
+        self._generate_forced_base_models()
 
     def _collect_discriminator_schemas(self) -> None:
         """Collect schemas with discriminators but no oneOf/anyOf, and find their subtypes."""

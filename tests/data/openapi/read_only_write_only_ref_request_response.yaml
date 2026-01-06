@@ -1,0 +1,68 @@
+openapi: "3.0.0"
+info:
+  title: Read Only Write Only Ref Request Response Test API
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    # Child with only readOnly fields - should generate base model when referenced directly
+    ChildOnlyReadOnly:
+      type: object
+      properties:
+        id:
+          readOnly: true
+          type: integer
+    # Child with only writeOnly fields - should generate base model when referenced directly
+    ChildOnlyWriteOnly:
+      type: object
+      properties:
+        secret:
+          writeOnly: true
+          type: string
+    # Child with mixed fields - should generate ChildRequest variant
+    ChildMixed:
+      type: object
+      properties:
+        id:
+          readOnly: true
+          type: integer
+        name:
+          type: string
+    # Parent referencing child with only readOnly fields
+    ParentWithOnlyReadOnlyChild:
+      type: object
+      properties:
+        child:
+          $ref: "#/components/schemas/ChildOnlyReadOnly"
+        name:
+          readOnly: true
+          type: string
+    # Parent referencing child with only writeOnly fields
+    ParentWithOnlyWriteOnlyChild:
+      type: object
+      properties:
+        child:
+          $ref: "#/components/schemas/ChildOnlyWriteOnly"
+        secret:
+          writeOnly: true
+          type: string
+    # Parent referencing child with mixed fields
+    ParentWithMixedChild:
+      type: object
+      properties:
+        child:
+          $ref: "#/components/schemas/ChildMixed"
+        name:
+          readOnly: true
+          type: string
+    # Parent with list of children (nested type reference)
+    ParentWithChildList:
+      type: object
+      properties:
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChildMixed"
+        name:
+          readOnly: true
+          type: string

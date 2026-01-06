@@ -31,6 +31,7 @@ class JsonSchemaFeatures:
         id_field: The field name for schema ID ("id" for Draft 4, "$id" for Draft 6+).
         definitions_key: The key for definitions ("definitions" or "$defs").
         exclusive_as_number: Draft 6+ uses numeric exclusiveMin/Max (Draft 4 uses boolean).
+        read_only_write_only: Draft 7+ supports readOnly/writeOnly keywords.
     """
 
     null_in_type_array: bool
@@ -40,6 +41,7 @@ class JsonSchemaFeatures:
     id_field: str
     definitions_key: str
     exclusive_as_number: bool
+    read_only_write_only: bool
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -54,8 +56,9 @@ class JsonSchemaFeatures:
                     id_field="id",
                     definitions_key="definitions",
                     exclusive_as_number=False,
+                    read_only_write_only=False,
                 )
-            case JsonSchemaVersion.Draft6 | JsonSchemaVersion.Draft7:
+            case JsonSchemaVersion.Draft6:
                 return cls(
                     null_in_type_array=False,
                     defs_not_definitions=False,
@@ -64,6 +67,18 @@ class JsonSchemaFeatures:
                     id_field="$id",
                     definitions_key="definitions",
                     exclusive_as_number=True,
+                    read_only_write_only=False,
+                )
+            case JsonSchemaVersion.Draft7:
+                return cls(
+                    null_in_type_array=False,
+                    defs_not_definitions=False,
+                    prefix_items=False,
+                    boolean_schemas=True,
+                    id_field="$id",
+                    definitions_key="definitions",
+                    exclusive_as_number=True,
+                    read_only_write_only=True,
                 )
             case JsonSchemaVersion.Draft201909:
                 return cls(
@@ -74,6 +89,7 @@ class JsonSchemaFeatures:
                     id_field="$id",
                     definitions_key="$defs",
                     exclusive_as_number=True,
+                    read_only_write_only=True,
                 )
             case _:
                 return cls(
@@ -84,6 +100,7 @@ class JsonSchemaFeatures:
                     id_field="$id",
                     definitions_key="$defs",
                     exclusive_as_number=True,
+                    read_only_write_only=True,
                 )
 
 
@@ -106,8 +123,6 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
         """Create OpenAPISchemaFeatures from an OpenAPI version."""
         match version:
             case OpenAPIVersion.V30:
-                # OpenAPI 3.0 schema dialect inherits JSON Schema Draft 4 semantics
-                # where exclusiveMinimum/Maximum are boolean values
                 return cls(
                     null_in_type_array=False,
                     defs_not_definitions=False,
@@ -116,6 +131,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     id_field="$id",
                     definitions_key="definitions",
                     exclusive_as_number=False,
+                    read_only_write_only=True,
                     nullable_keyword=True,
                     discriminator_support=True,
                 )
@@ -128,6 +144,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     id_field="$id",
                     definitions_key="$defs",
                     exclusive_as_number=True,
+                    read_only_write_only=True,
                     nullable_keyword=False,
                     discriminator_support=True,
                 )
