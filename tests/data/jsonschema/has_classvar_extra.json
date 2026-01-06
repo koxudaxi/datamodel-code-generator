@@ -3,7 +3,7 @@
     "properties": {
         "namespace": {
             "type": "string",
-            "x-is_classvar": true,
+            "x-is-classvar": true,
             "default": "test"
         }
     }

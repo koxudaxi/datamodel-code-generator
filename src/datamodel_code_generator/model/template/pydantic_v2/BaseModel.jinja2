@@ -19,9 +19,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ line }}
 {%- endfor %}
 {%- for field in fields %}
-    {%- if field.is_class_var and field.represented_default %}
-    {{ field.name }}: {{ field.class_var_type_hint }} = {{ field.represented_default }}
-    {%- elif not field.annotated and field.field %}
+    {%- if not field.annotated and field.field %}
     {{ field.name }}: {{ field.type_hint }} = {{ field.field }}
     {%- else %}
     {%- if field.annotated %}

@@ -189,14 +189,6 @@ class DataModelField(DataModelFieldV1):
         return any(dt.discriminator for dt in self.data_type.all_data_types)
 
     @property
-    def class_var_type_hint(self) -> str:
-        return f"ClassVar[{self.type_hint}]"
-
-    @property
-    def is_class_var(self) -> bool:
-        return self.extras.get("x-is_classvar") is True
-
-    @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including AliasChoices and Field for discriminator."""
         base_imports = super().imports
