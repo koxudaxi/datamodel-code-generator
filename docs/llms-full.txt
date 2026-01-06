@@ -245,7 +245,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 7 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 9 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
@@ -398,6 +398,8 @@ This documentation is auto-generated from test cases.
 
 ### S {#s}
 
+- [`--schema-version`](base-options.md#schema-version)
+- [`--schema-version-mode`](base-options.md#schema-version-mode)
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member)
 - [`--shared-module-name`](general-options.md#shared-module-name)
 - [`--skip-root-model`](model-customization.md#skip-root-model)
@@ -481,6 +483,8 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/base-options
 | [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
 | [`--input-model-ref-strategy`](#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
+| [`--schema-version`](#schema-version) | Schema version to use for parsing. |
+| [`--schema-version-mode`](#schema-version-mode) | Schema version validation mode. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
 ---
@@ -794,6 +798,76 @@ is written to stdout.
         name: str | None = None
         tag: str | None = None
     ```
+
+---
+
+## `--schema-version` {#schema-version}
+
+Schema version to use for parsing.
+
+The `--schema-version` option specifies the schema version to use instead of auto-detection.
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version draft-07 # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "type": "object",
+      "properties": {"s": {"type": ["string"]}},
+      "required": ["s"]
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: jsonschema/simple_string.py
+
+---
+
+## `--schema-version-mode` {#schema-version-mode}
+
+Schema version validation mode.
+
+The `--schema-version-mode` option controls how schema version validation is performed.
+'lenient' (default): accept all features regardless of version.
+'strict': warn on features outside the declared/detected version.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version-mode lenient # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version-mode` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "type": "object",
+      "properties": {"s": {"type": ["string"]}},
+      "required": ["s"]
+    }
+    ```
+
+    **Output:**
+
+    > **Error:** File not found: jsonschema/simple_string.py
 
 ---
 
@@ -23161,6 +23235,8 @@ datamodel-codegen [OPTIONS]
 | [`--input-model`](base-options.md#input-model) | Import a Python type or dict schema from a module. |
 | [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
+| [`--schema-version`](base-options.md#schema-version) | Schema version to use for parsing. |
+| [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode. |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
 ### 🔧 Typing Customization
@@ -23438,6 +23514,8 @@ All options sorted alphabetically:
 - [`--remove-special-field-name-prefix`](field-customization.md#remove-special-field-name-prefix) - Remove the special prefix from field names.
 - [`--reuse-model`](model-customization.md#reuse-model) - Reuse identical model definitions instead of generating dupl...
 - [`--reuse-scope`](model-customization.md#reuse-scope) - Scope for model reuse detection (root or tree).
+- [`--schema-version`](base-options.md#schema-version) - Schema version to use for parsing.
+- [`--schema-version-mode`](base-options.md#schema-version-mode) - Schema version validation mode.
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member) - Set the first enum member as the default value for enum fiel...
 - [`--shared-module-name`](general-options.md#shared-module-name) - Customize the name of the shared module for deduplicated mod...
 - [`--skip-root-model`](model-customization.md#skip-root-model) - Skip generation of root model when schema contains nested de...
