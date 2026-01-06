@@ -255,8 +255,7 @@ class OpenAPIParser(JsonSchemaParser):
                     obj.type = [obj.type, "null"]
             else:
                 # OpenAPI 3.1+: nullable is deprecated, still process but warn in Strict mode
-                version_mode = getattr(self.config, "schema_version_mode", None)
-                if version_mode == VersionMode.Strict:
+                if self.config.schema_version_mode == VersionMode.Strict:
                     warn(
                         'nullable keyword is deprecated in OpenAPI 3.1, use type: ["string", "null"] instead',
                         DeprecationWarning,
