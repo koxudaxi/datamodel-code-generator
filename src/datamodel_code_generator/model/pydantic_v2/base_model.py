@@ -14,6 +14,7 @@ from pydantic import Field
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
+from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
 )
@@ -31,7 +32,6 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
-from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
 from datamodel_code_generator.util import field_validator, model_validate, model_validator
