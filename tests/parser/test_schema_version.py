@@ -495,3 +495,133 @@ def test_cli_schema_version_mode() -> None:
         schema_version_mode=VersionMode.Lenient,
     )
     assert result is not None
+
+
+def test_schema_paths_lenient_mode_draft7() -> None:
+    """Test schema_paths returns both paths in Lenient mode for Draft 7."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft7)
+    paths = parser.schema_paths
+    assert paths == snapshot([
+        ("#/definitions", ["definitions"]),
+        ("#/$defs", ["$defs"]),
+    ])
+
+
+def test_schema_paths_lenient_mode_2020_12() -> None:
+    """Test schema_paths returns $defs first in Lenient mode for 2020-12."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser("", jsonschema_version=JsonSchemaVersion.Draft202012)
+    paths = parser.schema_paths
+    assert paths == snapshot([
+        ("#/$defs", ["$defs"]),
+        ("#/definitions", ["definitions"]),
+    ])
+
+
+def test_schema_paths_strict_mode_draft7() -> None:
+    """Test schema_paths returns only definitions in Strict mode for Draft 7."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/definitions", ["definitions"])])
+
+
+def test_schema_paths_strict_mode_2020_12() -> None:
+    """Test schema_paths returns only $defs in Strict mode for 2020-12."""
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/$defs", ["$defs"])])
+
+
+def test_openapi_schema_paths_unchanged() -> None:
+    """Test that OpenAPI schema_paths uses SCHEMA_PATHS regardless of version mode."""
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+    )
+    paths = parser.schema_paths
+    assert paths == snapshot([("#/components/schemas", ["components", "schemas"])])
+
+
+def test_nullable_keyword_openapi_31_strict_warning() -> None:
+    """Test that nullable keyword emits warning in OpenAPI 3.1 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "nullable keyword is deprecated" in str(w[0].message)
+
+
+def test_nullable_keyword_openapi_30_no_warning() -> None:
+    """Test that nullable keyword does NOT emit warning in OpenAPI 3.0."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(deprecation_warnings) == 0
+
+
+def test_nullable_keyword_openapi_31_lenient_no_warning() -> None:
+    """Test that nullable keyword does NOT emit warning in OpenAPI 3.1 Lenient mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Lenient,
+        strict_nullable=True,
+    )
+    obj = JsonSchemaObject(type="string", nullable=True)
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser.get_data_type(obj)
+        deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert len(deprecation_warnings) == 0
