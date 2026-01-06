@@ -24178,48 +24178,50 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 
 ### JSON Schema - Unsupported Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| `$anchor` | ❌ Not supported | Use `$ref` with `$id` instead |
-| `$dynamicRef` / `$dynamicAnchor` | ❌ Not supported | Draft 2020-12 dynamic references |
-| `unevaluatedProperties` | ❌ Not supported | Use `additionalProperties` instead |
-| `unevaluatedItems` | ❌ Not supported | Use `additionalItems` instead |
-| `contentMediaType` | ❌ Not supported | Content type hints ignored |
-| `contentEncoding` | ❌ Not supported | Encoding hints ignored |
-| `contentSchema` | ❌ Not supported | Nested content schema ignored |
-| `$vocabulary` | ❌ Not supported | Vocabulary declarations ignored |
-| `$comment` | ⚠️ Ignored | Comments not preserved in output |
-| `deprecated` | ⚠️ Partial | Recognized but not enforced |
-| `examples` (array) | ⚠️ Partial | Only first example used for Field default |
-| Recursive `$ref` | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
-| `propertyNames` | ❌ Not supported | Property name validation ignored |
-| `dependentRequired` | ❌ Not supported | Dependent requirements ignored |
-| `dependentSchemas` | ❌ Not supported | Dependent schemas ignored |
+| Feature | Introduced | Status | Notes |
+|---------|------------|--------|-------|
+| `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
+| `$dynamicRef` / `$dynamicAnchor` | 2020-12 | ❌ Not supported | Dynamic references |
+| `unevaluatedProperties` | 2019-09 | ❌ Not supported | Use `additionalProperties` instead |
+| `unevaluatedItems` | 2019-09 | ❌ Not supported | Use `additionalItems` instead |
+| `contentMediaType` | Draft 7 | ❌ Not supported | Content type hints ignored |
+| `contentEncoding` | Draft 7 | ❌ Not supported | Encoding hints ignored |
+| `contentSchema` | 2019-09 | ❌ Not supported | Nested content schema ignored |
+| `$vocabulary` | 2019-09 | ❌ Not supported | Vocabulary declarations ignored |
+| `$comment` | Draft 7 | ⚠️ Ignored | Comments not preserved in output |
+| `deprecated` | 2019-09 | ⚠️ Partial | Recognized but not enforced |
+| `examples` (array) | Draft 6 | ⚠️ Partial | Only first example used for Field default |
+| Recursive `$ref` | Draft 4+ | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
+| `propertyNames` | Draft 6 | ❌ Not supported | Property name validation ignored |
+| `dependentRequired` | 2019-09 | ❌ Not supported | Dependent requirements ignored |
+| `dependentSchemas` | 2019-09 | ❌ Not supported | Dependent schemas ignored |
 
 ### OpenAPI - Unsupported Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| OpenAPI 2.0 (Swagger) | ⚠️ Limited | Recommend converting to 3.0+ |
-| `$ref` sibling keywords (3.0) | ❌ Not supported | 3.0 spec limitation |
-| `links` | ❌ Not supported | Runtime linking not applicable |
-| `callbacks` | ❌ Not supported | Webhook callbacks ignored |
-| `security` definitions | ❌ Not supported | Security schemes not generated |
-| `servers` | ❌ Not supported | Server configuration ignored |
-| `externalDocs` | ❌ Not supported | External documentation links ignored |
-| `xml` | ❌ Not supported | XML serialization hints ignored |
-| Request body `required` | ⚠️ Partial | Affects field optionality |
-| Header/Cookie parameters | ⚠️ Partial | Generated but not validated |
+| Feature | Introduced | Status | Notes |
+|---------|------------|--------|-------|
+| OpenAPI 2.0 (Swagger) | OAS 2.0 | ⚠️ Limited | Recommend converting to 3.0+ |
+| `$ref` sibling keywords | OAS 3.0 | ❌ Not supported | 3.0 spec limitation (fixed in 3.1) |
+| `links` | OAS 3.0 | ❌ Not supported | Runtime linking not applicable |
+| `callbacks` | OAS 3.0 | ❌ Not supported | Webhook callbacks ignored |
+| `webhooks` | OAS 3.1 | ❌ Not supported | Top-level webhooks ignored |
+| `security` definitions | OAS 2.0+ | ❌ Not supported | Security schemes not generated |
+| `servers` | OAS 3.0 | ❌ Not supported | Server configuration ignored |
+| `externalDocs` | OAS 2.0+ | ❌ Not supported | External documentation links ignored |
+| `xml` | OAS 2.0+ | ❌ Not supported | XML serialization hints ignored |
+| Request body `required` | OAS 3.0 | ⚠️ Partial | Affects field optionality |
+| Header/Cookie parameters | OAS 3.0 | ⚠️ Partial | Generated but not validated |
 
 ### GraphQL - Unsupported Features
 
-| Feature | Status | Notes |
-|---------|--------|-------|
-| Directives | ❌ Not supported | Custom directives ignored |
-| Subscriptions | ❌ Not supported | Only Query/Mutation types |
-| Custom scalars | ⚠️ Partial | Mapped to `Any` by default |
-| Interfaces inheritance | ⚠️ Partial | Flattened to concrete types |
-| Federation directives | ❌ Not supported | Apollo Federation not supported |
+| Feature | Spec | Status | Notes |
+|---------|------|--------|-------|
+| Directives | Core | ❌ Not supported | Custom directives ignored |
+| Subscriptions | Core | ❌ Not supported | Only Query/Mutation types |
+| Custom scalars | Core | ⚠️ Partial | Mapped to `Any` by default |
+| Interfaces inheritance | Core | ⚠️ Partial | Flattened to concrete types |
+| Federation directives | Apollo | ❌ Not supported | Apollo Federation not supported |
+| Input unions | Proposal | ❌ Not supported | Not yet in GraphQL spec |
 
 ### Legend
 
