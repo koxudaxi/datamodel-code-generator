@@ -121,15 +121,17 @@ datamodel-codegen --input schema.json --schema-version-mode strict
 
 **Strict mode warnings include:**
 
-| Feature | Warning Condition |
-|---------|------------------|
-| `null` in type array | Used with Draft 4/6/7 or OpenAPI 3.0 |
-| `prefixItems` | Used with versions before Draft 2020-12 |
-| Items as array | Used with Draft 2020-12 (should use prefixItems) |
-| Boolean schema | Used with Draft 4 |
-| `nullable` keyword | Used with OpenAPI 3.1 |
-| Numeric exclusiveMin/Max | Used with Draft 4 or OpenAPI 3.0 |
-| Boolean exclusiveMin/Max | Used with Draft 6+ or OpenAPI 3.1 |
+| Feature | JSON Schema Warning | OpenAPI Warning |
+|---------|---------------------|-----------------|
+| `null` in type array | Draft 4/6/7 (not supported) | 3.0 (use nullable instead) |
+| `nullable` keyword | Always (OpenAPI extension) | 3.1 (deprecated) |
+| `binary` format | Always (OpenAPI extension) | Never (valid) |
+| `password` format | Always (OpenAPI extension) | Never (valid) |
+| `prefixItems` | Before Draft 2020-12 | - |
+| Items as array | Draft 2020-12 (use prefixItems) | - |
+| Boolean schema | Draft 4 (not supported) | - |
+| Numeric exclusiveMin/Max | Draft 4 (use boolean) | 3.0 (use boolean) |
+| Boolean exclusiveMin/Max | Draft 6+ (use numeric) | 3.1 (use numeric) |
 
 ## Limitations
 
