@@ -56,7 +56,11 @@ def test_detect_jsonschema_version_2020_12() -> None:
 
 
 def test_detect_jsonschema_version_defs_heuristic() -> None:
-    """Test detection using $defs heuristic defaults to latest."""
+    """Test detection using $defs heuristic.
+
+    $defs was introduced in Draft 2019-09, but Draft 2020-12 also uses it.
+    Since 2020-12 is a superset, default to 2020-12 to avoid false warnings.
+    """
     assert detect_jsonschema_version({"$defs": {"Foo": {"type": "string"}}}) == snapshot(JsonSchemaVersion.Draft202012)
 
 
@@ -110,6 +114,7 @@ def test_jsonschema_features_draft4() -> None:
             boolean_schemas=False,
             id_field="id",
             definitions_key="definitions",
+            exclusive_as_number=False,
         )
     )
 
@@ -124,6 +129,7 @@ def test_jsonschema_features_draft6() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=True,
         )
     )
 
@@ -138,6 +144,7 @@ def test_jsonschema_features_draft7() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=True,
         )
     )
 
@@ -152,6 +159,7 @@ def test_jsonschema_features_2019_09() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -166,6 +174,7 @@ def test_jsonschema_features_2020_12() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -180,6 +189,7 @@ def test_jsonschema_features_auto() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
 
@@ -201,6 +211,7 @@ def test_openapi_features_v30() -> None:
             boolean_schemas=False,
             id_field="$id",
             definitions_key="definitions",
+            exclusive_as_number=False,
             nullable_keyword=True,
             discriminator_support=True,
         )
@@ -217,6 +228,7 @@ def test_openapi_features_v31() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -233,6 +245,7 @@ def test_openapi_features_auto() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -625,3 +638,194 @@ def test_nullable_keyword_openapi_31_lenient_no_warning() -> None:
         parser.get_data_type(obj)
         deprecation_warnings = [x for x in w if issubclass(x.category, DeprecationWarning)]
         assert len(deprecation_warnings) == 0
+
+
+def test_null_in_type_array_strict_warning_draft7() -> None:
+    """Test that null in type array emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": ["string", "null"]}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "null in type array" in str(user_warnings[0].message)
+
+
+def test_null_in_type_array_no_warning_2020_12() -> None:
+    """Test that null in type array does NOT emit warning in Draft 2020-12."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": ["string", "null"]}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_exclusive_as_number_strict_warning_draft4() -> None:
+    """Test that numeric exclusiveMinimum emits warning in Draft 4 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "number", "exclusiveMinimum": 5}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "exclusiveMinimum as number" in str(user_warnings[0].message)
+
+
+def test_exclusive_as_bool_strict_warning_draft7() -> None:
+    """Test that boolean exclusiveMinimum emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "number", "minimum": 5, "exclusiveMinimum": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "exclusiveMinimum as boolean" in str(user_warnings[0].message)
+
+
+def test_prefix_items_strict_warning_draft7() -> None:
+    """Test that prefixItems emits warning in Draft 7 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    obj = JsonSchemaObject(
+        type="array",
+        prefixItems=[JsonSchemaObject(type="string"), JsonSchemaObject(type="number")],
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_array_version_features(obj, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "prefixItems is not supported" in str(user_warnings[0].message)
+
+
+def test_items_array_strict_warning_2020_12() -> None:
+    """Test that items as array emits warning in Draft 2020-12 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft202012,
+        schema_version_mode=VersionMode.Strict,
+    )
+    obj = JsonSchemaObject(
+        type="array",
+        items=[JsonSchemaObject(type="string"), JsonSchemaObject(type="number")],
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_array_version_features(obj, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "items as array" in str(user_warnings[0].message)
+
+
+def test_boolean_schema_strict_warning_draft4() -> None:
+    """Test that boolean schema emits warning in Draft 4 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "Boolean schemas" in str(user_warnings[0].message)
+
+
+def test_boolean_schema_no_warning_draft7() -> None:
+    """Test that boolean schema does NOT emit warning in Draft 7."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_version_checks_lenient_no_warnings() -> None:
+    """Test that version checks do NOT emit warnings in Lenient mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Lenient,
+    )
+    raw_schema = {"type": ["string", "null"], "exclusiveMinimum": 5}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0

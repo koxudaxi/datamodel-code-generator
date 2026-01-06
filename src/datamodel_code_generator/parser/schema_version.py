@@ -30,6 +30,7 @@ class JsonSchemaFeatures:
         boolean_schemas: Draft 6+ allows boolean values as schemas.
         id_field: The field name for schema ID ("id" for Draft 4, "$id" for Draft 6+).
         definitions_key: The key for definitions ("definitions" or "$defs").
+        exclusive_as_number: Draft 6+ uses numeric exclusiveMin/Max (Draft 4 uses boolean).
     """
 
     null_in_type_array: bool
@@ -38,6 +39,7 @@ class JsonSchemaFeatures:
     boolean_schemas: bool
     id_field: str
     definitions_key: str
+    exclusive_as_number: bool
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -51,6 +53,7 @@ class JsonSchemaFeatures:
                     boolean_schemas=False,
                     id_field="id",
                     definitions_key="definitions",
+                    exclusive_as_number=False,
                 )
             case JsonSchemaVersion.Draft6 | JsonSchemaVersion.Draft7:
                 return cls(
@@ -60,6 +63,7 @@ class JsonSchemaFeatures:
                     boolean_schemas=True,
                     id_field="$id",
                     definitions_key="definitions",
+                    exclusive_as_number=True,
                 )
             case JsonSchemaVersion.Draft201909:
                 return cls(
@@ -69,6 +73,7 @@ class JsonSchemaFeatures:
                     boolean_schemas=True,
                     id_field="$id",
                     definitions_key="$defs",
+                    exclusive_as_number=True,
                 )
             case _:
                 return cls(
@@ -78,6 +83,7 @@ class JsonSchemaFeatures:
                     boolean_schemas=True,
                     id_field="$id",
                     definitions_key="$defs",
+                    exclusive_as_number=True,
                 )
 
 
@@ -100,6 +106,8 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
         """Create OpenAPISchemaFeatures from an OpenAPI version."""
         match version:
             case OpenAPIVersion.V30:
+                # OpenAPI 3.0 schema dialect inherits JSON Schema Draft 4 semantics
+                # where exclusiveMinimum/Maximum are boolean values
                 return cls(
                     null_in_type_array=False,
                     defs_not_definitions=False,
@@ -107,6 +115,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     boolean_schemas=False,
                     id_field="$id",
                     definitions_key="definitions",
+                    exclusive_as_number=False,
                     nullable_keyword=True,
                     discriminator_support=True,
                 )
@@ -118,6 +127,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     boolean_schemas=True,
                     id_field="$id",
                     definitions_key="$defs",
+                    exclusive_as_number=True,
                     nullable_keyword=False,
                     discriminator_support=True,
                 )
@@ -158,6 +168,10 @@ def detect_jsonschema_version(data: dict[str, Any]) -> JsonSchemaVersion:
             if pattern in schema_url:
                 return version
 
+    # Heuristic detection based on keywords
+    # $defs was introduced in Draft 2019-09, but Draft 2020-12 also uses it.
+    # Since 2020-12 is a superset of 2019-09, default to 2020-12 when $defs is present
+    # to avoid false warnings in Strict mode for features valid in both versions.
     if "$defs" in data:
         return JsonSchemaVersion.Draft202012
     if "definitions" in data:
