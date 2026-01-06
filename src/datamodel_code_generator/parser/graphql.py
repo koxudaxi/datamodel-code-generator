@@ -421,43 +421,6 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
             use_serialization_alias=self.use_serialization_alias,
         )
 
-    def _sort_interfaces_for_mro(  # noqa: PLR6301
-        self,
-        interfaces: list[graphql.GraphQLInterfaceType],
-    ) -> list[graphql.GraphQLInterfaceType]:
-        """Sort interfaces so that subclasses come before their parent classes.
-
-        This ensures valid Python MRO (Method Resolution Order) when a class
-        implements multiple interfaces where some interfaces extend others.
-
-        For example, if Notification implements Node, and a class implements
-        both Node and Notification, the order should be [Notification, Node]
-        not [Node, Notification].
-        """
-        if len(interfaces) <= 1:
-            return interfaces
-
-        interface_names = {i.name for i in interfaces}
-
-        def get_ancestors(iface: graphql.GraphQLInterfaceType) -> set[str]:
-            """Get all ancestor interface names that are in our interface list."""
-            ancestors: set[str] = set()
-            to_visit = list(getattr(iface, "interfaces", []))
-            while to_visit:
-                parent = to_visit.pop()
-                if parent.name in interface_names and parent.name not in ancestors:
-                    ancestors.add(parent.name)
-                    to_visit.extend(getattr(parent, "interfaces", []))
-            return ancestors
-
-        ancestor_map = {i.name: get_ancestors(i) for i in interfaces}
-
-        def sort_key(iface: graphql.GraphQLInterfaceType) -> tuple[int, str]:
-            ancestor_count = sum(1 for other in interfaces if iface.name in ancestor_map[other.name])
-            return (ancestor_count, iface.name)
-
-        return sorted(interfaces, key=sort_key)
-
     def parse_object_like(
         self,
         obj: graphql.GraphQLInterfaceType | graphql.GraphQLObjectType | graphql.GraphQLInputObjectType,
@@ -485,8 +448,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
 
         base_classes = []
         if hasattr(obj, "interfaces"):
-            sorted_interfaces = self._sort_interfaces_for_mro(list(obj.interfaces))  # ty: ignore
-            base_classes = [self.references[i.name] for i in sorted_interfaces]
+            base_classes = [self.references[i.name] for i in obj.interfaces]  # ty: ignore
 
         data_model_type = self._create_data_model(
             reference=self.references[obj.name],
