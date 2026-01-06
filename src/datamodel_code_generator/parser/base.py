@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
     Generic,
     NamedTuple,
     Optional,
@@ -89,8 +90,10 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
+SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound="JsonSchemaFeatures")
 
 
 @runtime_checkable
@@ -753,26 +756,55 @@ class Source(BaseModel):
         return cls(path=Path(), raw_data=data)
 
 
-class Parser(ABC, Generic[ParserConfigT]):
+class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
     Provides the parsing algorithm and code generation. Subclasses implement
     parse_raw() to handle specific schema formats.
+
+    Type Parameters:
+        ParserConfigT: The configuration type for this parser.
+        SchemaFeaturesT: The schema features type (JsonSchemaFeatures or subclass).
     """
+
+    @property
+    @abstractmethod
+    def schema_features(self) -> SchemaFeaturesT:
+        """Get schema features based on detected version.
+
+        Returns:
+            Schema features instance with version-specific flags.
+        """
+        ...
+
+    _config_class_name: ClassVar[str] = "ParserConfig"
+
+    @classmethod
+    def _get_config_class(cls) -> type[ParserConfig]:
+        """Return the config class for this parser.
+
+        Uses _config_class_name class variable to dynamically import the config class.
+        Subclasses should set _config_class_name to their config class name.
+        """
+        import importlib  # noqa: PLC0415
+
+        module = importlib.import_module("datamodel_code_generator.config")
+        return getattr(module, cls._config_class_name)
 
     @classmethod
     def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore
         """Create a default config from options.
 
-        Subclasses should override this to return their own config type.
+        Uses _get_config_class() to determine which config class to instantiate.
         """
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
-        from datamodel_code_generator.config import ParserConfig  # noqa: PLC0415
         from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
         from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
+        config_class = cls._get_config_class()
+
         if is_pydantic_v2():
-            ParserConfig.model_rebuild(
+            config_class.model_rebuild(
                 _types_namespace={
                     "StrictTypes": types_module.StrictTypes,
                     "DataModel": model_base.DataModel,
@@ -780,16 +812,16 @@ class Parser(ABC, Generic[ParserConfigT]):
                     "DataTypeManager": types_module.DataTypeManager,
                 }
             )
-            return ParserConfig.model_validate(options)  # type: ignore[return-value]
-        ParserConfig.update_forward_refs(
+            return config_class.model_validate(options)  # type: ignore[return-value]
+        config_class.update_forward_refs(
             StrictTypes=types_module.StrictTypes,
             DataModel=model_base.DataModel,
             DataModelFieldBase=model_base.DataModelFieldBase,
             DataTypeManager=types_module.DataTypeManager,
         )
-        defaults = {name: field.default for name, field in ParserConfig.__fields__.items()}
+        defaults = {name: field.default for name, field in config_class.__fields__.items()}
         defaults.update(options)  # ty: ignore
-        return ParserConfig.construct(**defaults)  # type: ignore[return-value]
+        return config_class.construct(**defaults)  # type: ignore[return-value]
 
     def __init__(  # noqa: PLR0912, PLR0915
         self,

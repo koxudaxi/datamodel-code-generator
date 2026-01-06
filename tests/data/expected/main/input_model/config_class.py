@@ -114,6 +114,9 @@ UnionMode: TypeAlias = Literal['smart', 'left_to_right']
 ValidatorMode: TypeAlias = Literal['before', 'after', 'wrap', 'plain']
 
 
+VersionMode: TypeAlias = Literal['lenient', 'strict']
+
+
 class GenerateConfig(TypedDict, closed=True):
     input_filename: NotRequired[str | None]
     input_file_type: NotRequired[InputFileType]
@@ -246,6 +249,8 @@ class GenerateConfig(TypedDict, closed=True):
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
+    schema_version: NotRequired[str | None]
+    schema_version_mode: NotRequired[VersionMode | None]
 
 
 class ValidatorDefinition(TypedDict):

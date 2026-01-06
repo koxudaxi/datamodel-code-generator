@@ -32,6 +32,7 @@ if TYPE_CHECKING:
         StrictTypes,
         TargetPydanticVersion,
         UnionMode,
+        VersionMode,
     )
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
     from datamodel_code_generator.parser import LiteralType
@@ -168,6 +169,8 @@ class GenerateConfigDict(TypedDict, closed=True):
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     module_split_mode: NotRequired[ModuleSplitMode | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
+    schema_version: NotRequired[str | None]
+    schema_version_mode: NotRequired[VersionMode | None]
 
 
 class ValidatorDefinition(TypedDict):

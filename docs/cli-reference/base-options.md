@@ -10,6 +10,8 @@
 | [`--input-model`](#input-model) | Import a Python type or dict schema from a module. |
 | [`--input-model-ref-strategy`](#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](#output) | Specify the destination path for generated Python code. |
+| [`--schema-version`](#schema-version) | Schema version to use for parsing. |
+| [`--schema-version-mode`](#schema-version-mode) | Schema version validation mode. |
 | [`--url`](#url) | Fetch schema from URL with custom HTTP headers. |
 
 ---
@@ -322,6 +324,290 @@ is written to stdout.
         id: int | None = None
         name: str | None = None
         tag: str | None = None
+    ```
+
+---
+
+## `--schema-version` {#schema-version}
+
+Schema version to use for parsing.
+
+The `--schema-version` option specifies the schema version to use instead of auto-detection.
+Valid values depend on input type: JsonSchema (draft-04, draft-06, draft-07, 2019-09, 2020-12)
+or OpenAPI (3.0, 3.1). Default is 'auto' (detected from $schema or openapi field).
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version draft-07 # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version` - the option documented here
+
+??? example "Examples"
+
+    === "OpenAPI"
+
+        **Input Schema:**
+
+        ```yaml
+        openapi: "3.0.0"
+        info:
+          version: 1.0.0
+          title: Swagger Petstore
+          license:
+            name: MIT
+        servers:
+          - url: http://petstore.swagger.io/v1
+        paths:
+          /pets:
+            get:
+              summary: List all pets
+              operationId: listPets
+              tags:
+                - pets
+              parameters:
+                - name: limit
+                  in: query
+                  description: How many items to return at one time (max 100)
+                  required: false
+                  schema:
+                    type: integer
+                    format: int32
+              responses:
+                '200':
+                  description: A paged array of pets
+                  headers:
+                    x-next:
+                      description: A link to the next page of responses
+                      schema:
+                        type: string
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+            post:
+              summary: Create a pet
+              operationId: createPets
+              tags:
+                - pets
+              responses:
+                '201':
+                  description: Null response
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+                        x-amazon-apigateway-integration:
+                          uri:
+                            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                          passthroughBehavior: when_no_templates
+                          httpMethod: POST
+                          type: aws_proxy
+          /pets/{petId}:
+            get:
+              summary: Info for a specific pet
+              operationId: showPetById
+              tags:
+                - pets
+              parameters:
+                - name: petId
+                  in: path
+                  required: true
+                  description: The id of the pet to retrieve
+                  schema:
+                    type: string
+              responses:
+                '200':
+                  description: Expected response to a valid request
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Pets"
+                default:
+                  description: unexpected error
+                  content:
+                    application/json:
+                      schema:
+                        $ref: "#/components/schemas/Error"
+            x-amazon-apigateway-integration:
+              uri:
+                Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+              passthroughBehavior: when_no_templates
+              httpMethod: POST
+              type: aws_proxy
+        components:
+          schemas:
+            Pet:
+              required:
+                - id
+                - name
+              properties:
+                id:
+                  type: integer
+                  format: int64
+                  default: 1
+                name:
+                  type: string
+                tag:
+                  type: string
+            Pets:
+              type: array
+              items:
+                $ref: "#/components/schemas/Pet"
+            Users:
+              type: array
+              items:
+                required:
+                  - id
+                  - name
+                properties:
+                  id:
+                    type: integer
+                    format: int64
+                  name:
+                    type: string
+                  tag:
+                    type: string
+            Id:
+              type: string
+            Rules:
+              type: array
+              items:
+                type: string
+            Error:
+              description: error result
+              required:
+                - code
+                - message
+              properties:
+                code:
+                  type: integer
+                  format: int32
+                message:
+                  type: string
+            apis:
+              type: array
+              items:
+                type: object
+                properties:
+                  apiKey:
+                    type: string
+                    description: To be used as a dataset parameter value
+                  apiVersionNumber:
+                    type: string
+                    description: To be used as a version parameter value
+                  apiUrl:
+                    type: string
+                    format: uri
+                    description: "The URL describing the dataset's fields"
+                  apiDocumentationUrl:
+                    type: string
+                    format: uri
+                    description: A URL to the API console for each API
+            Event:
+              type: object
+              description: Event object
+              properties:
+                name:
+                  type: string
+            Result:
+                type: object
+                properties:
+                  event:
+                    $ref: '#/components/schemas/Event'
+        ```
+
+        **Output:**
+
+        > **Error:** File not found: openapi/api.py
+
+    === "JSON Schema"
+
+        **Input Schema:**
+
+        ```json
+        {
+          "$schema": "http://json-schema.org/draft-07/schema",
+          "type": "object",
+          "properties": {"s": {"type": ["string"]}},
+          "required": ["s"]
+        }
+        ```
+
+        **Output:**
+
+        ```python
+        # generated by datamodel-codegen:
+        #   filename:  simple_string.json
+        
+        from __future__ import annotations
+        
+        from pydantic import BaseModel
+        
+        
+        class Model(BaseModel):
+            s: str
+        ```
+
+---
+
+## `--schema-version-mode` {#schema-version-mode}
+
+Schema version validation mode.
+
+The `--schema-version-mode` option controls how schema version validation is performed.
+'lenient' (default): accept all features regardless of version.
+'strict': warn on features outside the declared/detected version.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --schema-version-mode lenient # (1)!
+    ```
+
+    1. :material-arrow-left: `--schema-version-mode` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema",
+      "type": "object",
+      "properties": {"s": {"type": ["string"]}},
+      "required": ["s"]
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  simple_string.json
+    
+    from __future__ import annotations
+    
+    from pydantic import BaseModel
+    
+    
+    class Model(BaseModel):
+        s: str
     ```
 
 ---

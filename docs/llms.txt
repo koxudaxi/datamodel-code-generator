@@ -27,6 +27,7 @@
 
 
 - [Supported Input Formats](https://datamodel-code-generator.koxudaxi.dev/supported-data-types/): This code generator supports the following input formats:
+- [Schema Version Support](https://datamodel-code-generator.koxudaxi.dev/supported_formats/): This document describes the JSON Schema and OpenAPI versions supported by datamodel-code-generator.
 ## Usage
 
 ### Input Formats

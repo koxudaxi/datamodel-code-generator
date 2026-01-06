@@ -6,9 +6,11 @@ objects, interfaces, enums, scalars, inputs, and union types.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
+    ClassVar,
 )
 
 from typing_extensions import Unpack
@@ -43,6 +45,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types import GraphQLParserConfigDict
     from datamodel_code_generator.config import GraphQLParserConfig
     from datamodel_code_generator.model import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
@@ -59,11 +62,20 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 
 @snooper_to_methods()
-class GraphQLParser(Parser["GraphQLParserConfig"]):
+class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     """Parser for GraphQL schema files."""
 
     # raw graphql schema as `graphql-core` object
     raw_obj: graphql.GraphQLSchema
+
+    @cached_property
+    def schema_features(self) -> JsonSchemaFeatures:
+        """Get schema features for GraphQL (uses default JSON Schema features)."""
+        from datamodel_code_generator.enums import JsonSchemaVersion  # noqa: PLC0415
+        from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures  # noqa: PLC0415
+
+        return JsonSchemaFeatures.from_version(JsonSchemaVersion.Draft202012)
+
     # all processed graphql objects
     # mapper from an object name (unique) to an object
     all_graphql_objects: dict[str, graphql.GraphQLNamedType]
@@ -86,33 +98,7 @@ class GraphQLParser(Parser["GraphQLParserConfig"]):
         graphql.type.introspection.TypeKind.UNION,
     ]
 
-    @classmethod
-    def _create_default_config(cls, options: GraphQLParserConfigDict) -> GraphQLParserConfig:  # type: ignore[override]
-        """Create a GraphQLParserConfig from options."""
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
-        from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
-
-        if is_pydantic_v2():
-            GraphQLParserConfig.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return GraphQLParserConfig.model_validate(options)
-        GraphQLParserConfig.update_forward_refs(  # pragma: no cover
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
-        )
-        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}  # pragma: no cover
-        defaults.update(options)  # pragma: no cover  # ty: ignore
-        return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+    _config_class_name: ClassVar[str] = "GraphQLParserConfig"
 
     def __init__(
         self,

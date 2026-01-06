@@ -29,6 +29,7 @@ nav = [
     ]}
   ]},
   { "Support data types" = "supported-data-types.md" },
+  { "Schema Version Support" = "supported_formats.md" },
   { "Usage" = [
     { "Input Formats" = [
       { "OpenAPI" = "openapi.md" },

@@ -93,6 +93,8 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--remove-special-field-name-prefix": "Remove the special prefix from field names.",
     "--reuse-model": "Reuse identical model definitions instead of generating duplicates.",
     "--reuse-scope": "Scope for model reuse detection (root or tree).",
+    "--schema-version": "Schema version to use for parsing.",
+    "--schema-version-mode": "Schema version validation mode.",
     "--set-default-enum-member": "Set the first enum member as the default value for enum fields.",
     "--shared-module-name": "Customize the name of the shared module for deduplicated models.",
     "--skip-root-model": "Skip generation of root model when schema contains nested definitions.",
