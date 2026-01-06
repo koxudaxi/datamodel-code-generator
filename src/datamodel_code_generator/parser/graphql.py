@@ -6,6 +6,7 @@ objects, interfaces, enums, scalars, inputs, and union types.
 
 from __future__ import annotations
 
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -43,6 +44,7 @@ if TYPE_CHECKING:
     from datamodel_code_generator._types import GraphQLParserConfigDict
     from datamodel_code_generator.config import GraphQLParserConfig
     from datamodel_code_generator.model import DataModel, DataModelFieldBase
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 # graphql-core >=3.2.7 removed TypeResolvers in favor of TypeFields.kind.
 # Normalize to a single callable for resolving type kinds.
@@ -59,11 +61,20 @@ def build_graphql_schema(schema_str: str) -> graphql.GraphQLSchema:
 
 
 @snooper_to_methods()
-class GraphQLParser(Parser["GraphQLParserConfig"]):
+class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     """Parser for GraphQL schema files."""
 
     # raw graphql schema as `graphql-core` object
     raw_obj: graphql.GraphQLSchema
+
+    @cached_property
+    def schema_features(self) -> JsonSchemaFeatures:
+        """Get schema features for GraphQL (uses default JSON Schema features)."""
+        from datamodel_code_generator.enums import JsonSchemaVersion  # noqa: PLC0415
+        from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures  # noqa: PLC0415
+
+        return JsonSchemaFeatures.from_version(JsonSchemaVersion.Draft202012)
+
     # all processed graphql objects
     # mapper from an object name (unique) to an object
     all_graphql_objects: dict[str, graphql.GraphQLNamedType]

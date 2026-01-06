@@ -89,8 +89,10 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator._types import ParserConfigDict
     from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 ParserConfigT = TypeVar("ParserConfigT", bound="ParserConfig")
+SchemaFeaturesT = TypeVar("SchemaFeaturesT", bound="JsonSchemaFeatures")
 
 
 @runtime_checkable
@@ -688,12 +690,26 @@ class Source(BaseModel):
         return cls(path=Path(), raw_data=data)
 
 
-class Parser(ABC, Generic[ParserConfigT]):
+class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     """Abstract base class for schema parsers.
 
     Provides the parsing algorithm and code generation. Subclasses implement
     parse_raw() to handle specific schema formats.
+
+    Type Parameters:
+        ParserConfigT: The configuration type for this parser.
+        SchemaFeaturesT: The schema features type (JsonSchemaFeatures or subclass).
     """
+
+    @property
+    @abstractmethod
+    def schema_features(self) -> SchemaFeaturesT:
+        """Get schema features based on detected version.
+
+        Returns:
+            Schema features instance with version-specific flags.
+        """
+        ...
 
     @classmethod
     def _create_default_config(cls, options: ParserConfigDict) -> ParserConfigT:  # ty: ignore

@@ -145,3 +145,28 @@ def test_graphql_typename_included_by_default(output_file: Path) -> None:
         assert_func=assert_typename_present,
         expected_file=None,
     )
+
+
+def test_graphql_schema_features() -> None:
+    """Test that GraphQLParser has schema_features property returning JsonSchemaFeatures."""
+    from inline_snapshot import snapshot
+
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
+
+    parser = GraphQLParser(
+        source="type Query { id: ID }",
+        data_model_type=DataClass,
+    )
+
+    features = parser.schema_features
+    assert isinstance(features, JsonSchemaFeatures)
+    assert features == snapshot(
+        JsonSchemaFeatures(
+            null_in_type_array=True,
+            defs_not_definitions=True,
+            prefix_items=True,
+            boolean_schemas=True,
+            id_field="$id",
+            definitions_key="$defs",
+        )
+    )

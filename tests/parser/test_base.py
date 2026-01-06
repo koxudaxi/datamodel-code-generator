@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
 
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
+
 from datamodel_code_generator.model.pydantic import BaseModel, DataModelField
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
@@ -35,6 +39,14 @@ class B(DataModel):
 
 class C(Parser):
     """Test parser class C."""
+
+    @property
+    def schema_features(self) -> JsonSchemaFeatures:
+        """Return mock schema features."""
+        from datamodel_code_generator.enums import JsonSchemaVersion
+        from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
+
+        return JsonSchemaFeatures.from_version(JsonSchemaVersion.Draft202012)
 
     def parse_raw(self, name: str, raw: dict[str, Any]) -> None:
         """Parse raw data into models."""
