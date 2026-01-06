@@ -1,0 +1,15 @@
+openapi: "3.0.3"
+info:
+  title: ExclusiveMaxNumberTest
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Root:
+      type: object
+      properties:
+        value:
+          $ref: "#/components/schemas/BoundedInt"
+    BoundedInt:
+      type: integer
+      exclusiveMaximum: 100

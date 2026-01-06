@@ -1,0 +1,16 @@
+openapi: "3.0.3"
+info:
+  title: NullTypeTest
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Root:
+      type: object
+      properties:
+        item:
+          $ref: "#/components/schemas/NullableItem"
+    NullableItem:
+      type:
+        - string
+        - "null"

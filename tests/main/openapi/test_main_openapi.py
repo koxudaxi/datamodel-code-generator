@@ -4916,3 +4916,123 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
         expected_file="deprecated_field.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+@SKIP_PYDANTIC_V1
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when null in type array is used
+in OpenAPI 3.0 (should use nullable: true instead).""",
+    input_schema="openapi/schema_version_strict_null_in_type_3_0.yaml",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/schema_version_strict_null_in_type_3_0.py",
+)
+def test_main_openapi_schema_version_strict_null_in_type_3_0(output_file: Path) -> None:
+    """Test null in type array in OpenAPI 3.0 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"null in type array.*OpenAPI 3\.0"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_version_strict_null_in_type_3_0.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_null_in_type_3_0.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@SKIP_PYDANTIC_V1
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMaximum is used as
+number in OpenAPI 3.0 (should be boolean).""",
+    input_schema="openapi/schema_version_strict_exclusive_max_number_3_0.yaml",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/schema_version_strict_exclusive_max_number_3_0.py",
+)
+def test_main_openapi_schema_version_strict_exclusive_max_number_3_0(output_file: Path) -> None:
+    """Test exclusiveMaximum as number in OpenAPI 3.0 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMaximum as number is OpenAPI 3\.1 style"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_version_strict_exclusive_max_number_3_0.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_max_number_3_0.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@SKIP_PYDANTIC_V1
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMaximum is used as
+boolean in OpenAPI 3.1 (should be numeric).""",
+    input_schema="openapi/schema_version_strict_exclusive_max_boolean_3_1.yaml",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/schema_version_strict_exclusive_max_boolean_3_1.py",
+)
+def test_main_openapi_schema_version_strict_exclusive_max_boolean_3_1(output_file: Path) -> None:
+    """Test exclusiveMaximum as boolean in OpenAPI 3.1 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMaximum as boolean is not supported in OpenAPI 3\.1"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_version_strict_exclusive_max_boolean_3_1.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_max_boolean_3_1.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@SKIP_PYDANTIC_V1
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMinimum is used as
+number in OpenAPI 3.0 (should be boolean).""",
+    input_schema="openapi/schema_version_strict_exclusive_min_number_3_0.yaml",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/schema_version_strict_exclusive_min_number_3_0.py",
+)
+def test_main_openapi_schema_version_strict_exclusive_min_number_3_0(output_file: Path) -> None:
+    """Test exclusiveMinimum as number in OpenAPI 3.0 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMinimum as number is OpenAPI 3\.1 style"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_version_strict_exclusive_min_number_3_0.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_min_number_3_0.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@SKIP_PYDANTIC_V1
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMinimum is used as
+boolean in OpenAPI 3.1 (should be numeric).""",
+    input_schema="openapi/schema_version_strict_exclusive_min_boolean_3_1.yaml",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="openapi/schema_version_strict_exclusive_min_boolean_3_1.py",
+)
+def test_main_openapi_schema_version_strict_exclusive_min_boolean_3_1(output_file: Path) -> None:
+    """Test exclusiveMinimum as boolean in OpenAPI 3.1 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMinimum as boolean is not supported in OpenAPI 3\.1"):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "schema_version_strict_exclusive_min_boolean_3_1.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_min_boolean_3_1.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )

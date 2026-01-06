@@ -1,0 +1,12 @@
+openapi: "3.0.3"
+info:
+  title: BooleanSchemaTest
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        anything:
+          additionalProperties: true
