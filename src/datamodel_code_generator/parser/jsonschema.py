@@ -1018,7 +1018,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_non_write_only = False
 
         for prop in (ref_schema.properties or {}).values():
-            if not isinstance(prop, JsonSchemaObject):
+            if not isinstance(prop, JsonSchemaObject):  # pragma: no cover
                 continue
             is_read_only = self._resolve_field_flag(prop, "readOnly")
             is_write_only = self._resolve_field_flag(prop, "writeOnly")
@@ -1052,7 +1052,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_write_only = False
 
         for prop in (ref_schema.properties or {}).values():
-            if not isinstance(prop, JsonSchemaObject):
+            if not isinstance(prop, JsonSchemaObject):  # pragma: no cover
                 continue
             is_read_only = self._resolve_field_flag(prop, "readOnly")
             is_write_only = self._resolve_field_flag(prop, "writeOnly")
@@ -3774,7 +3774,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         obj = self._validate_schema_object(raw, path)
         self.parse_obj(name, obj, path)
 
-    def _check_version_specific_features(
+    def _check_version_specific_features(  # noqa: PLR0912
         self,
         raw: dict[str, YamlValue] | YamlValue,
         path: list[str],
@@ -3835,6 +3835,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 warn(
                     f"exclusiveMaximum as number is Draft 6+ style, but schema version is Draft 4. "
                     f"Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+
+        if not self.schema_features.read_only_write_only:
+            if raw.get("readOnly") is True:
+                warn(
+                    f"readOnly is not supported in this schema version (Draft 7+ only). Schema path: {'/'.join(path)}",
+                    stacklevel=3,
+                )
+            if raw.get("writeOnly") is True:
+                warn(
+                    f"writeOnly is not supported in this schema version (Draft 7+ only). Schema path: {'/'.join(path)}",
                     stacklevel=3,
                 )
 

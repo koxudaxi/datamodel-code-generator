@@ -115,6 +115,7 @@ def test_jsonschema_features_draft4() -> None:
             id_field="id",
             definitions_key="definitions",
             exclusive_as_number=False,
+            read_only_write_only=False,
         )
     )
 
@@ -130,6 +131,7 @@ def test_jsonschema_features_draft6() -> None:
             id_field="$id",
             definitions_key="definitions",
             exclusive_as_number=True,
+            read_only_write_only=False,
         )
     )
 
@@ -145,6 +147,7 @@ def test_jsonschema_features_draft7() -> None:
             id_field="$id",
             definitions_key="definitions",
             exclusive_as_number=True,
+            read_only_write_only=True,
         )
     )
 
@@ -160,6 +163,7 @@ def test_jsonschema_features_2019_09() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
         )
     )
 
@@ -175,6 +179,7 @@ def test_jsonschema_features_2020_12() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
         )
     )
 
@@ -190,6 +195,7 @@ def test_jsonschema_features_auto() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
         )
     )
 
@@ -212,6 +218,7 @@ def test_openapi_features_v30() -> None:
             id_field="$id",
             definitions_key="definitions",
             exclusive_as_number=False,
+            read_only_write_only=True,
             nullable_keyword=True,
             discriminator_support=True,
         )
@@ -229,6 +236,7 @@ def test_openapi_features_v31() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -246,6 +254,7 @@ def test_openapi_features_auto() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -806,6 +815,88 @@ def test_boolean_schema_no_warning_draft7() -> None:
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_read_only_strict_warning_draft6() -> None:
+    """Test that readOnly emits warning in Draft 6 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft6,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "readOnly": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "readOnly is not supported" in str(user_warnings[0].message)
+
+
+def test_write_only_strict_warning_draft4() -> None:
+    """Test that writeOnly emits warning in Draft 4 Strict mode."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft4,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "writeOnly": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "writeOnly is not supported" in str(user_warnings[0].message)
+
+
+def test_read_only_no_warning_draft7() -> None:
+    """Test that readOnly does NOT emit warning in Draft 7."""
+    import warnings
+
+    from datamodel_code_generator.parser.jsonschema import JsonSchemaParser
+
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "readOnly": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_write_only_no_warning_openapi_30() -> None:
+    """Test that writeOnly does NOT emit warning in OpenAPI 3.0."""
+    import warnings
+
+    from datamodel_code_generator.parser.openapi import OpenAPIParser
+
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+    )
+    raw_schema = {"type": "string", "writeOnly": True}
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(raw_schema, ["test"])
         user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
         assert len(user_warnings) == 0
 

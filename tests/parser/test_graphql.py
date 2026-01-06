@@ -169,5 +169,6 @@ def test_graphql_schema_features() -> None:
             id_field="$id",
             definitions_key="$defs",
             exclusive_as_number=True,
+            read_only_write_only=True,
         )
     )
