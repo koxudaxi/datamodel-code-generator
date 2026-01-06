@@ -98,32 +98,11 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
     ]
 
     @classmethod
-    def _create_default_config(cls, options: GraphQLParserConfigDict) -> GraphQLParserConfig:  # type: ignore[override]
-        """Create a GraphQLParserConfig from options."""
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+    def _get_config_class(cls) -> type[GraphQLParserConfig]:
+        """Return the GraphQLParserConfig class."""
         from datamodel_code_generator.config import GraphQLParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
-        if is_pydantic_v2():
-            GraphQLParserConfig.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return GraphQLParserConfig.model_validate(options)
-        GraphQLParserConfig.update_forward_refs(  # pragma: no cover
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
-        )
-        defaults = {name: field.default for name, field in GraphQLParserConfig.__fields__.items()}  # pragma: no cover
-        defaults.update(options)  # pragma: no cover  # ty: ignore
-        return GraphQLParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+        return GraphQLParserConfig
 
     def __init__(
         self,

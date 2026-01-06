@@ -185,32 +185,11 @@ class OpenAPIParser(JsonSchemaParser):
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
     @classmethod
-    def _create_default_config(cls, options: OpenAPIParserConfigDict) -> OpenAPIParserConfig:  # ty: ignore
-        """Create an OpenAPIParserConfig from options."""
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+    def _get_config_class(cls) -> type[OpenAPIParserConfig]:
+        """Return the OpenAPIParserConfig class."""
         from datamodel_code_generator.config import OpenAPIParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
-        if is_pydantic_v2():
-            OpenAPIParserConfig.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return OpenAPIParserConfig.model_validate(options)
-        OpenAPIParserConfig.update_forward_refs(
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
-        )
-        defaults = {name: field.default for name, field in OpenAPIParserConfig.__fields__.items()}
-        defaults.update(options)  # ty: ignore
-        return OpenAPIParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+        return OpenAPIParserConfig
 
     def __init__(
         self,

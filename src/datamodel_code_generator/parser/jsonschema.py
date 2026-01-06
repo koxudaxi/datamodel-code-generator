@@ -670,31 +670,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     })
 
     @classmethod
-    def _create_default_config(cls, options: JSONSchemaParserConfigDict) -> JSONSchemaParserConfig:  # type: ignore[override]
-        """Create a JSONSchemaParserConfig from options."""
-        from datamodel_code_generator import types as types_module  # noqa: PLC0415
+    def _get_config_class(cls) -> type[JSONSchemaParserConfig]:
+        """Return the JSONSchemaParserConfig class."""
         from datamodel_code_generator.config import JSONSchemaParserConfig  # noqa: PLC0415
-        from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
 
-        if is_pydantic_v2():
-            JSONSchemaParserConfig.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return JSONSchemaParserConfig.model_validate(options)
-        JSONSchemaParserConfig.update_forward_refs(
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
-        )
-        defaults = {name: field.default for name, field in JSONSchemaParserConfig.__fields__.items()}  # ty: ignore
-        defaults.update(options)  # ty: ignore
-        return JSONSchemaParserConfig.construct(**defaults)  # type: ignore[return-value]  # pragma: no cover
+        return JSONSchemaParserConfig
 
     def __init__(
         self,
