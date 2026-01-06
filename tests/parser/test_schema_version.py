@@ -952,3 +952,132 @@ from pydantic import BaseModel
 class Model(BaseModel):
     s: str"""
     )
+
+
+# =============================================================================
+# Error handling tests for invalid schema versions
+# =============================================================================
+
+
+def test_invalid_jsonschema_version_error() -> None:
+    """Test that invalid JSON Schema version raises Error."""
+    from datamodel_code_generator import Error, generate
+
+    with pytest.raises(Error) as exc_info:
+        generate(
+            JSON_SCHEMA_DATA_PATH / "simple_string.json",
+            input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+            schema_version="invalid-version",
+        )
+    assert "Invalid JSON Schema version" in str(exc_info.value)
+    assert "invalid-version" in str(exc_info.value)
+
+
+def test_invalid_openapi_version_error() -> None:
+    """Test that invalid OpenAPI version raises Error."""
+    from datamodel_code_generator import Error, generate
+
+    with pytest.raises(Error) as exc_info:
+        generate(
+            OPENAPI_DATA_PATH / "api.yaml",
+            input_file_type=datamodel_code_generator.InputFileType.OpenAPI,
+            schema_version="invalid-version",
+        )
+    assert "Invalid OpenAPI version" in str(exc_info.value)
+    assert "invalid-version" in str(exc_info.value)
+
+
+def test_graphql_schema_version_not_supported() -> None:
+    """Test that --schema-version is not supported for GraphQL."""
+    from datamodel_code_generator import Error, generate
+
+    graphql_data_path = Path(__file__).parent.parent / "data" / "graphql"
+
+    with pytest.raises(Error) as exc_info:
+        generate(
+            graphql_data_path / "schema.graphql",
+            input_file_type=datamodel_code_generator.InputFileType.GraphQL,
+            schema_version="draft-07",
+        )
+    assert "--schema-version is not supported" in str(exc_info.value)
+    assert "graphql" in str(exc_info.value).lower()
+
+
+# =============================================================================
+# E2E tests for strict mode warnings
+# =============================================================================
+
+
+def test_e2e_exclusive_maximum_as_bool_strict_warning_draft7() -> None:
+    """Test that boolean exclusiveMaximum emits warning in Draft 7 Strict mode via generate()."""
+    import json
+    import tempfile
+    import warnings
+
+    from datamodel_code_generator import generate
+
+    # Draft 4 style schema with boolean exclusiveMaximum in definitions
+    schema = {
+        "type": "object",
+        "definitions": {
+            "MyValue": {
+                "type": "number",
+                "maximum": 10,
+                "exclusiveMaximum": True,
+            }
+        },
+        "properties": {"value": {"$ref": "#/definitions/MyValue"}},
+    }
+
+    with tempfile.NamedTemporaryFile(encoding="utf-8", mode="w", suffix=".json", delete=False) as f:
+        json.dump(schema, f)
+        f.flush()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = generate(
+                Path(f.name),
+                input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+                schema_version="draft-07",
+                schema_version_mode=VersionMode.Strict,
+            )
+            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+            assert any("exclusiveMaximum as boolean" in str(uw.message) for uw in user_warnings)
+            assert result is not None
+
+
+def test_e2e_exclusive_maximum_as_number_strict_warning_draft4() -> None:
+    """Test that numeric exclusiveMaximum emits warning in Draft 4 Strict mode via generate()."""
+    import json
+    import tempfile
+    import warnings
+
+    from datamodel_code_generator import generate
+
+    # Draft 6+ style schema with numeric exclusiveMaximum in definitions
+    schema = {
+        "type": "object",
+        "definitions": {
+            "MyValue": {
+                "type": "number",
+                "exclusiveMaximum": 10,
+            }
+        },
+        "properties": {"value": {"$ref": "#/definitions/MyValue"}},
+    }
+
+    with tempfile.NamedTemporaryFile(encoding="utf-8", mode="w", suffix=".json", delete=False) as f:
+        json.dump(schema, f)
+        f.flush()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = generate(
+                Path(f.name),
+                input_file_type=datamodel_code_generator.InputFileType.JsonSchema,
+                schema_version="draft-04",
+                schema_version_mode=VersionMode.Strict,
+            )
+            user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+            assert any("exclusiveMaximum as number" in str(uw.message) for uw in user_warnings)
+            assert result is not None

@@ -65,6 +65,8 @@ def test_parser() -> None:
     assert c.data_model_root_type == B
     assert c.data_model_field_type == DataModelFieldBase
     assert c.base_class == "Base"
+    # Test schema_features property of test stub
+    assert c.schema_features.prefix_items is True
 
 
 def test_add_model_path_to_list() -> None:
