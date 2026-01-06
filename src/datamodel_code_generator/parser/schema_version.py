@@ -1,15 +1,19 @@
 """Schema version features and detection utilities.
 
-Provides SchemaFeatures classes for version-dependent feature flags
+Provides SchemaFeatures classes for version-dependent feature flags,
+format registries for schema-specific data formats,
 and utility functions for detecting schema versions.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar
 
 from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion
+
+if TYPE_CHECKING:
+    from datamodel_code_generator.types import Types
 
 
 @dataclass(frozen=True)
@@ -178,10 +182,107 @@ def detect_openapi_version(data: dict[str, Any]) -> OpenAPIVersion:
     return OpenAPIVersion.V31
 
 
+DataFormatMapping: TypeAlias = "dict[str, dict[str, Types]]"
+
+
+def _get_common_data_formats() -> DataFormatMapping:
+    """Get common data formats valid for both JsonSchema and OpenAPI."""
+    from datamodel_code_generator.types import Types  # noqa: PLC0415
+
+    return {
+        "integer": {
+            "int32": Types.int32,
+            "int64": Types.int64,
+            "default": Types.integer,
+            "date-time": Types.date_time,
+            "unix-time": Types.int64,
+            "unixtime": Types.int64,
+        },
+        "number": {
+            "float": Types.float,
+            "double": Types.double,
+            "decimal": Types.decimal,
+            "date-time": Types.date_time,
+            "time": Types.time,
+            "time-delta": Types.timedelta,
+            "default": Types.number,
+            "unixtime": Types.int64,
+        },
+        "string": {
+            "default": Types.string,
+            "byte": Types.byte,
+            "date": Types.date,
+            "date-time": Types.date_time,
+            "timestamp with time zone": Types.date_time,
+            "date-time-local": Types.date_time_local,
+            "duration": Types.timedelta,
+            "time": Types.time,
+            "time-local": Types.time_local,
+            "path": Types.path,
+            "email": Types.email,
+            "idn-email": Types.email,
+            "uuid": Types.uuid,
+            "uuid1": Types.uuid1,
+            "uuid2": Types.uuid2,
+            "uuid3": Types.uuid3,
+            "uuid4": Types.uuid4,
+            "uuid5": Types.uuid5,
+            "uri": Types.uri,
+            "uri-reference": Types.string,
+            "hostname": Types.hostname,
+            "ipv4": Types.ipv4,
+            "ipv4-network": Types.ipv4_network,
+            "ipv6": Types.ipv6,
+            "ipv6-network": Types.ipv6_network,
+            "decimal": Types.decimal,
+            "integer": Types.integer,
+            "unixtime": Types.int64,
+            "ulid": Types.ulid,
+        },
+        "boolean": {"default": Types.boolean},
+        "object": {"default": Types.object},
+        "null": {"default": Types.null},
+        "array": {"default": Types.array},
+    }
+
+
+def _get_openapi_only_formats() -> DataFormatMapping:
+    """Get formats specific to OpenAPI (not valid in pure JsonSchema)."""
+    from datamodel_code_generator.types import Types  # noqa: PLC0415
+
+    return {
+        "string": {
+            "binary": Types.binary,
+            "password": Types.password,
+        },
+    }
+
+
+def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
+    """Get merged data formats based on schema type.
+
+    Args:
+        is_openapi: If True, includes OpenAPI-specific formats.
+
+    Returns:
+        Merged dictionary of data formats.
+    """
+    formats = _get_common_data_formats()
+    if is_openapi:
+        for type_key, type_formats in _get_openapi_only_formats().items():
+            if type_key in formats:
+                formats[type_key] = {**formats[type_key], **type_formats}
+            else:
+                formats[type_key] = type_formats
+    return formats
+
+
 __all__ = [
+    "DataFormatMapping",
     "JsonSchemaFeatures",
     "OpenAPISchemaFeatures",
     "SchemaFeaturesT",
     "detect_jsonschema_version",
     "detect_openapi_version",
+    "get_data_formats",
 ]
