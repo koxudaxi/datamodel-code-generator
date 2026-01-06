@@ -181,7 +181,7 @@ class OpenAPIParser(JsonSchemaParser):
         config_version = getattr(self.config, "openapi_version", None)
         if config_version is not None and config_version != OpenAPIVersion.Auto:
             return OpenAPISchemaFeatures.from_openapi_version(config_version)
-        version = detect_openapi_version(self.raw_obj) if self.raw_obj else OpenAPIVersion.Auto
+        version = detect_openapi_version(self.raw_obj) if self.raw_obj is not None else OpenAPIVersion.Auto
         return OpenAPISchemaFeatures.from_openapi_version(version)
 
     @classmethod
