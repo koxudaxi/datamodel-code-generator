@@ -91,6 +91,8 @@ class DataModelField(DataModelFieldBase):
     @property
     def field(self) -> str | None:
         """For backwards compatibility."""
+        if self.is_class_var:
+            return None
         result = str(self)
         if (
             self.use_default_kwarg
