@@ -168,5 +168,6 @@ def test_graphql_schema_features() -> None:
             boolean_schemas=True,
             id_field="$id",
             definitions_key="$defs",
+            exclusive_as_number=True,
         )
     )
