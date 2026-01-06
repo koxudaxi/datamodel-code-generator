@@ -51,6 +51,7 @@ from datamodel_code_generator.model.enum import (
 )
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
+from datamodel_code_generator.parser._openapi_types import Discriminator
 from datamodel_code_generator.parser.base import (
     SPECIAL_PATH_FORMAT,
     Parser,
@@ -192,18 +193,7 @@ class JSONReference(_enum.Enum):
     URL = "URL"
 
 
-class Discriminator(BaseModel):
-    """Represent OpenAPI discriminator object.
-
-    This is an OpenAPI-specific concept for supporting polymorphism.
-    It identifies which schema applies based on a property value.
-
-    Note: Defined in jsonschema.py to avoid circular imports, but re-exported
-    from openapi.py for discoverability. Use the openapi.py import for new code.
-    """
-
-    propertyName: str  # noqa: N815
-    mapping: Optional[dict[str, str]] = None  # noqa: UP045
+__all__ = ["Discriminator", "JsonSchemaObject", "JsonSchemaParser", "get_model_by_path"]
 
 
 class JsonSchemaObject(BaseModel):

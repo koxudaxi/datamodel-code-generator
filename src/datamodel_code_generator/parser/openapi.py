@@ -28,6 +28,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
+from datamodel_code_generator.parser._openapi_types import Discriminator
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -40,6 +41,8 @@ from datamodel_code_generator.types import (
     EmptyDataType,
 )
 from datamodel_code_generator.util import BaseModel, model_dump, model_validate
+
+__all__ = ["Discriminator", "OpenAPIParser"]
 
 if TYPE_CHECKING:
     from urllib.parse import ParseResult
