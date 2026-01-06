@@ -7,13 +7,32 @@ and utility functions for detecting schema versions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar
+
+from typing_extensions import TypedDict
 
 from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import Types
+
+
+class FeatureMetadata(TypedDict):
+    """Metadata for schema feature documentation.
+
+    This metadata is used by scripts/build_schema_docs.py to generate
+    the feature compatibility matrix in docs/supported_formats.md.
+    """
+
+    introduced: str
+    """Version when feature was introduced (e.g., "Draft 6", "2020-12", "OAS 3.0")."""
+    doc_name: str
+    """Display name for documentation (e.g., "prefixItems", "Null in type array")."""
+    description: str
+    """User-facing description of the feature."""
+    status: Literal["supported", "partial", "not_supported"]
+    """Implementation status: supported, partial, or not_supported."""
 
 
 @dataclass(frozen=True)
@@ -23,25 +42,82 @@ class JsonSchemaFeatures:
     This is the base class for schema features. OpenAPISchemaFeatures
     extends this to add OpenAPI-specific features.
 
-    Attributes:
-        null_in_type_array: Draft 2020-12 allows null in type arrays.
-        defs_not_definitions: Draft 2019-09+ uses $defs instead of definitions.
-        prefix_items: Draft 2020-12 uses prefixItems instead of items array.
-        boolean_schemas: Draft 6+ allows boolean values as schemas.
-        id_field: The field name for schema ID ("id" for Draft 4, "$id" for Draft 6+).
-        definitions_key: The key for definitions ("definitions" or "$defs").
-        exclusive_as_number: Draft 6+ uses numeric exclusiveMin/Max (Draft 4 uses boolean).
-        read_only_write_only: Draft 7+ supports readOnly/writeOnly keywords.
+    Each field includes metadata for documentation generation.
+    Use `dataclasses.fields(JsonSchemaFeatures)` to access metadata.
     """
 
-    null_in_type_array: bool
-    defs_not_definitions: bool
-    prefix_items: bool
-    boolean_schemas: bool
-    id_field: str
-    definitions_key: str
-    exclusive_as_number: bool
-    read_only_write_only: bool
+    null_in_type_array: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2020-12",
+            doc_name="Null in type array",
+            description="Allows `type: ['string', 'null']` syntax for nullable types",
+            status="supported",
+        ),
+    )
+    defs_not_definitions: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$defs",
+            description="Uses `$defs` instead of `definitions` for schema definitions",
+            status="supported",
+        ),
+    )
+    prefix_items: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2020-12",
+            doc_name="prefixItems",
+            description="Tuple validation using `prefixItems` keyword",
+            status="supported",
+        ),
+    )
+    boolean_schemas: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="Boolean schemas",
+            description="Allows `true` and `false` as valid schemas",
+            status="supported",
+        ),
+    )
+    id_field: str = field(
+        default="$id",
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="$id",
+            description="Schema identifier field (`id` in Draft 4, `$id` in Draft 6+)",
+            status="supported",
+        ),
+    )
+    definitions_key: str = field(
+        default="$defs",
+        metadata=FeatureMetadata(
+            introduced="Draft 4",
+            doc_name="definitions/$defs",
+            description="Key for reusable schema definitions",
+            status="supported",
+        ),
+    )
+    exclusive_as_number: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="exclusiveMinimum/Maximum as number",
+            description="Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4)",
+            status="supported",
+        ),
+    )
+    read_only_write_only: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 7",
+            doc_name="readOnly/writeOnly",
+            description="Field visibility hints for read-only and write-only properties",
+            status="supported",
+        ),
+    )
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -110,13 +186,28 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
 
     Extends JsonSchemaFeatures with OpenAPI-specific features.
 
-    Attributes:
-        nullable_keyword: OpenAPI 3.0 uses nullable: true (deprecated in 3.1).
-        discriminator_support: All OpenAPI versions support discriminator.
+    Each field includes metadata for documentation generation.
+    Use `dataclasses.fields(OpenAPISchemaFeatures)` to access metadata.
     """
 
-    nullable_keyword: bool
-    discriminator_support: bool
+    nullable_keyword: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="nullable",
+            description="Uses `nullable: true` for nullable types (deprecated in 3.1)",
+            status="supported",
+        ),
+    )
+    discriminator_support: bool = field(
+        default=True,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="discriminator",
+            description="Polymorphism support via `discriminator` keyword",
+            status="supported",
+        ),
+    )
 
     @classmethod
     def from_openapi_version(cls, version: OpenAPIVersion) -> OpenAPISchemaFeatures:
@@ -310,6 +401,7 @@ def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
 
 __all__ = [
     "DataFormatMapping",
+    "FeatureMetadata",
     "JsonSchemaFeatures",
     "OpenAPISchemaFeatures",
     "SchemaFeaturesT",
