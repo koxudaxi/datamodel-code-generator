@@ -1,0 +1,14 @@
+{
+    "type": "object",
+    "properties": {
+        "tags": {
+            "type": "array",
+            "x-is-classvar": true,
+            "default": ["a", "b"],
+            "uniqueItems": true,
+            "items": {
+                "type": "string"
+            }
+        }
+    }
+}

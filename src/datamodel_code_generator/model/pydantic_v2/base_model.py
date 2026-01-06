@@ -14,6 +14,7 @@ from pydantic import Field
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
+from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic.base_model import (
     BaseModelBase,
 )
@@ -192,6 +193,8 @@ class DataModelField(DataModelFieldV1):
         """Get all required imports including AliasChoices and Field for discriminator."""
         base_imports = super().imports
         extra_imports: list[Import] = []
+        if self.is_class_var:
+            extra_imports.append(IMPORT_CLASSVAR)
         if self.validation_aliases:
             from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_ALIAS_CHOICES  # noqa: PLC0415
 

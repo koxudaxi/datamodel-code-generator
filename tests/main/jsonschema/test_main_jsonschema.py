@@ -8001,6 +8001,52 @@ def test_validators_requires_pydantic_v2(output_file: Path, tmp_path: Path, caps
     )
 
 
+def test_jsonschema_classvar_extra_pydantic_v2(output_file: Path) -> None:
+    """Test default value handling."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="has_classvar_extra.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-include-all-keys"],
+    )
+
+
+def test_jsonschema_classvar_extra_set_pydantic_v2(output_file: Path) -> None:
+    """Test ClassVar with set default value."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra_set.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="has_classvar_extra_set.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-include-all-keys",
+            "--use-unique-items-as-set",
+        ],
+    )
+
+
+def test_jsonschema_classvar_extra_annotated_pydantic_v2(output_file: Path) -> None:
+    """Test ClassVar with use_annotated option."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "has_classvar_extra_annotated.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="has_classvar_extra_annotated.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-include-all-keys",
+            "--use-annotated",
+        ],
+    )
+
+
 @PYDANTIC_V2_SKIP
 def test_unique_items_enum_set(output_file: Path) -> None:
     """Test set with enum items does not add __hash__ to enum (already hashable)."""
