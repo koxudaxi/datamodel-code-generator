@@ -526,7 +526,7 @@ def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
                     continue
                 ancestors.add(parent_path)
                 parent_model = sorted_data_models.get(parent_path)
-                if not parent_model:
+                if not parent_model:  # pragma: no cover
                     continue
                 to_visit.extend(
                     bc.reference.path

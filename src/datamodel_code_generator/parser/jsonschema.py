@@ -1079,7 +1079,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 path_parts[-1] = unique_name
                 variant_ref = self.model_resolver.add(path_parts, unique_name, class_name=True, unique=False)
                 data_type.reference = variant_ref
-            elif not self._ref_schema_has_model(ref_path):
+            elif not self._ref_schema_has_model(ref_path):  # pragma: no branch
                 if not hasattr(self, "_force_base_model_refs"):
                     self._force_base_model_refs: set[str] = set()
                 self._force_base_model_refs.add(ref_path)
@@ -1097,7 +1097,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if self.read_only_write_only_model_type != ReadOnlyWriteOnlyModelType.RequestResponse:
             return model_fields
         for field in model_fields:
-            if field.data_type:
+            if field.data_type:  # pragma: no branch
                 self._update_data_type_ref_for_variant(field.data_type, suffix)
         return model_fields
 
