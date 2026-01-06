@@ -27,7 +27,7 @@ from datamodel_code_generator import (
     load_data,
     snooper_to_methods,
 )
-from datamodel_code_generator.enums import OpenAPIVersion
+from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
 from datamodel_code_generator.parser.base import get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -248,8 +248,6 @@ class OpenAPIParser(JsonSchemaParser):
         - OpenAPI 3.0: nullable: true is valid, convert to type array when strict_nullable
         - OpenAPI 3.1: nullable is deprecated, use type: ["string", "null"] instead
         """
-        from datamodel_code_generator.enums import VersionMode  # noqa: PLC0415
-
         if obj.nullable:
             if self.schema_features.nullable_keyword:
                 # OpenAPI 3.0: nullable: true is the standard way
