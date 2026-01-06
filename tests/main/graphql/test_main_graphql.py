@@ -104,6 +104,39 @@ def test_main_use_default_kwarg(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_list_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_list_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_graphql_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test GraphQL generation with empty list default values."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
+        output_path=output_file,
+        expected_file=GRAPHQL_DATA_PATH / expected_output,
+        input_file_type="graphql",
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.13",
+        ],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
