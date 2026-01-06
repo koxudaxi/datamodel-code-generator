@@ -260,13 +260,12 @@ class DataModelField(DataModelFieldBase):
 
     @property
     def is_class_var(self) -> bool:
+        """Check if this field is a ClassVar."""
         return self.extras.get("x-is-classvar") is True
 
     @property
     def type_hint(self) -> str:
         """Get the type hint including ClassVar if applicable."""
-        # if self.name == "name":
-        #     breakpoint()
         if self.is_class_var:
             return f"ClassVar[{super().type_hint}]"
         return super().type_hint
