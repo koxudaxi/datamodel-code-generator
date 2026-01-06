@@ -24176,16 +24176,56 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 
 ## Limitations and Known Issues
 
-### JSON Schema
+### JSON Schema - Unsupported Features
 
-1. **`$anchor` and `$dynamicRef`**: Not fully implemented
-2. **`unevaluatedProperties`/`unevaluatedItems`**: Not implemented
-3. **`contentMediaType`/`contentEncoding`**: Not implemented
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `$anchor` | ❌ Not supported | Use `$ref` with `$id` instead |
+| `$dynamicRef` / `$dynamicAnchor` | ❌ Not supported | Draft 2020-12 dynamic references |
+| `unevaluatedProperties` | ❌ Not supported | Use `additionalProperties` instead |
+| `unevaluatedItems` | ❌ Not supported | Use `additionalItems` instead |
+| `contentMediaType` | ❌ Not supported | Content type hints ignored |
+| `contentEncoding` | ❌ Not supported | Encoding hints ignored |
+| `contentSchema` | ❌ Not supported | Nested content schema ignored |
+| `$vocabulary` | ❌ Not supported | Vocabulary declarations ignored |
+| `$comment` | ⚠️ Ignored | Comments not preserved in output |
+| `deprecated` | ⚠️ Partial | Recognized but not enforced |
+| `examples` (array) | ⚠️ Partial | Only first example used for Field default |
+| Recursive `$ref` | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
+| `propertyNames` | ❌ Not supported | Property name validation ignored |
+| `dependentRequired` | ❌ Not supported | Dependent requirements ignored |
+| `dependentSchemas` | ❌ Not supported | Dependent schemas ignored |
 
-### OpenAPI
+### OpenAPI - Unsupported Features
 
-1. **OpenAPI 2.0 (Swagger)**: Limited support, recommend converting to 3.0+
-2. **`$ref` sibling keywords in 3.0**: Not supported (3.0 spec limitation)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| OpenAPI 2.0 (Swagger) | ⚠️ Limited | Recommend converting to 3.0+ |
+| `$ref` sibling keywords (3.0) | ❌ Not supported | 3.0 spec limitation |
+| `links` | ❌ Not supported | Runtime linking not applicable |
+| `callbacks` | ❌ Not supported | Webhook callbacks ignored |
+| `security` definitions | ❌ Not supported | Security schemes not generated |
+| `servers` | ❌ Not supported | Server configuration ignored |
+| `externalDocs` | ❌ Not supported | External documentation links ignored |
+| `xml` | ❌ Not supported | XML serialization hints ignored |
+| Request body `required` | ⚠️ Partial | Affects field optionality |
+| Header/Cookie parameters | ⚠️ Partial | Generated but not validated |
+
+### GraphQL - Unsupported Features
+
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Directives | ❌ Not supported | Custom directives ignored |
+| Subscriptions | ❌ Not supported | Only Query/Mutation types |
+| Custom scalars | ⚠️ Partial | Mapped to `Any` by default |
+| Interfaces inheritance | ⚠️ Partial | Flattened to concrete types |
+| Federation directives | ❌ Not supported | Apollo Federation not supported |
+
+### Legend
+
+- ✅ Fully supported
+- ⚠️ Partial support or limitations
+- ❌ Not supported
 
 ### Mixed Version Schemas
 
@@ -24194,6 +24234,8 @@ Real-world schemas often mix features from different versions. datamodel-code-ge
 - Features from all versions are accepted
 - No warnings for version mismatches
 - Maximum compatibility with existing schemas
+
+In **Strict mode** (`--schema-version-mode strict`), warnings are emitted for version-incompatible features.
 
 ## See Also
 
