@@ -817,6 +817,10 @@ watch = [
 ]
 
 [package.dev-dependencies]
+benchmark = [
+    { name = "pytest-benchmark" },
+    { name = "pytest-codspeed" },
+]
 black22 = [
     { name = "black", version = "22.1.0", source = { registry = "https://pypi.org/simple" } },
 ]
@@ -840,8 +844,6 @@ dev = [
     { name = "msgspec" },
     { name = "prek" },
     { name = "pytest" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
@@ -886,8 +888,6 @@ test = [
     { name = "inline-snapshot" },
     { name = "msgspec" },
     { name = "pytest" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
@@ -901,8 +901,6 @@ type = [
     { name = "inline-snapshot" },
     { name = "msgspec" },
     { name = "pytest" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed" },
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "pytest-xdist" },
@@ -945,6 +943,10 @@ requires-dist = [
 provides-extras = ["all", "debug", "graphql", "http", "ruff", "validation", "watch"]
 
 [package.metadata.requires-dev]
+benchmark = [
+    { name = "pytest-benchmark" },
+    { name = "pytest-codspeed", specifier = ">=2.2" },
+]
 black22 = [{ name = "black", specifier = "==22.1" }]
 black23 = [{ name = "black", specifier = "==23.12" }]
 black24 = [{ name = "black", specifier = "==24.1" }]
@@ -963,8 +965,6 @@ dev = [
     { name = "prek", specifier = ">=0.2.22" },
     { name = "pytest", specifier = ">=6.1" },
     { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed", specifier = ">=2.2" },
     { name = "pytest-cov", specifier = ">=2.12.1" },
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-mock", specifier = ">=3.14" },
@@ -999,8 +999,6 @@ test = [
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=6.1" },
     { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed", specifier = ">=2.2" },
     { name = "pytest-cov", specifier = ">=2.12.1" },
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-mock", specifier = ">=3.14" },
@@ -1016,8 +1014,6 @@ type = [
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=6.1" },
     { name = "pytest", specifier = ">=8.3.4" },
-    { name = "pytest-benchmark" },
-    { name = "pytest-codspeed", specifier = ">=2.2" },
     { name = "pytest-cov", specifier = ">=2.12.1" },
     { name = "pytest-cov", specifier = ">=5" },
     { name = "pytest-mock", specifier = ">=3.14" },
