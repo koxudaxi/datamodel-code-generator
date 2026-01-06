@@ -197,7 +197,9 @@ class Discriminator(BaseModel):
 
     This is an OpenAPI-specific concept for supporting polymorphism.
     It identifies which schema applies based on a property value.
-    Kept in jsonschema.py to avoid circular imports with openapi.py.
+
+    Note: Defined in jsonschema.py to avoid circular imports, but re-exported
+    from openapi.py for discoverability. Use the openapi.py import for new code.
     """
 
     propertyName: str  # noqa: N815
@@ -811,7 +813,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig"]):
         config_version = getattr(self.config, "jsonschema_version", None)
         if config_version is not None and config_version != JsonSchemaVersion.Auto:
             return JsonSchemaFeatures.from_version(config_version)
-        version = detect_jsonschema_version(self.raw_obj) if self.raw_obj else JsonSchemaVersion.Auto
+        version = detect_jsonschema_version(self.raw_obj) if self.raw_obj is not None else JsonSchemaVersion.Auto
         return JsonSchemaFeatures.from_version(version)
 
     @property
