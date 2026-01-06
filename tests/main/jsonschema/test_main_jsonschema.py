@@ -7975,3 +7975,123 @@ def test_unique_items_enum_set(output_file: Path) -> None:
             "--use-standard-collections",
         ],
     )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on OpenAPI extensions).
+
+The `--schema-version-mode strict` option warns when OpenAPI-only features like
+`nullable` keyword are used in pure JSON Schema.""",
+    input_schema="jsonschema/schema_version_strict_nullable.json",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/schema_version_strict_nullable.py",
+)
+def test_main_schema_version_strict_nullable_warning(output_file: Path) -> None:
+    """Test that nullable keyword in JSON Schema emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"nullable keyword is an OpenAPI extension"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "schema_version_strict_nullable.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_nullable.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on OpenAPI extensions).
+
+The `--schema-version-mode strict` option warns when OpenAPI-only formats like
+`binary` are used in pure JSON Schema.""",
+    input_schema="jsonschema/schema_version_strict_binary.json",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/schema_version_strict_binary.py",
+)
+def test_main_schema_version_strict_binary_warning(output_file: Path) -> None:
+    """Test that binary format in JSON Schema emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"format 'binary' is an OpenAPI extension"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "schema_version_strict_binary.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_binary.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on OpenAPI extensions).
+
+The `--schema-version-mode strict` option warns when OpenAPI-only formats like
+`password` are used in pure JSON Schema.""",
+    input_schema="jsonschema/schema_version_strict_password.json",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/schema_version_strict_password.py",
+)
+def test_main_schema_version_strict_password_warning(output_file: Path) -> None:
+    """Test that password format in JSON Schema emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"format 'password' is an OpenAPI extension"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "schema_version_strict_password.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_password.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMaximum is used as
+boolean in Draft 6+ (should be numeric).""",
+    input_schema="jsonschema/schema_version_strict_exclusive_max_boolean_draft7.json",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/schema_version_strict_exclusive_max_boolean_draft7.py",
+)
+def test_main_schema_version_strict_exclusive_max_boolean_draft7(output_file: Path) -> None:
+    """Test exclusiveMaximum as boolean in Draft 7 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMaximum as boolean is Draft 4 style"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "schema_version_strict_exclusive_max_boolean_draft7.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_max_boolean_draft7.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )
+
+
+@PYDANTIC_V2_SKIP
+@pytest.mark.cli_doc(
+    options=["--schema-version-mode"],
+    option_description="""Schema version validation mode (strict: warn on version mismatches).
+
+The `--schema-version-mode strict` option warns when exclusiveMaximum is used as
+number in Draft 4 (should be boolean).""",
+    input_schema="jsonschema/schema_version_strict_exclusive_max_number_draft4.json",
+    cli_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+    golden_output="jsonschema/schema_version_strict_exclusive_max_number_draft4.py",
+)
+def test_main_schema_version_strict_exclusive_max_number_draft4(output_file: Path) -> None:
+    """Test exclusiveMaximum as number in Draft 4 emits warning in strict mode."""
+    with pytest.warns(UserWarning, match=r"exclusiveMaximum as number is Draft 6\+ style"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "schema_version_strict_exclusive_max_number_draft4.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="schema_version_strict_exclusive_max_number_draft4.py",
+            extra_args=["--schema-version-mode", "strict", "--output-model-type", "pydantic_v2.BaseModel"],
+        )

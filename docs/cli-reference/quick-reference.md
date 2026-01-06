@@ -23,7 +23,7 @@ datamodel-codegen [OPTIONS]
 | [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) | Strategy for referenced types when using --input-model. |
 | [`--output`](base-options.md#output) | Specify the destination path for generated Python code. |
 | [`--schema-version`](base-options.md#schema-version) | Schema version to use for parsing. |
-| [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode. |
+| [`--schema-version-mode`](base-options.md#schema-version-mode) | Schema version validation mode (strict: warn on OpenAPI extensions). |
 | [`--url`](base-options.md#url) | Fetch schema from URL with custom HTTP headers. |
 
 ### 🔧 Typing Customization
@@ -302,7 +302,7 @@ All options sorted alphabetically:
 - [`--reuse-model`](model-customization.md#reuse-model) - Reuse identical model definitions instead of generating dupl...
 - [`--reuse-scope`](model-customization.md#reuse-scope) - Scope for model reuse detection (root or tree).
 - [`--schema-version`](base-options.md#schema-version) - Schema version to use for parsing.
-- [`--schema-version-mode`](base-options.md#schema-version-mode) - Schema version validation mode.
+- [`--schema-version-mode`](base-options.md#schema-version-mode) - Schema version validation mode (strict: warn on OpenAPI exte...
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member) - Set the first enum member as the default value for enum fiel...
 - [`--shared-module-name`](general-options.md#shared-module-name) - Customize the name of the shared module for deduplicated mod...
 - [`--skip-root-model`](model-customization.md#skip-root-model) - Skip generation of root model when schema contains nested de...

@@ -356,6 +356,7 @@ class JSONSchemaParserConfig(ParserConfig):
     """Configuration model for JsonSchemaParser.__init__()."""
 
     jsonschema_version: JsonSchemaVersion | None = None
+    schema_version_mode: VersionMode | None = None
 
 
 class OpenAPIParserConfig(JSONSchemaParserConfig):
