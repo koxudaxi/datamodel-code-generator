@@ -26,7 +26,7 @@ jobs:
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: uv sync --all-extras --group benchmark
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v4
         with:
