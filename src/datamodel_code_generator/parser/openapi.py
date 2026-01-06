@@ -197,8 +197,7 @@ class OpenAPIParser(JsonSchemaParser):
         OpenAPI version: skips warnings for OpenAPI-valid features (nullable, binary, password)
         that would warn in pure JSON Schema. Still applies JSON Schema version checks.
         """
-        version_mode = getattr(self.config, "schema_version_mode", None)
-        if version_mode != VersionMode.Strict:
+        if self.config.schema_version_mode != VersionMode.Strict:
             return
 
         # Check boolean schemas (Draft 6+)
