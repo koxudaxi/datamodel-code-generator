@@ -839,3 +839,68 @@ def test_binary_format_in_openapi_no_warning() -> None:
         parser._check_version_specific_features(raw_schema, ["test"])
         user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
         assert len(user_warnings) == 0
+
+
+def test_boolean_schema_strict_warning_openapi_30() -> None:
+    """Test that boolean schema emits warning in OpenAPI 3.0 Strict mode."""
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 1
+        assert "Boolean schemas are not supported" in str(user_warnings[0].message)
+
+
+def test_boolean_schema_no_warning_openapi_31() -> None:
+    """Test that boolean schema does NOT emit warning in OpenAPI 3.1."""
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V31,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(True, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_non_dict_raw_value_no_crash_jsonschema() -> None:
+    """Test that non-dict, non-bool raw values don't crash in JsonSchema."""
+    parser = JsonSchemaParser(
+        "",
+        jsonschema_version=JsonSchemaVersion.Draft7,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(None, ["test"])
+        parser._check_version_specific_features(["a", "list"], ["test"])
+        parser._check_version_specific_features(123, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
+
+
+def test_non_dict_raw_value_no_crash_openapi() -> None:
+    """Test that non-dict, non-bool raw values don't crash in OpenAPI."""
+    parser = OpenAPIParser(
+        "",
+        openapi_version=OpenAPIVersion.V30,
+        schema_version_mode=VersionMode.Strict,
+    )
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        parser._check_version_specific_features(None, ["test"])
+        parser._check_version_specific_features(["a", "list"], ["test"])
+        parser._check_version_specific_features(123, ["test"])
+        user_warnings = [x for x in w if issubclass(x.category, UserWarning)]
+        assert len(user_warnings) == 0
