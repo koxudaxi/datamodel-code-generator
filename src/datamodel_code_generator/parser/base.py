@@ -519,15 +519,17 @@ def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
             ]
             while to_visit:
                 parent_path = to_visit.pop()
-                if parent_path not in ancestors:
-                    ancestors.add(parent_path)
-                    parent_model = sorted_data_models.get(parent_path)
-                    if parent_model:
-                        to_visit.extend(
-                            bc.reference.path
-                            for bc in parent_model.base_classes
-                            if bc.reference and bc.reference.path in base_class_paths
-                        )
+                if parent_path in ancestors:
+                    continue
+                ancestors.add(parent_path)
+                parent_model = sorted_data_models.get(parent_path)
+                if not parent_model:
+                    continue
+                to_visit.extend(
+                    bc.reference.path
+                    for bc in parent_model.base_classes
+                    if bc.reference and bc.reference.path in base_class_paths
+                )
             return ancestors
 
         # Build ancestor map for each base class
