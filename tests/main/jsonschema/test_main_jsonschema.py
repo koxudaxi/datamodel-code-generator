@@ -8063,3 +8063,18 @@ def test_unique_items_enum_set(output_file: Path) -> None:
             "--use-standard-collections",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_allof_mro(output_file: Path) -> None:
+    """Test allOf with diamond inheritance pattern produces valid Python MRO."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_mro.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_mro.py",
+        extra_args=[
+            "--use-schema-description",
+        ],
+    )
