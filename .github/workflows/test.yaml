@@ -129,6 +129,7 @@ jobs:
           name: html-report
           path: .tox/htmlcov
       - name: Upload coverage to Codecov
+        if: success() || failure()
         uses: codecov/codecov-action@v5
         with:
           flags: unittests
