@@ -1,10 +1,10 @@
-"""
-Equivalent types for the GraphQL schemas.
-"""
+
 input Container {
-  name: String
+  name: String!
 }
 
 input PodSpec {
-  containers: [Container!]! = []
+  container_list: [Container!]! = []
+  container_list_or_none: [Container]! = []
+  container_or_none_list_or_none: [Container] = []
 }

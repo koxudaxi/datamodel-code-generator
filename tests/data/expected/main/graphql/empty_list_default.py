@@ -4,14 +4,18 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 
 class Container(BaseModel):
-    name: Optional[str] = None
+    name: str
+    typename__: Literal['Container'] | None = Field('Container', alias='__typename')
 
 
 class PodSpec(BaseModel):
-    containers: Optional[List[Container]] = Field(default_factory=list)
+    container_list: list[Container] = Field(default_factory=list)
+    container_list_or_none: list[Container | None] = Field(default_factory=list)
+    container_or_none_list_or_none: list[Container | None] | None = Field(default_factory=list)
+    typename__: Literal['PodSpec'] | None = Field('PodSpec', alias='__typename')
