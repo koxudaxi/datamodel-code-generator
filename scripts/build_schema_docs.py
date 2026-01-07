@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from dataclasses import fields
 from pathlib import Path
@@ -25,6 +26,10 @@ from datamodel_code_generator.parser.schema_version import (
 )
 
 DOCS_PATH = Path(__file__).parent.parent / "docs" / "supported_formats.md"
+
+# Markers for auto-generated content
+BEGIN_MARKER = "<!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->"
+END_MARKER = "<!-- END AUTO-GENERATED SUPPORTED FEATURES -->"
 
 # Status emoji mapping
 STATUS_EMOJI = {
@@ -114,10 +119,9 @@ def print_features_summary() -> None:
             print()
 
 
-def generate_supported_features_table() -> str:
-    """Generate the supported features table for documentation."""
+def generate_supported_features_content() -> str:
+    """Generate the supported features content for documentation (without markers)."""
     lines = [
-        "<!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->",
         "",
         "### Supported Features (from code)",
         "",
@@ -136,9 +140,66 @@ def generate_supported_features_table() -> str:
     openapi_features = [
         (name, meta) for name, meta in get_feature_metadata(OpenAPISchemaFeatures) if name not in json_field_names
     ]
-    lines.extend((generate_feature_table(openapi_features), "", "<!-- END AUTO-GENERATED SUPPORTED FEATURES -->"))
+    lines.extend((generate_feature_table(openapi_features), ""))
 
     return "\n".join(lines)
+
+
+def generate_supported_features_table() -> str:
+    """Generate the supported features table with markers for documentation."""
+    return f"{BEGIN_MARKER}{generate_supported_features_content()}{END_MARKER}"
+
+
+def update_docs_file(*, check: bool = False) -> int:
+    """Update docs/supported_formats.md with auto-generated content.
+
+    Args:
+        check: If True, only check if content would change (returns 1 if different).
+
+    Returns:
+        0 on success, 1 on failure or if check mode detects changes.
+    """
+    if not DOCS_PATH.exists():
+        print(f"Error: {DOCS_PATH} does not exist", file=sys.stderr)
+        return 1
+
+    current_content = DOCS_PATH.read_text(encoding="utf-8")
+    new_generated = generate_supported_features_content()
+
+    # Pattern to match content between markers (including markers)
+    pattern = re.compile(
+        rf"{re.escape(BEGIN_MARKER)}.*?{re.escape(END_MARKER)}",
+        re.DOTALL,
+    )
+
+    if pattern.search(current_content):
+        # Replace existing auto-generated section
+        new_content = pattern.sub(
+            f"{BEGIN_MARKER}{new_generated}{END_MARKER}",
+            current_content,
+        )
+    else:
+        print(f"Warning: Markers not found in {DOCS_PATH}", file=sys.stderr)
+        print("Please add the following markers to the file:", file=sys.stderr)
+        print(f"  {BEGIN_MARKER}", file=sys.stderr)
+        print(f"  {END_MARKER}", file=sys.stderr)
+        return 1
+
+    if check:
+        if current_content != new_content:
+            print(f"Schema docs are out of date: {DOCS_PATH}", file=sys.stderr)
+            print("Run 'python scripts/build_schema_docs.py' to update.", file=sys.stderr)
+            return 1
+        print("Schema docs are up to date.")
+        return 0
+
+    if current_content == new_content:
+        print("Schema docs are already up to date.")
+        return 0
+
+    DOCS_PATH.write_text(new_content, encoding="utf-8")
+    print(f"Updated {DOCS_PATH}")
+    return 0
 
 
 def main() -> int:
@@ -160,21 +221,7 @@ def main() -> int:
         print_features_summary()
         return 0
 
-    print("Schema Documentation Builder")
-    print("-" * 40)
-
-    # For now, just print the generated table
-    print("\nGenerated Supported Features Table:")
-    print()
-    print(generate_supported_features_table())
-
-    if args.check:
-        print("\n[Check mode] No files modified.")
-    else:
-        print("\n[Info] This script currently outputs to stdout.")
-        print("       Future versions will update docs/supported_formats.md directly.")
-
-    return 0
+    return update_docs_file(check=args.check)
 
 
 if __name__ == "__main__":
