@@ -107,6 +107,19 @@ The following features are tracked in the codebase with their implementation sta
 | `definitions/$defs` | Draft 4 | ✅ Supported | Key for reusable schema definitions |
 | `exclusiveMinimum/Maximum as number` | Draft 6 | ✅ Supported | Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4) |
 | `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
+| `const` | Draft 6 | ✅ Supported | Single constant value constraint |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
+| `contains` | Draft 6 | ❌ Not Supported | Array contains at least one matching item |
+| `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
+| `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
+| `contentMediaType/contentEncoding` | Draft 7 | ❌ Not Supported | Content type and encoding hints for strings |
+| `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
+| `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
+| `unevaluatedProperties` | 2019-09 | ❌ Not Supported | Additional properties not evaluated by subschemas |
+| `unevaluatedItems` | 2019-09 | ❌ Not Supported | Additional items not evaluated by subschemas |
+| `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
+| `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
+| `$dynamicRef/$dynamicAnchor` | 2020-12 | ❌ Not Supported | Dynamic reference resolution across schemas |
 
 #### OpenAPI-Specific Features
 
@@ -114,6 +127,13 @@ The following features are tracked in the codebase with their implementation sta
 |---------|------------|--------|-------------|
 | `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
 | `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
+| `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
+| `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
+| `xml` | OAS 3.0 | ❌ Not Supported | XML serialization metadata (name, namespace, prefix) |
+| `externalDocs` | OAS 3.0 | ❌ Not Supported | Reference to external documentation |
+| `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
+| `callbacks` | OAS 3.0 | ❌ Not Supported | Callback definitions for webhooks |
+| `securitySchemes` | OAS 3.0 | ❌ Not Supported | API security mechanism definitions |
 <!-- END AUTO-GENERATED SUPPORTED FEATURES -->
 
 ## Data Format Support
