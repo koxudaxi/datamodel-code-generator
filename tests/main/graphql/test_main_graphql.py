@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 import black
 import pytest
 
-from tests.main.conftest import DEFAULT_VALUES_DATA_PATH, GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
+from tests.main.conftest import (
+    DEFAULT_VALUES_DATA_PATH,
+    EXPECTED_GRAPHQL_PATH,
+    GRAPHQL_DATA_PATH,
+    LEGACY_BLACK_SKIP,
+    run_main_and_assert
+)
 from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -126,13 +132,14 @@ def test_main_graphql_empty_list_default(output_model: str, expected_output: str
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
         output_path=output_file,
-        expected_file=GRAPHQL_DATA_PATH / expected_output,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_GRAPHQL_PATH / expected_output,
         input_file_type="graphql",
         extra_args=[
             "--output-model-type",
             output_model,
             "--target-python-version",
-            "3.13",
+            "3.12",
         ],
     )
 
