@@ -90,6 +90,32 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
 
+<!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
+### Supported Features (from code)
+
+The following features are tracked in the codebase with their implementation status:
+
+#### JSON Schema Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `Null in type array` | 2020-12 | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
+| `$defs` | 2019-09 | ✅ Supported | Uses `$defs` instead of `definitions` for schema definitions |
+| `prefixItems` | 2020-12 | ✅ Supported | Tuple validation using `prefixItems` keyword |
+| `Boolean schemas` | Draft 6 | ✅ Supported | Allows `true` and `false` as valid schemas |
+| `$id` | Draft 6 | ✅ Supported | Schema identifier field (`id` in Draft 4, `$id` in Draft 6+) |
+| `definitions/$defs` | Draft 4 | ✅ Supported | Key for reusable schema definitions |
+| `exclusiveMinimum/Maximum as number` | Draft 6 | ✅ Supported | Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4) |
+| `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
+
+#### OpenAPI-Specific Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
+| `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
+<!-- END AUTO-GENERATED SUPPORTED FEATURES -->
+
 ## Data Format Support
 
 ### Common Formats (JSON Schema + OpenAPI)
