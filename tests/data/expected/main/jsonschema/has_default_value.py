@@ -32,7 +32,9 @@ class Family(BaseModel):
 
 class FamilyPets(BaseModel):
     __root__: list[Pet] = Field(
-        default_factory=lambda: [Pet.parse_obj(v) for v in ['taro', 'shiro']]
+        default_factory=lambda: [
+            Pet.parse_obj(v) for v in [{'name': 'taro'}, {'name': 'shiro'}]
+        ]
     )
 
 
