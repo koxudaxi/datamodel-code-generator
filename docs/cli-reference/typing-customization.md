@@ -10,7 +10,7 @@
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
 | [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping.... |
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
-| [`--no-use-closed-typed-dict`](#no-use-closed-typed-dict) | Control PEP 728 TypedDict closed/extra_items generation. |
+| [`--no-use-closed-typed-dict`](#no-use-closed-typed-dict) | Disable PEP 728 TypedDict closed/extra_items generation. |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
 | [`--no-use-standard-collections`](#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for conta... |
 | [`--no-use-union-operator`](#no-use-union-operator) | Use Union[X, Y] / Optional[X] instead of X | Y union operato... |
@@ -20,7 +20,7 @@
 | [`--type-mappings`](#type-mappings) | Override default type mappings for schema formats. |
 | [`--type-overrides`](#type-overrides) | Replace schema model types with custom Python types via JSON... |
 | [`--use-annotated`](#use-annotated) | Use typing.Annotated for Field() with constraints. |
-| [`--use-closed-typed-dict`](#use-closed-typed-dict) | Control PEP 728 TypedDict closed/extra_items generation. |
+| [`--use-closed-typed-dict`](#use-closed-typed-dict) | Generate TypedDict with PEP 728 closed/extra_items (default:... |
 | [`--use-decimal-for-multiple-of`](#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint... |
 | [`--use-generic-container-types`](#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hin... |
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
@@ -1748,17 +1748,15 @@ defined enum members.
 
 ## `--no-use-closed-typed-dict` {#no-use-closed-typed-dict}
 
-Control PEP 728 TypedDict closed/extra_items generation.
+Disable PEP 728 TypedDict closed/extra_items generation.
 
-The `--use-closed-typed-dict` option (enabled by default) generates TypedDict with
-PEP 728 `closed=True` or `extra_items` parameters based on `additionalProperties`.
-Use `--no-use-closed-typed-dict` for compatibility with type checkers that don't
-yet support PEP 728 (e.g., mypy).
+Use this option for compatibility with type checkers that don't yet support PEP 728
+(e.g., mypy). TypedDict will be generated without `closed=True` or `extra_items`.
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type typing.TypedDict # (1)!
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --no-use-closed-typed-dict # (1)!
     ```
 
     1. :material-arrow-left: `--no-use-closed-typed-dict` - the option documented here
@@ -1790,10 +1788,12 @@ yet support PEP 728 (e.g., mypy).
     
     from __future__ import annotations
     
-    from typing_extensions import NotRequired, TypedDict
+    from typing import TypedDict
+    
+    from typing_extensions import NotRequired
     
     
-    class ClosedModel(TypedDict, closed=True):
+    class ClosedModel(TypedDict):
         name: str
         age: NotRequired[int]
     ```
@@ -3275,17 +3275,15 @@ syntax instead of default values. This also enables `--field-constraints`.
 
 ## `--use-closed-typed-dict` {#use-closed-typed-dict}
 
-Control PEP 728 TypedDict closed/extra_items generation.
+Generate TypedDict with PEP 728 closed/extra_items (default: enabled).
 
-The `--use-closed-typed-dict` option (enabled by default) generates TypedDict with
-PEP 728 `closed=True` or `extra_items` parameters based on `additionalProperties`.
-Use `--no-use-closed-typed-dict` for compatibility with type checkers that don't
-yet support PEP 728 (e.g., mypy).
+When enabled (default), generates TypedDict with PEP 728 `closed=True` or `extra_items`
+parameters based on `additionalProperties` constraints in the schema.
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type typing.TypedDict # (1)!
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --use-closed-typed-dict # (1)!
     ```
 
     1. :material-arrow-left: `--use-closed-typed-dict` - the option documented here
