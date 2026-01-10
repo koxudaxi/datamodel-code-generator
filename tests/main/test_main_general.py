@@ -26,6 +26,7 @@ from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
@@ -2060,6 +2061,21 @@ def test_generate_with_config_object(output_file: Path) -> None:
     content = output_file.read_text(encoding="utf-8")
     assert "class Model" in content
     assert "user_name" in content
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_config_with_union_mode() -> None:
+    """Test GenerateConfig with union_mode field."""
+    config = GenerateConfig(
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        union_mode=UnionMode.left_to_right,
+        disable_timestamp=True,
+    )
+    result = generate(
+        input_='{"type": "object", "properties": {"value": {"anyOf": [{"type": "string"}, {"type": "integer"}]}}}',
+        config=config,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_config_union_mode.py")
 
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")

@@ -44,16 +44,13 @@ from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydan
     DataModel,
     DataModelFieldBase,
 )
+from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 - used by Pydantic at runtime
-
-if TYPE_CHECKING:
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
-
 
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
