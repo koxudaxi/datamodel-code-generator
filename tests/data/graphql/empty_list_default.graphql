@@ -1,0 +1,8 @@
+input TagInput {
+  name: String!
+  value: String!
+}
+
+input ModelInput {
+  tags: [TagInput!] = []
+}

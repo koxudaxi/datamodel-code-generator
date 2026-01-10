@@ -890,3 +890,22 @@ def test_main_graphql_no_typename(output_file: Path) -> None:
         expected_file="no_typename.py",
         extra_args=["--graphql-no-typename"],
     )
+
+
+def test_main_graphql_empty_list_default(output_file: Path) -> None:
+    """Test that empty list default generates default_factory=list, not model_validate([]).
+
+    When a GraphQL field has a list type with an empty list default (e.g., tags: [TagInput!] = []),
+    the generator should produce `Field(default_factory=list)` instead of
+    `Field(default_factory=lambda: TagInput.model_validate([]))`.
+
+    This test verifies fix for issue #2947.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file="empty_list_default.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
