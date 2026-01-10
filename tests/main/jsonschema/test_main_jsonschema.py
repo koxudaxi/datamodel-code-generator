@@ -4259,6 +4259,16 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-closed-typed-dict"],
+    option_description="""Generate TypedDict with PEP 728 closed/extra_items (default: enabled).
+
+When enabled (default), generates TypedDict with PEP 728 `closed=True` or `extra_items`
+parameters based on `additionalProperties` constraints in the schema.""",
+    input_schema="jsonschema/typed_dict_closed.json",
+    cli_args=["--output-model-type", "typing.TypedDict", "--use-closed-typed-dict"],
+    golden_output="jsonschema/typed_dict_closed.py",
+)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "22",
     reason="Installed black doesn't support Python version 3.10",
@@ -4297,6 +4307,38 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
             "typing.TypedDict",
             "--target-python-version",
             "3.10",
+        ],
+    )
+
+
+@pytest.mark.cli_doc(
+    options=["--no-use-closed-typed-dict"],
+    option_description="""Disable PEP 728 TypedDict closed/extra_items generation.
+
+Use this option for compatibility with type checkers that don't yet support PEP 728
+(e.g., mypy). TypedDict will be generated without `closed=True` or `extra_items`.""",
+    input_schema="jsonschema/typed_dict_closed.json",
+    cli_args=["--output-model-type", "typing.TypedDict", "--no-use-closed-typed-dict"],
+    golden_output="jsonschema/typed_dict_no_closed.py",
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_no_closed(output_file: Path) -> None:
+    """Test --no-use-closed-typed-dict disables PEP 728 closed/extra_items generation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_closed.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_no_closed.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+            "--no-use-closed-typed-dict",
         ],
     )
 

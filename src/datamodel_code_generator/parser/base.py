@@ -919,6 +919,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
         self.use_unique_items_as_set: bool = config.use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
+        self.use_closed_typed_dict: bool = config.use_closed_typed_dict
         self.allof_merge_mode: AllOfMergeMode = config.allof_merge_mode
         self.allof_class_hierarchy: AllOfClassHierarchy = config.allof_class_hierarchy
         self.dataclass_arguments = config.dataclass_arguments

@@ -36,6 +36,7 @@ datamodel-codegen [OPTIONS]
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
 | [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping. |
 | [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of Enum classes. |
+| [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) | Disable PEP 728 TypedDict closed/extra_items generation. |
 | [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code generation. |
 | [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for container types. |
 | [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) | Use Union[X, Y] / Optional[X] instead of X | Y union operator. |
@@ -45,6 +46,7 @@ datamodel-codegen [OPTIONS]
 | [`--type-mappings`](typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
 | [`--type-overrides`](typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
 | [`--use-annotated`](typing-customization.md#use-annotated) | Use typing.Annotated for Field() with constraints. |
+| [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) | Generate TypedDict with PEP 728 closed/extra_items (default: enabled). |
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
@@ -285,6 +287,7 @@ All options sorted alphabetically:
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
 - [`--no-color`](utility-options.md#no-color) - Disable colorized output
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) - Keep dots in schema names as underscores for flat output.
+- [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) - Disable PEP 728 TypedDict closed/extra_items generation.
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) - Use typing.Dict/List instead of built-in dict/list for conta...
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) - Use Union[X, Y] / Optional[X] instead of X | Y union operato...
@@ -320,6 +323,7 @@ All options sorted alphabetically:
 - [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
+- [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) - Generate TypedDict with PEP 728 closed/extra_items (default:...
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) - Generate Decimal types for fields with multipleOf constraint...
 - [`--use-default`](model-customization.md#use-default) - Use default values from schema in generated models.
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) - Generate default_factory for optional nested model fields.
