@@ -4941,6 +4941,7 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
     )
 
 
+@SKIP_PYDANTIC_V1
 def test_main_openapi_reuse_scope_tree_single_file_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
     """Test --reuse-scope=tree with single file output raises proper error (#2953).
 
