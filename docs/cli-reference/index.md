@@ -9,7 +9,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 9 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 19 | Output formatting and custom rendering |
@@ -133,6 +133,7 @@ This documentation is auto-generated from test cases.
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
+- [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
@@ -186,6 +187,7 @@ This documentation is auto-generated from test cases.
 - [`--url`](base-options.md#url)
 - [`--use-annotated`](typing-customization.md#use-annotated)
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)
+- [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict)
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of)
 - [`--use-default`](model-customization.md#use-default)
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models)

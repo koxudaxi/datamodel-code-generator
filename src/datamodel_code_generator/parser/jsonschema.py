@@ -1306,7 +1306,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         For TypedDict with PEP 728 support:
         - additionalProperties: false -> closed=True
         - additionalProperties: { type: X } -> extra_items=X
+
+        This is controlled by use_closed_typed_dict option. When disabled,
+        the additionalProperties constraint is not converted to PEP 728 syntax.
         """
+        if not self.use_closed_typed_dict:
+            return
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
             if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
