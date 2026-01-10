@@ -890,3 +890,32 @@ def test_main_graphql_no_typename(output_file: Path) -> None:
         expected_file="no_typename.py",
         extra_args=["--graphql-no-typename"],
     )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_list_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_list_default.py",
+        ),
+    ],
+)
+def test_main_graphql_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test that empty list defaults in GraphQL input types generate default_factory=list.
+
+    This test verifies that fields like `requiredList: [String!]! = []` correctly
+    generate `Field(default_factory=list)` instead of `Field(...)` or `Field([])`.
+    """
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
+        output_path=output_file,
+        input_file_type="graphql",
+        assert_func=assert_file_content,
+        expected_file=expected_output,
+        extra_args=["--output-model-type", output_model],
+    )

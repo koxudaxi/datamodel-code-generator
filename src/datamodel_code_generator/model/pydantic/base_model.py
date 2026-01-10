@@ -126,9 +126,12 @@ class DataModelField(DataModelFieldBase):
             return value
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> str | None:
+    def _get_default_as_pydantic_model(self) -> str | None:  # noqa: PLR0911, PLR0912
         if isinstance(self.default, WrappedDefault):
             return f"lambda :{self.default!r}"
+        # Handle empty list defaults for any list type (including primitive types like String)
+        if self.data_type.is_list and isinstance(self.default, list) and not self.default:
+            return STANDARD_LIST
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:
@@ -220,7 +223,7 @@ class DataModelField(DataModelFieldBase):
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data["discriminator"] = discriminator["propertyName"]
 
-        if self.required:
+        if self.required and not self.has_default:
             default_factory = None
         elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
@@ -249,7 +252,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
-        elif self.required:
+        elif self.required and not default_factory:
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
             default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)

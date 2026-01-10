@@ -1,0 +1,18 @@
+type Query {
+    test: String
+}
+
+input ItemInput {
+    id: ID!
+}
+
+input TestInput {
+    "Required list with empty default"
+    requiredList: [String!]! = []
+
+    "Nullable list with empty default"
+    nullableList: [String!] = []
+
+    "Required list of items with empty default"
+    requiredItems: [ItemInput!]! = []
+}
