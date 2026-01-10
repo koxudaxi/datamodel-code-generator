@@ -2063,6 +2063,36 @@ def test_generate_with_config_object(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_config_union_mode_runtime_access() -> None:
+    """Test that UnionMode is available at runtime for Pydantic model_rebuild().
+
+    This test ensures UnionMode is imported outside TYPE_CHECKING block.
+    Previously UnionMode was imported inside TYPE_CHECKING block which caused:
+    PydanticUndefinedAnnotation: name 'UnionMode' is not defined
+
+    Must run in subprocess to avoid pytest's import side effects polluting namespace.
+    """
+    import subprocess
+    import sys
+
+    # Run in subprocess to ensure clean namespace without pytest's imports
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from datamodel_code_generator.config import GenerateConfig; "
+            "GenerateConfig.model_rebuild(); "
+            "print('SUCCESS')",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, f"model_rebuild() failed: {result.stderr}"
+    assert "SUCCESS" in result.stdout
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
 def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
     """Test generate() raises error when both config and kwargs are provided."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
