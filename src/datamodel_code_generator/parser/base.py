@@ -1752,7 +1752,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> None:
         """Validate that the shared module name doesn't conflict with existing modules."""
         shared_module = self.shared_module_name
-        existing_module_names = {module[0] for module, _ in module_models}
+        existing_module_names = {module[0] for module, _ in module_models if module}
         if shared_module in existing_module_names:
             msg = (
                 f"Schema file or directory '{shared_module}' conflicts with the shared module name. "
