@@ -25,11 +25,15 @@ class Pet(BaseModel):
 
 
 class Family(BaseModel):
-    __root__: list[ID]
+    __root__: list[ID] = Field(
+        default_factory=lambda: [ID.parse_obj(v) for v in ['abc', 'efg']]
+    )
 
 
 class FamilyPets(BaseModel):
-    __root__: list[Pet]
+    __root__: list[Pet] = Field(
+        default_factory=lambda: [Pet.parse_obj(v) for v in ['taro', 'shiro']]
+    )
 
 
 class Person(BaseModel):
