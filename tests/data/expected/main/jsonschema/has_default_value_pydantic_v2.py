@@ -17,7 +17,7 @@ class TeamType(Enum):
 
 
 class ID(RootModel[str]):
-    root: str
+    root: str = 'abc'
 
 
 class Pet(BaseModel):
@@ -32,7 +32,9 @@ class Family(RootModel[list[ID]]):
 
 class FamilyPets(RootModel[list[Pet]]):
     root: list[Pet] = Field(
-        default_factory=lambda: [Pet.model_validate(v) for v in ['taro', 'shiro']]
+        default_factory=lambda: [
+            Pet.model_validate(v) for v in [{'name': 'taro'}, {'name': 'shiro'}]
+        ]
     )
 
 

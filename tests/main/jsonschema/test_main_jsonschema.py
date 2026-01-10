@@ -3258,7 +3258,11 @@ def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) 
     ("output_model", "expected_file"),
     [
         ("pydantic.BaseModel", "has_default_value.py"),
-        ("pydantic_v2.BaseModel", "has_default_value_pydantic_v2.py"),
+        pytest.param(
+            "pydantic_v2.BaseModel",
+            "has_default_value_pydantic_v2.py",
+            marks=PYDANTIC_V2_SKIP,
+        ),
     ],
 )
 def test_main_jsonschema_has_default_value(output_model: str, expected_file: str, output_file: Path) -> None:
