@@ -126,9 +126,23 @@ class DataModelField(DataModelFieldBase):
             return value
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> str | None:
+    def _get_default_as_pydantic_model(self) -> str | None:  # noqa: PLR0911, PLR0912
         if isinstance(self.default, WrappedDefault):
             return f"lambda :{self.default!r}"
+        # Handle the case where self.data_type.is_list is True directly (e.g., GraphQL)
+        if self.data_type.is_list and len(self.data_type.data_types) == 1:
+            data_type_child = self.data_type.data_types[0]
+            if (
+                data_type_child.reference
+                and isinstance(data_type_child.reference.source, BaseModelBase)
+                and isinstance(self.default, list)
+            ):
+                if not self.default:
+                    return STANDARD_LIST
+                return (  # pragma: no cover
+                    f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
+                    f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
+                )
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:

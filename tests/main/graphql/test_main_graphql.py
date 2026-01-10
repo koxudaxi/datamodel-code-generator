@@ -12,7 +12,7 @@ from tests.main.conftest import (
     EXPECTED_GRAPHQL_PATH,
     GRAPHQL_DATA_PATH,
     LEGACY_BLACK_SKIP,
-    run_main_and_assert
+    run_main_and_assert,
 )
 from tests.main.graphql.conftest import assert_file_content
 
