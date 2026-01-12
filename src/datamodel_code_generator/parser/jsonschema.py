@@ -3076,8 +3076,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 nullable = obj.nullable if obj.has_default or required else True
             else:
                 required = not obj.nullable and required
-                # Set nullable=False when has_default and schema doesn't explicitly allow null
-                # This prevents fall_back_to_nullable from adding | None
                 if obj.nullable:
                     nullable = True
                 elif obj.has_default:
@@ -3268,27 +3266,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
             )
-        # For RootModels (not TypeAlias):
-        # - required=False when nullable or has_default (preserves = None for nullable types)
-        # - nullable=False when has_default and not explicitly nullable (prevents fall_back_to_nullable)
-        # For TypeAlias (IS_ALIAS=True):
-        # - Defaults are meaningless for type aliases, so don't process has_default
-        is_type_alias = getattr(self.data_model_root_type, "IS_ALIAS", False)
+        is_type_alias = self.data_model_root_type.IS_ALIAS
         if self.force_optional_for_required_fields:
             required = False
-            nullable = None  # Will be handled by fall_back_to_nullable
-            # Force optional makes all fields optional, so use None as default
+            nullable = None
             has_default_override = True
             default_value = obj.default if obj.has_default else None
         elif obj.nullable:
             required = False
             nullable = True
-            # Nullable fields should have None as default when no explicit default is set
             has_default_override = True
             default_value = obj.default if obj.has_default else None
         elif obj.has_default and not is_type_alias:
             required = False
-            # Set nullable=False to prevent fall_back_to_nullable from adding | None
             nullable = False
             has_default_override = True
             default_value = obj.default
