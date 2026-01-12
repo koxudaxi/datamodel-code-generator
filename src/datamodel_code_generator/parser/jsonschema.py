@@ -897,13 +897,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         final_enum = [*enum_values, None] if nullable else enum_values
         final_varnames = varnames if len(varnames) == len(enum_values) else []
 
+        # Only include default if original has one; otherwise don't set it at all
+        # to avoid incorrectly marking the synthetic object as having a default
         return self.SCHEMA_OBJECT_TYPE(
             type=enum_type,
             enum=final_enum,
             title=original.title,
             description=original.description,
             x_enum_varnames=final_varnames,
-            default=original.default if original.has_default else None,
+            **({"default": original.default} if original.has_default else {}),
         )
 
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
@@ -3054,7 +3056,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for index, item in enumerate(target_items)
         ]
 
-    def parse_array_fields(  # noqa: PLR0912
+    def parse_array_fields(  # noqa: PLR0912, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -3069,12 +3071,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             required: bool = False
             nullable: Optional[bool] = None  # noqa: UP045
         else:
-            required = not (obj.has_default and self.apply_default_values_for_required_fields)
+            required = not obj.has_default
             if self.strict_nullable:
                 nullable = obj.nullable if obj.has_default or required else True
             else:
                 required = not obj.nullable and required
-                nullable = None
+                # Set nullable=False when has_default and schema doesn't explicitly allow null
+                # This prevents fall_back_to_nullable from adding | None
+                if obj.nullable:
+                    nullable = True
+                elif obj.has_default:
+                    nullable = False
+                else:
+                    nullable = None
         is_tuple = False
         suppress_item_constraints = False
         if isinstance(obj.items, JsonSchemaObject):
@@ -3259,10 +3268,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
             )
-        required = self._should_field_be_required(
-            has_default=obj.has_default,
-            is_nullable=bool(obj.nullable),
-        )
+        # For RootModels (not TypeAlias):
+        # - required=False when nullable or has_default (preserves = None for nullable types)
+        # - nullable=False when has_default and not explicitly nullable (prevents fall_back_to_nullable)
+        # For TypeAlias (IS_ALIAS=True):
+        # - Defaults are meaningless for type aliases, so don't process has_default
+        is_type_alias = getattr(self.data_model_root_type, "IS_ALIAS", False)
+        if self.force_optional_for_required_fields:
+            required = False
+            nullable = None  # Will be handled by fall_back_to_nullable
+            # Force optional makes all fields optional, so use None as default
+            has_default_override = True
+            default_value = obj.default if obj.has_default else None
+        elif obj.nullable:
+            required = False
+            nullable = True
+            # Nullable fields should have None as default when no explicit default is set
+            has_default_override = True
+            default_value = obj.default if obj.has_default else None
+        elif obj.has_default and not is_type_alias:
+            required = False
+            # Set nullable=False to prevent fall_back_to_nullable from adding | None
+            nullable = False
+            has_default_override = True
+            default_value = obj.default
+        else:
+            required = True
+            nullable = None
+            has_default_override = obj.has_default
+            default_value = obj.default if obj.has_default else UNDEFINED
         name = self._apply_title_as_name(name, obj)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
@@ -3276,12 +3310,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             fields=[
                 self.data_model_field_type(
                     data_type=data_type,
-                    default=obj.default,
+                    default=default_value,
                     required=required,
                     constraints=constraints,
-                    nullable=obj.nullable
-                    if self.strict_nullable and obj.nullable is not None
-                    else (False if self.strict_nullable and obj.has_default else None),
+                    nullable=nullable,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
@@ -3289,7 +3321,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_field_description_example=self.use_field_description_example,
                     use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
-                    has_default=obj.has_default,
+                    has_default=has_default_override,
                 )
             ],
             custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
@@ -3298,7 +3330,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             path=self.current_source_path,
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
-            default=obj.default if obj.has_default else UNDEFINED,
+            default=default_value if has_default_override else UNDEFINED,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
