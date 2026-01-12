@@ -1870,7 +1870,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         for key, value in child_dict.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._merge_property_schemas(result[key], value)
+                if "$ref" in value:
+                    result[key] = value
+                else:
+                    result[key] = self._merge_property_schemas(result[key], value)
             else:
                 result[key] = value
         return result

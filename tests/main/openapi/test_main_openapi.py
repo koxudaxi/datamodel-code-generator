@@ -4942,25 +4942,24 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
 
 
 @SKIP_PYDANTIC_V1
-def test_main_openapi_reuse_scope_tree_single_file_error(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
-    """Test --reuse-scope=tree with single file output raises proper error (#2953).
+def test_main_openapi_allof_array_ref_no_duplicate_model(output_file: Path) -> None:
+    """Test allOf with array property referencing another schema (#2959).
 
-    When using reuse-scope=tree with single file output and duplicate models,
-    it should raise a proper error about needing a directory output instead of
-    crashing with IndexError.
+    When allOf merges an array property from parent (with generic items) and child
+    (with $ref items), the child's $ref should completely override the parent,
+    preventing duplicate model generation like 'Datum' class.
     """
     run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "issue_2953.yaml",
+        input_path=OPEN_API_DATA_PATH / "allof_array_ref_override.yaml",
         output_path=output_file,
         input_file_type="openapi",
-        expected_exit=Exit.ERROR,
-        capsys=capsys,
-        expected_stderr_contains="Modular references require an output directory, not a file",
+        assert_func=assert_file_content,
+        expected_file="allof_array_ref_override.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--reuse-model",
-            "--reuse-scope",
-            "tree",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--use-schema-description",
         ],
     )
