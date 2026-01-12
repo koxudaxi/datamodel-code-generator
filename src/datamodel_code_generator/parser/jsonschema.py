@@ -897,8 +897,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         final_enum = [*enum_values, None] if nullable else enum_values
         final_varnames = varnames if len(varnames) == len(enum_values) else []
 
-        # Only include default if original has one; otherwise don't set it at all
-        # to avoid incorrectly marking the synthetic object as having a default
         return self.SCHEMA_OBJECT_TYPE(
             type=enum_type,
             enum=final_enum,
