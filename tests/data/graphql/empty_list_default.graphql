@@ -1,0 +1,10 @@
+
+input Container {
+  name: String!
+}
+
+input PodSpec {
+  container_list: [Container!]! = []
+  container_list_or_none: [Container]! = []
+  container_or_none_list_or_none: [Container] = []
+}

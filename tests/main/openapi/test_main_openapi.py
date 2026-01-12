@@ -2808,6 +2808,7 @@ def test_main_openapi_empty_list_default(output_model: str, expected_output: str
         input_path=OPEN_API_DATA_PATH / "empty_list_default.yaml",
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        assert_func=assert_file_content,
         input_file_type="openapi",
         extra_args=[
             "--output-model-type",
