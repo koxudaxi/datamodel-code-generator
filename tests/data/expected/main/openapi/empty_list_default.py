@@ -4,14 +4,12 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, Field
 
 
 class Container(BaseModel):
-    name: Optional[str] = None
+    name: str | None = None
 
 
 class PodSpec(BaseModel):
-    containers: Optional[List[Container]] = Field(default_factory=list)
+    containers: list[Container] | None = Field(default_factory=list)
