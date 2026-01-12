@@ -220,7 +220,7 @@ class DataModelField(DataModelFieldBase):
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data["discriminator"] = discriminator["propertyName"]
 
-        if self.required and not self.has_default:
+        if self.required:
             default_factory = None
         elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
             default_factory = self._get_default_as_pydantic_model()
@@ -249,7 +249,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
-        elif self.required and not default_factory:
+        elif self.required:
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
             default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)

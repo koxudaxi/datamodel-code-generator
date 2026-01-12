@@ -120,16 +120,24 @@ jobs:
           pattern: .coverage.*
           merge-multiple: true
       - name: Combine and report coverage
+        id: coverage
         run: tox run -e coverage --skip-uv-sync --skip-pkg-install
+        continue-on-error: true
         env:
           UV_PYTHON_PREFERENCE: only-managed
+      - name: Show uncovered lines on failure
+        if: steps.coverage.outcome == 'failure'
+        run: |
+          echo "::error::Coverage check failed. Lines not covered:"
+          COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage report --show-missing --fail-under=0 | grep -v "100%"
       - name: Upload HTML report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: html-report
           path: .tox/htmlcov
       - name: Upload coverage to Codecov
-        if: success() || failure()
+        if: always()
         uses: codecov/codecov-action@v5
         with:
           flags: unittests
@@ -137,6 +145,9 @@ jobs:
           fail_ci_if_error: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Fail if coverage check failed
+        if: steps.coverage.outcome == 'failure'
+        run: exit 1
 
   check:
     name: ${{ matrix.tox_env }}
