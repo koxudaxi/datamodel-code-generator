@@ -1528,22 +1528,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         return name
 
-    def _should_field_be_required(
-        self,
-        *,
-        in_required_list: bool = True,
-        has_default: bool = False,
-        is_nullable: bool = False,
-    ) -> bool:
-        """Determine if a field should be marked as required."""
-        if self.force_optional_for_required_fields:
-            return False
-        if self.apply_default_values_for_required_fields and has_default:  # pragma: no cover
-            return False
-        if is_nullable:
-            return False
-        return in_required_list
-
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge two dictionaries, combining nested dicts and lists."""
         result = dict1.copy()
@@ -3346,10 +3330,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
         is_nullable = obj.nullable or obj.type_has_null
-        required = self._should_field_be_required(
-            has_default=obj.has_default,
-            is_nullable=bool(is_nullable),
-        )
+        required = not (self.force_optional_for_required_fields or is_nullable)
 
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
