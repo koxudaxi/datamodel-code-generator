@@ -2625,7 +2625,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     
     class Zoom(BaseModel):
-        __root__: confloat(ge=0.0, le=25.0)
+        __root__: confloat(ge=0.0, le=25.0) = 0
     ```
 
 ---

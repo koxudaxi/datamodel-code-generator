@@ -17,7 +17,7 @@ class TeamType(Enum):
 
 
 class ID(BaseModel):
-    __root__: str
+    __root__: str = 'abc'
 
 
 class Pet(BaseModel):
@@ -25,11 +25,11 @@ class Pet(BaseModel):
 
 
 class Family(BaseModel):
-    __root__: list[ID]
+    __root__: list[ID] = ['abc', 'efg']
 
 
 class FamilyPets(BaseModel):
-    __root__: list[Pet]
+    __root__: list[Pet] = ['taro', 'shiro']
 
 
 class Person(BaseModel):

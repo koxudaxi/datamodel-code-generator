@@ -6182,7 +6182,7 @@ where optional fields have defaults but cannot accept `None` values.
     
     
     class Id(BaseModel):
-        __root__: int
+        __root__: int = 1
     
     
     class Description(BaseModel):
@@ -19238,7 +19238,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     
     class Zoom(BaseModel):
-        __root__: confloat(ge=0.0, le=25.0)
+        __root__: confloat(ge=0.0, le=25.0) = 0
     ```
 
 ---

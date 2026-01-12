@@ -57,7 +57,7 @@ class Email(BaseModel):
 
 
 class Id(BaseModel):
-    __root__: int
+    __root__: int = 1
 
 
 class Description(BaseModel):
