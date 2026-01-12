@@ -4950,11 +4950,11 @@ def test_main_openapi_allof_array_ref_no_duplicate_model(output_file: Path) -> N
     preventing duplicate model generation like 'Datum' class.
     """
     run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "issue_2959.yaml",
+        input_path=OPEN_API_DATA_PATH / "allof_array_ref_override.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file="issue_2959.py",
+        expected_file="allof_array_ref_override.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
