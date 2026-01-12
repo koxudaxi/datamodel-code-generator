@@ -124,8 +124,8 @@ def test_main_use_default_kwarg(output_file: Path) -> None:
     ],
 )
 @pytest.mark.skipif(
-    black.__version__.split(".")[0] == "19",
-    reason="Installed black doesn't support the old style",
+    black.__version__.split(".")[0] in {"19", "22"},
+    reason="Installed black doesn't support Python 3.12 target version",
 )
 def test_main_graphql_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
     """Test GraphQL generation with empty list default values."""
