@@ -3254,14 +3254,26 @@ def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) 
     )
 
 
-def test_main_jsonschema_has_default_value(output_file: Path) -> None:
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("pydantic.BaseModel", "has_default_value.py"),
+        pytest.param(
+            "pydantic_v2.BaseModel",
+            "has_default_value_pydantic_v2.py",
+            marks=PYDANTIC_V2_SKIP,
+        ),
+    ],
+)
+def test_main_jsonschema_has_default_value(output_model: str, expected_file: str, output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "has_default_value.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file="has_default_value.py",
+        expected_file=expected_file,
+        extra_args=["--output-model-type", output_model],
     )
 
 

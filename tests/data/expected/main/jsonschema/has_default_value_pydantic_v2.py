@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class TeamType(Enum):
@@ -16,33 +16,33 @@ class TeamType(Enum):
     Organization = 'Organization'
 
 
-class ID(BaseModel):
-    __root__: str = 'abc'
+class ID(RootModel[str]):
+    root: str = 'abc'
 
 
 class Pet(BaseModel):
     name: str | None = None
 
 
-class Family(BaseModel):
-    __root__: list[ID] = Field(
-        default_factory=lambda: [ID.parse_obj(v) for v in ['abc', 'efg']]
+class Family(RootModel[list[ID]]):
+    root: list[ID] = Field(
+        default_factory=lambda: [ID.model_validate(v) for v in ['abc', 'efg']]
     )
 
 
-class FamilyPets(BaseModel):
-    __root__: list[Pet] = Field(
+class FamilyPets(RootModel[list[Pet]]):
+    root: list[Pet] = Field(
         default_factory=lambda: [
-            Pet.parse_obj(v) for v in [{'name': 'taro'}, {'name': 'shiro'}]
+            Pet.model_validate(v) for v in [{'name': 'taro'}, {'name': 'shiro'}]
         ]
     )
 
 
 class Person(BaseModel):
-    id: ID | None = Field(default_factory=lambda: ID.parse_obj('abc'))
+    id: ID | None = Field(default_factory=lambda: ID('abc'))
     user: Pet | None = None
     firstName: str | None = Field(None, description="The person's first name.")
     team: TeamType | None = 'Department'
     anotherTeam: TeamType | None = 'Department'
-    Family: Family | None = None
-    FamilyPets: FamilyPets | None = None
+    Family_1: Family | None = Field(None, alias='Family')
+    FamilyPets_1: FamilyPets | None = Field(None, alias='FamilyPets')
