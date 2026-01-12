@@ -971,12 +971,20 @@ _LAZY_IMPORTS = {
     "detect_jsonschema_version": "datamodel_code_generator.parser.schema_version",
     "detect_openapi_version": "datamodel_code_generator.parser.schema_version",
     "generate_dynamic_models": "datamodel_code_generator.dynamic",
+    "GenerateConfig": "datamodel_code_generator.config",
 }
 
 
 def __getattr__(name: str) -> Any:
     if name in _LAZY_IMPORTS:
         import importlib  # noqa: PLC0415
+
+        if name == "GenerateConfig" and not is_pydantic_v2():  # pragma: no cover
+            msg = (
+                f"'{name}' is only available in Pydantic v2 environments. "
+                "Use 'from datamodel_code_generator.config import GenerateConfig' instead."
+            )
+            raise ImportError(msg)
 
         module = importlib.import_module(_LAZY_IMPORTS[name])
         return getattr(module, name)
@@ -1025,3 +1033,6 @@ __all__ = [
     "generate",
     "generate_dynamic_models",  # noqa: F822
 ]
+
+if is_pydantic_v2():  # pragma: no cover
+    __all__ += ["GenerateConfig"]
