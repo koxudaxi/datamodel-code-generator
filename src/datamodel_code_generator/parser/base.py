@@ -2211,19 +2211,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                 if filed_name in _BUILTIN_NAMES and field.alias is None:
                     should_rename = False
-                    container_flags = {
-                        "list": "is_list",
-                        "dict": "is_dict",
-                        "set": "is_set",
-                        "frozenset": "is_frozen_set",
-                        "tuple": "is_tuple",
-                    }
                     for dt in field.data_type.all_data_types:
                         if dt.type == filed_name and not dt.import_:
                             should_rename = True
                             break
-                        flag = container_flags.get(filed_name)
-                        if flag and getattr(dt, flag, False):
+                        if filed_name == "list" and dt.is_list:
+                            should_rename = True
+                            break
+                        if filed_name == "dict" and dt.is_dict:
+                            should_rename = True
+                            break
+                        if filed_name == "set" and dt.is_set:
+                            should_rename = True
+                            break
+                        if filed_name == "frozenset" and dt.is_frozen_set:
+                            should_rename = True
+                            break
+                        if filed_name == "tuple" and dt.is_tuple:
                             should_rename = True
                             break
                     if should_rename:
