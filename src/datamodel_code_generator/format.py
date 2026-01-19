@@ -404,7 +404,7 @@ class CodeFormatter:
         )
         if check_proc.stdout:  # pragma: no branch
             check_proc.stdout.close()
-        check_proc.stdin.write(code.encode(self.encoding))  # type: ignore[union-attr]
+        check_proc.communicate(code.encode(self.encoding))
         check_proc.stdin.close()  # type: ignore[union-attr]
         stdout, _ = format_proc.communicate()
         check_proc.wait()
