@@ -854,8 +854,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             if item.title:
                 varnames.append(item.title)
-            else:
-                varnames.append(str(const_value))
 
             if inferred_type is None and const_value is not None:
                 match const_value:
@@ -902,8 +900,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             enum=final_enum,
             title=original.title,
             description=original.description,
-            x_enum_varnames=final_varnames,
-            **({"default": original.default} if original.has_default else {}),
+            **({"x-enum-varnames": final_varnames} | ({"default": original.default} if original.has_default else {})),
         )
 
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
