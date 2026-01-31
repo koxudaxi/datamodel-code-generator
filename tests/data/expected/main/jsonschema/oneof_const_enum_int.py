@@ -8,6 +8,6 @@ from enum import IntEnum
 
 
 class StatusCode(IntEnum):
-    integer_200 = 200
-    integer_404 = 404
-    integer_500 = 500
+    OK = 200
+    Not_Found = 404
+    Server_Error = 500

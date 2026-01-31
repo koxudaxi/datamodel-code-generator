@@ -902,8 +902,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             enum=final_enum,
             title=original.title,
             description=original.description,
-            x_enum_varnames=final_varnames,
-            **({"default": original.default} if original.has_default else {}),
+            **({"x-enum-varnames": final_varnames} | ({"default": original.default} if original.has_default else {})),
         )
 
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
