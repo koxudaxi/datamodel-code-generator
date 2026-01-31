@@ -854,10 +854,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             if item.title:
                 varnames.append(item.title)
-            else:
-                varnames.append(str(const_value))
-
-            if inferred_type is None and const_value is not None:
+            elif inferred_type is None and const_value is not None:
                 match const_value:
                     case str():
                         inferred_type = "string"
@@ -867,6 +864,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         inferred_type = "integer"
                     case float():
                         inferred_type = "number"
+            else:
+                varnames.append(str(const_value))
 
         if not enum_values:  # pragma: no cover
             return None
