@@ -992,8 +992,7 @@ from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    s: str\
-"""
+    s: str"""
     )
 
 
@@ -1066,8 +1065,7 @@ from pydantic import BaseModel
 
 
 class Model(BaseModel):
-    s: str\
-"""
+    s: str"""
     )
 
 
