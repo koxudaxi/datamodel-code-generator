@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "set": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string"
+      }
+    },
+    "frozenset": {
+      "type": "array",
+      "x-python-type": "frozenset[str]",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tuple": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "type": {
+      "type": "string"
+    },
+    "list": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "dict": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    }
+  },
+  "required": [
+    "set",
+    "frozenset",
+    "tuple",
+    "type",
+    "list",
+    "dict"
+  ]
+}

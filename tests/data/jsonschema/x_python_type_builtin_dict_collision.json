@@ -1,0 +1,13 @@
+{
+  "type": "object",
+  "properties": {
+    "dict": {
+      "type": "object",
+      "x-python-type": "typing.Dict[str, int]",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    }
+  },
+  "required": ["dict"]
+}
