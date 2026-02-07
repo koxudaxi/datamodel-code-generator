@@ -7098,6 +7098,34 @@ def test_main_builtin_field_names_container_types(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+@pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        ("3.10", "builtin_field_names_target_python_version_310.py"),
+        ("3.13", "builtin_field_names_target_python_version_313.py"),
+    ],
+)
+def test_main_builtin_field_names_target_python_version(
+    output_file: Path, target_python_version: str, expected_file: str
+) -> None:
+    """Test builtin field renaming follows target Python version instead of runtime builtins."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_target_python_version.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        skip_code_validation=True,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            target_python_version,
+        ],
+    )
+
+
+@pytest.mark.benchmark
 def test_main_root_model_config_populate_by_name(output_file: Path) -> None:
     """Test that RootModel subclasses don't get populate_by_name config (issue #2483).
 

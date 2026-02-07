@@ -113,6 +113,28 @@ ModelDeps: TypeAlias = dict[ModelName, set[ModelName]]
 OrderIndex: TypeAlias = dict[ModelName, int]
 
 _BUILTIN_NAMES: frozenset[str] = frozenset(name for name in builtins.__dict__ if not name.startswith("_"))
+_BUILTIN_NAMES_INTRODUCED_IN: dict[PythonVersion, frozenset[str]] = {
+    PythonVersion.PY_311: frozenset({"BaseExceptionGroup", "ExceptionGroup"}),
+    PythonVersion.PY_313: frozenset({"PythonFinalizationError"}),
+}
+
+
+def _python_version_key(python_version: PythonVersion) -> tuple[int, int]:
+    major, minor = python_version.value.split(".")
+    return int(major), int(minor)
+
+
+def _get_builtin_names_for_target(target_python_version: PythonVersion) -> frozenset[str]:
+    builtin_names = set(_BUILTIN_NAMES)
+    target_key = _python_version_key(target_python_version)
+
+    for introduced_version, names in _BUILTIN_NAMES_INTRODUCED_IN.items():
+        if target_key >= _python_version_key(introduced_version):
+            builtin_names.update(names)
+        else:
+            builtin_names.difference_update(names)
+
+    return frozenset(builtin_names)
 
 
 def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
@@ -903,6 +925,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.base_class: str | None = config.base_class
         self.base_class_map: dict[str, str | list[str]] | None = config.base_class_map
         self.target_python_version: PythonVersion = config.target_python_version
+        self.builtin_names: frozenset[str] = _get_builtin_names_for_target(self.target_python_version)
         self.results: list[DataModel] = []
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
         self.validation: bool = config.validation
@@ -2204,7 +2227,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         field.alias = filed_name
                         field.name = new_filed_name
 
-                if (current_name := field.name) in _BUILTIN_NAMES and any(
+                if (current_name := field.name) in self.builtin_names and any(
                     _is_builtin_type_collision(current_name, dt) for dt in field.data_type.all_data_types
                 ):
                     if field.alias is None:
