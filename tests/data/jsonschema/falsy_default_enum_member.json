@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Model",
+  "type": "object",
+  "properties": {
+    "status": {
+      "$ref": "#/$defs/Status",
+      "default": 0
+    },
+    "name": {
+      "$ref": "#/$defs/Name",
+      "default": ""
+    },
+    "active": {
+      "$ref": "#/$defs/Active",
+      "default": false
+    }
+  },
+  "$defs": {
+    "Status": {
+      "title": "Status",
+      "type": "integer",
+      "enum": [0, 1]
+    },
+    "Name": {
+      "title": "Name",
+      "type": "string",
+      "enum": ["", "non-empty"]
+    },
+    "Active": {
+      "title": "Active",
+      "type": "boolean",
+      "enum": [true, false]
+    }
+  }
+}

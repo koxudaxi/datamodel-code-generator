@@ -3299,6 +3299,18 @@ def test_main_jsonschema_modular_default_enum_member(output_dir: Path) -> None:
         )
 
 
+def test_main_jsonschema_falsy_default_enum_member(output_file: Path) -> None:
+    """Test enum member mapping for falsy default values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "falsy_default_enum_member.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="falsy_default_enum_member.py",
+        extra_args=["--set-default-enum-member"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] < "22",
     reason="Installed black doesn't support Python version 3.10",

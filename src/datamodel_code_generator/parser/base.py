@@ -2059,7 +2059,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self.set_default_enum_member:
             return
         for _, model_field, data_type in iter_models_field_data_types(models):
-            if not model_field.default:
+            if model_field.default is None:
                 continue
             if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
                 if isinstance(model_field.default, list):
