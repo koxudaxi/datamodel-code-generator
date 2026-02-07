@@ -117,6 +117,13 @@ _BUILTIN_NAMES_INTRODUCED_IN: dict[PythonVersion, frozenset[str]] = {
     PythonVersion.PY_311: frozenset({"BaseExceptionGroup", "ExceptionGroup"}),
     PythonVersion.PY_313: frozenset({"PythonFinalizationError"}),
 }
+_BUILTIN_CONTAINER_COLLISION_FLAGS: dict[str, str] = {
+    "list": "is_list",
+    "dict": "is_dict",
+    "set": "is_set",
+    "frozenset": "is_frozen_set",
+    "tuple": "is_tuple",
+}
 
 
 def _python_version_key(python_version: PythonVersion) -> tuple[int, int]:
@@ -141,20 +148,11 @@ def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
     if data_type.type == current_name and not data_type.import_:
         return True
 
-    is_container_match = False
     match current_name:
-        case "list":
-            is_container_match = data_type.is_list
-        case "dict":
-            is_container_match = data_type.is_dict
-        case "set":
-            is_container_match = data_type.is_set
-        case "frozenset":
-            is_container_match = data_type.is_frozen_set
-        case "tuple":
-            is_container_match = data_type.is_tuple
-
-    return is_container_match
+        case name if flag := _BUILTIN_CONTAINER_COLLISION_FLAGS.get(name):
+            return bool(getattr(data_type, flag))
+        case _:
+            return False
 
 
 ComponentId: TypeAlias = int

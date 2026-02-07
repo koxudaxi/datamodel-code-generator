@@ -7098,6 +7098,25 @@ def test_main_builtin_field_names_container_types(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+def test_main_builtin_field_names_container_types_no_use_standard_collections(output_file: Path) -> None:
+    """Test builtin container renaming when container types are imported from typing."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_container_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_container_types_no_use_standard_collections.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--use-unique-items-as-set",
+            "--no-use-standard-collections",
+        ],
+    )
+
+
+@pytest.mark.benchmark
 @pytest.mark.parametrize(
     ("target_python_version", "expected_file"),
     [
@@ -7637,6 +7656,22 @@ def test_x_python_type_compatible_set(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_builtin_dict_collision(output_file: Path) -> None:
+    """Test x-python-type Dict keeps builtin dict collision handling with typing containers."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_builtin_dict_collision.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--no-use-standard-collections",
+        ],
     )
 
 
