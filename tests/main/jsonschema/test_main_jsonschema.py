@@ -7063,6 +7063,23 @@ def test_main_builtin_field_names(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+def test_main_builtin_field_names_snake_case(output_file: Path) -> None:
+    """Test builtin field rename keeps original alias after snake_case normalization."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_snake_case.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_snake_case.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+        ],
+    )
+
+
+@pytest.mark.benchmark
 def test_main_root_model_config_populate_by_name(output_file: Path) -> None:
     """Test that RootModel subclasses don't get populate_by_name config (issue #2483).
 

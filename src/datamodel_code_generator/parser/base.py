@@ -7,6 +7,7 @@ code generation.
 
 from __future__ import annotations
 
+import builtins
 import operator
 import os.path
 import re
@@ -111,34 +112,7 @@ ModelNames: TypeAlias = set[ModelName]
 ModelDeps: TypeAlias = dict[ModelName, set[ModelName]]
 OrderIndex: TypeAlias = dict[ModelName, int]
 
-_BUILTIN_NAMES: frozenset[str] = frozenset({
-    "bool",
-    "bytearray",
-    "bytes",
-    "classmethod",
-    "complex",
-    "dict",
-    "enumerate",
-    "filter",
-    "float",
-    "frozenset",
-    "int",
-    "list",
-    "map",
-    "memoryview",
-    "object",
-    "property",
-    "range",
-    "reversed",
-    "set",
-    "slice",
-    "staticmethod",
-    "str",
-    "super",
-    "tuple",
-    "type",
-    "zip",
-})
+_BUILTIN_NAMES: frozenset[str] = frozenset(name for name in builtins.__dict__ if not name.startswith("_"))
 
 ComponentId: TypeAlias = int
 Components: TypeAlias = list[list[ModelName]]
@@ -2161,7 +2135,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         _reorder_models_keep_model_order(models, imports, use_deferred_annotations=use_deferred_annotations)
 
-    def __change_field_name(  # noqa: PLR0912
+    def __change_field_name(  # noqa: PLR0912, PLR0915
         self,
         models: list[DataModel],
     ) -> None:
@@ -2209,30 +2183,32 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         field.alias = filed_name
                         field.name = new_filed_name
 
-                if filed_name in _BUILTIN_NAMES and field.alias is None:
+                current_name = field.name
+                if current_name in _BUILTIN_NAMES:
                     should_rename = False
                     for dt in field.data_type.all_data_types:
-                        if dt.type == filed_name and not dt.import_:
+                        if dt.type == current_name and not dt.import_:
                             should_rename = True
                             break
-                        if filed_name == "list" and dt.is_list:
+                        if current_name == "list" and dt.is_list:
                             should_rename = True
                             break
-                        if filed_name == "dict" and dt.is_dict:
+                        if current_name == "dict" and dt.is_dict:
                             should_rename = True
                             break
-                        if filed_name == "set" and dt.is_set:
+                        if current_name == "set" and dt.is_set:
                             should_rename = True
                             break
-                        if filed_name == "frozenset" and dt.is_frozen_set:
+                        if current_name == "frozenset" and dt.is_frozen_set:
                             should_rename = True
                             break
-                        if filed_name == "tuple" and dt.is_tuple:
+                        if current_name == "tuple" and dt.is_tuple:
                             should_rename = True
                             break
                     if should_rename:
-                        field.alias = filed_name
-                        field.name = f"{filed_name}_"
+                        if field.alias is None:
+                            field.alias = filed_name
+                        field.name = f"{current_name}_"
 
     def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:
