@@ -119,6 +119,7 @@ def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
     if data_type.type == current_name and not data_type.import_:
         return True
 
+    is_container_match = False
     match current_name:
         case "list":
             is_container_match = data_type.is_list
@@ -130,8 +131,6 @@ def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
             is_container_match = data_type.is_frozen_set
         case "tuple":
             is_container_match = data_type.is_tuple
-        case _:
-            is_container_match = False
 
     return is_container_match
 
