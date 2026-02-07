@@ -2009,7 +2009,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
                                 for dt in copied_data_type.data_types
                             )
-                            if not has_any_variant:
+                            if not has_any_variant:  # pragma: no branch
                                 prop_name = (
                                     discriminator.get("propertyName")
                                     if isinstance(discriminator, dict)

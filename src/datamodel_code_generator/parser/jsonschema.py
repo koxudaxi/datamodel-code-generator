@@ -1613,13 +1613,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             current_ref = "#"  # pragma: no cover
         # Find the best matching anchor: path prefix with longest match
+        # best defaults to "#" (root anchor fallback)
         best = "#"
         best_len = 0
         for anchor_ref in anchors:
-            if anchor_ref == "#":
-                if best_len == 0:
-                    best = "#"
-            elif (
+            if anchor_ref != "#" and (
                 len(anchor_ref) > best_len
                 and current_ref.startswith(anchor_ref)
                 and (len(current_ref) == len(anchor_ref) or current_ref[len(anchor_ref)] == "/")
@@ -3026,14 +3024,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         # Resolve $recursiveRef to $ref (JSON Schema 2019-09)
         if item.recursiveRef and not item.ref:
-            resolved_ref = self._resolve_recursive_ref(item, path)
-            if resolved_ref:
-                return self.get_ref_data_type(resolved_ref)
+            return self.get_ref_data_type(self._resolve_recursive_ref(item, path) or "#")
         # Resolve $dynamicRef to $ref (JSON Schema 2020-12)
         if item.dynamicRef and not item.ref:
-            resolved_ref = self._resolve_dynamic_ref(item)
-            if resolved_ref:
-                return self.get_ref_data_type(resolved_ref)
+            return self.get_ref_data_type(self._resolve_dynamic_ref(item) or item.dynamicRef)
         if item.is_ref_with_nullable_only and item.ref:
             ref_data_type = self.get_ref_data_type(item.ref)
             if self.strict_nullable:
@@ -4164,9 +4158,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 # Build $dynamicAnchor index for root object
                 if root_obj.dynamicAnchor:
                     root_key = tuple(path_parts)
-                    if root_key not in self._dynamic_anchor_index:
-                        self._dynamic_anchor_index[root_key] = {}
-                    self._dynamic_anchor_index[root_key].setdefault(root_obj.dynamicAnchor, "#")
+                    self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(root_obj.dynamicAnchor, "#")
                 definitions: dict[str, YamlValue] = {}
                 schema_path = ""
                 for schema_path_candidate, split_schema_path in self.schema_paths:
@@ -4189,10 +4181,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     # Build $dynamicAnchor index for definitions
                     if obj.dynamicAnchor:
                         root_key = tuple(path_parts)
-                        if root_key not in self._dynamic_anchor_index:
-                            self._dynamic_anchor_index[root_key] = {}
                         ref_path = "#/" + schema_path.lstrip("#/") + "/" + key
-                        self._dynamic_anchor_index[root_key].setdefault(obj.dynamicAnchor, ref_path)
+                        self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(obj.dynamicAnchor, ref_path)
 
                 if object_paths:
                     models = get_model_by_path(raw, object_paths)
