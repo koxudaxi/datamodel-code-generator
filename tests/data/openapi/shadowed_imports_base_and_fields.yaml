@@ -1,0 +1,28 @@
+openapi: 3.0.0
+info:
+  title: Shadowed Imports Base and Fields Test
+  version: 0.0.1
+paths: {}
+components:
+  schemas:
+    BaseItem:
+      type: object
+      properties:
+        id:
+          type: string
+    MyModel:
+      allOf:
+        - $ref: '#/components/schemas/BaseItem'
+        - type: object
+          properties:
+            Node:
+              type: object
+              customTypePath: mymodule.node.Node
+            Node2:
+              type: object
+              customTypePath: mymodule.node.Node
+            other:
+              type: object
+              customTypePath: mymodule.other.Other
+            name:
+              type: string
