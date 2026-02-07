@@ -42,6 +42,8 @@ class JsonSchemaFeatures:
     definitions_key: str
     exclusive_as_number: bool
     read_only_write_only: bool
+    recursive_ref: bool
+    dynamic_ref: bool
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -57,6 +59,8 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=False,
                     read_only_write_only=False,
+                    recursive_ref=False,
+                    dynamic_ref=False,
                 )
             case JsonSchemaVersion.Draft6:
                 return cls(
@@ -68,6 +72,8 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=True,
                     read_only_write_only=False,
+                    recursive_ref=False,
+                    dynamic_ref=False,
                 )
             case JsonSchemaVersion.Draft7:
                 return cls(
@@ -79,6 +85,8 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=False,
+                    dynamic_ref=False,
                 )
             case JsonSchemaVersion.Draft201909:
                 return cls(
@@ -90,6 +98,8 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
+                    dynamic_ref=False,
                 )
             case _:
                 return cls(
@@ -101,6 +111,8 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
+                    dynamic_ref=True,
                 )
 
 
@@ -132,6 +144,8 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     definitions_key="definitions",
                     exclusive_as_number=False,
                     read_only_write_only=True,
+                    recursive_ref=False,
+                    dynamic_ref=False,
                     nullable_keyword=True,
                     discriminator_support=True,
                 )
@@ -145,6 +159,8 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
+                    dynamic_ref=True,
                     nullable_keyword=False,
                     discriminator_support=True,
                 )
