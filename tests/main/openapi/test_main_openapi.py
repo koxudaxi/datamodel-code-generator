@@ -4966,6 +4966,30 @@ def test_main_openapi_deprecated_field(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_recursive_ref_discriminator(output_file: Path) -> None:
+    """Test OpenAPI generation with $recursiveRef and discriminator."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "recursive_ref_discriminator.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_discriminator.py",
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_main_openapi_recursive_ref_discriminator_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI generation with $recursiveRef and discriminator for Pydantic v2."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "recursive_ref_discriminator.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_discriminator_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 @SKIP_PYDANTIC_V1
 def test_main_openapi_allof_array_ref_no_duplicate_model(output_file: Path) -> None:
     """Test allOf with array property referencing another schema (#2959).

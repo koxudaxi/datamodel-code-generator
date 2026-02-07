@@ -8144,3 +8144,123 @@ def test_main_allof_mro(output_file: Path) -> None:
             "--use-schema-description",
         ],
     )
+
+
+def test_main_jsonschema_recursive_ref(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with $recursiveAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_dynamic_ref(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with $dynamicAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_dynamic_ref_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_recursive_ref_no_anchor(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef without $recursiveAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_no_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_no_anchor.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_no_anchor_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef without $recursiveAnchor for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_no_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_no_anchor_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_recursive_ref_in_defs(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with anchor in $defs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_in_defs.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_in_defs_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with anchor in $defs for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_in_defs_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_dynamic_ref_in_defs(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_in_defs.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_dynamic_ref_in_defs_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_in_defs_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )

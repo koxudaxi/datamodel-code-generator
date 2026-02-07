@@ -118,6 +118,8 @@ def test_jsonschema_features_draft4() -> None:
             definitions_key="definitions",
             exclusive_as_number=False,
             read_only_write_only=False,
+            recursive_ref=False,
+            dynamic_ref=False,
         )
     )
 
@@ -134,6 +136,8 @@ def test_jsonschema_features_draft6() -> None:
             definitions_key="definitions",
             exclusive_as_number=True,
             read_only_write_only=False,
+            recursive_ref=False,
+            dynamic_ref=False,
         )
     )
 
@@ -150,6 +154,8 @@ def test_jsonschema_features_draft7() -> None:
             definitions_key="definitions",
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=False,
+            dynamic_ref=False,
         )
     )
 
@@ -166,6 +172,8 @@ def test_jsonschema_features_2019_09() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=True,
+            dynamic_ref=False,
         )
     )
 
@@ -182,6 +190,8 @@ def test_jsonschema_features_2020_12() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=True,
+            dynamic_ref=True,
         )
     )
 
@@ -198,6 +208,8 @@ def test_jsonschema_features_auto() -> None:
             definitions_key="$defs",
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=True,
+            dynamic_ref=True,
         )
     )
 
@@ -221,6 +233,8 @@ def test_openapi_features_v30() -> None:
             definitions_key="definitions",
             exclusive_as_number=False,
             read_only_write_only=True,
+            recursive_ref=False,
+            dynamic_ref=False,
             nullable_keyword=True,
             discriminator_support=True,
         )
@@ -241,6 +255,8 @@ def test_openapi_features_v31() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=True,
+            dynamic_ref=True,
             nullable_keyword=False,
             discriminator_support=True,
         )
@@ -261,6 +277,8 @@ def test_openapi_features_auto() -> None:
             ref_sibling_keywords=True,
             exclusive_as_number=True,
             read_only_write_only=True,
+            recursive_ref=True,
+            dynamic_ref=True,
             nullable_keyword=False,
             discriminator_support=True,
         )

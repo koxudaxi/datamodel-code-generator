@@ -228,13 +228,22 @@ class JsonSchemaFeatures:
             status="not_supported",
         ),
     )
+    recursive_ref: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$recursiveRef/$recursiveAnchor",
+            description="Recursive reference resolution via anchors",
+            status="supported",
+        ),
+    )
     dynamic_ref: bool = field(
         default=False,
         metadata=FeatureMetadata(
             introduced="2020-12",
             doc_name="$dynamicRef/$dynamicAnchor",
             description="Dynamic reference resolution across schemas",
-            status="not_supported",
+            status="supported",
         ),
     )
 
@@ -287,6 +296,7 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
                 )
             case _:
                 return cls(
@@ -298,6 +308,8 @@ class JsonSchemaFeatures:
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
+                    dynamic_ref=True,
                 )
 
 
@@ -422,6 +434,8 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     definitions_key="$defs",
                     exclusive_as_number=True,
                     read_only_write_only=True,
+                    recursive_ref=True,
+                    dynamic_ref=True,
                     nullable_keyword=False,
                     discriminator_support=True,
                     webhooks=True,

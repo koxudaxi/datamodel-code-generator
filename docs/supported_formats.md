@@ -15,8 +15,8 @@ datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI s
 | Draft 4 | [json-schema.org/draft-04](https://json-schema.org/draft-04/json-schema-core) | `id`, `definitions` |
 | Draft 6 | [json-schema.org/draft-06](https://json-schema.org/draft-06/json-schema-release-notes) | `$id`, const, boolean schemas |
 | Draft 7 | [json-schema.org/draft-07](https://json-schema.org/draft-07/json-schema-release-notes) | if/then/else, readOnly/writeOnly |
-| 2019-09 | [json-schema.org/draft/2019-09](https://json-schema.org/draft/2019-09/release-notes) | `$defs`, `$anchor` |
-| 2020-12 | [json-schema.org/draft/2020-12](https://json-schema.org/draft/2020-12/release-notes) | `prefixItems`, null in type arrays |
+| 2019-09 | [json-schema.org/draft/2019-09](https://json-schema.org/draft/2019-09/release-notes) | `$defs`, `$anchor`, `$recursiveRef`/`$recursiveAnchor` |
+| 2020-12 | [json-schema.org/draft/2020-12](https://json-schema.org/draft/2020-12/release-notes) | `prefixItems`, null in type arrays, `$dynamicRef`/`$dynamicAnchor` |
 
 ### Feature Compatibility Matrix
 
@@ -38,6 +38,9 @@ datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI s
 | contains | - | Yes | Yes | Yes | Yes |
 | **Conditional** |
 | if/then/else | - | - | Yes | Yes | Yes |
+| **Recursive/Dynamic References** | | | | | |
+| `$recursiveRef` / `$recursiveAnchor` | - | - | - | Yes | - |
+| `$dynamicRef` / `$dynamicAnchor` | - | - | - | - | Yes |
 | **Metadata** |
 | readOnly | - | - | Yes | Yes | Yes |
 | writeOnly | - | - | Yes | Yes | Yes |
@@ -119,7 +122,8 @@ The following features are tracked in the codebase with their implementation sta
 | `unevaluatedItems` | 2019-09 | ❌ Not Supported | Additional items not evaluated by subschemas |
 | `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
 | `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
-| `$dynamicRef/$dynamicAnchor` | 2020-12 | ❌ Not Supported | Dynamic reference resolution across schemas |
+| `$recursiveRef/$recursiveAnchor` | 2019-09 | ✅ Supported | Recursive reference resolution via anchors |
+| `$dynamicRef/$dynamicAnchor` | 2020-12 | ✅ Supported | Dynamic reference resolution across schemas |
 
 #### OpenAPI-Specific Features
 
@@ -173,7 +177,8 @@ The following features are tracked in the codebase with their implementation sta
 | Feature | Introduced | Status | Notes |
 |---------|------------|--------|-------|
 | `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
-| `$dynamicRef` / `$dynamicAnchor` | 2020-12 | ❌ Not supported | Dynamic references |
+| `$recursiveRef` / `$recursiveAnchor` | 2019-09 | ✅ Supported | Statically resolved to self-reference |
+| `$dynamicRef` / `$dynamicAnchor` | 2020-12 | ✅ Supported | Statically resolved to self-reference |
 | `unevaluatedProperties` | 2019-09 | ❌ Not supported | Use `additionalProperties` instead |
 | `unevaluatedItems` | 2019-09 | ❌ Not supported | Use `additionalItems` instead |
 | `contentMediaType` | Draft 7 | ❌ Not supported | Content type hints ignored |

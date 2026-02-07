@@ -82,7 +82,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
-from datamodel_code_generator.types import DataType, DataTypeManager
+from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
 
 if TYPE_CHECKING:
@@ -1476,6 +1476,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
                 discriminator["propertyName"] = field_name
                 mapping = discriminator.get("mapping", {})
+                # Any type cannot be a discriminated union variant (Pydantic v2 rejects it)
+                has_any_variant = any(
+                    dt.type == ANY or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
+                    for dt in field.data_type.data_types
+                )
+                if has_any_variant:  # pragma: no cover
+                    field.extras.pop("discriminator", None)
+                    field.data_type.discriminator = None
+                    continue
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
                         continue
@@ -1995,11 +2004,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
                         discriminator = root_type_field.extras.get("discriminator")
                         if discriminator and isinstance(root_type_field, pydantic_model.DataModelField):
-                            prop_name = (
-                                discriminator.get("propertyName") if isinstance(discriminator, dict) else discriminator
+                            has_any_variant = any(
+                                dt.type == ANY
+                                or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
+                                for dt in copied_data_type.data_types
                             )
-                            if self._is_pydantic_v2_model():
-                                copied_data_type.discriminator = prop_name
+                            if not has_any_variant:  # pragma: no branch
+                                prop_name = (
+                                    discriminator.get("propertyName")
+                                    if isinstance(discriminator, dict)
+                                    else discriminator
+                                )
+                                if self._is_pydantic_v2_model():
+                                    copied_data_type.discriminator = prop_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
