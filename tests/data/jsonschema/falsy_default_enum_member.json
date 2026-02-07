@@ -10,6 +10,10 @@
     "name": {
       "$ref": "#/$defs/Name",
       "default": ""
+    },
+    "active": {
+      "$ref": "#/$defs/Active",
+      "default": false
     }
   },
   "$defs": {
@@ -22,6 +26,11 @@
       "title": "Name",
       "type": "string",
       "enum": ["", "non-empty"]
+    },
+    "Active": {
+      "title": "Active",
+      "type": "boolean",
+      "enum": [true, false]
     }
   }
 }

@@ -19,6 +19,12 @@ class Name(Enum):
     non_empty = 'non-empty'
 
 
+class Active(Enum):
+    boolean_True = True
+    boolean_False = False
+
+
 class Model(BaseModel):
     status: Status | None = Status.integer_0
     name: Name | None = Name.field_
+    active: Active | None = Active.boolean_False
