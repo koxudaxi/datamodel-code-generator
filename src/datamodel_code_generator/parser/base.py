@@ -148,11 +148,10 @@ def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
     if data_type.type == current_name and not data_type.import_:
         return True
 
-    match current_name:
-        case name if flag := _BUILTIN_CONTAINER_COLLISION_FLAGS.get(name):
-            return bool(getattr(data_type, flag))
-        case _:
-            return False
+    if flag := _BUILTIN_CONTAINER_COLLISION_FLAGS.get(current_name):
+        return bool(getattr(data_type, flag))
+
+    return False
 
 
 ComponentId: TypeAlias = int
