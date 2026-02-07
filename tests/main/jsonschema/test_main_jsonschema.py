@@ -7102,7 +7102,7 @@ def test_main_builtin_field_names_container_types(output_file: Path) -> None:
     ("target_python_version", "expected_file"),
     [
         ("3.10", "builtin_field_names_target_python_version_310.py"),
-        ("3.13", "builtin_field_names_target_python_version_313.py"),
+        pytest.param("3.13", "builtin_field_names_target_python_version_313.py", marks=BLACK_PY313_SKIP),
     ],
 )
 def test_main_builtin_field_names_target_python_version(
