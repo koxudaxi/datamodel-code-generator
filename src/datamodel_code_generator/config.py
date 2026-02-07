@@ -44,16 +44,13 @@ from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydan
     DataModel,
     DataModelFieldBase,
 )
+from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
 from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 - used by Pydantic at runtime
-
-if TYPE_CHECKING:
-    from datamodel_code_generator.model.pydantic_v2 import UnionMode
-
 
 CallableSchema = Callable[[str], str]
 DumpResolveReferenceAction = Callable[[Iterable[str]], str]
@@ -152,6 +149,7 @@ class GenerateConfig(BaseModel):
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
+    use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None
@@ -289,6 +287,7 @@ class ParserConfig(BaseModel):
     use_operation_id_as_name: bool = False
     use_unique_items_as_set: bool = False
     use_tuple_for_fixed_items: bool = False
+    use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     http_headers: Sequence[tuple[str, str]] | None = None

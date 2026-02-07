@@ -45,8 +45,8 @@
         "$ref": "#/definitions/Pet"
       },
       "default": [
-        "taro",
-        "shiro"
+        {"name": "taro"},
+        {"name": "shiro"}
       ]
     }
   },

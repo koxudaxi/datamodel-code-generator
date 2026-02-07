@@ -75,4 +75,4 @@ class Pitch(BaseModel):
 
 
 class Zoom(BaseModel):
-    __root__: confloat(ge=0.0, le=25.0)
+    __root__: confloat(ge=0.0, le=25.0) = 0

@@ -362,6 +362,29 @@ def iter_models_field_data_types(
                 yield model, field, data_type
 
 
+def _alias_base_class_imports(
+    model: DataModel,
+    aliased_imports: dict[tuple[str | None, str], Import],
+) -> None:
+    """Apply aliased imports to a model's base classes and their _additional_imports."""
+    for base_class in model.base_classes:
+        if not base_class.import_:
+            continue
+        key = (base_class.import_.from_, base_class.import_.import_)
+        if key not in aliased_imports:
+            continue
+        old_import = base_class.import_
+        aliased_import = aliased_imports[key]
+        base_class.type = aliased_import.alias  # type: ignore[assignment]
+        base_class.import_ = aliased_import
+        for i, additional_import in enumerate(model._additional_imports):  # pragma: no branch  # noqa: SLF001
+            if (
+                additional_import.from_ == old_import.from_ and additional_import.import_ == old_import.import_
+            ):  # pragma: no branch
+                model._additional_imports[i] = aliased_import  # noqa: SLF001
+                break
+
+
 ReferenceMapSet = dict[str, set[str]]
 SortedDataModels = dict[str, DataModel]
 
@@ -919,6 +942,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_operation_id_as_name: bool = config.use_operation_id_as_name
         self.use_unique_items_as_set: bool = config.use_unique_items_as_set
         self.use_tuple_for_fixed_items: bool = config.use_tuple_for_fixed_items
+        self.use_closed_typed_dict: bool = config.use_closed_typed_dict
         self.allof_merge_mode: AllOfMergeMode = config.allof_merge_mode
         self.allof_class_hierarchy: AllOfClassHierarchy = config.allof_class_hierarchy
         self.dataclass_arguments = config.dataclass_arguments
@@ -1761,7 +1785,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> None:
         """Validate that the shared module name doesn't conflict with existing modules."""
         shared_module = self.shared_module_name
-        existing_module_names = {module[0] for module, _ in module_models}
+        existing_module_names = {module[0] for module, _ in module_models if module}
         if shared_module in existing_module_names:
             msg = (
                 f"Schema file or directory '{shared_module}' conflicts with the shared module name. "
@@ -2052,7 +2076,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self.set_default_enum_member:
             return
         for _, model_field, data_type in iter_models_field_data_types(models):
-            if not model_field.default:
+            if model_field.default is None:
                 continue
             if data_type.reference and isinstance(data_type.reference.source, Enum):  # pragma: no cover
                 if isinstance(model_field.default, list):
@@ -2404,21 +2428,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         models: list[DataModel],
         all_model_field_names: set[str],
     ) -> None:
-        for _, model_field, data_type in iter_models_field_data_types(models):
-            if (
-                data_type
-                and data_type.import_
-                and data_type.type in all_model_field_names
-                and data_type.type == model_field.name
-            ):
-                alias = data_type.type + "_aliased"
-                data_type.type = alias
-                data_type.import_ = Import(
-                    from_=data_type.import_.from_,
-                    import_=data_type.import_.import_,
-                    alias=alias,
-                    reference_path=data_type.import_.reference_path,
-                )
+        aliased_imports: dict[tuple[str | None, str], Import] = {}
+        for _, _model_field, data_type in iter_models_field_data_types(models):
+            if data_type and data_type.import_ and data_type.type in all_model_field_names:
+                key = (data_type.import_.from_, data_type.import_.import_)
+                if key not in aliased_imports:
+                    aliased_imports[key] = Import(
+                        from_=data_type.import_.from_,
+                        import_=data_type.import_.import_,
+                        alias=data_type.type + "_aliased",
+                        reference_path=data_type.import_.reference_path,
+                    )
+
+        if not aliased_imports:
+            return
+
+        for _, _model_field, data_type in iter_models_field_data_types(models):
+            if data_type and data_type.import_:
+                key = (data_type.import_.from_, data_type.import_.import_)
+                if key in aliased_imports:
+                    aliased_import = aliased_imports[key]
+                    data_type.type = aliased_import.alias  # type: ignore[assignment]
+                    data_type.import_ = aliased_import
+
+        for model in models:
+            _alias_base_class_imports(model, aliased_imports)
 
     def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
         self,

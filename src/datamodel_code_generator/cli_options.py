@@ -203,6 +203,8 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--use-unique-items-as-set": CLIOptionMeta(name="--use-unique-items-as-set", category=OptionCategory.TYPING),
     "--use-tuple-for-fixed-items": CLIOptionMeta(name="--use-tuple-for-fixed-items", category=OptionCategory.TYPING),
+    "--use-closed-typed-dict": CLIOptionMeta(name="--use-closed-typed-dict", category=OptionCategory.TYPING),
+    "--no-use-closed-typed-dict": CLIOptionMeta(name="--no-use-closed-typed-dict", category=OptionCategory.TYPING),
     "--type-mappings": CLIOptionMeta(name="--type-mappings", category=OptionCategory.TYPING),
     "--type-overrides": CLIOptionMeta(name="--type-overrides", category=OptionCategory.TYPING),
     "--no-use-specialized-enum": CLIOptionMeta(name="--no-use-specialized-enum", category=OptionCategory.TYPING),

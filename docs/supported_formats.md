@@ -38,7 +38,7 @@ datamodel-code-generator supports multiple versions of JSON Schema and OpenAPI s
 | contains | - | Yes | Yes | Yes | Yes |
 | **Conditional** |
 | if/then/else | - | - | Yes | Yes | Yes |
-| **Recursive/Dynamic References** |
+| **Recursive/Dynamic References** | | | | | |
 | `$recursiveRef` / `$recursiveAnchor` | - | - | - | Yes | - |
 | `$dynamicRef` / `$dynamicAnchor` | - | - | - | - | Yes |
 | **Metadata** |
@@ -93,6 +93,53 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
 
+<!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
+### Supported Features (from code)
+
+The following features are tracked in the codebase with their implementation status:
+
+#### JSON Schema Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `Null in type array` | 2020-12 | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
+| `$defs` | 2019-09 | ✅ Supported | Uses `$defs` instead of `definitions` for schema definitions |
+| `prefixItems` | 2020-12 | ✅ Supported | Tuple validation using `prefixItems` keyword |
+| `Boolean schemas` | Draft 6 | ✅ Supported | Allows `true` and `false` as valid schemas |
+| `$id` | Draft 6 | ✅ Supported | Schema identifier field (`id` in Draft 4, `$id` in Draft 6+) |
+| `definitions/$defs` | Draft 4 | ✅ Supported | Key for reusable schema definitions |
+| `exclusiveMinimum/Maximum as number` | Draft 6 | ✅ Supported | Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4) |
+| `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
+| `const` | Draft 6 | ✅ Supported | Single constant value constraint |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
+| `contains` | Draft 6 | ❌ Not Supported | Array contains at least one matching item |
+| `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
+| `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
+| `contentMediaType/contentEncoding` | Draft 7 | ❌ Not Supported | Content type and encoding hints for strings |
+| `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
+| `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
+| `unevaluatedProperties` | 2019-09 | ❌ Not Supported | Additional properties not evaluated by subschemas |
+| `unevaluatedItems` | 2019-09 | ❌ Not Supported | Additional items not evaluated by subschemas |
+| `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
+| `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
+| `$recursiveRef/$recursiveAnchor` | 2019-09 | ✅ Supported | Recursive reference resolution via anchors |
+| `$dynamicRef/$dynamicAnchor` | 2020-12 | ✅ Supported | Dynamic reference resolution across schemas |
+
+#### OpenAPI-Specific Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
+| `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
+| `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
+| `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
+| `xml` | OAS 3.0 | ❌ Not Supported | XML serialization metadata (name, namespace, prefix) |
+| `externalDocs` | OAS 3.0 | ❌ Not Supported | Reference to external documentation |
+| `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
+| `callbacks` | OAS 3.0 | ❌ Not Supported | Callback definitions for webhooks |
+| `securitySchemes` | OAS 3.0 | ❌ Not Supported | API security mechanism definitions |
+<!-- END AUTO-GENERATED SUPPORTED FEATURES -->
+
 ## Data Format Support
 
 ### Common Formats (JSON Schema + OpenAPI)
@@ -142,7 +189,7 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 | `deprecated` | 2019-09 | ⚠️ Partial | Recognized but not enforced |
 | `examples` (array) | Draft 6 | ⚠️ Partial | Only first example used for Field default |
 | Recursive `$ref` | Draft 4+ | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
-| `propertyNames` | Draft 6 | ❌ Not supported | Property name validation ignored |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
 | `dependentRequired` | 2019-09 | ❌ Not supported | Dependent requirements ignored |
 | `dependentSchemas` | 2019-09 | ❌ Not supported | Dependent schemas ignored |
 

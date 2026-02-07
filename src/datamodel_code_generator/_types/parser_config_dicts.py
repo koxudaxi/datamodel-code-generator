@@ -108,6 +108,7 @@ class ParserConfigDict(TypedDict):
     use_operation_id_as_name: NotRequired[bool]
     use_unique_items_as_set: NotRequired[bool]
     use_tuple_for_fixed_items: NotRequired[bool]
+    use_closed_typed_dict: NotRequired[bool]
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]

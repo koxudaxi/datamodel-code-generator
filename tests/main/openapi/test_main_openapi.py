@@ -2808,6 +2808,7 @@ def test_main_openapi_empty_list_default(output_model: str, expected_output: str
         input_path=OPEN_API_DATA_PATH / "empty_list_default.yaml",
         output_path=output_file,
         expected_file=EXPECTED_OPENAPI_PATH / expected_output,
+        assert_func=assert_file_content,
         input_file_type="openapi",
         extra_args=[
             "--output-model-type",
@@ -3708,6 +3709,30 @@ def test_main_openapi_shadowed_imports(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="shadowed_imports.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_shadowed_imports_base_and_fields(output_file: Path) -> None:
+    """Test that aliased imports are applied to all fields, not just matching field names."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "shadowed_imports_base_and_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="shadowed_imports_base_and_fields.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_shadowed_imports_base_and_fields_custom_base(output_file: Path) -> None:
+    """Test that aliased imports are applied to custom base classes."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "shadowed_imports_base_and_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="shadowed_imports_base_and_fields_custom_base.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--base-class", "mymodule.node.Node"],
     )
 
 
@@ -4962,4 +4987,28 @@ def test_main_openapi_recursive_ref_discriminator_pydantic_v2(output_file: Path)
         assert_func=assert_file_content,
         expected_file="recursive_ref_discriminator_pydantic_v2.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@SKIP_PYDANTIC_V1
+def test_main_openapi_allof_array_ref_no_duplicate_model(output_file: Path) -> None:
+    """Test allOf with array property referencing another schema (#2959).
+
+    When allOf merges an array property from parent (with generic items) and child
+    (with $ref items), the child's $ref should completely override the parent,
+    preventing duplicate model generation like 'Datum' class.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "allof_array_ref_override.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="allof_array_ref_override.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-standard-collections",
+            "--use-union-operator",
+            "--use-schema-description",
+        ],
     )

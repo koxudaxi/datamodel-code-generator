@@ -601,6 +601,13 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-closed-typed-dict",
+    help="Generate TypedDict with PEP 728 closed=True/extra_items for additionalProperties constraints. "
+    "Use --no-use-closed-typed-dict for type checkers that don't yet support PEP 728 (e.g., mypy).",
+    action=BooleanOptionalAction,
+    default=None,
+)
+typing_options.add_argument(
     "--allof-merge-mode",
     help="Mode for field merging in allOf schemas. "
     "'constraints': merge only constraints (minItems, maxItems, pattern, etc.) from parent (default). "

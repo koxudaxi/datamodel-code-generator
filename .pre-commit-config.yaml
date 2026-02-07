@@ -43,3 +43,9 @@ repos:
     language: system
     files: ^src/datamodel_code_generator/config\.py$
     pass_filenames: false
+  - id: schema-docs
+    name: Update schema feature documentation
+    entry: bash -c '[ -x .tox/schema-docs/bin/python ] && PYTHON=.tox/schema-docs/bin/python || PYTHON=.tox/schema-docs/Scripts/python; test -x "$PYTHON" || tox run -e schema-docs --notest -qq; "$PYTHON" scripts/build_schema_docs.py'
+    language: system
+    files: ^(src/datamodel_code_generator/parser/schema_version\.py|scripts/build_schema_docs\.py|docs/supported_formats\.md)$
+    pass_filenames: false

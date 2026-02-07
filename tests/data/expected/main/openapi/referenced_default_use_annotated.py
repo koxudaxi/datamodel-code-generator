@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field, RootModel
 
 
 class ModelSettingB(RootModel[float]):
-    root: Annotated[float, Field(ge=0.0, le=10.0)]
+    root: Annotated[float, Field(ge=0.0, le=10.0)] = 5
 
 
 class Model(BaseModel):

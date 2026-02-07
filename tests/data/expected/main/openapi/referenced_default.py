@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, RootModel, confloat
 
 
 class ModelSettingB(RootModel[confloat(ge=0.0, le=10.0)]):
-    root: confloat(ge=0.0, le=10.0)
+    root: confloat(ge=0.0, le=10.0) = 5
 
 
 class Model(BaseModel):

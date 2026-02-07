@@ -7,7 +7,13 @@ from typing import TYPE_CHECKING
 import black
 import pytest
 
-from tests.main.conftest import DEFAULT_VALUES_DATA_PATH, GRAPHQL_DATA_PATH, LEGACY_BLACK_SKIP, run_main_and_assert
+from tests.main.conftest import (
+    DEFAULT_VALUES_DATA_PATH,
+    EXPECTED_GRAPHQL_PATH,
+    GRAPHQL_DATA_PATH,
+    LEGACY_BLACK_SKIP,
+    run_main_and_assert,
+)
 from tests.main.graphql.conftest import assert_file_content
 
 if TYPE_CHECKING:
@@ -101,6 +107,40 @@ def test_main_use_default_kwarg(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="annotated_use_default_kwarg.py",
         extra_args=["--use-default-kwarg"],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_output"),
+    [
+        (
+            "pydantic.BaseModel",
+            "empty_list_default.py",
+        ),
+        (
+            "pydantic_v2.BaseModel",
+            "pydantic_v2_empty_list_default.py",
+        ),
+    ],
+)
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] in {"19", "22"},
+    reason="Installed black doesn't support Python 3.12 target version",
+)
+def test_main_graphql_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+    """Test GraphQL generation with empty list default values."""
+    run_main_and_assert(
+        input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_GRAPHQL_PATH / expected_output,
+        input_file_type="graphql",
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--target-python-version",
+            "3.12",
+        ],
     )
 
 

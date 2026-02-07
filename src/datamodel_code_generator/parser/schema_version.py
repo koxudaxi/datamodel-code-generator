@@ -7,13 +7,32 @@ and utility functions for detecting schema versions.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar
+
+from typing_extensions import TypedDict
 
 from datamodel_code_generator.enums import JsonSchemaVersion, OpenAPIVersion
 
 if TYPE_CHECKING:
     from datamodel_code_generator.types import Types
+
+
+class FeatureMetadata(TypedDict):
+    """Metadata for schema feature documentation.
+
+    This metadata is used by scripts/build_schema_docs.py to generate
+    the feature compatibility matrix in docs/supported_formats.md.
+    """
+
+    introduced: str
+    """Version when feature was introduced (e.g., "Draft 6", "2020-12", "OAS 3.0")."""
+    doc_name: str
+    """Display name for documentation (e.g., "prefixItems", "Null in type array")."""
+    description: str
+    """User-facing description of the feature."""
+    status: Literal["supported", "partial", "not_supported"]
+    """Implementation status: supported, partial, or not_supported."""
 
 
 @dataclass(frozen=True)
@@ -23,27 +42,210 @@ class JsonSchemaFeatures:
     This is the base class for schema features. OpenAPISchemaFeatures
     extends this to add OpenAPI-specific features.
 
-    Attributes:
-        null_in_type_array: Draft 2020-12 allows null in type arrays.
-        defs_not_definitions: Draft 2019-09+ uses $defs instead of definitions.
-        prefix_items: Draft 2020-12 uses prefixItems instead of items array.
-        boolean_schemas: Draft 6+ allows boolean values as schemas.
-        id_field: The field name for schema ID ("id" for Draft 4, "$id" for Draft 6+).
-        definitions_key: The key for definitions ("definitions" or "$defs").
-        exclusive_as_number: Draft 6+ uses numeric exclusiveMin/Max (Draft 4 uses boolean).
-        read_only_write_only: Draft 7+ supports readOnly/writeOnly keywords.
+    Each field includes metadata for documentation generation.
+    Use `dataclasses.fields(JsonSchemaFeatures)` to access metadata.
     """
 
-    null_in_type_array: bool
-    defs_not_definitions: bool
-    prefix_items: bool
-    boolean_schemas: bool
-    id_field: str
-    definitions_key: str
-    exclusive_as_number: bool
-    read_only_write_only: bool
-    recursive_ref: bool
-    dynamic_ref: bool
+    null_in_type_array: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2020-12",
+            doc_name="Null in type array",
+            description="Allows `type: ['string', 'null']` syntax for nullable types",
+            status="supported",
+        ),
+    )
+    defs_not_definitions: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$defs",
+            description="Uses `$defs` instead of `definitions` for schema definitions",
+            status="supported",
+        ),
+    )
+    prefix_items: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2020-12",
+            doc_name="prefixItems",
+            description="Tuple validation using `prefixItems` keyword",
+            status="supported",
+        ),
+    )
+    boolean_schemas: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="Boolean schemas",
+            description="Allows `true` and `false` as valid schemas",
+            status="supported",
+        ),
+    )
+    id_field: str = field(
+        default="$id",
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="$id",
+            description="Schema identifier field (`id` in Draft 4, `$id` in Draft 6+)",
+            status="supported",
+        ),
+    )
+    definitions_key: str = field(
+        default="$defs",
+        metadata=FeatureMetadata(
+            introduced="Draft 4",
+            doc_name="definitions/$defs",
+            description="Key for reusable schema definitions",
+            status="supported",
+        ),
+    )
+    exclusive_as_number: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="exclusiveMinimum/Maximum as number",
+            description="Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4)",
+            status="supported",
+        ),
+    )
+    read_only_write_only: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 7",
+            doc_name="readOnly/writeOnly",
+            description="Field visibility hints for read-only and write-only properties",
+            status="supported",
+        ),
+    )
+    # --- Partially supported features ---
+    const_support: bool = field(
+        default=True,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="const",
+            description="Single constant value constraint",
+            status="supported",
+        ),
+    )
+    property_names: bool = field(
+        default=True,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="propertyNames",
+            description="Dict key type constraints via pattern, enum, or $ref",
+            status="supported",
+        ),
+    )
+    contains: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 6",
+            doc_name="contains",
+            description="Array contains at least one matching item",
+            status="not_supported",
+        ),
+    )
+    deprecated_keyword: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="deprecated",
+            description="Marks schema elements as deprecated",
+            status="partial",
+        ),
+    )
+    # --- Unsupported features ---
+    if_then_else: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 7",
+            doc_name="if/then/else",
+            description="Conditional schema validation",
+            status="not_supported",
+        ),
+    )
+    content_encoding: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="Draft 7",
+            doc_name="contentMediaType/contentEncoding",
+            description="Content type and encoding hints for strings",
+            status="not_supported",
+        ),
+    )
+    anchor: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$anchor",
+            description="Location-independent schema references",
+            status="not_supported",
+        ),
+    )
+    vocabulary: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$vocabulary",
+            description="Vocabulary declarations for meta-schemas",
+            status="not_supported",
+        ),
+    )
+    unevaluated_properties: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="unevaluatedProperties",
+            description="Additional properties not evaluated by subschemas",
+            status="not_supported",
+        ),
+    )
+    unevaluated_items: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="unevaluatedItems",
+            description="Additional items not evaluated by subschemas",
+            status="not_supported",
+        ),
+    )
+    dependent_required: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="dependentRequired",
+            description="Conditional property requirements",
+            status="not_supported",
+        ),
+    )
+    dependent_schemas: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="dependentSchemas",
+            description="Conditional schema application based on property presence",
+            status="not_supported",
+        ),
+    )
+    recursive_ref: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$recursiveRef/$recursiveAnchor",
+            description="Recursive reference resolution via anchors",
+            status="supported",
+        ),
+    )
+    dynamic_ref: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2020-12",
+            doc_name="$dynamicRef/$dynamicAnchor",
+            description="Dynamic reference resolution across schemas",
+            status="supported",
+        ),
+    )
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -59,8 +261,8 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=False,
                     read_only_write_only=False,
-                    recursive_ref=False,
-                    dynamic_ref=False,
+                    const_support=False,
+                    property_names=False,
                 )
             case JsonSchemaVersion.Draft6:
                 return cls(
@@ -72,8 +274,6 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=True,
                     read_only_write_only=False,
-                    recursive_ref=False,
-                    dynamic_ref=False,
                 )
             case JsonSchemaVersion.Draft7:
                 return cls(
@@ -85,8 +285,6 @@ class JsonSchemaFeatures:
                     definitions_key="definitions",
                     exclusive_as_number=True,
                     read_only_write_only=True,
-                    recursive_ref=False,
-                    dynamic_ref=False,
                 )
             case JsonSchemaVersion.Draft201909:
                 return cls(
@@ -99,7 +297,6 @@ class JsonSchemaFeatures:
                     exclusive_as_number=True,
                     read_only_write_only=True,
                     recursive_ref=True,
-                    dynamic_ref=False,
                 )
             case _:
                 return cls(
@@ -122,13 +319,93 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
 
     Extends JsonSchemaFeatures with OpenAPI-specific features.
 
-    Attributes:
-        nullable_keyword: OpenAPI 3.0 uses nullable: true (deprecated in 3.1).
-        discriminator_support: All OpenAPI versions support discriminator.
+    Each field includes metadata for documentation generation.
+    Use `dataclasses.fields(OpenAPISchemaFeatures)` to access metadata.
     """
 
-    nullable_keyword: bool
-    discriminator_support: bool
+    nullable_keyword: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="nullable",
+            description="Uses `nullable: true` for nullable types (deprecated in 3.1)",
+            status="supported",
+        ),
+    )
+    discriminator_support: bool = field(
+        default=True,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="discriminator",
+            description="Polymorphism support via `discriminator` keyword",
+            status="supported",
+        ),
+    )
+    webhooks: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.1",
+            doc_name="webhooks",
+            description="Top-level webhooks object for incoming events",
+            status="supported",
+        ),
+    )
+    # --- Partially supported features ---
+    ref_sibling_keywords: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.1",
+            doc_name="$ref with sibling keywords",
+            description="$ref can coexist with description, summary (no allOf workaround)",
+            status="partial",
+        ),
+    )
+    # --- Unsupported features ---
+    xml_support: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="xml",
+            description="XML serialization metadata (name, namespace, prefix)",
+            status="not_supported",
+        ),
+    )
+    external_docs: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="externalDocs",
+            description="Reference to external documentation",
+            status="not_supported",
+        ),
+    )
+    links: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="links",
+            description="Links between operations",
+            status="not_supported",
+        ),
+    )
+    callbacks: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="callbacks",
+            description="Callback definitions for webhooks",
+            status="not_supported",
+        ),
+    )
+    security_schemes: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="OAS 3.0",
+            doc_name="securitySchemes",
+            description="API security mechanism definitions",
+            status="not_supported",
+        ),
+    )
 
     @classmethod
     def from_openapi_version(cls, version: OpenAPIVersion) -> OpenAPISchemaFeatures:
@@ -144,8 +421,6 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     definitions_key="definitions",
                     exclusive_as_number=False,
                     read_only_write_only=True,
-                    recursive_ref=False,
-                    dynamic_ref=False,
                     nullable_keyword=True,
                     discriminator_support=True,
                 )
@@ -163,6 +438,8 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
                     dynamic_ref=True,
                     nullable_keyword=False,
                     discriminator_support=True,
+                    webhooks=True,
+                    ref_sibling_keywords=True,
                 )
 
 
@@ -326,6 +603,7 @@ def get_data_formats(*, is_openapi: bool = False) -> DataFormatMapping:
 
 __all__ = [
     "DataFormatMapping",
+    "FeatureMetadata",
     "JsonSchemaFeatures",
     "OpenAPISchemaFeatures",
     "SchemaFeaturesT",

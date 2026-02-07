@@ -11,6 +11,7 @@ import pydantic
 import pytest
 from inline_snapshot import snapshot
 
+import datamodel_code_generator
 from datamodel_code_generator import (
     AllExportsScope,
     DataModelType,
@@ -26,7 +27,9 @@ from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
+from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -2063,6 +2066,21 @@ def test_generate_with_config_object(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
+def test_generate_config_with_union_mode() -> None:
+    """Test GenerateConfig with union_mode field."""
+    config = GenerateConfig(
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        union_mode=UnionMode.left_to_right,
+        disable_timestamp=True,
+    )
+    result = generate(
+        input_='{"type": "object", "properties": {"value": {"anyOf": [{"type": "string"}, {"type": "integer"}]}}}',
+        config=config,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_config_union_mode.py")
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
 def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
     """Test generate() raises error when both config and kwargs are provided."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -2291,3 +2309,34 @@ def test_use_annotated_no_warning_pydantic_v1(output_file: Path) -> None:
             extra_args=["--output-model-type", "pydantic.BaseModel"],
         )
     assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+
+
+@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
+def test_import_generate_config_from_top_level() -> None:
+    """Test that GenerateConfig can be imported from top-level module."""
+    from datamodel_code_generator import GenerateConfig as TopLevelGenerateConfig
+
+    assert TopLevelGenerateConfig is not None
+    assert TopLevelGenerateConfig is GenerateConfig
+
+
+@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
+def test_generate_with_imported_config_from_top_level() -> None:
+    """Test generate() with GenerateConfig imported from top-level."""
+    config = datamodel_code_generator.GenerateConfig(class_name="TestModel")
+    result = generate('{"type": "object"}', config=config)
+    assert result is not None
+    assert "class TestModel" in result
+
+
+@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
+def test_all_exports_includes_generate_config() -> None:
+    """Test that __all__ includes GenerateConfig in Pydantic v2."""
+    assert "GenerateConfig" in datamodel_code_generator.__all__
+
+
+@pytest.mark.skipif(is_pydantic_v2(), reason="Test for Pydantic v1 only")
+def test_import_generate_config_fails_on_v1() -> None:
+    """GenerateConfig should not be importable from top-level in Pydantic v1."""
+    with pytest.raises(ImportError, match="only available in Pydantic v2"):
+        _ = datamodel_code_generator.GenerateConfig

@@ -872,8 +872,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
             if item.title:
                 varnames.append(item.title)
-            else:
-                varnames.append(str(const_value))
 
             if inferred_type is None and const_value is not None:
                 match const_value:
@@ -920,8 +918,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             enum=final_enum,
             title=original.title,
             description=original.description,
-            x_enum_varnames=final_varnames,
-            default=original.default if original.has_default else None,
+            **({"x-enum-varnames": final_varnames} | ({"default": original.default} if original.has_default else {})),
         )
 
     def is_constraints_field(self, obj: JsonSchemaObject) -> bool:
@@ -1324,7 +1321,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         For TypedDict with PEP 728 support:
         - additionalProperties: false -> closed=True
         - additionalProperties: { type: X } -> extra_items=X
+
+        This is controlled by use_closed_typed_dict option. When disabled,
+        the additionalProperties constraint is not converted to PEP 728 syntax.
         """
+        if not self.use_closed_typed_dict:
+            return
         if isinstance(obj.additionalProperties, bool):
             self.extra_template_data[path]["additionalProperties"] = obj.additionalProperties
             if obj.additionalProperties is False and not self.target_python_version.has_typed_dict_closed:
@@ -1541,22 +1543,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return sanitize_module_name(obj.title, treat_dot_as_module=self.treat_dot_as_module)
         return name
 
-    def _should_field_be_required(
-        self,
-        *,
-        in_required_list: bool = True,
-        has_default: bool = False,
-        is_nullable: bool = False,
-    ) -> bool:
-        """Determine if a field should be marked as required."""
-        if self.force_optional_for_required_fields:
-            return False
-        if self.apply_default_values_for_required_fields and has_default:  # pragma: no cover
-            return False
-        if is_nullable:
-            return False
-        return in_required_list
-
     def _deep_merge(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge two dictionaries, combining nested dicts and lists."""
         result = dict1.copy()
@@ -1600,9 +1586,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.recursiveAnchor:
             self._recursive_anchor_index.setdefault(root_key, []).append(ref_path)
         if obj.dynamicAnchor:
-            if root_key not in self._dynamic_anchor_index:  # pragma: no cover
-                self._dynamic_anchor_index[root_key] = {}
-            self._dynamic_anchor_index[root_key].setdefault(obj.dynamicAnchor, ref_path)
+            self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(obj.dynamicAnchor, ref_path)
 
     def _resolve_recursive_ref(self, item: JsonSchemaObject, path: list[str]) -> str | None:
         """Resolve $recursiveRef to an equivalent $ref.
@@ -1627,9 +1611,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 suffix_parts = [first[1:].lstrip("/"), *suffix_parts[1:]]
             current_ref = "#/" + "/".join(suffix_parts)
         else:
-            current_ref = "#"
+            current_ref = "#"  # pragma: no cover
         # Find the best matching anchor: path prefix with longest match
-        best = anchors[0]
+        best = "#"
         best_len = 0
         for anchor_ref in anchors:
             if anchor_ref == "#":
@@ -1964,7 +1948,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         for key, value in child_dict.items():
             if key in result and isinstance(result[key], dict) and isinstance(value, dict):
-                result[key] = self._merge_property_schemas(result[key], value)
+                if "$ref" in value:
+                    result[key] = value
+                else:
+                    result[key] = self._merge_property_schemas(result[key], value)
             else:
                 result[key] = value
         return result
@@ -3155,7 +3142,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for index, item in enumerate(target_items)
         ]
 
-    def parse_array_fields(  # noqa: PLR0912
+    def parse_array_fields(  # noqa: PLR0912, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -3170,12 +3157,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             required: bool = False
             nullable: Optional[bool] = None  # noqa: UP045
         else:
-            required = not (obj.has_default and self.apply_default_values_for_required_fields)
+            required = not obj.has_default
             if self.strict_nullable:
                 nullable = obj.nullable if obj.has_default or required else True
             else:
                 required = not obj.nullable and required
-                nullable = None
+                if obj.nullable:
+                    nullable = True
+                elif obj.has_default:
+                    nullable = False
+                else:
+                    nullable = None
         is_tuple = False
         suppress_item_constraints = False
         if isinstance(obj.items, JsonSchemaObject):
@@ -3360,10 +3352,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_type = self.data_type_manager.get_data_type(
                 Types.any,
             )
-        required = self._should_field_be_required(
-            has_default=obj.has_default,
-            is_nullable=bool(obj.nullable),
-        )
+        is_type_alias = self.data_model_root_type.IS_ALIAS
+        if self.force_optional_for_required_fields:
+            required = False
+            nullable = None
+            has_default_override = True
+            default_value = obj.default if obj.has_default else None
+        elif obj.nullable:
+            required = False
+            nullable = True
+            has_default_override = True
+            default_value = obj.default if obj.has_default else None
+        elif obj.has_default and not is_type_alias:
+            required = False
+            nullable = False
+            has_default_override = True
+            default_value = obj.default
+        else:
+            required = True
+            nullable = None
+            has_default_override = obj.has_default
+            default_value = obj.default if obj.has_default else UNDEFINED
         name = self._apply_title_as_name(name, obj)
         if not reference:
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
@@ -3377,12 +3386,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             fields=[
                 self.data_model_field_type(
                     data_type=data_type,
-                    default=obj.default,
+                    default=default_value,
                     required=required,
                     constraints=constraints,
-                    nullable=obj.nullable
-                    if self.strict_nullable and obj.nullable is not None
-                    else (False if self.strict_nullable and obj.has_default else None),
+                    nullable=nullable,
                     strip_default_none=self.strip_default_none,
                     extras=self.get_field_extras(obj),
                     use_annotated=self.use_annotated,
@@ -3390,7 +3397,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     use_field_description_example=self.use_field_description_example,
                     use_inline_field_description=self.use_inline_field_description,
                     original_name=None,
-                    has_default=obj.has_default,
+                    has_default=has_default_override,
                 )
             ],
             custom_base_class=self._resolve_base_class(name, obj.custom_base_path),
@@ -3399,7 +3406,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             path=self.current_source_path,
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
-            default=obj.default if obj.has_default else UNDEFINED,
+            default=default_value if has_default_override else UNDEFINED,
         )
         self.results.append(data_model_root_type)
         return self.data_type(reference=reference)
@@ -3427,10 +3434,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
         is_nullable = obj.nullable or obj.type_has_null
-        required = self._should_field_be_required(
-            has_default=obj.has_default,
-            is_nullable=bool(is_nullable),
-        )
+        required = not (self.force_optional_for_required_fields or is_nullable)
 
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)

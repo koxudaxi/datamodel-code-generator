@@ -47,7 +47,7 @@ class ExtendedProcessingTasksTitle(BaseModel):
 class ProcessingStatusUnionTitle(BaseModel):
     __root__: (
         ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle
-    ) = Field(..., title='Processing Status Union Title')
+    ) = Field('COMPLETED', title='Processing Status Union Title')
 
 
 class ProcessingTaskTitle(BaseModel):

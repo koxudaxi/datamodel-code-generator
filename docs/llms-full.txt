@@ -246,7 +246,7 @@ This documentation is auto-generated from test cases.
 | Category | Options | Description |
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 9 | Input/output configuration |
-| 🔧 [Typing Customization](typing-customization.md) | 27 | Type annotation and import behavior |
+| 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 19 | Output formatting and custom rendering |
@@ -370,6 +370,7 @@ This documentation is auto-generated from test cases.
 - [`--no-alias`](field-customization.md#no-alias)
 - [`--no-color`](utility-options.md#no-color)
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module)
+- [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
@@ -423,6 +424,7 @@ This documentation is auto-generated from test cases.
 - [`--url`](base-options.md#url)
 - [`--use-annotated`](typing-customization.md#use-annotated)
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings)
+- [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict)
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of)
 - [`--use-default`](model-customization.md#use-default)
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models)
@@ -6180,7 +6182,7 @@ where optional fields have defaults but cannot accept `None` values.
     
     
     class Id(BaseModel):
-        __root__: int
+        __root__: int = 1
     
     
     class Description(BaseModel):
@@ -11678,7 +11680,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     class ProcessingStatusUnionTitle(BaseModel):
         __root__: (
             ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle
-        ) = Field(..., title='Processing Status Union Title')
+        ) = Field('COMPLETED', title='Processing Status Union Title')
     
     
     class ProcessingTaskTitle(BaseModel):
@@ -11712,6 +11714,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-custo
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
 | [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping.... |
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
+| [`--no-use-closed-typed-dict`](#no-use-closed-typed-dict) | Disable PEP 728 TypedDict closed/extra_items generation. |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |
 | [`--no-use-standard-collections`](#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for conta... |
 | [`--no-use-union-operator`](#no-use-union-operator) | Use Union[X, Y] / Optional[X] instead of X | Y union operato... |
@@ -11721,6 +11724,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/typing-custo
 | [`--type-mappings`](#type-mappings) | Override default type mappings for schema formats. |
 | [`--type-overrides`](#type-overrides) | Replace schema model types with custom Python types via JSON... |
 | [`--use-annotated`](#use-annotated) | Use typing.Annotated for Field() with constraints. |
+| [`--use-closed-typed-dict`](#use-closed-typed-dict) | Generate TypedDict with PEP 728 closed/extra_items (default:... |
 | [`--use-decimal-for-multiple-of`](#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint... |
 | [`--use-generic-container-types`](#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hin... |
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
@@ -13446,6 +13450,60 @@ defined enum members.
 
 ---
 
+## `--no-use-closed-typed-dict` {#no-use-closed-typed-dict}
+
+Disable PEP 728 TypedDict closed/extra_items generation.
+
+Use this option for compatibility with type checkers that don't yet support PEP 728
+(e.g., mypy). TypedDict will be generated without `closed=True` or `extra_items`.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --no-use-closed-typed-dict # (1)!
+    ```
+
+    1. :material-arrow-left: `--no-use-closed-typed-dict` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "title": "ClosedModel",
+      "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"}
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  typed_dict_closed.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import TypedDict
+    
+    from typing_extensions import NotRequired
+    
+    
+    class ClosedModel(TypedDict):
+        name: str
+        age: NotRequired[int]
+    ```
+
+---
+
 ## `--no-use-specialized-enum` {#no-use-specialized-enum}
 
 Disable specialized Enum classes for Python 3.11+ code generation.
@@ -14916,6 +14974,58 @@ syntax instead of default values. This also enables `--field-constraints`.
             optionalListOptionalField: list[String | None] | None = None
             typename__: Annotated[Literal['A'] | None, Field(alias='__typename')] = 'A'
         ```
+
+---
+
+## `--use-closed-typed-dict` {#use-closed-typed-dict}
+
+Generate TypedDict with PEP 728 closed/extra_items (default: enabled).
+
+When enabled (default), generates TypedDict with PEP 728 `closed=True` or `extra_items`
+parameters based on `additionalProperties` constraints in the schema.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --output-model-type typing.TypedDict --use-closed-typed-dict # (1)!
+    ```
+
+    1. :material-arrow-left: `--use-closed-typed-dict` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "type": "object",
+      "title": "ClosedModel",
+      "properties": {
+        "name": {"type": "string"},
+        "age": {"type": "integer"}
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  typed_dict_closed.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing_extensions import NotRequired, TypedDict
+    
+    
+    class ClosedModel(TypedDict, closed=True):
+        name: str
+        age: NotRequired[int]
+    ```
 
 ---
 
@@ -19128,7 +19238,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     
     class Zoom(BaseModel):
-        __root__: confloat(ge=0.0, le=25.0)
+        __root__: confloat(ge=0.0, le=25.0) = 0
     ```
 
 ---
@@ -23463,6 +23573,7 @@ datamodel-codegen [OPTIONS]
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
 | [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping. |
 | [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of Enum classes. |
+| [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) | Disable PEP 728 TypedDict closed/extra_items generation. |
 | [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code generation. |
 | [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) | Use typing.Dict/List instead of built-in dict/list for container types. |
 | [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) | Use Union[X, Y] / Optional[X] instead of X | Y union operator. |
@@ -23472,6 +23583,7 @@ datamodel-codegen [OPTIONS]
 | [`--type-mappings`](typing-customization.md#type-mappings) | Override default type mappings for schema formats. |
 | [`--type-overrides`](typing-customization.md#type-overrides) | Replace schema model types with custom Python types via JSON mapping. |
 | [`--use-annotated`](typing-customization.md#use-annotated) | Use typing.Annotated for Field() with constraints. |
+| [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) | Generate TypedDict with PEP 728 closed/extra_items (default: enabled). |
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
@@ -23712,6 +23824,7 @@ All options sorted alphabetically:
 - [`--no-alias`](field-customization.md#no-alias) - Disable Field alias generation for non-Python-safe property ...
 - [`--no-color`](utility-options.md#no-color) - Disable colorized output
 - [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) - Keep dots in schema names as underscores for flat output.
+- [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) - Disable PEP 728 TypedDict closed/extra_items generation.
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) - Use typing.Dict/List instead of built-in dict/list for conta...
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) - Use Union[X, Y] / Optional[X] instead of X | Y union operato...
@@ -23747,6 +23860,7 @@ All options sorted alphabetically:
 - [`--url`](base-options.md#url) - Fetch schema from URL with custom HTTP headers.
 - [`--use-annotated`](typing-customization.md#use-annotated) - Use typing.Annotated for Field() with constraints.
 - [`--use-attribute-docstrings`](field-customization.md#use-attribute-docstrings) - Generate field descriptions as attribute docstrings instead ...
+- [`--use-closed-typed-dict`](typing-customization.md#use-closed-typed-dict) - Generate TypedDict with PEP 728 closed/extra_items (default:...
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) - Generate Decimal types for fields with multipleOf constraint...
 - [`--use-default`](model-customization.md#use-default) - Use default values from schema in generated models.
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) - Generate default_factory for optional nested model fields.
@@ -24144,6 +24258,52 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 - `openapi: "3.1.x"` -> OpenAPI 3.1
 - No `openapi` field -> Fallback to OpenAPI 3.1
 
+<!-- BEGIN AUTO-GENERATED SUPPORTED FEATURES -->
+### Supported Features (from code)
+
+The following features are tracked in the codebase with their implementation status:
+
+#### JSON Schema Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `Null in type array` | 2020-12 | ✅ Supported | Allows `type: ['string', 'null']` syntax for nullable types |
+| `$defs` | 2019-09 | ✅ Supported | Uses `$defs` instead of `definitions` for schema definitions |
+| `prefixItems` | 2020-12 | ✅ Supported | Tuple validation using `prefixItems` keyword |
+| `Boolean schemas` | Draft 6 | ✅ Supported | Allows `true` and `false` as valid schemas |
+| `$id` | Draft 6 | ✅ Supported | Schema identifier field (`id` in Draft 4, `$id` in Draft 6+) |
+| `definitions/$defs` | Draft 4 | ✅ Supported | Key for reusable schema definitions |
+| `exclusiveMinimum/Maximum as number` | Draft 6 | ✅ Supported | Numeric `exclusiveMinimum`/`exclusiveMaximum` (boolean in Draft 4) |
+| `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
+| `const` | Draft 6 | ✅ Supported | Single constant value constraint |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
+| `contains` | Draft 6 | ❌ Not Supported | Array contains at least one matching item |
+| `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
+| `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
+| `contentMediaType/contentEncoding` | Draft 7 | ❌ Not Supported | Content type and encoding hints for strings |
+| `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
+| `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
+| `unevaluatedProperties` | 2019-09 | ❌ Not Supported | Additional properties not evaluated by subschemas |
+| `unevaluatedItems` | 2019-09 | ❌ Not Supported | Additional items not evaluated by subschemas |
+| `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
+| `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
+| `$dynamicRef/$dynamicAnchor` | 2020-12 | ❌ Not Supported | Dynamic reference resolution across schemas |
+
+#### OpenAPI-Specific Features
+
+| Feature | Introduced | Status | Description |
+|---------|------------|--------|-------------|
+| `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
+| `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
+| `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
+| `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
+| `xml` | OAS 3.0 | ❌ Not Supported | XML serialization metadata (name, namespace, prefix) |
+| `externalDocs` | OAS 3.0 | ❌ Not Supported | Reference to external documentation |
+| `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
+| `callbacks` | OAS 3.0 | ❌ Not Supported | Callback definitions for webhooks |
+| `securitySchemes` | OAS 3.0 | ❌ Not Supported | API security mechanism definitions |
+<!-- END AUTO-GENERATED SUPPORTED FEATURES -->
+
 ## Data Format Support
 
 ### Common Formats (JSON Schema + OpenAPI)
@@ -24192,7 +24352,7 @@ datamodel-code-generator detects the OpenAPI version from the `openapi` field:
 | `deprecated` | 2019-09 | ⚠️ Partial | Recognized but not enforced |
 | `examples` (array) | Draft 6 | ⚠️ Partial | Only first example used for Field default |
 | Recursive `$ref` | Draft 4+ | ⚠️ Partial | Supported with `ForwardRef`, may require manual adjustment |
-| `propertyNames` | Draft 6 | ❌ Not supported | Property name validation ignored |
+| `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
 | `dependentRequired` | 2019-09 | ❌ Not supported | Dependent requirements ignored |
 | `dependentSchemas` | 2019-09 | ❌ Not supported | Dependent schemas ignored |
 
@@ -28756,6 +28916,11 @@ pip install 'datamodel-code-generator[http]'
 ### 📝 Getting Generated Code as String
 
 When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
+
+!!! note
+    `GenerateConfig` is only available in Pydantic v2 environments.
+    For Pydantic v1, use `from datamodel_code_generator.config import GenerateConfig`
+    and call `update_forward_refs()` before use.
 
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType
