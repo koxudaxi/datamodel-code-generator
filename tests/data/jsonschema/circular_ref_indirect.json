@@ -1,0 +1,39 @@
+{
+  "$defs": {
+    "NodeA": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["x", "y"]
+        },
+        "c": {
+          "anyOf": [{"$ref": "#/$defs/NodeC"}]
+        },
+        "b": {
+          "anyOf": [{"type": "object", "$ref": "#/$defs/NodeB"}]
+        }
+      }
+    },
+    "NodeB": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "anyOf": [{"type": "object", "$ref": "#/$defs/NodeA"}]
+        }
+      }
+    },
+    "NodeC": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "root": {"$ref": "#/$defs/NodeA"}
+  }
+}

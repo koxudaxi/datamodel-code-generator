@@ -1,0 +1,29 @@
+{
+  "$defs": {
+    "Context": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "$ref": "#/$defs/Context"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "root": {
+      "$ref": "#/$defs/Context"
+    }
+  }
+}

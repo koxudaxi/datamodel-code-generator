@@ -1,0 +1,14 @@
+{
+  "$defs": {
+    "Node": {
+      "type": "object",
+      "properties": {
+        "child": {
+          "anyOf": [{"type": "object", "$ref": "#/$defs/Node"}]
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Node",
+  "type": "object"
+}

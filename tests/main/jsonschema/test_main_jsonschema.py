@@ -8144,3 +8144,36 @@ def test_main_allof_mro(output_file: Path) -> None:
             "--use-schema-description",
         ],
     )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_with_schema_keywords(output_file: Path) -> None:
+    """Test circular $ref with additional schema keywords does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_with_schema_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_indirect(output_file: Path) -> None:
+    """Test indirect circular $ref (A->B->A) does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_indirect.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_root_with_type(output_file: Path) -> None:
+    """Test circular $ref at root level with type does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_root_with_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
