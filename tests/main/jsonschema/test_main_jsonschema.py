@@ -7080,6 +7080,24 @@ def test_main_builtin_field_names_snake_case(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+def test_main_builtin_field_names_container_types(output_file: Path) -> None:
+    """Test builtin container names are renamed for set/frozenset/tuple/list/dict collisions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_container_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_container_types.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--use-unique-items-as-set",
+        ],
+    )
+
+
+@pytest.mark.benchmark
 def test_main_root_model_config_populate_by_name(output_file: Path) -> None:
     """Test that RootModel subclasses don't get populate_by_name config (issue #2483).
 
