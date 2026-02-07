@@ -298,6 +298,30 @@ class D(DataModel):
     """Test data model class D."""
 
 
+def _create_field_rename_parser(*, snake_case_field: bool = False) -> C:
+    """Create parser configured with pydantic-v2 models for field rename tests."""
+    from datamodel_code_generator.model.pydantic_v2 import BaseModel as BaseModelV2
+    from datamodel_code_generator.model.pydantic_v2 import DataModelField as DataModelFieldV2
+
+    return C(
+        data_model_type=BaseModelV2,
+        data_model_root_type=BaseModelV2,
+        data_model_field_type=DataModelFieldV2,
+        snake_case_field=snake_case_field,
+        source="",
+    )
+
+
+def _create_single_field_model(field: Any) -> Any:
+    """Create a minimal model containing a single field."""
+    from datamodel_code_generator.model.pydantic_v2 import BaseModel as BaseModelV2
+
+    return BaseModelV2(
+        reference=Reference(path="Model", original_name="Model", name="Model"),
+        fields=[field],
+    )
+
+
 @pytest.fixture
 def parser_fixture() -> C:
     """Create a test parser instance for unit tests."""
@@ -308,6 +332,73 @@ def parser_fixture() -> C:
         base_class="Base",
         source="",
     )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "data_type"),
+    [
+        ("float", DataType(type="float")),
+        ("list", DataType(is_list=True)),
+        ("dict", DataType(is_dict=True)),
+        ("set", DataType(is_set=True)),
+        ("frozenset", DataType(is_frozen_set=True)),
+        ("tuple", DataType(is_tuple=True)),
+    ],
+)
+def test_change_field_name_renames_builtin_collision(field_name: str, data_type: DataType) -> None:
+    """Builtin names that collide with generated type syntax should gain underscore suffix."""
+    from datamodel_code_generator.model.pydantic_v2 import DataModelField as DataModelFieldV2
+
+    parser = _create_field_rename_parser()
+    model = _create_single_field_model(DataModelFieldV2(name=field_name, data_type=data_type))
+
+    parser._Parser__change_field_name([model])
+
+    field = model.fields[0]
+    assert field.name == f"{field_name}_"
+    assert field.alias == field_name
+
+
+def test_change_field_name_preserves_existing_alias_on_builtin_collision() -> None:
+    """Builtin rename should keep pre-existing alias values untouched."""
+    from datamodel_code_generator.model.pydantic_v2 import DataModelField as DataModelFieldV2
+
+    parser = _create_field_rename_parser()
+    model = _create_single_field_model(DataModelFieldV2(name="float", alias="Float", data_type=DataType(type="float")))
+
+    parser._Parser__change_field_name([model])
+
+    field = model.fields[0]
+    assert field.name == "float_"
+    assert field.alias == "Float"
+
+
+def test_change_field_name_skips_builtin_without_type_collision() -> None:
+    """Builtin-like field names should not be renamed when type collision does not exist."""
+    from datamodel_code_generator.model.pydantic_v2 import DataModelField as DataModelFieldV2
+
+    parser = _create_field_rename_parser()
+    model = _create_single_field_model(DataModelFieldV2(name="type", data_type=DataType(type="str")))
+
+    parser._Parser__change_field_name([model])
+
+    field = model.fields[0]
+    assert field.name == "type"
+    assert field.alias is None
+
+
+def test_change_field_name_handles_snake_case_before_builtin_rename() -> None:
+    """snake_case normalization should happen before builtin collision rename."""
+    from datamodel_code_generator.model.pydantic_v2 import DataModelField as DataModelFieldV2
+
+    parser = _create_field_rename_parser(snake_case_field=True)
+    model = _create_single_field_model(DataModelFieldV2(name="Float", data_type=DataType(type="float")))
+
+    parser._Parser__change_field_name([model])
+
+    field = model.fields[0]
+    assert field.name == "float_"
+    assert field.alias == "Float"
 
 
 def test_additional_imports() -> None:
