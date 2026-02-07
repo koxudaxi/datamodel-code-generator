@@ -362,6 +362,29 @@ def iter_models_field_data_types(
                 yield model, field, data_type
 
 
+def _alias_base_class_imports(
+    model: DataModel,
+    aliased_imports: dict[tuple[str | None, str], Import],
+) -> None:
+    """Apply aliased imports to a model's base classes and their _additional_imports."""
+    for base_class in model.base_classes:
+        if not base_class.import_:
+            continue
+        key = (base_class.import_.from_, base_class.import_.import_)
+        if key not in aliased_imports:
+            continue
+        old_import = base_class.import_
+        aliased_import = aliased_imports[key]
+        base_class.type = aliased_import.alias  # type: ignore[assignment]
+        base_class.import_ = aliased_import
+        for i, additional_import in enumerate(model._additional_imports):  # pragma: no branch  # noqa: SLF001
+            if (
+                additional_import.from_ == old_import.from_ and additional_import.import_ == old_import.import_
+            ):  # pragma: no branch
+                model._additional_imports[i] = aliased_import  # noqa: SLF001
+                break
+
+
 ReferenceMapSet = dict[str, set[str]]
 SortedDataModels = dict[str, DataModel]
 
@@ -2388,21 +2411,31 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         models: list[DataModel],
         all_model_field_names: set[str],
     ) -> None:
-        for _, model_field, data_type in iter_models_field_data_types(models):
-            if (
-                data_type
-                and data_type.import_
-                and data_type.type in all_model_field_names
-                and data_type.type == model_field.name
-            ):
-                alias = data_type.type + "_aliased"
-                data_type.type = alias
-                data_type.import_ = Import(
-                    from_=data_type.import_.from_,
-                    import_=data_type.import_.import_,
-                    alias=alias,
-                    reference_path=data_type.import_.reference_path,
-                )
+        aliased_imports: dict[tuple[str | None, str], Import] = {}
+        for _, _model_field, data_type in iter_models_field_data_types(models):
+            if data_type and data_type.import_ and data_type.type in all_model_field_names:
+                key = (data_type.import_.from_, data_type.import_.import_)
+                if key not in aliased_imports:
+                    aliased_imports[key] = Import(
+                        from_=data_type.import_.from_,
+                        import_=data_type.import_.import_,
+                        alias=data_type.type + "_aliased",
+                        reference_path=data_type.import_.reference_path,
+                    )
+
+        if not aliased_imports:
+            return
+
+        for _, _model_field, data_type in iter_models_field_data_types(models):
+            if data_type and data_type.import_:
+                key = (data_type.import_.from_, data_type.import_.import_)
+                if key in aliased_imports:
+                    aliased_import = aliased_imports[key]
+                    data_type.type = aliased_import.alias  # type: ignore[assignment]
+                    data_type.import_ = aliased_import
+
+        for model in models:
+            _alias_base_class_imports(model, aliased_imports)
 
     def __apply_generic_base_class(  # noqa: PLR0912, PLR0914, PLR0915
         self,

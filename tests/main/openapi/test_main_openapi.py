@@ -3712,6 +3712,30 @@ def test_main_openapi_shadowed_imports(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_shadowed_imports_base_and_fields(output_file: Path) -> None:
+    """Test that aliased imports are applied to all fields, not just matching field names."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "shadowed_imports_base_and_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="shadowed_imports_base_and_fields.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_shadowed_imports_base_and_fields_custom_base(output_file: Path) -> None:
+    """Test that aliased imports are applied to custom base classes."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "shadowed_imports_base_and_fields.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="shadowed_imports_base_and_fields_custom_base.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--base-class", "mymodule.node.Node"],
+    )
+
+
 def test_main_openapi_extra_fields_forbid(output_file: Path) -> None:
     """Test OpenAPI generation with extra fields forbidden."""
     run_main_and_assert(
