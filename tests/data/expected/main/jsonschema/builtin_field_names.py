@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Model(BaseModel):
-    int: int | None = None
-    float: float | None = None
-    bool: bool | None = None
-    str: str | None = None
+    int_: int | None = Field(None, alias='int')
+    float_: float | None = Field(None, alias='float')
+    bool_: bool | None = Field(None, alias='bool')
+    str_: str | None = Field(None, alias='str')

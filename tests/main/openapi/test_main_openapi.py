@@ -4736,6 +4736,27 @@ def test_main_enum_builtin_conflict(output_file: Path) -> None:
         )
 
 
+@SKIP_PYDANTIC_V1
+@pytest.mark.parametrize(
+    ("extra_args", "expected_file"),
+    [
+        ([], "builtin_type_field_names.py"),
+        (["--no-use-union-operator"], "builtin_type_field_names_no_union_operator.py"),
+    ],
+)
+def test_main_builtin_type_field_names(output_file: Path, extra_args: list[str], expected_file: str) -> None:
+    """Test field names that conflict with Python builtin types get underscore suffix."""
+    with freeze_time(TIMESTAMP):
+        run_main_and_assert(
+            input_path=OPEN_API_DATA_PATH / "builtin_type_field_names.yaml",
+            output_path=output_file,
+            input_file_type="openapi",
+            assert_func=assert_file_content,
+            expected_file=expected_file,
+            extra_args=["--output-model-type", "pydantic_v2.BaseModel", *extra_args],
+        )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

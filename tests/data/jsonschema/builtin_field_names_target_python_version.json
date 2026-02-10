@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "ExceptionGroup": {
+      "type": "string",
+      "x-python-type": "ExceptionGroup"
+    },
+    "BaseExceptionGroup": {
+      "type": "string",
+      "x-python-type": "BaseExceptionGroup"
+    },
+    "PythonFinalizationError": {
+      "type": "string",
+      "x-python-type": "PythonFinalizationError"
+    }
+  }
+}
