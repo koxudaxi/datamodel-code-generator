@@ -1576,7 +1576,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         root_len = len(root_key)
         if root_len < len(path):
             suffix_parts = path[root_len:]
-            # Strip leading '#' from fragment markers (e.g. '#/$defs' -> '$defs')
             first = suffix_parts[0]
             if first.startswith("#"):
                 suffix_parts = [first[1:].lstrip("/"), *suffix_parts[1:]]
@@ -1584,7 +1583,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             ref_path = "#"
         if obj.recursiveAnchor:
-            self._recursive_anchor_index.setdefault(root_key, []).append(ref_path)
+            anchors = self._recursive_anchor_index.setdefault(root_key, [])
+            if ref_path not in anchors:
+                anchors.append(ref_path)
         if obj.dynamicAnchor:
             self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(obj.dynamicAnchor, ref_path)
 
@@ -1602,7 +1603,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         anchors = self._recursive_anchor_index.get(root_key, [])
         if not anchors:
             return "#"
-        # Build root-relative path for comparison
         root_len = len(root_key)
         if root_len < len(path):
             suffix_parts = path[root_len:]
@@ -1612,8 +1612,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             current_ref = "#/" + "/".join(suffix_parts)
         else:
             current_ref = "#"  # pragma: no cover
-        # Find the best matching anchor: path prefix with longest match
-        # best defaults to "#" (root anchor fallback)
         best = "#"
         best_len = 0
         for anchor_ref in anchors:
@@ -3022,10 +3020,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 item,
                 root_type_path,
             )
-        # Resolve $recursiveRef to $ref (JSON Schema 2019-09)
         if item.recursiveRef and not item.ref:
             return self.get_ref_data_type(self._resolve_recursive_ref(item, path) or "#")
-        # Resolve $dynamicRef to $ref (JSON Schema 2020-12)
         if item.dynamicRef and not item.ref:
             return self.get_ref_data_type(self._resolve_dynamic_ref(item) or item.dynamicRef)
         if item.is_ref_with_nullable_only and item.ref:
@@ -4151,11 +4147,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 # parse $id before parsing $ref
                 root_obj = self._validate_schema_object(raw, path_parts or ["#"])
                 self.parse_id(root_obj, path_parts)
-                # Build $recursiveAnchor index for root object
                 if root_obj.recursiveAnchor:
                     root_key = tuple(path_parts)
                     self._recursive_anchor_index.setdefault(root_key, []).append("#")
-                # Build $dynamicAnchor index for root object
                 if root_obj.dynamicAnchor:
                     root_key = tuple(path_parts)
                     self._dynamic_anchor_index.setdefault(root_key, {}).setdefault(root_obj.dynamicAnchor, "#")
@@ -4173,12 +4167,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     definition_path = [*path_parts, schema_path, key]
                     obj = self._validate_schema_object(model, definition_path)
                     self.parse_id(obj, definition_path)
-                    # Build $recursiveAnchor index for definitions
                     if obj.recursiveAnchor:
                         root_key = tuple(path_parts)
                         ref_path = "#/" + schema_path.lstrip("#/") + "/" + key
                         self._recursive_anchor_index.setdefault(root_key, []).append(ref_path)
-                    # Build $dynamicAnchor index for definitions
                     if obj.dynamicAnchor:
                         root_key = tuple(path_parts)
                         ref_path = "#/" + schema_path.lstrip("#/") + "/" + key
