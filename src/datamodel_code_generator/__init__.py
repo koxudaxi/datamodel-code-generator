@@ -739,7 +739,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             else (LiteralType.All if config.output_model_type == DataModelType.TypingTypedDict else None)
         ),
         "set_default_enum_member": (
-            True if config.output_model_type in (DataModelType.DataclassesDataclass, DataModelType.PydanticBaseModel) else config.set_default_enum_member
+            True if config.output_model_type in (DataModelType.DataclassesDataclass, DataModelType.PydanticBaseModel, DataModelType.PydanticV2BaseModel) else config.set_default_enum_member
         ),
     }
 
