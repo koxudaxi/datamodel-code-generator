@@ -24345,8 +24345,6 @@ The following features are tracked in the codebase with their implementation sta
 | Feature | Introduced | Status | Notes |
 |---------|------------|--------|-------|
 | `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
-| `$recursiveRef` / `$recursiveAnchor` | 2019-09 | ✅ Supported | Statically resolved to self-reference |
-| `$dynamicRef` / `$dynamicAnchor` | 2020-12 | ✅ Supported | Statically resolved to self-reference |
 | `unevaluatedProperties` | 2019-09 | ❌ Not supported | Use `additionalProperties` instead |
 | `unevaluatedItems` | 2019-09 | ❌ Not supported | Use `additionalItems` instead |
 | `contentMediaType` | Draft 7 | ❌ Not supported | Content type hints ignored |
