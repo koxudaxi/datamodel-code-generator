@@ -7,6 +7,7 @@ code generation.
 
 from __future__ import annotations
 
+import builtins
 import operator
 import os.path
 import re
@@ -82,7 +83,7 @@ from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
-from datamodel_code_generator.types import DataType, DataTypeManager
+from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
 
 if TYPE_CHECKING:
@@ -110,6 +111,48 @@ ModelName: TypeAlias = str
 ModelNames: TypeAlias = set[ModelName]
 ModelDeps: TypeAlias = dict[ModelName, set[ModelName]]
 OrderIndex: TypeAlias = dict[ModelName, int]
+
+_BUILTIN_NAMES: frozenset[str] = frozenset(name for name in builtins.__dict__ if not name.startswith("_"))
+_BUILTIN_NAMES_INTRODUCED_IN: dict[PythonVersion, frozenset[str]] = {
+    PythonVersion.PY_311: frozenset({"BaseExceptionGroup", "ExceptionGroup"}),
+    PythonVersion.PY_313: frozenset({"PythonFinalizationError"}),
+}
+_BUILTIN_CONTAINER_COLLISION_FLAGS: dict[str, str] = {
+    "list": "is_list",
+    "dict": "is_dict",
+    "set": "is_set",
+    "frozenset": "is_frozen_set",
+    "tuple": "is_tuple",
+}
+
+
+def _python_version_key(python_version: PythonVersion) -> tuple[int, int]:
+    major, minor = python_version.value.split(".")
+    return int(major), int(minor)
+
+
+def _get_builtin_names_for_target(target_python_version: PythonVersion) -> frozenset[str]:
+    builtin_names = set(_BUILTIN_NAMES)
+    target_key = _python_version_key(target_python_version)
+
+    for introduced_version, names in _BUILTIN_NAMES_INTRODUCED_IN.items():
+        if target_key >= _python_version_key(introduced_version):
+            builtin_names.update(names)
+        else:
+            builtin_names.difference_update(names)
+
+    return frozenset(builtin_names)
+
+
+def _is_builtin_type_collision(current_name: str, data_type: DataType) -> bool:
+    if data_type.type == current_name and not data_type.import_:
+        return True
+
+    if flag := _BUILTIN_CONTAINER_COLLISION_FLAGS.get(current_name):
+        return bool(getattr(data_type, flag))
+
+    return False
+
 
 ComponentId: TypeAlias = int
 Components: TypeAlias = list[list[ModelName]]
@@ -902,6 +945,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.base_class: str | None = config.base_class
         self.base_class_map: dict[str, str | list[str]] | None = config.base_class_map
         self.target_python_version: PythonVersion = config.target_python_version
+        self.builtin_names: frozenset[str] = _get_builtin_names_for_target(self.target_python_version)
         self.results: list[DataModel] = []
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
         self.validation: bool = config.validation
@@ -1476,6 +1520,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 )
                 discriminator["propertyName"] = field_name
                 mapping = discriminator.get("mapping", {})
+                # Any type cannot be a discriminated union variant (Pydantic v2 rejects it)
+                has_any_variant = any(
+                    dt.type == ANY or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
+                    for dt in field.data_type.data_types
+                )
+                if has_any_variant:  # pragma: no cover
+                    field.extras.pop("discriminator", None)
+                    field.data_type.discriminator = None
+                    continue
                 for data_type in field.data_type.data_types:
                     if not data_type.reference:  # pragma: no cover
                         continue
@@ -1995,11 +2048,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             )
                         discriminator = root_type_field.extras.get("discriminator")
                         if discriminator and isinstance(root_type_field, pydantic_model.DataModelField):
-                            prop_name = (
-                                discriminator.get("propertyName") if isinstance(discriminator, dict) else discriminator
+                            has_any_variant = any(
+                                dt.type == ANY
+                                or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
+                                for dt in copied_data_type.data_types
                             )
-                            if self._is_pydantic_v2_model():
-                                copied_data_type.discriminator = prop_name
+                            if not has_any_variant:  # pragma: no branch
+                                prop_name = (
+                                    discriminator.get("propertyName")
+                                    if isinstance(discriminator, dict)
+                                    else discriminator
+                                )
+                                if self._is_pydantic_v2_model():
+                                    copied_data_type.discriminator = prop_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
@@ -2202,6 +2263,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     if filed_name != new_filed_name:
                         field.alias = filed_name
                         field.name = new_filed_name
+
+                if (current_name := field.name) in self.builtin_names and any(
+                    _is_builtin_type_collision(current_name, dt) for dt in field.data_type.all_data_types
+                ):
+                    if field.alias is None:
+                        field.alias = filed_name
+                    field.name = f"{current_name}_"
 
     def __set_one_literal_on_default(self, models: list[DataModel]) -> None:
         if not self.use_one_literal_as_default:

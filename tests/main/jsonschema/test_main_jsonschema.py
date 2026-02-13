@@ -7075,6 +7075,88 @@ def test_main_builtin_field_names(output_file: Path) -> None:
 
 
 @pytest.mark.benchmark
+def test_main_builtin_field_names_snake_case(output_file: Path) -> None:
+    """Test builtin field rename keeps original alias after snake_case normalization."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_snake_case.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_snake_case.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_builtin_field_names_container_types(output_file: Path) -> None:
+    """Test builtin container names are renamed for set/frozenset/tuple/list/dict collisions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_container_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_container_types.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--use-unique-items-as-set",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_builtin_field_names_container_types_no_use_standard_collections(output_file: Path) -> None:
+    """Test builtin container renaming when container types are imported from typing."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_container_types.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="builtin_field_names_container_types_no_use_standard_collections.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--use-unique-items-as-set",
+            "--no-use-standard-collections",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+@pytest.mark.parametrize(
+    ("target_python_version", "expected_file"),
+    [
+        ("3.10", "builtin_field_names_target_python_version_310.py"),
+        pytest.param("3.13", "builtin_field_names_target_python_version_313.py", marks=BLACK_PY313_SKIP),
+    ],
+)
+def test_main_builtin_field_names_target_python_version(
+    output_file: Path, target_python_version: str, expected_file: str
+) -> None:
+    """Test builtin field renaming follows target Python version instead of runtime builtins."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "builtin_field_names_target_python_version.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        skip_code_validation=True,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            target_python_version,
+        ],
+    )
+
+
+@pytest.mark.benchmark
 def test_main_root_model_config_populate_by_name(output_file: Path) -> None:
     """Test that RootModel subclasses don't get populate_by_name config (issue #2483).
 
@@ -7586,6 +7668,22 @@ def test_x_python_type_compatible_set(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         extra_args=["--output-model-type", "typing.TypedDict"],
+    )
+
+
+def test_x_python_type_builtin_dict_collision(output_file: Path) -> None:
+    """Test x-python-type Dict keeps builtin dict collision handling with typing containers."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_type_builtin_dict_collision.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
+            "--no-use-standard-collections",
+        ],
     )
 
 
@@ -8176,4 +8274,124 @@ def test_main_circular_ref_root_with_type(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_recursive_ref(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with $recursiveAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_dynamic_ref(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with $dynamicAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_dynamic_ref_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_recursive_ref_no_anchor(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef without $recursiveAnchor."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_no_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_no_anchor.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_no_anchor_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef without $recursiveAnchor for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_no_anchor.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_no_anchor_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_recursive_ref_in_defs(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with anchor in $defs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_in_defs.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_recursive_ref_in_defs_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2019-09 $recursiveRef with anchor in $defs for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_ref_in_defs_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_dynamic_ref_in_defs(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_in_defs.py",
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_jsonschema_dynamic_ref_in_defs_pydantic_v2(output_file: Path) -> None:
+    """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dynamic_ref_in_defs.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dynamic_ref_in_defs_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
