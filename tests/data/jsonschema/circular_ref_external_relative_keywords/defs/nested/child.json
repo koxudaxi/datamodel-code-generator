@@ -1,0 +1,21 @@
+{
+  "$defs": {
+    "Child": {
+      "type": "object",
+      "x-bad-ref": {
+        "$ref": "#missing"
+      },
+      "properties": {
+        "parent": {
+          "anyOf": [
+            {
+              "type": "object",
+              "$ref": "../context.json#/$defs/Context"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Child"
+}

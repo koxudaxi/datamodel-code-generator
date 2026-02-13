@@ -1684,19 +1684,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Check if the schema at ref_to_check contains a reference back to target."""
         visited.add(ref_to_check)
         file_part, fragment = ([*ref_to_check.split("#", 1), ""])[:2]
-        raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
-        raw_obj: Any = raw_doc
-        if fragment:
-            pointer = [p for p in fragment.split("/") if p]
-            raw_obj = get_model_by_path(raw_doc, pointer)
-        return self._walk_for_ref(raw_obj, target, visited)
+        base_path = Path(file_part).parent if file_part else self.model_resolver.current_base_path
+        root_path = file_part.split("/") if file_part else self.model_resolver.current_root
+        base_url = file_part or self.model_resolver.base_url
+        with (
+            self.model_resolver.current_base_path_context(base_path),
+            self.model_resolver.base_url_context(base_url),
+            self.model_resolver.current_root_context(root_path),
+        ):
+            raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
+            raw_obj: Any = raw_doc
+            if fragment:
+                pointer = [p for p in fragment.split("/") if p]
+                raw_obj = get_model_by_path(raw_doc, pointer)
+            return self._walk_for_ref(raw_obj, target, visited)
 
     def _walk_for_ref(self, data: dict[str, Any] | list[Any], target: str, visited: set[str]) -> bool:
         """Recursively walk raw dict/list data looking for a $ref that resolves to target."""
         if isinstance(data, dict):
             ref_value = data.get("$ref")
             if isinstance(ref_value, str):
-                resolved = self.model_resolver.resolve_ref(ref_value)
+                try:
+                    resolved = self.model_resolver.resolve_ref(ref_value)
+                except Exception:  # noqa: BLE001
+                    resolved = ref_value
                 if resolved == target:
                     return True
                 if resolved not in visited and self._has_ref_cycle(resolved, target, visited):

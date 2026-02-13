@@ -7638,6 +7638,17 @@ def test_main_jsonschema_ref_to_json_list_file() -> None:
         )
 
 
+def test_main_jsonschema_x_python_import_unused(output_file: Path) -> None:
+    """Test x-python-import entries in $defs are handled without model generation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_import_unused.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="x_python_import_unused.py",
+    )
+
+
 def test_x_python_type_callable(output_file: Path) -> None:
     """Test x-python-type with Callable preserves the Callable type."""
     run_main_and_assert(
@@ -8271,6 +8282,17 @@ def test_main_circular_ref_root_with_type(output_file: Path) -> None:
     """Test circular $ref at root level with type does not cause RecursionError."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_root_with_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None:
+    """Test circular external refs with relative paths and schema keywords."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords" / "root.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,

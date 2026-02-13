@@ -1,0 +1,18 @@
+{
+  "$defs": {
+    "Context": {
+      "type": "object",
+      "properties": {
+        "child": {
+          "anyOf": [
+            {
+              "type": "object",
+              "$ref": "nested/child.json#/$defs/Child"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/Context"
+}
