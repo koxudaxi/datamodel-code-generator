@@ -4052,6 +4052,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Mark x-python-import reference as loaded to skip model generation."""
         self.model_resolver.add(path, name, class_name=True, loaded=True)
 
+    def _is_named_schema_definition_path(self, path: list[str]) -> bool:
+        """Check if path points to a named schema entry under definitions/$defs."""
+        current_root = list(self.model_resolver.current_root)
+        expected_path_length = len(current_root) + 2
+        if len(path) != expected_path_length:
+            return False
+
+        schema_container_path = path[len(current_root)]
+        return path[: len(current_root)] == current_root and any(
+            schema_container_path == schema_path for schema_path, _ in self.schema_paths
+        )
+
     def parse_obj(  # noqa: PLR0912
         self,
         name: str,
@@ -4062,7 +4074,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             obj = self._merge_ref_with_schema(obj)
             if obj.ref:
-                self.parse_root_type(name, obj, path)
+                if self._is_named_schema_definition_path(path):
+                    self.parse_root_type(name, obj, path)
                 self.parse_ref(obj, path)
                 return
 
