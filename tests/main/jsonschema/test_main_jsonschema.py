@@ -8299,6 +8299,17 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
     )
 
 
+@pytest.mark.benchmark
+def test_main_circular_ref_ref_with_schema_keywords(output_file: Path) -> None:
+    """Test named schema with circular $ref and schema keywords still generates alias model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_ref_with_schema_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
 def test_main_jsonschema_recursive_ref(output_file: Path) -> None:
     """Test JSON Schema 2019-09 $recursiveRef with $recursiveAnchor."""
     run_main_and_assert(

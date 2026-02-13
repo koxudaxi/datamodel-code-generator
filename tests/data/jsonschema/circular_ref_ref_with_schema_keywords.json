@@ -1,0 +1,22 @@
+{
+  "$defs": {
+    "Node": {
+      "$ref": "#/$defs/BaseNode",
+      "type": "object"
+    },
+    "BaseNode": {
+      "type": "object",
+      "properties": {
+        "next": {
+          "$ref": "#/$defs/Node"
+        }
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "root": {
+      "$ref": "#/$defs/Node"
+    }
+  }
+}

@@ -4062,6 +4062,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             obj = self._merge_ref_with_schema(obj)
             if obj.ref:
+                self.parse_root_type(name, obj, path)
                 self.parse_ref(obj, path)
                 return
 
