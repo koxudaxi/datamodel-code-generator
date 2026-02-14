@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ConstrainedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "DictModel": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/ConstrainedString",
+        "const": "fixed"
+      }
+    }
+  },
+  "type": "object",
+  "properties": {
+    "data": {
+      "$ref": "#/definitions/DictModel"
+    }
+  }
+}
