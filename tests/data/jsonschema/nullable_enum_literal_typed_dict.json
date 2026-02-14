@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Record",
+  "type": "object",
+  "definitions": {
+    "StatusEnum": {
+      "type": ["string", "null"],
+      "enum": ["active", "inactive", null]
+    }
+  },
+  "properties": {
+    "required_inline": {
+      "type": ["string", "null"],
+      "enum": ["active", "inactive", null]
+    },
+    "required_ref": {
+      "$ref": "#/definitions/StatusEnum"
+    },
+    "optional_inline": {
+      "type": ["string", "null"],
+      "enum": ["pending", "completed", null]
+    }
+  },
+  "required": ["required_inline", "required_ref"]
+}
