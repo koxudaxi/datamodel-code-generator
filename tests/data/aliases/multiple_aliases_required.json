@@ -1,0 +1,4 @@
+{
+  "name": ["full_name", "customer_name"],
+  "email": ["email_address", "mail"]
+}
