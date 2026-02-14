@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReflectionSetData",
+  "type": "object",
+  "properties": {
+    "stats": {
+      "allOf": [
+        {
+          "$ref": "../datatypes/FooStats.json"
+        }
+      ]
+    },
+    "stats_list": {
+      "type": "array",
+      "items": {
+        "$ref": "../datatypes/FooStats.json"
+      }
+    },
+    "stats_collection": {
+      "$ref": "../datatypes/BarStatsList.json"
+    }
+  }
+}
