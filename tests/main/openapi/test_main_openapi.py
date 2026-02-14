@@ -5033,3 +5033,23 @@ def test_main_openapi_allof_array_ref_no_duplicate_model(output_file: Path) -> N
             "--use-schema-description",
         ],
     )
+
+
+def test_ref_merge_parameters(output_file: Path) -> None:
+    """Test $ref + const merge in OpenAPI parse_all_parameters path."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "ref_merge_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-frozen-field",
+            "--use-annotated",
+            "--openapi-scopes",
+            "paths",
+            "schemas",
+            "parameters",
+        ],
+    )

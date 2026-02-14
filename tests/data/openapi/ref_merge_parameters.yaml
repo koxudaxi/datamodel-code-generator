@@ -1,0 +1,23 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Test
+paths:
+  /items:
+    get:
+      operationId: getItems
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/StatusString"
+            const: "active"
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    StatusString:
+      type: string
+      readOnly: true

@@ -2745,6 +2745,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
                 continue
 
+            if field.has_ref_with_schema_keywords and not field.is_ref_with_nullable_only:
+                field = self._merge_ref_with_schema(field)  # noqa: PLW2901
+
             field_type = self.parse_item(modular_name, field, [*path, field_name])
 
             effective_default, effective_has_default = self.model_resolver.resolve_default_value(
@@ -2814,10 +2817,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if fields or not isinstance(obj.additionalProperties, JsonSchemaObject):
             data_model_type_class = self.data_model_type
         else:
+            additional_props = obj.additionalProperties
+            if additional_props.has_ref_with_schema_keywords and not additional_props.is_ref_with_nullable_only:
+                additional_props = self._merge_ref_with_schema(additional_props)
             fields.append(
                 self.get_object_field(
                     field_name=None,
-                    field=obj.additionalProperties,
+                    field=additional_props,
                     required=True,
                     original_field_name=None,
                     field_type=self.data_type(
@@ -2825,7 +2831,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             self.parse_item(
                                 # TODO: Improve naming for nested ClassName
                                 name,
-                                obj.additionalProperties,
+                                additional_props,
                                 [*path, "additionalProperties"],
                             )
                         ],

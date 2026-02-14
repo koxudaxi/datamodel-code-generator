@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from . import URI, ContactPoint
 from . import id as id_1
@@ -20,7 +20,7 @@ class Type(Enum):
 
 class Organization(BaseModel):
     id: id_1.Schema | None = None
-    type: Type
+    type: Type = Field(..., description='Type of this object.', title='type')
     name: name_1.Schema
     contactPoint: ContactPoint.Schema | None = None
     sameAs: sameAs_1.Schema | None = None
