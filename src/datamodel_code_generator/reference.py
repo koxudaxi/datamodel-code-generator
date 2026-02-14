@@ -36,6 +36,7 @@ from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
 from datamodel_code_generator.enums import ClassNameAffixScope
+from datamodel_code_generator.format import PythonVersion
 from datamodel_code_generator.util import ConfigDict, camel_to_snake, is_pydantic_v2, model_validator
 
 if TYPE_CHECKING:
@@ -221,6 +222,27 @@ def context_variable(setter: Callable[[T], None], current_value: T, new_value: T
         setter(previous_value)
 
 
+_BUILTIN_TYPE_ATTRIBUTES: frozenset[str] = frozenset(
+    name for cls in (str, int, float, bytes) for name in dir(cls) if not name.startswith("_")
+)
+
+_BUILTIN_TYPE_ATTRIBUTES_INTRODUCED_IN: dict[PythonVersion, frozenset[str]] = {
+    PythonVersion.PY_314: frozenset({"from_number"}),
+}
+
+
+def _get_builtin_type_attributes_for_target(target: PythonVersion) -> frozenset[str]:
+    """Get builtin type attributes adjusted for the target Python version."""
+    attrs = set(_BUILTIN_TYPE_ATTRIBUTES)
+    target_key = target.version_key
+    for ver, names in _BUILTIN_TYPE_ATTRIBUTES_INTRODUCED_IN.items():
+        if target_key >= ver.version_key:
+            attrs.update(names)
+        else:
+            attrs.difference_update(names)
+    return frozenset(attrs)
+
+
 class FieldNameResolver:
     """Converts schema field names to valid Python identifiers."""
 
@@ -234,6 +256,8 @@ class FieldNameResolver:
         remove_special_field_name_prefix: bool = False,  # noqa: FBT001, FBT002
         capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
         no_alias: bool = False,  # noqa: FBT001, FBT002
+        use_subclass_enum: bool = False,  # noqa: FBT001, FBT002
+        target_python_version: PythonVersion | None = None,
     ) -> None:
         """Initialize field name resolver with transformation options."""
         self.aliases: Mapping[str, str | list[str]] = {} if aliases is None else {**aliases}
@@ -246,9 +270,10 @@ class FieldNameResolver:
         self.remove_special_field_name_prefix: bool = remove_special_field_name_prefix
         self.capitalise_enum_members: bool = capitalise_enum_members
         self.no_alias = no_alias
+        self.use_subclass_enum: bool = use_subclass_enum
+        self.target_python_version = target_python_version
 
-    @classmethod
-    def _validate_field_name(cls, field_name: str) -> bool:  # noqa: ARG003
+    def _validate_field_name(self, field_name: str) -> bool:  # noqa: ARG002, PLR6301
         """Check if a field name is valid. Subclasses may override."""
         return True
 
@@ -283,7 +308,8 @@ class FieldNameResolver:
         if self.capitalise_enum_members or (self.snake_case_field and not ignore_snake_case_field):
             name = camel_to_snake(name)
         count = 1
-        if iskeyword(name) or not self._validate_field_name(name):
+        validated_name = name.upper() if self.capitalise_enum_members else name
+        if iskeyword(validated_name) or not self._validate_field_name(validated_name):
             name += "_"
         if upper_camel:
             new_name = snake_to_upper_camel(name)
@@ -357,100 +383,28 @@ class FieldNameResolver:
 class PydanticFieldNameResolver(FieldNameResolver):
     """Field name resolver that avoids Pydantic reserved names."""
 
-    @classmethod
-    def _validate_field_name(cls, field_name: str) -> bool:
+    def _validate_field_name(self, field_name: str) -> bool:  # noqa: PLR6301
         """Check field name doesn't conflict with BaseModel attributes."""
         # TODO: Support Pydantic V2
         return not hasattr(BaseModel, field_name)
 
 
 class EnumFieldNameResolver(FieldNameResolver):
-    """Field name resolver for enum members with special handling for reserved names.
+    """Field name resolver for enum members with special handling for reserved names."""
 
-    When using --use-subclass-enum, enums inherit from types like str or int.
-    Member names that conflict with methods of these types cause type checker errors.
-    This class detects and handles such conflicts by adding underscore suffixes.
+    def __init__(self, **kwargs: Any) -> None:
+        """Initialize with version-aware builtin type attributes."""
+        super().__init__(**kwargs)
+        target = self.target_python_version
+        self._builtin_type_attributes = (
+            _get_builtin_type_attributes_for_target(target) if target is not None else _BUILTIN_TYPE_ATTRIBUTES
+        )
 
-    The _BUILTIN_TYPE_ATTRIBUTES set is intentionally static (not using hasattr)
-    to avoid runtime Python version differences affecting code generation.
-    Based on Python 3.8-3.14 method names (union of all versions for safety).
-    Note: 'mro' is handled explicitly in get_valid_name for backward compatibility.
-    """
-
-    _BUILTIN_TYPE_ATTRIBUTES: ClassVar[frozenset[str]] = frozenset({
-        "as_integer_ratio",
-        "bit_count",
-        "bit_length",
-        "capitalize",
-        "casefold",
-        "center",
-        "conjugate",
-        "count",
-        "decode",
-        "denominator",
-        "encode",
-        "endswith",
-        "expandtabs",
-        "find",
-        "format",
-        "format_map",
-        "from_bytes",
-        "from_number",
-        "fromhex",
-        "hex",
-        "imag",
-        "index",
-        "isalnum",
-        "isalpha",
-        "isascii",
-        "isdecimal",
-        "isdigit",
-        "isidentifier",
-        "islower",
-        "isnumeric",
-        "isprintable",
-        "isspace",
-        "istitle",
-        "isupper",
-        "is_integer",
-        "join",
-        "ljust",
-        "lower",
-        "lstrip",
-        "maketrans",
-        "numerator",
-        "partition",
-        "real",
-        "removeprefix",
-        "removesuffix",
-        "replace",
-        "rfind",
-        "rindex",
-        "rjust",
-        "rpartition",
-        "rsplit",
-        "rstrip",
-        "split",
-        "splitlines",
-        "startswith",
-        "strip",
-        "swapcase",
-        "title",
-        "to_bytes",
-        "translate",
-        "upper",
-        "zfill",
-    })
-
-    @classmethod
-    def _validate_field_name(cls, field_name: str) -> bool:
-        """Check field name doesn't conflict with subclass enum base type attributes.
-
-        When using --use-subclass-enum, enums inherit from types like str or int.
-        Member names that conflict with methods of these types (e.g., 'count' for str)
-        cause type checker errors. This method detects such conflicts.
-        """
-        return field_name not in cls._BUILTIN_TYPE_ATTRIBUTES
+    def _validate_field_name(self, field_name: str) -> bool:
+        """Check field name doesn't conflict with subclass enum base type attributes."""
+        if not self.use_subclass_enum:
+            return True
+        return field_name not in self._builtin_type_attributes
 
     def get_valid_name(
         self,
@@ -538,6 +492,8 @@ class ModelResolver:  # noqa: PLR0904
         remove_special_field_name_prefix: bool = False,  # noqa: FBT001, FBT002
         capitalise_enum_members: bool = False,  # noqa: FBT001, FBT002
         no_alias: bool = False,  # noqa: FBT001, FBT002
+        use_subclass_enum: bool = False,  # noqa: FBT001, FBT002
+        target_python_version: PythonVersion | None = None,
         remove_suffix_number: bool = False,  # noqa: FBT001, FBT002
         parent_scoped_naming: bool = False,  # noqa: FBT001, FBT002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -575,6 +531,8 @@ class ModelResolver:  # noqa: PLR0904
                 remove_special_field_name_prefix=remove_special_field_name_prefix,
                 capitalise_enum_members=capitalise_enum_members if k == ModelType.ENUM else False,
                 no_alias=no_alias,
+                use_subclass_enum=use_subclass_enum if k == ModelType.ENUM else False,
+                target_python_version=target_python_version if k == ModelType.ENUM else None,
             )
             for k, v in merged_field_name_resolver_classes.items()
         }

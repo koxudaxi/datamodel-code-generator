@@ -126,17 +126,12 @@ _BUILTIN_CONTAINER_COLLISION_FLAGS: dict[str, str] = {
 }
 
 
-def _python_version_key(python_version: PythonVersion) -> tuple[int, int]:
-    major, minor = python_version.value.split(".")
-    return int(major), int(minor)
-
-
 def _get_builtin_names_for_target(target_python_version: PythonVersion) -> frozenset[str]:
     builtin_names = set(_BUILTIN_NAMES)
-    target_key = _python_version_key(target_python_version)
+    target_key = target_python_version.version_key
 
     for introduced_version, names in _BUILTIN_NAMES_INTRODUCED_IN.items():
-        if target_key >= _python_version_key(introduced_version):
+        if target_key >= introduced_version.version_key:
             builtin_names.update(names)
         else:
             builtin_names.difference_update(names)
@@ -1061,6 +1056,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             remove_special_field_name_prefix=config.remove_special_field_name_prefix,
             capitalise_enum_members=config.capitalise_enum_members,
             no_alias=config.no_alias,
+            use_subclass_enum=config.use_subclass_enum,
+            target_python_version=config.target_python_version,
             parent_scoped_naming=config.parent_scoped_naming,
             treat_dot_as_module=config.treat_dot_as_module,
             naming_strategy=config.naming_strategy,
