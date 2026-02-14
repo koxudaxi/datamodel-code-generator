@@ -586,6 +586,70 @@ class EnumSystems(str, Enum):
     )
 
 
+def test_capitalise_enum_members_builtin_conflict(output_file: Path) -> None:
+    """Test capitalise-enum-members does not add underscore to builtin names (#2970)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_builtin_conflict.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--capitalise-enum-members",
+        ],
+    )
+
+
+def test_capitalise_enum_members_and_use_subclass_enum_builtin_conflict(output_file: Path) -> None:
+    """Test capitalise-enum-members + use-subclass-enum with builtin names (#2970)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_builtin_conflict_two.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--capitalise-enum-members",
+            "--use-subclass-enum",
+        ],
+    )
+
+
+def test_use_subclass_enum_builtin_conflict_no_capitalise(output_file: Path) -> None:
+    """Test use-subclass-enum without capitalise adds underscore for builtin conflicts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_builtin_conflict_two.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+            "--use-subclass-enum",
+        ],
+    )
+
+
+def test_no_subclass_enum_no_capitalise_builtin_names(output_file: Path) -> None:
+    """Test default behavior with builtin names has no underscore suffix."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_builtin_conflict_two.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+    )
+
+
 EXPECTED_GENERATE_PYPROJECT_CONFIG_PATH = EXPECTED_MAIN_KR_PATH / "generate_pyproject_config"
 
 
