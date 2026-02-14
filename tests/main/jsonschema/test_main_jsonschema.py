@@ -8615,11 +8615,11 @@ def test_ref_with_const(output_file: Path) -> None:
 
 
 @PYDANTIC_V2_SKIP
-def test_main_exact_imports_collapse_root_models_module_class_collision(tmp_path: Path) -> None:
+def test_main_exact_imports_collapse_root_models_module_class_collision(output_dir: Path) -> None:
     """Test --use-exact-imports with --collapse-root-models when module and class names collide."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "exact_imports_collapse_root_models",
-        output_path=tmp_path,
+        output_path=output_dir,
         input_file_type="jsonschema",
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models",
         extra_args=[
@@ -8633,4 +8633,5 @@ def test_main_exact_imports_collapse_root_models_module_class_collision(tmp_path
             "--snake-case-field",
             "--disable-timestamp",
         ],
+        force_exec_validation=True,
     )

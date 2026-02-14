@@ -3398,6 +3398,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self._finalize_modules(contexts, unused_models, model_to_module_models, module_to_import)
 
+        root_init: ModulePath = ("__init__.py",)
+        if root_init not in results:
+            top_level_dirs = {k[0] for k in results if len(k) >= 2}  # noqa: PLR2004
+            if len(top_level_dirs) > 1:
+                results[root_init] = Result(body="")
+
         future_imports = self.imports.extract_future()
         future_imports_str = str(future_imports)
 
