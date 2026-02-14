@@ -8498,6 +8498,22 @@ def test_main_jsonschema_dynamic_ref_in_defs_pydantic_v2(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_multiple_aliases_required_pydantic_v2(output_file: Path) -> None:
+    """Test multiple aliases with AliasChoices on required fields for Pydantic v2. (#2989)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_aliases_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "multiple_aliases_required.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_ref_with_nonstandard_metadata(output_file: Path) -> None:
     """Test $ref with non-standard metadata fields preserves type information.
 
