@@ -1676,7 +1676,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             result = self._has_ref_cycle(resolved_ref, resolved_ref, set())
         except Exception:  # noqa: BLE001  # pragma: no cover
-            result = False
+            result = True
         self._circular_ref_cache[resolved_ref] = result
         return result
 
