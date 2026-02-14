@@ -4283,6 +4283,27 @@ def test_main_typed_dict_enum_field_as_literal_all(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.11",
+)
+def test_main_typed_dict_nullable_enum_literal(output_file: Path) -> None:
+    """Test TypedDict with nullable enum literals generates | None correctly."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_enum_literal_typed_dict.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_nullable_enum_literal.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.11",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--use-closed-typed-dict"],
     option_description="""Generate TypedDict with PEP 728 closed/extra_items (default: enabled).
