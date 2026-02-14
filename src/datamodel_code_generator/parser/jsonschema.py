@@ -711,6 +711,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             *self.field_extra_keys,
             *self.field_extra_keys_without_x_prefix,
         }
+        self._circular_ref_cache: dict[str, bool] = {}
 
         if self.data_model_field_type.can_have_extra_keys:
             self.get_field_extra_key: Callable[[str], str] = (
@@ -1656,6 +1657,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not obj.ref:
             return obj
 
+        resolved_ref = self.model_resolver.resolve_ref(obj.ref)
+        if self._is_ref_circular(resolved_ref):
+            return obj
+
         ref_schema = self._load_ref_schema_object(obj.ref)
         ref_dict = model_dump(ref_schema, exclude_unset=True, by_alias=True)
         current_dict = model_dump(obj, exclude={"ref"}, exclude_unset=True, by_alias=True)
@@ -1663,6 +1668,59 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged.pop("$ref", None)
 
         return model_validate(self.SCHEMA_OBJECT_TYPE, merged)
+
+    def _is_ref_circular(self, resolved_ref: str) -> bool:
+        """Check if a resolved $ref target contains a circular reference (cached)."""
+        if resolved_ref in self._circular_ref_cache:
+            return self._circular_ref_cache[resolved_ref]
+        try:
+            result = self._has_ref_cycle(resolved_ref, resolved_ref, set())
+        except Exception:  # noqa: BLE001  # pragma: no cover
+            result = True
+        self._circular_ref_cache[resolved_ref] = result
+        return result
+
+    def _has_ref_cycle(self, ref_to_check: str, target: str, visited: set[str]) -> bool:
+        """Check if the schema at ref_to_check contains a reference back to target."""
+        visited.add(ref_to_check)
+        file_part, _, fragment = ref_to_check.partition("#")
+        if file_part and is_url(file_part):
+            base_path = None
+            root_path = [file_part]
+        else:
+            base_path = Path(file_part).parent if file_part else self.model_resolver.current_base_path
+            root_path = file_part.split("/") if file_part else self.model_resolver.current_root
+        base_url = file_part or self.model_resolver.base_url
+        with (
+            self.model_resolver.current_base_path_context(base_path),
+            self.model_resolver.base_url_context(base_url),
+            self.model_resolver.current_root_context(root_path),
+        ):
+            raw_doc = self._get_ref_body(file_part) if file_part else self.raw_obj
+            raw_obj: Any = raw_doc
+            if fragment:
+                pointer = [p for p in fragment.split("/") if p]
+                raw_obj = get_model_by_path(raw_doc, pointer)
+            return self._walk_for_ref(raw_obj, target, visited)
+
+    def _walk_for_ref(self, data: dict[str, Any] | list[Any], target: str, visited: set[str]) -> bool:
+        """Recursively walk raw dict/list data looking for a $ref that resolves to target."""
+        if isinstance(data, dict):
+            ref_value = data.get("$ref")
+            if isinstance(ref_value, str):
+                try:
+                    resolved = self.model_resolver.resolve_ref(ref_value)
+                except Exception:  # noqa: BLE001
+                    resolved = ref_value
+                if resolved == target:
+                    return True
+                if resolved not in visited and self._has_ref_cycle(resolved, target, visited):
+                    return True
+            for value in data.values():
+                if isinstance(value, (dict, list)) and self._walk_for_ref(value, target, visited):
+                    return True
+            return False
+        return any(isinstance(item, (dict, list)) and self._walk_for_ref(item, target, visited) for item in data)
 
     def _merge_primitive_schemas(self, items: list[JsonSchemaObject]) -> JsonSchemaObject:
         """Merge multiple primitive schemas by computing the intersection of their constraints."""
@@ -2189,12 +2247,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if target_attribute.ref:
                 if target_attribute.has_ref_with_schema_keywords and not target_attribute.is_ref_with_nullable_only:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
-                    combined_schemas.append(
-                        model_validate(
-                            self.SCHEMA_OBJECT_TYPE,
-                            self._deep_merge(base_object, model_dump(merged_attr, exclude_unset=True, by_alias=True)),
+                    if merged_attr.ref:
+                        combined_schemas.append(merged_attr)
+                        refs.append(index)
+                    else:
+                        combined_schemas.append(
+                            model_validate(
+                                self.SCHEMA_OBJECT_TYPE,
+                                self._deep_merge(
+                                    base_object, model_dump(merged_attr, exclude_unset=True, by_alias=True)
+                                ),
+                            )
                         )
-                    )
                 else:
                     combined_schemas.append(target_attribute)
                     refs.append(index)
@@ -3992,6 +4056,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Mark x-python-import reference as loaded to skip model generation."""
         self.model_resolver.add(path, name, class_name=True, loaded=True)
 
+    def _is_named_schema_definition_path(self, path: list[str]) -> bool:
+        """Check if path points to a named schema entry under definitions/$defs."""
+        current_root = list(self.model_resolver.current_root)
+        expected_path_length = len(current_root) + 2
+        if len(path) != expected_path_length:
+            return False
+
+        schema_container_path = path[len(current_root)]
+        return path[: len(current_root)] == current_root and any(
+            schema_container_path == schema_path for schema_path, _ in self.schema_paths
+        )
+
     def parse_obj(  # noqa: PLR0912
         self,
         name: str,
@@ -4001,6 +4077,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse a JsonSchemaObject by dispatching to appropriate parse methods."""
         if obj.has_ref_with_schema_keywords and not obj.is_ref_with_nullable_only:
             obj = self._merge_ref_with_schema(obj)
+            if obj.ref:
+                if self._is_named_schema_definition_path(path):
+                    self.parse_root_type(name, obj, path)
+                self.parse_ref(obj, path)
+                return
 
         if obj.is_array:
             self.parse_array(name, obj, path)

@@ -7638,6 +7638,17 @@ def test_main_jsonschema_ref_to_json_list_file() -> None:
         )
 
 
+def test_main_jsonschema_x_python_import_unused(output_file: Path) -> None:
+    """Test x-python-import entries in $defs are handled without model generation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "x_python_import_unused.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="x_python_import_unused.py",
+    )
+
+
 def test_x_python_type_callable(output_file: Path) -> None:
     """Test x-python-type with Callable preserves the Callable type."""
     run_main_and_assert(
@@ -8241,6 +8252,128 @@ def test_main_allof_mro(output_file: Path) -> None:
         extra_args=[
             "--use-schema-description",
         ],
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_with_schema_keywords(output_file: Path) -> None:
+    """Test circular $ref with additional schema keywords does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_with_schema_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_indirect(output_file: Path) -> None:
+    """Test indirect circular $ref (A->B->A) does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_indirect.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_root_with_type(output_file: Path) -> None:
+    """Test circular $ref at root level with type does not cause RecursionError."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_root_with_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None:
+    """Test circular external refs with relative paths and schema keywords."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords" / "root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_file: Path) -> None:
+    """Test circular external refs with relative paths and schema keywords via URL input."""
+    external_directory = JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords"
+    base_url = "https://example.com/circular_ref_external_relative_keywords/"
+
+    url_to_path = {
+        f"{base_url}root.json": "root.json",
+        f"{base_url}defs/context.json": "defs/context.json",
+        f"{base_url}defs/nested/child.json": "defs/nested/child.json",
+    }
+
+    def get_mock_response(url: str, **_: object) -> mocker.Mock:
+        path = url_to_path.get(url)
+        mock = mocker.Mock()
+        mock.text = (external_directory / path).read_text()
+        return mock
+
+    httpx_get_mock = mocker.patch(
+        "httpx.get",
+        side_effect=get_mock_response,
+    )
+
+    run_main_url_and_assert(
+        url=f"{base_url}root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="circular_ref_external_relative_keywords.py",
+        transform=lambda s: s.replace(
+            f"#   filename:  {base_url}root.json",
+            "#   filename:  root.json",
+        ),
+    )
+
+    httpx_get_mock.assert_has_calls(
+        [
+            call(
+                f"{base_url}root.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+                timeout=30.0,
+            ),
+            call(
+                f"{base_url}defs/context.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+                timeout=30.0,
+            ),
+            call(
+                f"{base_url}defs/nested/child.json",
+                headers=None,
+                verify=True,
+                follow_redirects=True,
+                params=None,
+                timeout=30.0,
+            ),
+        ],
+        any_order=True,
+    )
+    assert httpx_get_mock.call_count == 3
+
+
+@pytest.mark.benchmark
+def test_main_circular_ref_ref_with_schema_keywords(output_file: Path) -> None:
+    """Test named schema with circular $ref and schema keywords still generates alias model."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "circular_ref_ref_with_schema_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
     )
 
 
