@@ -297,10 +297,6 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        # Fast path: skip expensive self.field check for simple required fields
-        if self.required and not self.nullable and not self.alias and self.constraints is None and not self.extras:
-            return super().imports
-
         if self.field:
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
