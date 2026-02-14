@@ -7884,7 +7884,7 @@ def test_ref_nullable_with_constraint_creates_model(output_file: Path) -> None:
     )
 
 
-def test_ref_nullable_with_extra_creates_model(output_file: Path) -> None:
+def test_ref_nullable_with_extra_uses_reference_directly(output_file: Path) -> None:
     """Test $ref + nullable: true + non-schema-affecting extras uses reference directly.
 
     When a property has $ref with nullable: true AND extras that the tool cannot
