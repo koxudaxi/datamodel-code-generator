@@ -1684,8 +1684,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Check if the schema at ref_to_check contains a reference back to target."""
         visited.add(ref_to_check)
         file_part, _, fragment = ref_to_check.partition("#")
-        base_path = Path(file_part).parent if file_part else self.model_resolver.current_base_path
-        root_path = file_part.split("/") if file_part else self.model_resolver.current_root
+        if file_part and is_url(file_part):
+            base_path = None
+            root_path = [file_part]
+        else:
+            base_path = Path(file_part).parent if file_part else self.model_resolver.current_base_path
+            root_path = file_part.split("/") if file_part else self.model_resolver.current_root
         base_url = file_part or self.model_resolver.base_url
         with (
             self.model_resolver.current_base_path_context(base_path),
