@@ -459,6 +459,37 @@ def test_execute_multi_module_no_models() -> None:
     assert models == {}
 
 
+def test_multiple_aliases_required_field() -> None:
+    """Test dynamic models with multiple aliases on required fields. (#2989)."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        aliases={"name": ["full_name", "customer_name"]},
+        class_name="Customer",
+    )
+    assert_dynamic_models(
+        schema,
+        {"Customer": {"name": "John"}},
+        EXPECTED_PATH / "multiple_aliases_required.json",
+        config=config,
+    )
+
+
+def test_multiple_aliases_required_field_code_output() -> None:
+    """Test generated code includes Field import with multiple aliases on required fields. (#2989)."""
+    schema = make_object_schema({"name": {"type": "string"}}, required=["name"])
+    config = GenerateConfig(
+        input_file_type=InputFileType.JsonSchema,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        aliases={"name": ["full_name", "customer_name"]},
+        class_name="Customer",
+    )
+    result = generate(input_=schema, config=config)
+    assert isinstance(result, str)
+    assert_output(result, EXPECTED_PATH / "multiple_aliases_required_code.py")
+
+
 def test_execute_multi_module_enum_only() -> None:
     """Test _execute_multi_module with enum only to cover non-BaseModel branch."""
     from datamodel_code_generator.dynamic import _execute_multi_module
