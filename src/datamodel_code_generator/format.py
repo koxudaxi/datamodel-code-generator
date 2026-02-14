@@ -75,6 +75,12 @@ class PythonVersion(Enum):
     PY_314 = "3.14"
 
     @cached_property
+    def version_key(self) -> tuple[int, int]:
+        """Return (major, minor) tuple for version comparison."""
+        major, minor = self.value.split(".")
+        return int(major), int(minor)
+
+    @cached_property
     def _is_py_310_or_later(self) -> bool:  # pragma: no cover
         return True  # 3.10+ always true since minimum is PY_310
 

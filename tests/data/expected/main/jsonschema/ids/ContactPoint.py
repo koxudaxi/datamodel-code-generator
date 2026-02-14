@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class Type(Enum):
@@ -14,7 +14,7 @@ class Type(Enum):
 
 
 class Schema(BaseModel):
-    type: Type
+    type: Type = Field(..., description='Type of this object.', title='type')
     contactType: str | None = None
     email: EmailStr
     telephone: str | None = None

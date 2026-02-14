@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ReadOnlyString": {
+      "type": "string",
+      "readOnly": true
+    },
+    "ConstrainedString": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "DefaultString": {
+      "type": "string",
+      "default": "default_value"
+    },
+    "NullableString": {
+      "type": "string",
+      "nullable": true
+    }
+  },
+  "type": "object",
+  "properties": {
+    "readonly_via_ref": {
+      "$ref": "#/definitions/ReadOnlyString",
+      "const": "fixed_readonly"
+    },
+    "readonly_direct": {
+      "type": "string",
+      "readOnly": true,
+      "const": "fixed_readonly"
+    },
+    "constrained_via_ref": {
+      "$ref": "#/definitions/ConstrainedString",
+      "const": "constrained_value"
+    },
+    "constrained_direct": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "const": "constrained_value"
+    },
+    "default_via_ref": {
+      "$ref": "#/definitions/DefaultString",
+      "const": "default_value"
+    },
+    "default_direct": {
+      "type": "string",
+      "default": "default_value",
+      "const": "default_value"
+    },
+    "nullable_via_ref": {
+      "$ref": "#/definitions/NullableString",
+      "const": "nullable_value"
+    },
+    "nullable_direct": {
+      "type": "string",
+      "nullable": true,
+      "const": "nullable_value"
+    }
+  },
+  "required": [
+    "readonly_via_ref",
+    "readonly_direct",
+    "constrained_via_ref",
+    "constrained_direct",
+    "nullable_via_ref",
+    "nullable_direct"
+  ]
+}

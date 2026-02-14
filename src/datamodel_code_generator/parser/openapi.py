@@ -508,7 +508,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
-    def parse_all_parameters(  # noqa: PLR0912, PLR0914
+    def parse_all_parameters(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
@@ -541,10 +541,13 @@ class OpenAPIParser(JsonSchemaParser):
                 class_name=name,
             )
             if parameter.schema_:
+                param_schema = parameter.schema_
+                if param_schema.has_ref_with_schema_keywords and not param_schema.is_ref_with_nullable_only:
+                    param_schema = self._merge_ref_with_schema(param_schema)
                 effective_default, effective_has_default = self.model_resolver.resolve_default_value(
                     parameter_name,
-                    parameter.schema_.default,
-                    parameter.schema_.has_default,
+                    param_schema.default,
+                    param_schema.has_default,
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
@@ -553,8 +556,8 @@ class OpenAPIParser(JsonSchemaParser):
                 fields.append(
                     self.get_object_field(
                         field_name=field_name,
-                        field=parameter.schema_,
-                        field_type=self.parse_item(field_name, parameter.schema_, [*path, name, parameter_name]),
+                        field=param_schema,
+                        field_type=self.parse_item(field_name, param_schema, [*path, name, parameter_name]),
                         original_field_name=parameter_name,
                         required=effective_required,
                         alias=alias,
