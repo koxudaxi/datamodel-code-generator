@@ -4,6 +4,72 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.54.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.54.0) - 2026-02-14
+
+## Breaking Changes
+
+
+
+### Code Generation Changes
+* Enum member names from oneOf/anyOf const constructs now use `title` field when provided - Previously, when creating enums from `oneOf`/`anyOf` constructs with `const` values, the `title` field was incorrectly ignored and enum member names were generated using the pattern `{type}_{value}` (e.g., `integer_200`). Now, when a `title` is specified, it is correctly used as the enum member name (e.g., `OK` instead of `integer_200`). Users who have code depending on the previously generated enum member names will need to update their references. (#2975)
+  Before:
+  ```python
+  class StatusCode(IntEnum):
+      integer_200 = 200
+      integer_404 = 404
+      integer_500 = 500
+  ```
+  After:
+  ```python
+  class StatusCode(IntEnum):
+      OK = 200
+      Not_Found = 404
+      Server_Error = 500
+  ```
+* Field names matching Python builtins are now automatically sanitized - When a field name matches a Python builtin type AND the field's type annotation uses that same builtin (e.g., `int: int`, `list: list[str]`, `dict: dict[str, Any]`), the field is now renamed with a trailing underscore (e.g., `int_`) and an alias is added to preserve the original JSON field name. This prevents Python syntax issues and shadowing of builtin types. Previously, such fields were generated as-is (e.g., `int: int | None = None`), which could cause code that shadows Python builtins. After this change, the same field becomes `int_: int | None = Field(None, alias='int')`. This affects fields named: `int`, `float`, `bool`, `str`, `bytes`, `list`, `dict`, `set`, `frozenset`, `tuple`, and other Python builtins when their type annotation uses the matching builtin type. (#2968)
+* $ref with non-standard metadata fields no longer triggers schema merging - Previously, when a `$ref` was combined with non-standard fields like `markdownDescription`, `if`, `then`, `else`, or other extras not in the whitelist, the generator would merge schemas and potentially create duplicate models (e.g., `UserWithExtra` alongside `User`). Now, only whitelisted schema-affecting extras (currently just `const`) trigger merging. This means:
+  - Fewer merged/duplicate models will be generated
+  - References are preserved directly instead of being expanded
+  - Field types may change from inline merged types to direct references
+  Example schema:
+  ```yaml
+  properties:
+    user:
+      $ref: "#/definitions/User"
+      nullable: true
+      markdownDescription: "A user object"
+  ```
+  Before: Could generate a merged `UserWithMarkdownDescription` model
+  After: Directly uses `User | None` reference (#2993)
+* Enum member names no longer get underscore suffix with `--capitalise-enum-members` - Previously, enum values like `replace`, `count`, `index` would generate `REPLACE_`, `COUNT_`, `INDEX_` when using `--capitalise-enum-members`. Now they correctly generate `REPLACE`, `COUNT`, `INDEX`. The underscore suffix is only added when `--use-subclass-enum` is also used AND the lowercase name conflicts with builtin type methods. Users relying on the previous naming (e.g., referencing `MyEnum.REPLACE_` in code) will need to update to use the new names without trailing underscores. (#2999)
+* Fields using `$ref` with inline keywords now include merged metadata - When a schema property uses `$ref` alongside additional keywords (e.g., `const`, `enum`, `readOnly`, constraints), the generator now correctly merges metadata (description, title, constraints, defaults, readonly/writeOnly) from the referenced schema into the field definition. Previously, this metadata was lost. For example, a field like `type: Type` may now become `type: Type = Field(..., description='Type of this object.', title='type')` when the referenced schema includes those attributes. This also affects `additionalProperties` and OpenAPI parameter schemas. (#2997)
+
+## What's Changed
+* Refactor ruff check+format to use sequential subprocess calls by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2967
+* Fix title ignored when creating enums from merging `allOf`'s or `anyOf`'s objects by @ilovelinux in https://github.com/koxudaxi/datamodel-code-generator/pull/2975
+* Fix aliased imports not applied to base classes and non-matching fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2981
+* Fix handling of falsy default values for enums in set-default-enum-member option by @kkinugasa in https://github.com/koxudaxi/datamodel-code-generator/pull/2977
+* Fix use_union_operator with Python builtin type field names by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2968
+* Support $recursiveRef/$dynamicRef in JSON Schema and OpenAPI by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2982
+* Address review feedback for recursive/dynamic ref support by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2985
+* Fix RecursionError in _merge_ref_with_schema for circular $ref by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2983
+* Fix missing Field import with multiple aliases on required fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2992
+* Fix patternProperties/propertyNames key constraints lost with field_constraints by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2994
+* Fix type loss when $ref is used with non-standard metadata fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2993
+* Fix missing | None for nullable enum literals in TypedDict by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2991
+* Fix exact imports with module/class name collision by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2998
+* Fix extra underscore on enum members like replace with --capitalise-enum-members by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2999
+* Fix merged result in parse_item not passed back to parse_object_fields by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2997
+* Fix codespeed python version by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3000
+* Fix incorrect relative imports with --use-exact-imports and --collapse-root-models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/2996
+
+## New Contributors
+* @kkinugasa made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/2977
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.53.0...0.54.0
+
+---
+
 ## [0.53.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.53.0) - 2026-01-12
 
 ## Breaking Changes
