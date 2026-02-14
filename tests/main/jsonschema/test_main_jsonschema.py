@@ -8615,10 +8615,7 @@ def test_ref_with_const(output_file: Path) -> None:
 
 
 def test_ref_merge_field_metadata(output_file: Path) -> None:
-    """Test $ref + const merges ref metadata (readOnly, writeOnly, constraints, default, nullable).
-
-    See: https://github.com/koxudaxi/datamodel-code-generator/issues/2995
-    """
+    """Test $ref + const merges ref metadata."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "ref_merge_field_metadata.json",
         output_path=output_file,
