@@ -7912,11 +7912,12 @@ def test_ref_nullable_with_constraint_creates_model(output_file: Path) -> None:
     )
 
 
-def test_ref_nullable_with_extra_creates_model(output_file: Path) -> None:
-    """Test $ref + nullable: true + schema-affecting extras DOES create a merged model.
+def test_ref_nullable_with_extra_uses_reference_directly(output_file: Path) -> None:
+    """Test $ref + nullable: true + non-schema-affecting extras uses reference directly.
 
-    When a property has $ref with nullable: true AND schema-affecting extras like
-    'if', 'then', 'else', it should merge the schemas and create a new model.
+    When a property has $ref with nullable: true AND extras that the tool cannot
+    structurally process (like 'if'), it should use the reference directly
+    instead of creating a merged model.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_with_extra.yaml",
@@ -8538,4 +8539,55 @@ def test_main_jsonschema_multiple_aliases_required_pydantic_v2(output_file: Path
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+def test_ref_with_nonstandard_metadata(output_file: Path) -> None:
+    """Test $ref with non-standard metadata fields preserves type information.
+
+    When $ref is combined with non-standard metadata like 'markdownDescription',
+    the reference type should be preserved instead of being replaced by the
+    underlying type. Non-standard fields are annotation-only and should not
+    trigger schema merging.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_with_nonstandard_metadata.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_with_nonstandard_metadata.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+    )
+
+
+def test_ref_nullable_with_nonstandard_metadata(output_file: Path) -> None:
+    """Test $ref + nullable: true with non-standard metadata uses reference directly.
+
+    When $ref is combined with nullable: true and non-standard metadata like
+    'markdownDescription', the reference should be used directly with Optional
+    type annotation instead of creating a merged model.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_nullable_with_nonstandard_metadata.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_nullable_with_nonstandard_metadata.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
+    )
+
+
+def test_ref_with_const(output_file: Path) -> None:
+    """Test $ref + const triggers schema merging as const is schema-affecting.
+
+    When $ref is combined with 'const', the const keyword structurally affects
+    the generated type (producing Literal), so schema merging should occur.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_with_const.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_with_const.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--strict-nullable"],
     )

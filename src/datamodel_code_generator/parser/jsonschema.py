@@ -268,6 +268,10 @@ class JsonSchemaObject(BaseModel):
         "dynamicAnchor",
     }
 
+    __schema_affecting_extras__: set[str] = {  # noqa: RUF012
+        "const",
+    }
+
     @model_validator(mode="before")
     def validate_exclusive_maximum_and_exclusive_minimum(cls, values: Any) -> Any:  # noqa: N805
         """Validate and convert boolean exclusive maximum and minimum to numeric values."""
@@ -489,10 +493,7 @@ class JsonSchemaObject(BaseModel):
         other_fields = get_fields_set(self) - {"ref"}
         schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         if self.extras:
-            # Filter out metadata-only fields AND extension fields (x-* prefix)
-            schema_affecting_extras = {
-                k for k in self.extras if k not in self.__metadata_only_fields__ and not k.startswith("x-")
-            }
+            schema_affecting_extras = {k for k in self.extras if k in self.__schema_affecting_extras__}
             if schema_affecting_extras:
                 schema_affecting_fields |= {"extras"}
         return bool(schema_affecting_fields)
@@ -511,9 +512,7 @@ class JsonSchemaObject(BaseModel):
         if other_fields:
             return False
         if self.extras:
-            schema_affecting_extras = {
-                k for k in self.extras if k not in self.__metadata_only_fields__ and not k.startswith("x-")
-            }
+            schema_affecting_extras = {k for k in self.extras if k in self.__schema_affecting_extras__}
             if schema_affecting_extras:
                 return False
         return True

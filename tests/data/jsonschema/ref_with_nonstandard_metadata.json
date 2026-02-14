@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "Ipv6Addr": {
+      "type": "string",
+      "format": "ipv6"
+    }
+  },
+  "type": "object",
+  "properties": {
+    "ipv6_address": {
+      "$ref": "#/definitions/Ipv6Addr",
+      "markdownDescription": "An IPv6 address"
+    },
+    "ipv6_address_nullable": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/Ipv6Addr"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "markdownDescription": "An optional IPv6 address"
+    }
+  },
+  "required": ["ipv6_address"]
+}
