@@ -2912,7 +2912,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     is_dict=True,
                     dict_key=self.data_type_manager.get_data_type(
                         Types.string,
-                        pattern=merged_pattern if not self.field_constraints else None,
+                        pattern=merged_pattern,
                     ),
                 )
             )
@@ -2975,7 +2975,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or property_names.maxLength is not None
         ):
             kwargs: dict[str, Any] = {}
-            if property_names.pattern and not self.field_constraints:
+            if property_names.pattern:
                 kwargs["pattern"] = property_names.pattern
             if property_names.minLength is not None:
                 kwargs["minLength"] = property_names.minLength

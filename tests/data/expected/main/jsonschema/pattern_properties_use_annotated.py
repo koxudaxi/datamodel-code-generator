@@ -12,4 +12,4 @@ class Bar(BaseModel):
 
 
 class Foo(BaseModel):
-    bar: dict[constr(regex=r'^([a-zA-Z_][a-zA-Z0-9_]*)$'), Bar]
+    bar: dict[constr(pattern=r'^([a-zA-Z_][a-zA-Z0-9_]*)$'), Bar]

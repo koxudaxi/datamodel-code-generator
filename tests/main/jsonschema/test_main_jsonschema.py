@@ -3083,6 +3083,18 @@ def test_jsonschema_pattern_properties_field_constraints(output_file: Path) -> N
     )
 
 
+def test_jsonschema_pattern_properties_use_annotated(output_file: Path) -> None:
+    """Test pattern properties with --use-annotated preserves pattern constraint on dict keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_use_annotated.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
+    )
+
+
 @LEGACY_BLACK_SKIP
 def test_jsonschema_titles(output_file: Path) -> None:
     """Test JSON Schema title handling."""
@@ -3888,6 +3900,22 @@ def test_main_jsonschema_property_names_pattern(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_pattern_field_constraints(output_file: Path) -> None:
+    """Test propertyNames pattern with field_constraints preserves constr key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_pattern.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_pattern_field_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--field-constraints",
         ],
     )
 
