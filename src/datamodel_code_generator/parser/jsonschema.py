@@ -3528,8 +3528,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
         """Parse enum values as a Literal type."""
+        literals = [i for i in obj.enum if i is not None]
+        if not literals:
+            return self.data_type(is_optional=None in obj.enum)
         return self.data_type(
-            literals=[i for i in obj.enum if i is not None],
+            literals=literals,
             is_optional=None in obj.enum,
         )
 
