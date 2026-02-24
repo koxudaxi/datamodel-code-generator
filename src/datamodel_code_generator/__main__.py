@@ -317,6 +317,24 @@ class Config(BaseModel):
             values["class_decorators"] = decorators
         return values
 
+    @model_validator(mode="before")  # ty: ignore
+    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+        """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
+        raw = values.get("external_ref_mapping")
+        if raw is not None and isinstance(raw, list):
+            mapping: dict[str, str] = {}
+            for item in raw:
+                if "=" not in item:
+                    msg = (
+                        f"Invalid --external-ref-mapping format: {item!r}. "
+                        "Expected FILE_PATH=PYTHON_PACKAGE (e.g., '../common/schema.yaml=mypackage.models')"
+                    )
+                    raise Error(msg)
+                file_path, python_package = item.split("=", maxsplit=1)
+                mapping[file_path.strip()] = python_package.strip()
+            values["external_ref_mapping"] = mapping
+        return values
+
     __validate_output_datetime_class_err: ClassVar[str] = (
         '`--output-datetime-class` only allows "datetime" for '
         f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
@@ -624,6 +642,7 @@ class Config(BaseModel):
     watch_delay: float = 0.5
     schema_version: Optional[str] = None  # noqa: UP045
     schema_version_mode: Optional[VersionMode] = None  # noqa: UP045
+    external_ref_mapping: Optional[dict[str, str]] = None  # noqa: UP045
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
@@ -1070,6 +1089,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         default_value_overrides=default_value_overrides,
         schema_version=config.schema_version,
         schema_version_mode=config.schema_version_mode,
+        external_ref_mapping=config.external_ref_mapping,
     )
 
     if output is None and result is not None:  # pragma: no cover

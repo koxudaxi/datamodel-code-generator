@@ -996,6 +996,14 @@ openapi_options.add_argument(
 # Schema version options (for both JSON Schema and OpenAPI)
 # ======================================================================================
 base_options.add_argument(
+    "--external-ref-mapping",
+    nargs="+",
+    metavar="FILE_PATH=PYTHON_PACKAGE",
+    help="Map external $ref file paths to Python import packages instead of generating duplicate classes. "
+    'Format: "path/to/schema.yaml=mypackage.models" (repeatable). '
+    "When a $ref points to a mapped file, an import statement is generated instead of a class definition.",
+)
+base_options.add_argument(
     "--schema-version",
     help="Schema version. Valid values depend on input type: "
     "JsonSchema: auto, draft-04, draft-06, draft-07, 2019-09, 2020-12. "

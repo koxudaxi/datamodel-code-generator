@@ -208,6 +208,7 @@ class GenerateConfig(BaseModel):
     default_value_overrides: Mapping[str, Any] | None = None
     schema_version: str | None = None
     schema_version_mode: VersionMode | None = None
+    external_ref_mapping: dict[str, str] | None = None
 
 
 class ParserConfig(BaseModel):
@@ -341,6 +342,7 @@ class ParserConfig(BaseModel):
     field_type_collision_strategy: FieldTypeCollisionStrategy | None = None
     target_pydantic_version: TargetPydanticVersion | None = None
     default_value_overrides: Mapping[str, Any] | None = None
+    external_ref_mapping: dict[str, str] | None = None
 
 
 class GraphQLParserConfig(ParserConfig):

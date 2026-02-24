@@ -162,6 +162,7 @@ class ParserConfigDict(TypedDict):
     field_type_collision_strategy: NotRequired[FieldTypeCollisionStrategy | None]
     target_pydantic_version: NotRequired[TargetPydanticVersion | None]
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
+    external_ref_mapping: NotRequired[dict[str, str] | None]
 
 
 class GraphQLParserConfigDict(ParserConfigDict, closed=True):
