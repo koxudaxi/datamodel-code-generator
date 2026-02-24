@@ -1000,7 +1000,7 @@ base_options.add_argument(
     nargs="+",
     metavar="FILE_PATH=PYTHON_PACKAGE",
     help="Map external $ref file paths to Python import packages instead of generating duplicate classes. "
-    'Format: "path/to/schema.yaml=mypackage.models" (repeatable). '
+    'Accepts one or more mappings after a single flag. Format: "path/to/schema.yaml=mypackage.models". '
     "When a $ref points to a mapped file, an import statement is generated instead of a class definition.",
 )
 base_options.add_argument(
