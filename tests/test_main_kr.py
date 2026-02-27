@@ -1359,6 +1359,32 @@ def test_use_non_positive_negative_number_constrained_types(output_file: Path) -
     )
 
 
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="Require Pydantic version 2.0.0 or later")
+@freeze_time("2019-07-26")
+def test_use_non_positive_negative_number_constrained_types_with_use_annotated(output_file: Path) -> None:
+    """Use NonPositive/NonNegative types combined with --use-annotated.
+
+    When both --use-annotated and --use-non-positive-negative-number-constrained-types
+    are enabled, fields should use specialized types like NonNegativeInt instead of
+    Annotated[int, Field(ge=0)].
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_non_positive_negative.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--use-non-positive-negative-number-constrained-types", "--use-annotated"],
+    )
+    content = output_file.read_text()
+    # The key assertion: specialized types should be used, NOT Annotated[int, Field(ge=0)]
+    assert "NonNegativeInt" in content
+    assert "NonPositiveInt" in content
+    assert "NonNegativeFloat" in content
+    assert "NonPositiveFloat" in content
+    # Should NOT have redundant constraints on Field when the type already encodes them
+    assert "Field(ge=0)" not in content
+    assert "Field(le=0)" not in content
+
+
 @pytest.mark.cli_doc(
     options=["--include-path-parameters"],
     option_description="""Include OpenAPI path parameters in generated parameter models.
