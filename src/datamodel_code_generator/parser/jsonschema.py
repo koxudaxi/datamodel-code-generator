@@ -9,12 +9,14 @@ from __future__ import annotations
 import enum as _enum
 import importlib
 import json
+from os import write
 import re
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
+import sys
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
@@ -181,6 +183,21 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
     "object": {"default": Types.object},
     "null": {"default": Types.null},
     "array": {"default": Types.array},
+}
+
+
+# Mapping from specialized constrained type names to the JSON Schema constraint
+# keys they encode. When a type like NonNegativeInt is used, the corresponding
+# constraint (e.g. "minimum") should be removed from Field() to avoid redundancy.
+_CONSTRAINED_TYPE_CONSUMED_KEYS: dict[str, tuple[str, ...]] = {
+    "PositiveInt": ("exclusiveMinimum",),
+    "NegativeInt": ("exclusiveMaximum",),
+    "NonNegativeInt": ("minimum",),
+    "NonPositiveInt": ("maximum",),
+    "PositiveFloat": ("exclusiveMinimum",),
+    "NegativeFloat": ("exclusiveMaximum",),
+    "NonNegativeFloat": ("minimum",),
+    "NonPositiveFloat": ("maximum",),
 }
 
 
@@ -1226,6 +1243,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
         constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
+        # When a specialized constrained type (e.g. NonNegativeInt) is used,
+        # remove the corresponding constraint from the field to avoid redundancy
+        # like Annotated[NonNegativeInt, Field(ge=0)]
+        if constraints is not None and field_type.type in _CONSTRAINED_TYPE_CONSUMED_KEYS:
+            for key in _CONSTRAINED_TYPE_CONSUMED_KEYS[field_type.type]:
+                constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -1283,10 +1306,29 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
+            kwargs = model_dump(obj)
+            # sys.stderr.write(f"yoyo {kwargs}\n\n")
+            if self.field_constraints:
+                # To prevent type manager from generating conint/confloat,
+                # we only pass constraints that perfectly match specialized types
+                # (like NonNegativeInt -> minimum: 0).
+                # Other constraints should remain on Field(), so we pass {}
+                kwargs_to_pass = {}
+                number_keys = {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"}
+                number_kwargs = {k: v for k, v in kwargs.items() if k in number_keys and v is not None}
+
+                # Only works if there is exactly one number constraint
+                if len(number_kwargs) == 1:
+                    v = next(iter(number_kwargs.values()))
+                    if v == 0 and self.data_type_manager.use_non_positive_negative_number_constrained_types:
+                        kwargs_to_pass = number_kwargs
+            else:
+                kwargs_to_pass = kwargs
+
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
                 field_constraints=self.field_constraints,
-                **model_dump(obj) if not self.field_constraints else {},
+                **kwargs_to_pass,
             )
 
         if isinstance(obj.type, list):
