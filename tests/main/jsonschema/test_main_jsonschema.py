@@ -5707,6 +5707,32 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> None:
+    """Test that type alias + annotated + enum-field-as-literal generates valid defaults.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3009
+    When all three flags are combined, the default_factory should not call a type alias
+    (TypeAliasType is not callable).
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_type_alias_default.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_literal_type_alias_default.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--enum-field-as-literal",
+            "all",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--type-mappings"],
     option_description="""Override default type mappings for schema formats.
