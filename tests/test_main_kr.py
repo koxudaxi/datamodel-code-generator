@@ -1374,7 +1374,7 @@ def test_use_non_positive_negative_number_constrained_types_with_use_annotated(o
         input_file_type="jsonschema",
         extra_args=["--use-non-positive-negative-number-constrained-types", "--use-annotated"],
     )
-    content = output_file.read_text()
+    content = output_file.read_text(encoding="utf-8")
     # The key assertion: specialized types should be used, NOT Annotated[int, Field(ge=0)]
     assert "NonNegativeInt" in content
     assert "NonPositiveInt" in content
