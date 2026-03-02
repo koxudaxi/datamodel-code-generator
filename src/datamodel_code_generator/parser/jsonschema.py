@@ -9,14 +9,12 @@ from __future__ import annotations
 import enum as _enum
 import importlib
 import json
-from os import write
 import re
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
-import sys
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote
 from warnings import warn
@@ -1307,7 +1305,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         def _get_data_type(type_: str, format__: str) -> DataType:
             kwargs = model_dump(obj)
-            # sys.stderr.write(f"yoyo {kwargs}\n\n")
             if self.field_constraints:
                 # To prevent type manager from generating conint/confloat,
                 # we only pass constraints that perfectly match specialized types
