@@ -5712,12 +5712,7 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     reason="Installed black doesn't support the new 'type' statement",
 )
 def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> None:
-    """Test that type alias + annotated + enum-field-as-literal generates valid defaults.
-
-    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3009
-    When all three flags are combined, the default_factory should not call a type alias
-    (TypeAliasType is not callable).
-    """
+    """Don't wrap type alias defaults in default_factory (TypeAliasType is not callable)."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_type_alias_default.json",
         output_path=output_file,
