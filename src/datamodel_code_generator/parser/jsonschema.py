@@ -1304,15 +1304,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
-            kwargs = model_dump(obj)
             if self.field_constraints:
                 # To prevent type manager from generating conint/confloat,
                 # we only pass constraints that perfectly match specialized types
                 # (like NonNegativeInt -> minimum: 0).
                 # Other constraints should remain on Field(), so we pass {}
                 kwargs_to_pass = {}
-                number_keys = {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"}
-                number_kwargs = {k: v for k, v in kwargs.items() if k in number_keys and v is not None}
+                number_keys = ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum")
+                number_kwargs: dict[str, int | float | bool] = {}
+                for key in number_keys:
+                    value = getattr(obj, key)
+                    if value is not None:
+                        number_kwargs[key] = value.value if isinstance(value, UnionIntFloat) else value
 
                 # Only works if there is exactly one number constraint
                 if len(number_kwargs) == 1:
@@ -1320,7 +1323,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if v == 0 and self.data_type_manager.use_non_positive_negative_number_constrained_types:
                         kwargs_to_pass = number_kwargs
             else:
-                kwargs_to_pass = kwargs
+                kwargs_to_pass = model_dump(obj)
 
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
