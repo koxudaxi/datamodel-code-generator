@@ -5707,6 +5707,10 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
 def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> None:
     """Test that type alias + annotated + enum-field-as-literal generates valid defaults.
 

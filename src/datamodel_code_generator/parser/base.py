@@ -2158,7 +2158,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 continue
             if isinstance(model_field.default, list):
                 continue
-            if data_type.reference and isinstance(data_type.reference.source, self.data_model_root_type) and not isinstance(data_type.reference.source, TypeAliasBase):
+            if (
+                data_type.reference
+                and isinstance(data_type.reference.source, self.data_model_root_type)
+                and not isinstance(data_type.reference.source, TypeAliasBase)
+            ):
                 type_name = data_type.alias or data_type.reference.short_name
                 model_field.default = WrappedDefault(
                     value=model_field.default,
