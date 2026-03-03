@@ -7,15 +7,62 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator import InputFileType, generate
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
-from tests.main.conftest import OPEN_API_DATA_PATH, run_main_and_assert
+from tests.conftest import assert_error_message
+from tests.main.conftest import OPEN_API_DATA_PATH, run_main_and_assert, run_main_with_args
 from tests.main.openapi.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 EXTERNAL_REF_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
+
+
+def _assert_cli_mapping_parse_error(
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+    expected_message: str,
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--external-ref-mapping",
+            mapping,
+        ])
+    assert exc_info.value.code == 2
+    assert_error_message(capsys, expected_message)
+
+
+def _assert_pyproject_mapping_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+    expected_message: str,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        f"""\
+[tool.datamodel-codegen]
+external-ref-mapping = ["{mapping}"]
+"""
+    )
+    monkeypatch.chdir(tmp_path)
+    run_main_with_args(
+        [
+            "--input",
+            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "openapi",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    assert_error_message(capsys, expected_message)
 
 
 @pytest.mark.cli_doc(
@@ -340,18 +387,7 @@ def test_external_ref_mapping_without_flag_generates_classes(tmp_path: Path) -> 
 
 def test_external_ref_mapping_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
     """Invalid format (no equals sign) produces a clear error."""
-    with pytest.raises(SystemExit) as exc_info:
-        main([
-            "--input",
-            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
-            "--input-file-type",
-            "openapi",
-            "--external-ref-mapping",
-            "no-equals-sign",
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Invalid --external-ref-mapping format" in captured.err
+    _assert_cli_mapping_parse_error(capsys, "no-equals-sign", "Invalid --external-ref-mapping format")
 
 
 @pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
@@ -360,18 +396,7 @@ def test_external_ref_mapping_invalid_empty_part(
     mapping: str,
 ) -> None:
     """Empty file path or package in mapping produces a clear error."""
-    with pytest.raises(SystemExit) as exc_info:
-        main([
-            "--input",
-            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
-            "--input-file-type",
-            "openapi",
-            "--external-ref-mapping",
-            mapping,
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Both FILE_PATH and PYTHON_PACKAGE must be non-empty." in captured.err
+    _assert_cli_mapping_parse_error(capsys, mapping, "Both FILE_PATH and PYTHON_PACKAGE must be non-empty.")
 
 
 def test_external_ref_mapping_invalid_format_in_pyproject(
@@ -380,24 +405,13 @@ def test_external_ref_mapping_invalid_format_in_pyproject(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Invalid pyproject external-ref-mapping format returns Exit.ERROR."""
-    (tmp_path / "pyproject.toml").write_text(
-        """\
-[tool.datamodel-codegen]
-external-ref-mapping = ["no-equals-sign"]
-"""
+    _assert_pyproject_mapping_error(
+        tmp_path,
+        monkeypatch,
+        capsys,
+        "no-equals-sign",
+        "Invalid --external-ref-mapping format",
     )
-    monkeypatch.chdir(tmp_path)
-    return_code = main([
-        "--input",
-        str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
-        "--output",
-        str(tmp_path / "output.py"),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "Invalid --external-ref-mapping format" in captured.err
 
 
 @pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
@@ -408,24 +422,13 @@ def test_external_ref_mapping_invalid_empty_part_in_pyproject(
     mapping: str,
 ) -> None:
     """Empty file path or package in pyproject mapping returns Exit.ERROR."""
-    (tmp_path / "pyproject.toml").write_text(
-        f"""\
-[tool.datamodel-codegen]
-external-ref-mapping = ["{mapping}"]
-"""
+    _assert_pyproject_mapping_error(
+        tmp_path,
+        monkeypatch,
+        capsys,
+        mapping,
+        "Both FILE_PATH and PYTHON_PACKAGE must be non-empty.",
     )
-    monkeypatch.chdir(tmp_path)
-    return_code = main([
-        "--input",
-        str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
-        "--output",
-        str(tmp_path / "output.py"),
-        "--input-file-type",
-        "openapi",
-    ])
-    assert return_code == Exit.ERROR
-    captured = capsys.readouterr()
-    assert "Both FILE_PATH and PYTHON_PACKAGE must be non-empty." in captured.err
 
 
 def test_external_ref_mapping_programmatic_api(tmp_path: Path) -> None:
