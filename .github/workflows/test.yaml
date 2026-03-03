@@ -31,6 +31,8 @@ jobs:
             name: py312-black23
           - tox_env: py312-black22-parallel
             name: py312-black22
+          - tox_env: py312-isort8-parallel
+            name: py312-isort8
           - tox_env: py312-isort7-parallel
             name: py312-isort7
           - tox_env: py312-isort6-parallel
