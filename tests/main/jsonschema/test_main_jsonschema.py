@@ -5741,6 +5741,31 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> None:
+    """Don't wrap type alias defaults in default_factory (TypeAliasType is not callable)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_type_alias_default.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_literal_type_alias_default.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--enum-field-as-literal",
+            "all",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--type-mappings"],
     option_description="""Override default type mappings for schema formats.
