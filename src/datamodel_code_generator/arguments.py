@@ -70,6 +70,17 @@ def _dataclass_arguments(value: str) -> DataclassArguments:
     return cast("DataclassArguments", result)
 
 
+def _external_ref_mapping(value: str) -> str:
+    """Validate FILE_PATH=PYTHON_PACKAGE mapping format."""
+    if "=" not in value:
+        msg = (
+            f"Invalid --external-ref-mapping format: {value!r}. "
+            "Expected FILE_PATH=PYTHON_PACKAGE (e.g., '../common/schema.yaml=mypackage.models')"
+        )
+        raise ArgumentTypeError(msg)
+    return value
+
+
 class SortingHelpFormatter(RawDescriptionHelpFormatter):
     """Help formatter that sorts arguments, adds color to section headers, and preserves epilog formatting."""
 
@@ -146,6 +157,15 @@ base_options.add_argument(
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
     choices=[i.value for i in InputFileType],
+)
+base_options.add_argument(
+    "--external-ref-mapping",
+    nargs="+",
+    metavar="FILE_PATH=PYTHON_PACKAGE",
+    type=_external_ref_mapping,
+    help="Map external $ref file paths to Python import packages instead of generating duplicate classes. "
+    'Accepts one or more mappings after a single flag. Format: "path/to/schema.yaml=mypackage.models". '
+    "When a $ref points to a mapped file, an import statement is generated instead of a class definition.",
 )
 base_options.add_argument(
     "--output",
@@ -995,14 +1015,6 @@ openapi_options.add_argument(
 # ======================================================================================
 # Schema version options (for both JSON Schema and OpenAPI)
 # ======================================================================================
-base_options.add_argument(
-    "--external-ref-mapping",
-    nargs="+",
-    metavar="FILE_PATH=PYTHON_PACKAGE",
-    help="Map external $ref file paths to Python import packages instead of generating duplicate classes. "
-    'Accepts one or more mappings after a single flag. Format: "path/to/schema.yaml=mypackage.models". '
-    "When a $ref points to a mapped file, an import statement is generated instead of a class definition.",
-)
 base_options.add_argument(
     "--schema-version",
     help="Schema version. Valid values depend on input type: "

@@ -1356,10 +1356,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         python_package, fragment = mapped
 
-        # Extract class name from fragment (e.g., /components/schemas/SecretMetadata -> SecretMetadata)
-        class_name = fragment.rstrip("/").rsplit("/", maxsplit=1)[-1]
-        if not class_name:
+        # Extract and normalize class name from fragment to match generated model naming.
+        raw_name = unescape_json_pointer_segment(fragment.rstrip("/").rsplit("/", maxsplit=1)[-1])
+        if not raw_name:
             return None
+        class_name = self.model_resolver.get_class_name(raw_name, unique=False).name
 
         # Construct import — same pattern as x-python-import
         full_path = f"{python_package}.{class_name}"

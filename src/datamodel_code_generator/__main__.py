@@ -318,7 +318,8 @@ class Config(BaseModel):
         return values
 
     @model_validator(mode="before")  # ty: ignore
-    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
+    @classmethod
+    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:
         """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
         raw = values.get("external_ref_mapping")
         if raw is not None and isinstance(raw, list):

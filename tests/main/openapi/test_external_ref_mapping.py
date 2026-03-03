@@ -59,6 +59,255 @@ def test_external_ref_mapping_nested_relative_ref(output_file: Path) -> None:
     )
 
 
+def test_external_ref_mapping_normalizes_imported_class_name(tmp_path: Path) -> None:
+    """Mapped refs normalize schema keys to generated Python class names."""
+    common_schema = tmp_path / "common.yaml"
+    common_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: Common
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    user-name:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+"""
+    )
+    api_schema = tmp_path / "api.yaml"
+    api_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "common.yaml#/components/schemas/user-name"
+      required:
+        - user
+"""
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=api_schema,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import UserName" in content
+    assert "class UserName(" not in content
+
+
+def test_external_ref_mapping_file_uri(tmp_path: Path) -> None:
+    """Mappings accept file URI keys and refs."""
+    common_schema = tmp_path / "common.yaml"
+    common_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: Common
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+"""
+    )
+    common_uri = common_schema.resolve().as_uri()
+    api_schema = tmp_path / "api.yaml"
+    api_schema.write_text(
+        f"""\
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {{}}
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "{common_uri}#/components/schemas/User"
+      required:
+        - user
+"""
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=api_schema,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={common_uri: "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import User" in content
+    assert "class User(" not in content
+
+
+def test_external_ref_mapping_absolute_path_ref(tmp_path: Path) -> None:
+    """Mappings match absolute-path refs to external schemas."""
+    common_schema = tmp_path / "common.yaml"
+    common_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: Common
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+"""
+    )
+    absolute_ref = common_schema.resolve().as_posix()
+    api_schema = tmp_path / "api.yaml"
+    api_schema.write_text(
+        f"""\
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {{}}
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "{absolute_ref}#/components/schemas/User"
+      required:
+        - user
+"""
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=api_schema,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={str(common_schema.resolve()): "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import User" in content
+    assert "class User(" not in content
+
+
+def test_external_ref_mapping_local_ref_unchanged(tmp_path: Path) -> None:
+    """Local refs remain unchanged when external mapping is configured."""
+    api_schema = tmp_path / "api.yaml"
+    api_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - user
+"""
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=api_schema,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "class User(" in content
+    assert "class UserResponse(" in content
+    assert "from mypackage.shared.models import" not in content
+
+
+def test_external_ref_mapping_ref_without_fragment_errors(tmp_path: Path) -> None:
+    """Refs without a fragment remain unsupported and fail clearly."""
+    api_schema = tmp_path / "api.yaml"
+    api_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "common.yaml"
+      required:
+        - user
+"""
+    )
+    common_schema = tmp_path / "common.yaml"
+    common_schema.write_text(
+        """\
+openapi: "3.0.3"
+info:
+  title: Common
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id
+"""
+    )
+    output_file = tmp_path / "output.py"
+    with pytest.raises(Exception, match="A Parser can not resolve classes"):
+        generate(
+            input_=api_schema,
+            input_file_type=InputFileType.OpenAPI,
+            output=output_file,
+            external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+        )
+
+
 def test_external_ref_mapping_no_duplicate_classes(tmp_path: Path) -> None:
     """When mapping is active, the external file's classes should not be generated."""
     output_file = tmp_path / "output.py"
@@ -91,15 +340,42 @@ def test_external_ref_mapping_without_flag_generates_classes(tmp_path: Path) -> 
 
 def test_external_ref_mapping_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
     """Invalid format (no equals sign) produces a clear error."""
-    exit_code = main([
+    with pytest.raises(SystemExit) as exc_info:
+        main([
+            "--input",
+            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--external-ref-mapping",
+            "no-equals-sign",
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Invalid --external-ref-mapping format" in captured.err
+
+
+def test_external_ref_mapping_invalid_format_in_pyproject(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid pyproject external-ref-mapping format returns Exit.ERROR."""
+    (tmp_path / "pyproject.toml").write_text(
+        """\
+[tool.datamodel-codegen]
+external-ref-mapping = ["no-equals-sign"]
+"""
+    )
+    monkeypatch.chdir(tmp_path)
+    return_code = main([
         "--input",
         str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+        "--output",
+        str(tmp_path / "output.py"),
         "--input-file-type",
         "openapi",
-        "--external-ref-mapping",
-        "no-equals-sign",
     ])
-    assert exit_code == Exit.ERROR
+    assert return_code == Exit.ERROR
     captured = capsys.readouterr()
     assert "Invalid --external-ref-mapping format" in captured.err
 
