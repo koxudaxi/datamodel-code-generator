@@ -3635,25 +3635,75 @@ conint/confloat with ge/le parameters.
       "title": "NumberConstraints",
       "type": "object",
       "properties": {
-        "non_negative_count": {
+        "non_negative_int": {
           "type": "integer",
           "minimum": 0,
-          "description": "A count that cannot be negative"
+          "description": "NonNegativeInt: minimum=0 only"
         },
-        "non_positive_balance": {
+        "non_positive_int": {
           "type": "integer",
           "maximum": 0,
-          "description": "A balance that cannot be positive"
+          "description": "NonPositiveInt: maximum=0 only"
         },
-        "non_negative_amount": {
+        "non_negative_float": {
           "type": "number",
           "minimum": 0,
-          "description": "An amount that cannot be negative"
+          "description": "NonNegativeFloat: minimum=0 only"
         },
-        "non_positive_score": {
+        "non_positive_float": {
           "type": "number",
           "maximum": 0,
-          "description": "A score that cannot be positive"
+          "description": "NonPositiveFloat: maximum=0 only"
+        },
+        "positive_int": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "description": "PositiveInt: exclusiveMinimum=0"
+        },
+        "negative_int": {
+          "type": "integer",
+          "exclusiveMaximum": 0,
+          "description": "NegativeInt: exclusiveMaximum=0"
+        },
+        "positive_float": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "PositiveFloat: exclusiveMinimum=0"
+        },
+        "negative_float": {
+          "type": "number",
+          "exclusiveMaximum": 0,
+          "description": "NegativeFloat: exclusiveMaximum=0"
+        },
+        "bounded_non_negative_int": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "NonNegativeInt with additional upper bound"
+        },
+        "bounded_non_positive_int": {
+          "type": "integer",
+          "maximum": 0,
+          "minimum": -100,
+          "description": "NonPositiveInt with additional lower bound"
+        },
+        "bounded_non_negative_float": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1.0,
+          "description": "NonNegativeFloat with additional upper bound"
+        },
+        "bounded_non_positive_float": {
+          "type": "number",
+          "maximum": 0,
+          "minimum": -1.0,
+          "description": "NonPositiveFloat with additional lower bound"
+        },
+        "plain_constrained_int": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 100,
+          "description": "No zero bound: should remain conint/Field"
         }
       }
     }
@@ -3671,25 +3721,58 @@ conint/confloat with ge/le parameters.
     from pydantic import (
         BaseModel,
         Field,
+        NegativeFloat,
+        NegativeInt,
         NonNegativeFloat,
         NonNegativeInt,
         NonPositiveFloat,
         NonPositiveInt,
+        PositiveFloat,
+        PositiveInt,
+        confloat,
+        conint,
     )
     
     
     class NumberConstraints(BaseModel):
-        non_negative_count: NonNegativeInt | None = Field(
-            None, description='A count that cannot be negative'
+        non_negative_int: NonNegativeInt | None = Field(
+            None, description='NonNegativeInt: minimum=0 only'
         )
-        non_positive_balance: NonPositiveInt | None = Field(
-            None, description='A balance that cannot be positive'
+        non_positive_int: NonPositiveInt | None = Field(
+            None, description='NonPositiveInt: maximum=0 only'
         )
-        non_negative_amount: NonNegativeFloat | None = Field(
-            None, description='An amount that cannot be negative'
+        non_negative_float: NonNegativeFloat | None = Field(
+            None, description='NonNegativeFloat: minimum=0 only'
         )
-        non_positive_score: NonPositiveFloat | None = Field(
-            None, description='A score that cannot be positive'
+        non_positive_float: NonPositiveFloat | None = Field(
+            None, description='NonPositiveFloat: maximum=0 only'
+        )
+        positive_int: PositiveInt | None = Field(
+            None, description='PositiveInt: exclusiveMinimum=0'
+        )
+        negative_int: NegativeInt | None = Field(
+            None, description='NegativeInt: exclusiveMaximum=0'
+        )
+        positive_float: PositiveFloat | None = Field(
+            None, description='PositiveFloat: exclusiveMinimum=0'
+        )
+        negative_float: NegativeFloat | None = Field(
+            None, description='NegativeFloat: exclusiveMaximum=0'
+        )
+        bounded_non_negative_int: conint(ge=0, le=100) | None = Field(
+            None, description='NonNegativeInt with additional upper bound'
+        )
+        bounded_non_positive_int: conint(ge=-100, le=0) | None = Field(
+            None, description='NonPositiveInt with additional lower bound'
+        )
+        bounded_non_negative_float: confloat(ge=0.0, le=1.0) | None = Field(
+            None, description='NonNegativeFloat with additional upper bound'
+        )
+        bounded_non_positive_float: confloat(ge=-1.0, le=0.0) | None = Field(
+            None, description='NonPositiveFloat with additional lower bound'
+        )
+        plain_constrained_int: conint(ge=5, le=100) | None = Field(
+            None, description='No zero bound: should remain conint/Field'
         )
     ```
 

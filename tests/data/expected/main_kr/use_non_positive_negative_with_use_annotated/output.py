@@ -9,23 +9,59 @@ from typing import Annotated
 from pydantic import (
     BaseModel,
     Field,
+    NegativeFloat,
+    NegativeInt,
     NonNegativeFloat,
     NonNegativeInt,
     NonPositiveFloat,
     NonPositiveInt,
+    PositiveFloat,
+    PositiveInt,
 )
 
 
 class NumberConstraints(BaseModel):
-    non_negative_count: Annotated[
-        NonNegativeInt | None, Field(description='A count that cannot be negative')
+    non_negative_int: Annotated[
+        NonNegativeInt | None, Field(description='NonNegativeInt: minimum=0 only')
     ] = None
-    non_positive_balance: Annotated[
-        NonPositiveInt | None, Field(description='A balance that cannot be positive')
+    non_positive_int: Annotated[
+        NonPositiveInt | None, Field(description='NonPositiveInt: maximum=0 only')
     ] = None
-    non_negative_amount: Annotated[
-        NonNegativeFloat | None, Field(description='An amount that cannot be negative')
+    non_negative_float: Annotated[
+        NonNegativeFloat | None, Field(description='NonNegativeFloat: minimum=0 only')
     ] = None
-    non_positive_score: Annotated[
-        NonPositiveFloat | None, Field(description='A score that cannot be positive')
+    non_positive_float: Annotated[
+        NonPositiveFloat | None, Field(description='NonPositiveFloat: maximum=0 only')
+    ] = None
+    positive_int: Annotated[
+        PositiveInt | None, Field(description='PositiveInt: exclusiveMinimum=0')
+    ] = None
+    negative_int: Annotated[
+        NegativeInt | None, Field(description='NegativeInt: exclusiveMaximum=0')
+    ] = None
+    positive_float: Annotated[
+        PositiveFloat | None, Field(description='PositiveFloat: exclusiveMinimum=0')
+    ] = None
+    negative_float: Annotated[
+        NegativeFloat | None, Field(description='NegativeFloat: exclusiveMaximum=0')
+    ] = None
+    bounded_non_negative_int: Annotated[
+        NonNegativeInt | None,
+        Field(description='NonNegativeInt with additional upper bound', le=100),
+    ] = None
+    bounded_non_positive_int: Annotated[
+        NonPositiveInt | None,
+        Field(description='NonPositiveInt with additional lower bound', ge=-100),
+    ] = None
+    bounded_non_negative_float: Annotated[
+        NonNegativeFloat | None,
+        Field(description='NonNegativeFloat with additional upper bound', le=1),
+    ] = None
+    bounded_non_positive_float: Annotated[
+        NonPositiveFloat | None,
+        Field(description='NonPositiveFloat with additional lower bound', ge=-1),
+    ] = None
+    plain_constrained_int: Annotated[
+        int | None,
+        Field(description='No zero bound: should remain conint/Field', ge=5, le=100),
     ] = None
