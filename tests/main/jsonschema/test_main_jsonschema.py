@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     PythonVersionMin,
+    TargetPydanticVersion,
     chdir,
     generate,
 )
@@ -1842,6 +1843,39 @@ def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(tmp_path: 
     )
 
     assert_file_content(output_file, "pydantic_v2_dataclass_use_attribute_docstrings.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with allow_population_by_field_name."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        allow_population_by_field_name=True,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_populate_by_name.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name_v2_11(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with allow_population_by_field_name and target v2.11."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        allow_population_by_field_name=True,
+        target_pydantic_version=TargetPydanticVersion.V2_11,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_validate_by_name.py")
 
 
 def test_main_generate_pydantic_v2_dataclass_extra_allow(tmp_path: Path) -> None:
