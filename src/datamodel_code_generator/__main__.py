@@ -318,21 +318,28 @@ class Config(BaseModel):
         return values
 
     @model_validator(mode="before")  # ty: ignore
-    @classmethod
-    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def validate_external_ref_mapping(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
         """Parse external_ref_mapping from list of KEY=VALUE strings to dict."""
         raw = values.get("external_ref_mapping")
         if raw is not None and isinstance(raw, list):
             mapping: dict[str, str] = {}
             for item in raw:
-                if "=" not in item:
+                if not isinstance(item, str) or "=" not in item:
                     msg = (
                         f"Invalid --external-ref-mapping format: {item!r}. "
                         "Expected FILE_PATH=PYTHON_PACKAGE (e.g., '../common/schema.yaml=mypackage.models')"
                     )
                     raise Error(msg)
                 file_path, python_package = item.split("=", maxsplit=1)
-                mapping[file_path.strip()] = python_package.strip()
+                file_path = file_path.strip()
+                python_package = python_package.strip()
+                if not file_path or not python_package:
+                    msg = (
+                        f"Invalid --external-ref-mapping format: {item!r}. "
+                        "Both FILE_PATH and PYTHON_PACKAGE must be non-empty."
+                    )
+                    raise Error(msg)
+                mapping[file_path] = python_package
             values["external_ref_mapping"] = mapping
         return values
 

@@ -354,6 +354,26 @@ def test_external_ref_mapping_invalid_format(capsys: pytest.CaptureFixture[str])
     assert "Invalid --external-ref-mapping format" in captured.err
 
 
+@pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
+def test_external_ref_mapping_invalid_empty_part(
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+) -> None:
+    """Empty file path or package in mapping produces a clear error."""
+    with pytest.raises(SystemExit) as exc_info:
+        main([
+            "--input",
+            str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--external-ref-mapping",
+            mapping,
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Both FILE_PATH and PYTHON_PACKAGE must be non-empty." in captured.err
+
+
 def test_external_ref_mapping_invalid_format_in_pyproject(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -378,6 +398,34 @@ external-ref-mapping = ["no-equals-sign"]
     assert return_code == Exit.ERROR
     captured = capsys.readouterr()
     assert "Invalid --external-ref-mapping format" in captured.err
+
+
+@pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
+def test_external_ref_mapping_invalid_empty_part_in_pyproject(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    mapping: str,
+) -> None:
+    """Empty file path or package in pyproject mapping returns Exit.ERROR."""
+    (tmp_path / "pyproject.toml").write_text(
+        f"""\
+[tool.datamodel-codegen]
+external-ref-mapping = ["{mapping}"]
+"""
+    )
+    monkeypatch.chdir(tmp_path)
+    return_code = main([
+        "--input",
+        str(EXTERNAL_REF_DATA_PATH / "api.yaml"),
+        "--output",
+        str(tmp_path / "output.py"),
+        "--input-file-type",
+        "openapi",
+    ])
+    assert return_code == Exit.ERROR
+    captured = capsys.readouterr()
+    assert "Both FILE_PATH and PYTHON_PACKAGE must be non-empty." in captured.err
 
 
 def test_external_ref_mapping_programmatic_api(tmp_path: Path) -> None:
