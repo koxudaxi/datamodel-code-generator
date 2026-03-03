@@ -708,8 +708,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._external_ref_mapping: dict[str, str] = {}
         if raw_mapping:
             for file_path, python_package in raw_mapping.items():
-                abs_path = str((self.base_path / file_path).resolve())
-                self._external_ref_mapping[abs_path] = python_package
+                if is_url(file_path):
+                    self._external_ref_mapping[file_path] = python_package
+                else:
+                    abs_path = str((self.base_path / file_path).resolve())
+                    self._external_ref_mapping[abs_path] = python_package
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
@@ -1307,6 +1310,37 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type(data_types=[data_type], is_optional=True)
         return data_type
 
+    def _resolve_external_ref_mapping(self, ref: str) -> tuple[str, str] | None:
+        """Resolve a ref and return mapped package + fragment if configured."""
+        if not self._external_ref_mapping:
+            return None
+
+        def _resolve_lookup_key(file_part: str) -> str:
+            if is_url(file_part):
+                return file_part
+            path = Path(file_part)
+            if path.is_absolute():
+                return str(path.resolve())
+            base_path = self.model_resolver.current_base_path or self.base_path
+            return str((base_path / path).resolve())
+
+        candidate_refs = [ref]
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if resolved_ref not in candidate_refs:
+            candidate_refs.append(resolved_ref)
+
+        for candidate_ref in candidate_refs:
+            if "#" not in candidate_ref:
+                continue
+            file_part, fragment = candidate_ref.split("#", maxsplit=1)
+            if not file_part:
+                continue
+            lookup_key = _resolve_lookup_key(file_part)
+            if python_package := self._external_ref_mapping.get(lookup_key):
+                return python_package, fragment
+
+        return None
+
     def _check_external_ref_mapping(self, ref: str) -> DataType | None:
         """Check if a $ref matches an external ref mapping and return an import-based DataType.
 
@@ -1317,23 +1351,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         Returns None if no mapping matches, allowing the caller to fall through
         to normal ref resolution.
         """
-        if not self._external_ref_mapping:
+        mapped = self._resolve_external_ref_mapping(ref)
+        if mapped is None:
             return None
-
-        # Only process refs with a file path component (contain '#')
-        if "#" not in ref:
-            return None
-
-        file_part, fragment = ref.split("#", maxsplit=1)
-        if not file_part:
-            return None  # Local ref like "#/definitions/Foo"
-
-        # Resolve the file path to absolute for matching
-        abs_file = str((self.base_path / file_part).resolve())
-
-        python_package = self._external_ref_mapping.get(abs_file)
-        if python_package is None:
-            return None
+        python_package, fragment = mapped
 
         # Extract class name from fragment (e.g., /components/schemas/SecretMetadata -> SecretMetadata)
         class_name = fragment.rstrip("/").rsplit("/", maxsplit=1)[-1]
@@ -3828,20 +3849,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             default_factory=lambda _: load_data_from_path(full_path, self.encoding),
         )
 
-    def _is_external_ref_mapped(self, ref: str) -> bool:
-        """Check if a ref's file path matches an external ref mapping."""
-        if not self._external_ref_mapping or "#" not in ref:
-            return False
-        file_part = ref.split("#", maxsplit=1)[0]
-        if not file_part:
-            return False
-        abs_file = str((self.base_path / file_part).resolve())
-        return abs_file in self._external_ref_mapping
-
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""
         # If the ref is mapped to an external package, mark as loaded and skip parsing
-        if self._is_external_ref_mapped(object_ref):
+        if self._resolve_external_ref_mapping(object_ref) is not None:
             reference = self.model_resolver.add_ref(object_ref)
             reference.loaded = True
             return reference

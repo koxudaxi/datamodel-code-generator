@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -12,9 +12,23 @@ from datamodel_code_generator.config import GenerateConfig
 from tests.main.conftest import OPEN_API_DATA_PATH, run_main_and_assert
 from tests.main.openapi.conftest import assert_file_content
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 EXTERNAL_REF_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
 
 
+@pytest.mark.cli_doc(
+    options=["--external-ref-mapping"],
+    option_description="""Map external `$ref` files to Python packages.
+
+Use `--external-ref-mapping FILE_PATH=PYTHON_PACKAGE` to import referenced models from an existing package,
+instead of generating duplicate classes from external schema files.
+""",
+    input_schema="openapi/external_ref_mapping/api.yaml",
+    cli_args=["--input-file-type", "openapi", "--external-ref-mapping", "common.yaml=mypackage.shared.models"],
+    golden_output="main/openapi/external_ref_mapping.py",
+)
 def test_external_ref_mapping_basic(output_file: Path) -> None:
     """External refs produce imports, not class definitions."""
     run_main_and_assert(
@@ -27,6 +41,21 @@ def test_external_ref_mapping_basic(output_file: Path) -> None:
         ],
         assert_func=assert_file_content,
         expected_file="external_ref_mapping.py",
+    )
+
+
+def test_external_ref_mapping_nested_relative_ref(output_file: Path) -> None:
+    """Mappings work for refs that are relative to nested external files."""
+    run_main_and_assert(
+        input_path=EXTERNAL_REF_DATA_PATH / "api_nested.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=[
+            "--external-ref-mapping",
+            "common.yaml=mypackage.shared.models",
+        ],
+        assert_func=assert_file_content,
+        expected_file="external_ref_mapping_nested.py",
     )
 
 
