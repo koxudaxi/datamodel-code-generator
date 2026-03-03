@@ -184,21 +184,6 @@ json_schema_data_formats: dict[str, dict[str, Types]] = {
 }
 
 
-# Mapping from specialized constrained type names to the JSON Schema constraint
-# keys they encode. When a type like NonNegativeInt is used, the corresponding
-# constraint (e.g. "minimum") should be removed from Field() to avoid redundancy.
-_CONSTRAINED_TYPE_CONSUMED_KEYS: dict[str, tuple[str, ...]] = {
-    "PositiveInt": ("exclusiveMinimum",),
-    "NegativeInt": ("exclusiveMaximum",),
-    "NonNegativeInt": ("minimum",),
-    "NonPositiveInt": ("maximum",),
-    "PositiveFloat": ("exclusiveMinimum",),
-    "NegativeFloat": ("exclusiveMaximum",),
-    "NonNegativeFloat": ("minimum",),
-    "NonPositiveFloat": ("maximum",),
-}
-
-
 class JSONReference(_enum.Enum):
     """Define types of JSON references."""
 
@@ -1241,11 +1226,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
         constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
-        # When a specialized constrained type (e.g. NonNegativeInt) is used,
-        # remove the corresponding constraint from the field to avoid redundancy
-        # like Annotated[NonNegativeInt, Field(ge=0)]
-        if constraints is not None and field_type.type in _CONSTRAINED_TYPE_CONSUMED_KEYS:
-            for key in _CONSTRAINED_TYPE_CONSUMED_KEYS[field_type.type]:
+        consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
+        if constraints is not None and field_type.type in consumed:
+            for key in consumed[field_type.type]:
                 constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
