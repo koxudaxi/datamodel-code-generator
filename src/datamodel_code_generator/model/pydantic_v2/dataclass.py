@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.dataclass import has_field_assignment
-from datamodel_code_generator.model.pydantic_v2.base_model import Constraints
+from datamodel_code_generator.model.pydantic_v2.base_model import ConfigAttribute, Constraints
 from datamodel_code_generator.model.pydantic_v2.base_model import (
     DataModelField as DataModelFieldV2,
 )
@@ -35,6 +35,17 @@ class DataClass(DataModel):
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
+    # frozen/allow_mutation are handled as dataclass decorator arguments, not ConfigDict
+    _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [
+        ConfigAttribute("allow_population_by_field_name", "populate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("populate_by_name", "populate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
+    ]
+    _CONFIG_ATTRIBUTES_V2_11: ClassVar[list[ConfigAttribute]] = [
+        ConfigAttribute("allow_population_by_field_name", "validate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("populate_by_name", "validate_by_name", False),  # noqa: FBT003
+        ConfigAttribute("use_attribute_docstrings", "use_attribute_docstrings", False),  # noqa: FBT003
+    ]
 
     def __init__(  # noqa: PLR0913
         self,
@@ -90,8 +101,12 @@ class DataClass(DataModel):
         if extra:
             config_parameters["extra"] = extra
 
-        if self.extra_template_data.get("use_attribute_docstrings"):
-            config_parameters["use_attribute_docstrings"] = True
+        config_attributes = self._get_config_attributes()
+        for from_, to, invert in config_attributes:
+            if from_ in self.extra_template_data:
+                config_parameters[to] = (
+                    not self.extra_template_data[from_] if invert else self.extra_template_data[from_]
+                )
 
         for data_type in self.all_data_types:
             if data_type.is_custom_type:  # pragma: no cover
@@ -101,6 +116,15 @@ class DataClass(DataModel):
         if config_parameters:
             self._additional_imports.append(IMPORT_CONFIG_DICT)
             self.extra_template_data["config"] = config_parameters
+
+    def _get_config_attributes(self) -> list[ConfigAttribute]:
+        """Get config attributes based on target Pydantic version."""
+        from datamodel_code_generator import TargetPydanticVersion  # noqa: PLC0415
+
+        target_version = self.extra_template_data.get("target_pydantic_version")
+        if target_version == TargetPydanticVersion.V2_11:
+            return self._CONFIG_ATTRIBUTES_V2_11
+        return self._CONFIG_ATTRIBUTES_V2
 
     def _get_config_extra(self) -> str | None:
         """Get extra field configuration for ConfigDict."""

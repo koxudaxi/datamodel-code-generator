@@ -1342,13 +1342,7 @@ conint/confloat with ge/le parameters.""",
 @pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="Require Pydantic version 2.0.0 or later")
 @freeze_time("2019-07-26")
 def test_use_non_positive_negative_number_constrained_types(output_file: Path) -> None:
-    """Use NonPositive/NonNegative types for number constraints.
-
-    The `--use-non-positive-negative-number-constrained-types` flag generates
-    Pydantic's NonPositiveInt, NonNegativeInt, NonPositiveFloat, and NonNegativeFloat
-    types for fields with minimum: 0 or maximum: 0 constraints, instead of using
-    conint/confloat with ge/le parameters.
-    """
+    """Use NonPositive/NonNegative types for number constraints."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_non_positive_negative.json",
         output_path=output_file,
@@ -1356,6 +1350,20 @@ def test_use_non_positive_negative_number_constrained_types(output_file: Path) -
         assert_func=assert_file_content,
         expected_file=EXPECTED_MAIN_KR_PATH / "use_non_positive_negative" / "output.py",
         extra_args=["--use-non-positive-negative-number-constrained-types"],
+    )
+
+
+@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="Require Pydantic version 2.0.0 or later")
+@freeze_time("2019-07-26")
+def test_use_non_positive_negative_number_constrained_types_with_use_annotated(output_file: Path) -> None:
+    """Use NonPositive/NonNegative types combined with --use-annotated."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_non_positive_negative.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "use_non_positive_negative_with_use_annotated" / "output.py",
+        extra_args=["--use-non-positive-negative-number-constrained-types", "--use-annotated"],
     )
 
 

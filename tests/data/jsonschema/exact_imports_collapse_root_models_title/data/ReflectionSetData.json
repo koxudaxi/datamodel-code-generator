@@ -1,0 +1,21 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "ReflectionSetData",
+    "type": "object",
+    "properties": {
+        "fooStatsOverall": {
+            "allOf": [
+                {
+                    "$ref": "../datatypes/FooStats.json"
+                }
+            ]
+        },
+        "fooStatsShells": {
+            "items": {
+                "$ref": "../datatypes/FooStats.json"
+            },
+            "title": "Foo Stats Shells",
+            "type": "array"
+        }
+    }
+}
