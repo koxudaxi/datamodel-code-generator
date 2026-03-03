@@ -1385,6 +1385,35 @@ def test_use_non_positive_negative_number_constrained_types_with_use_annotated(o
     assert "Field(le=0)" not in content
 
 
+def test_use_non_positive_negative_number_constrained_types_with_other_constraints(output_file: Path) -> None:
+    """Use NonPositive/NonNegative types when additional numeric constraints are present.
+
+    When a field has both a zero-bound constraint (e.g. minimum: 0) and another
+    numeric constraint (e.g. maximum: 100), the specialized type (NonNegativeInt)
+    should still be used with the remaining constraint on Field().
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_non_positive_negative_with_other_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--use-non-positive-negative-number-constrained-types", "--use-annotated"],
+    )
+    content = output_file.read_text(encoding="utf-8")
+    # Specialized types should be used even with additional constraints
+    assert "NonNegativeInt" in content
+    assert "NonPositiveInt" in content
+    assert "NonNegativeFloat" in content
+    assert "NonPositiveFloat" in content
+    # The zero-bound constraints should NOT appear on Field (they're in the type)
+    assert "ge=0" not in content
+    assert "le=0" not in content
+    # But non-zero constraints should remain on Field
+    assert "le=100" in content
+    assert "ge=-100" in content
+    # Plain constrained field (no zero bound) should use int, not specialized type
+    assert "ge=5" in content
+
+
 @pytest.mark.cli_doc(
     options=["--include-path-parameters"],
     option_description="""Include OpenAPI path parameters in generated parameter models.

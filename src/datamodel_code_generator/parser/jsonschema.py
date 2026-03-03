@@ -1317,11 +1317,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if value is not None:
                         number_kwargs[key] = value.value if isinstance(value, UnionIntFloat) else value
 
-                # Only works if there is exactly one number constraint
-                if len(number_kwargs) == 1:
-                    v = next(iter(number_kwargs.values()))
-                    if v == 0 and self.data_type_manager.use_non_positive_negative_number_constrained_types:
-                        kwargs_to_pass = number_kwargs
+                if self.data_type_manager.use_non_positive_negative_number_constrained_types:
+                    zero_bound_keys = [k for k, v in number_kwargs.items() if v == 0]
+                    if len(zero_bound_keys) == 1:
+                        key = zero_bound_keys[0]
+                        kwargs_to_pass = {key: number_kwargs[key]}
             else:
                 kwargs_to_pass = model_dump(obj)
 
