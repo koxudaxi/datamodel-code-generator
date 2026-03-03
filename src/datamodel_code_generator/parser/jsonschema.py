@@ -1226,6 +1226,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
         constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
+        consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
+        if constraints is not None and field_type.type in consumed:
+            for key in consumed[field_type.type]:
+                constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -1283,10 +1287,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
+            if self.field_constraints:
+                # To prevent type manager from generating conint/confloat,
+                # we only pass constraints that perfectly match specialized types
+                # (like NonNegativeInt -> minimum: 0).
+                # Other constraints should remain on Field(), so we pass {}
+                kwargs_to_pass = {}
+                number_keys = ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum")
+                number_kwargs: dict[str, int | float | bool] = {}
+                for key in number_keys:
+                    value = getattr(obj, key)
+                    if value is not None:
+                        number_kwargs[key] = value.value if isinstance(value, UnionIntFloat) else value
+
+                if self.data_type_manager.use_non_positive_negative_number_constrained_types:
+                    zero_bound_keys = [k for k, v in number_kwargs.items() if v == 0]
+                    if len(zero_bound_keys) == 1:
+                        key = zero_bound_keys[0]
+                        kwargs_to_pass = {key: number_kwargs[key]}
+            else:
+                kwargs_to_pass = model_dump(obj)
+
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
                 field_constraints=self.field_constraints,
-                **model_dump(obj) if not self.field_constraints else {},
+                **kwargs_to_pass,
             )
 
         if isinstance(obj.type, list):
