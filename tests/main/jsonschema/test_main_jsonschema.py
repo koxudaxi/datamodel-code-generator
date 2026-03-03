@@ -8729,3 +8729,32 @@ def test_main_exact_imports_collapse_root_models_module_class_collision(output_d
         ],
         force_exec_validation=True,
     )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_exact_imports_collapse_root_models_title_array(output_dir: Path) -> None:
+    """Test --use-exact-imports with --collapse-root-models when array field has title.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3001
+    When an allOf $ref and an array items $ref point to the same type, and the array
+    field has a title (causing a root model to be created and collapsed), both fields
+    should use the same import alias.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "exact_imports_collapse_root_models_title",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models_title",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-exact-imports",
+            "--collapse-root-models",
+            "--use-title-as-name",
+            "--snake-case-field",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
