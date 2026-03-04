@@ -18,6 +18,7 @@ from datamodel_code_generator import (
     InputFileType,
     PythonVersion,
     PythonVersionMin,
+    TargetPydanticVersion,
     chdir,
     generate,
 )
@@ -1842,6 +1843,39 @@ def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(tmp_path: 
     )
 
     assert_file_content(output_file, "pydantic_v2_dataclass_use_attribute_docstrings.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with allow_population_by_field_name."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        allow_population_by_field_name=True,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_populate_by_name.py")
+
+
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name_v2_11(tmp_path: Path) -> None:
+    """Test pydantic_v2.dataclass with allow_population_by_field_name and target v2.11."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2Dataclass,
+        allow_population_by_field_name=True,
+        target_pydantic_version=TargetPydanticVersion.V2_11,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_dataclass_validate_by_name.py")
 
 
 def test_main_generate_pydantic_v2_dataclass_extra_allow(tmp_path: Path) -> None:
@@ -5707,6 +5741,31 @@ def test_main_jsonschema_type_alias_with_field_description_py312(output_file: Pa
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> None:
+    """Don't wrap type alias defaults in default_factory (TypeAliasType is not callable)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_literal_type_alias_default.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_literal_type_alias_default.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--enum-field-as-literal",
+            "all",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--type-mappings"],
     option_description="""Override default type mappings for schema formats.
@@ -8657,6 +8716,35 @@ def test_main_exact_imports_collapse_root_models_module_class_collision(output_d
         output_path=output_dir,
         input_file_type="jsonschema",
         expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+            "--use-exact-imports",
+            "--collapse-root-models",
+            "--use-title-as-name",
+            "--snake-case-field",
+            "--disable-timestamp",
+        ],
+        force_exec_validation=True,
+    )
+
+
+@PYDANTIC_V2_SKIP
+def test_main_exact_imports_collapse_root_models_title_array(output_dir: Path) -> None:
+    """Test --use-exact-imports with --collapse-root-models when array field has title.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3001
+    When an allOf $ref and an array items $ref point to the same type, and the array
+    field has a title (causing a root model to be created and collapsed), both fields
+    should use the same import alias.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "exact_imports_collapse_root_models_title",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "exact_imports_collapse_root_models_title",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",

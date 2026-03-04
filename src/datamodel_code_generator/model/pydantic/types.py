@@ -173,6 +173,16 @@ class DataTypeManager(_DataTypeManager):
 
     PATTERN_KEY: ClassVar[str] = "regex"
     HOSTNAME_REGEX: ClassVar[str] = HOSTNAME_REGEX
+    CONSTRAINED_TYPE_CONSUMED_KEYS: ClassVar[dict[str, tuple[str, ...]]] = {
+        "PositiveInt": ("exclusiveMinimum",),
+        "NegativeInt": ("exclusiveMaximum",),
+        "NonNegativeInt": ("minimum",),
+        "NonPositiveInt": ("maximum",),
+        "PositiveFloat": ("exclusiveMinimum",),
+        "NegativeFloat": ("exclusiveMaximum",),
+        "NonNegativeFloat": ("minimum",),
+        "NonPositiveFloat": ("maximum",),
+    }
 
     def __init__(  # noqa: PLR0913, PLR0917
         self,
