@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.54.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.54.1) - 2026-03-04
+
+## What's Changed
+* Add dismissible announce bar to docs site by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3004
+* docs: update maintainer announcement to reflect open to work status by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3007
+* Support isort 8 by @cjwatson in https://github.com/koxudaxi/datamodel-code-generator/pull/3011
+* Fix --allow-population-by-field-name for pydantic v2 dataclass output by @butvinm in https://github.com/koxudaxi/datamodel-code-generator/pull/3013
+* Support `--use-annotated` *and* `--use-non-positive-negative-number-constrained-types` by @torarvid in https://github.com/koxudaxi/datamodel-code-generator/pull/3015
+* Skip default_factory wrapping for non-callable type aliases by @butvinm in https://github.com/koxudaxi/datamodel-code-generator/pull/3012
+* Fix incorrect relative imports with --use-exact-imports and --collapse-root-models by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3020
+* feat: Add --external-ref-mapping to import from external packages instead of generating by @matssun in https://github.com/koxudaxi/datamodel-code-generator/pull/3006
+* Build(deps): Bump cryptography from 46.0.3 to 46.0.5 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3016
+* Build(deps): Bump urllib3 from 2.6.2 to 2.6.3 by @dependabot[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3017
+
+## New Contributors
+* @matssun made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3006
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.54.0...0.54.1
+
+---
+
 ## [0.54.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.54.0) - 2026-02-14
 
 ## Breaking Changes
