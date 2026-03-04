@@ -702,6 +702,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.raw_obj: dict[str, YamlValue] = {}
         self._root_id: Optional[str] = None  # noqa: UP045
         self._root_id_base_path: Optional[str] = None  # noqa: UP045
+
+        # Normalize external ref mapping paths to absolute for reliable matching
+        raw_mapping = self.config.external_ref_mapping
+        self._external_ref_mapping: dict[str, str] = {}
+        if raw_mapping:
+            for file_path, python_package in raw_mapping.items():
+                if is_url(file_path):
+                    self._external_ref_mapping[file_path] = python_package
+                else:
+                    abs_path = str((self.base_path / file_path).resolve())
+                    self._external_ref_mapping[abs_path] = python_package
         self.reserved_refs: defaultdict[tuple[str, ...], set[str]] = defaultdict(set)
         self._dynamic_anchor_index: dict[tuple[str, ...], dict[str, str]] = {}
         self._recursive_anchor_index: dict[tuple[str, ...], list[str]] = {}
@@ -1226,6 +1237,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
         constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
+        consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
+        if constraints is not None and field_type.type in consumed:
+            for key in consumed[field_type.type]:
+                constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         # Suppress minItems/maxItems for fixed-length tuples
@@ -1283,10 +1298,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
         def _get_data_type(type_: str, format__: str) -> DataType:
+            if self.field_constraints:
+                # To prevent type manager from generating conint/confloat,
+                # we only pass constraints that perfectly match specialized types
+                # (like NonNegativeInt -> minimum: 0).
+                # Other constraints should remain on Field(), so we pass {}
+                kwargs_to_pass = {}
+                number_keys = ("minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum")
+                number_kwargs: dict[str, int | float | bool] = {}
+                for key in number_keys:
+                    value = getattr(obj, key)
+                    if value is not None:
+                        number_kwargs[key] = value.value if isinstance(value, UnionIntFloat) else value
+
+                if self.data_type_manager.use_non_positive_negative_number_constrained_types:
+                    zero_bound_keys = [k for k, v in number_kwargs.items() if v == 0]
+                    if len(zero_bound_keys) == 1:
+                        key = zero_bound_keys[0]
+                        kwargs_to_pass = {key: number_kwargs[key]}
+            else:
+                kwargs_to_pass = model_dump(obj)
+
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
                 field_constraints=self.field_constraints,
-                **model_dump(obj) if not self.field_constraints else {},
+                **kwargs_to_pass,
             )
 
         if isinstance(obj.type, list):
@@ -1299,8 +1335,71 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.data_type(data_types=[data_type], is_optional=True)
         return data_type
 
+    def _resolve_external_ref_mapping(self, ref: str) -> tuple[str, str] | None:
+        """Resolve a ref and return mapped package + fragment if configured."""
+        if not self._external_ref_mapping:
+            return None
+
+        def _resolve_lookup_key(file_part: str) -> str:
+            if is_url(file_part):
+                return file_part
+            path = Path(file_part)
+            if path.is_absolute():
+                return str(path.resolve())
+            base_path = self.model_resolver.current_base_path or self.base_path
+            return str((base_path / path).resolve())
+
+        candidate_refs = [ref]
+        resolved_ref = self.model_resolver.resolve_ref(ref)
+        if resolved_ref not in candidate_refs:
+            candidate_refs.append(resolved_ref)
+
+        for candidate_ref in candidate_refs:
+            if "#" not in candidate_ref:
+                continue
+            file_part, fragment = candidate_ref.split("#", maxsplit=1)
+            if not file_part:
+                continue
+            lookup_key = _resolve_lookup_key(file_part)
+            if python_package := self._external_ref_mapping.get(lookup_key):
+                return python_package, fragment
+
+        return None
+
+    def _check_external_ref_mapping(self, ref: str) -> DataType | None:
+        """Check if a $ref matches an external ref mapping and return an import-based DataType.
+
+        Splits the ref into file path + JSON pointer fragment, resolves the file path
+        to absolute, and checks against the normalized mapping. If matched, constructs
+        an import from the mapped package and the class name extracted from the fragment.
+
+        Returns None if no mapping matches, allowing the caller to fall through
+        to normal ref resolution.
+        """
+        mapped = self._resolve_external_ref_mapping(ref)
+        if mapped is None:
+            return None
+        python_package, fragment = mapped
+
+        # Extract and normalize class name from fragment to match generated model naming.
+        raw_name = unescape_json_pointer_segment(fragment.rstrip("/").rsplit("/", maxsplit=1)[-1])
+        if not raw_name:
+            return None
+        class_name = self.model_resolver.get_class_name(raw_name, unique=False).name
+
+        # Construct import — same pattern as x-python-import
+        full_path = f"{python_package}.{class_name}"
+        import_ = Import.from_full_path(full_path)
+        self.imports.append(import_)
+        return self.data_type.from_import(import_)
+
     def get_ref_data_type(self, ref: str) -> DataType:
         """Get a data type from a reference string."""
+        # Check external ref mapping before loading the schema
+        mapped = self._check_external_ref_mapping(ref)
+        if mapped is not None:
+            return mapped
+
         ref_schema = self._load_ref_schema_object(ref)
         x_python_import = ref_schema.extras.get("x-python-import")
         if isinstance(x_python_import, dict):
@@ -3778,6 +3877,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""
+        # If the ref is mapped to an external package, mark as loaded and skip parsing
+        if self._resolve_external_ref_mapping(object_ref) is not None:
+            reference = self.model_resolver.add_ref(object_ref)
+            reference.loaded = True
+            return reference
+
         reference = self.model_resolver.add_ref(object_ref)
         if reference.loaded:
             return reference

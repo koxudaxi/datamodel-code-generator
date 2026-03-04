@@ -1413,7 +1413,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 else:
                     from_, import_ = full_path = relative(current_module_name, target_full_name)
                     if imports.use_exact:
-                        from_, import_ = exact_import(from_, import_, data_type.reference.short_name)
+                        from_, import_ = full_path = exact_import(from_, import_, data_type.reference.short_name)
                     import_ = import_.replace("-", "_")
                     current_module_path = tuple(current_module_name.split(".")) if current_module_name else ()
                     if (  # pragma: no cover
@@ -2158,7 +2158,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 continue
             if isinstance(model_field.default, list):
                 continue
-            if data_type.reference and isinstance(data_type.reference.source, self.data_model_root_type):
+            if (
+                data_type.reference
+                and isinstance(data_type.reference.source, self.data_model_root_type)
+                and not isinstance(data_type.reference.source, TypeAliasBase)
+            ):
                 type_name = data_type.alias or data_type.reference.short_name
                 model_field.default = WrappedDefault(
                     value=model_field.default,

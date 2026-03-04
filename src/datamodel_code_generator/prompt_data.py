@@ -46,6 +46,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--encoding": "Specify character encoding for input and output files.",
     "--enum-field-as-literal": "Convert all enum fields to Literal types instead of Enum classes.",
     "--enum-field-as-literal-map": "Override enum/literal generation per-field via JSON mapping.",
+    "--external-ref-mapping": "Map external `$ref` files to Python packages.",
     "--extra-fields": "Configure how generated models handle extra fields not defined in schema.",
     "--extra-template-data": "Pass custom template variables from JSON file for code generation.",
     "--field-constraints": "Generate Field() with validation constraints from schema.",

@@ -8,7 +8,7 @@ This documentation is auto-generated from test cases.
 
 | Category | Options | Description |
 |----------|---------|-------------|
-| 📁 [Base Options](base-options.md) | 9 | Input/output configuration |
+| 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
@@ -77,6 +77,7 @@ This documentation is auto-generated from test cases.
 - [`--encoding`](base-options.md#encoding)
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal)
 - [`--enum-field-as-literal-map`](typing-customization.md#enum-field-as-literal-map)
+- [`--external-ref-mapping`](base-options.md#external-ref-mapping)
 - [`--extra-fields`](field-customization.md#extra-fields)
 - [`--extra-template-data`](template-customization.md#extra-template-data)
 

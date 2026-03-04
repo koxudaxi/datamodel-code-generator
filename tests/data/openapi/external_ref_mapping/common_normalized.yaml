@@ -1,0 +1,14 @@
+openapi: "3.0.3"
+info:
+  title: Common
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    user-name:
+      type: object
+      properties:
+        id:
+          type: integer
+      required:
+        - id

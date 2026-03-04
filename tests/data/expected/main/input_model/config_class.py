@@ -252,6 +252,7 @@ class GenerateConfig(TypedDict, closed=True):
     default_value_overrides: NotRequired[Mapping[str, Any] | None]
     schema_version: NotRequired[str | None]
     schema_version_mode: NotRequired[VersionMode | None]
+    external_ref_mapping: NotRequired[dict[str, str] | None]
 
 
 class ValidatorDefinition(TypedDict):

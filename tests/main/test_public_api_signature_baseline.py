@@ -191,6 +191,7 @@ def _baseline_generate(
     module_split_mode: ModuleSplitMode | None = None,
     schema_version: str | None = None,
     schema_version_mode: VersionMode | None = None,
+    external_ref_mapping: dict[str, str] | None = None,
 ) -> str | object | None:
     raise NotImplementedError
 
@@ -318,6 +319,7 @@ class _BaselineParser:
         read_only_write_only_model_type: ReadOnlyWriteOnlyModelType | None = None,
         field_type_collision_strategy: FieldTypeCollisionStrategy | None = None,
         target_pydantic_version: TargetPydanticVersion | None = None,
+        external_ref_mapping: dict[str, str] | None = None,
     ) -> None:
         raise NotImplementedError
 
