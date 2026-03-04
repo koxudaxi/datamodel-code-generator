@@ -72,6 +72,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--encoding": CLIOptionMeta(name="--encoding", category=OptionCategory.BASE),
     "--schema-version": CLIOptionMeta(name="--schema-version", category=OptionCategory.BASE),
     "--schema-version-mode": CLIOptionMeta(name="--schema-version-mode", category=OptionCategory.BASE),
+    "--external-ref-mapping": CLIOptionMeta(name="--external-ref-mapping", category=OptionCategory.BASE),
     # ==========================================================================
     # Model Customization
     # ==========================================================================
