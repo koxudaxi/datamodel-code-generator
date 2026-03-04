@@ -29,8 +29,9 @@ from datamodel_code_generator import (
     inferred_message,
 )
 from datamodel_code_generator.__main__ import Exit
+from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, freeze_time
+from tests.conftest import assert_directory_content, assert_error_message, freeze_time
 from tests.main.conftest import (
     BLACK_PY313_SKIP,
     BLACK_PY314_SKIP,
@@ -42,6 +43,7 @@ from tests.main.conftest import (
     TIMESTAMP,
     run_main_and_assert,
     run_main_url_and_assert,
+    run_main_with_args,
 )
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
@@ -52,6 +54,7 @@ SKIP_PYDANTIC_V1 = pytest.mark.skipif(
     pydantic.VERSION < "2.0.0",
     reason="This test requires Pydantic v2",
 )
+EXTERNAL_REF_MAPPING_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
 
 
 @pytest.mark.benchmark
@@ -4046,6 +4049,271 @@ def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) 
         expected_file="external_ref_with_transitive_local_ref/output.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
+
+
+def _assert_external_ref_mapping_cli_parse_error(
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+    expected_message: str,
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml"),
+            "--input-file-type",
+            "openapi",
+            "--external-ref-mapping",
+            mapping,
+        ])
+    assert exc_info.value.code == 2
+    assert_error_message(capsys, expected_message)
+
+
+def _assert_external_ref_mapping_pyproject_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+    expected_message: str,
+) -> None:
+    (tmp_path / "pyproject.toml").write_text(
+        f"""\
+[tool.datamodel-codegen]
+external-ref-mapping = ["{mapping}"]
+"""
+    )
+    monkeypatch.chdir(tmp_path)
+    run_main_with_args(
+        [
+            "--input",
+            str(EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "openapi",
+        ],
+        expected_exit=Exit.ERROR,
+    )
+    assert_error_message(capsys, expected_message)
+
+
+@pytest.mark.cli_doc(
+    options=["--external-ref-mapping"],
+    option_description="""Map external `$ref` files to Python packages.
+
+Use `--external-ref-mapping FILE_PATH=PYTHON_PACKAGE` to import referenced models from an existing package,
+instead of generating duplicate classes from external schema files.
+""",
+    input_schema="openapi/external_ref_mapping/api.yaml",
+    cli_args=["--input-file-type", "openapi", "--external-ref-mapping", "common.yaml=mypackage.shared.models"],
+    golden_output="main/openapi/external_ref_mapping.py",
+)
+def test_main_openapi_external_ref_mapping_basic(output_file: Path) -> None:
+    """External refs produce imports, not class definitions."""
+    run_main_and_assert(
+        input_path=EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=[
+            "--external-ref-mapping",
+            "common.yaml=mypackage.shared.models",
+        ],
+        assert_func=assert_file_content,
+        expected_file="external_ref_mapping.py",
+    )
+
+
+def test_main_openapi_external_ref_mapping_nested_relative_ref(output_file: Path) -> None:
+    """Mappings work for refs that are relative to nested external files."""
+    run_main_and_assert(
+        input_path=EXTERNAL_REF_MAPPING_DATA_PATH / "api_nested.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        extra_args=[
+            "--external-ref-mapping",
+            "common.yaml=mypackage.shared.models",
+        ],
+        assert_func=assert_file_content,
+        expected_file="external_ref_mapping_nested.py",
+    )
+
+
+def test_main_openapi_external_ref_mapping_normalizes_imported_class_name(tmp_path: Path) -> None:
+    """Mapped refs normalize schema keys to generated Python class names."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api_normalized.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common_normalized.yaml": "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import UserName" in content
+    assert "class UserName(" not in content
+
+
+def test_main_openapi_external_ref_mapping_file_uri(tmp_path: Path) -> None:
+    """Mappings accept file URI keys and refs."""
+    common_uri = (EXTERNAL_REF_MAPPING_DATA_PATH / "common.yaml").resolve().as_uri()
+    input_path = tmp_path / "api_file_uri.yaml"
+    input_path.write_text(
+        (EXTERNAL_REF_MAPPING_DATA_PATH / "api_file_uri_template.yaml")
+        .read_text()
+        .replace("__COMMON_URI__", common_uri)
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=input_path,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={common_uri: "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import User" in content
+    assert "class User(" not in content
+
+
+def test_main_openapi_external_ref_mapping_absolute_path_ref(tmp_path: Path) -> None:
+    """Mappings match absolute-path refs to external schemas."""
+    common_path = str((EXTERNAL_REF_MAPPING_DATA_PATH / "common.yaml").resolve())
+    input_path = tmp_path / "api_absolute_path.yaml"
+    input_path.write_text(
+        (EXTERNAL_REF_MAPPING_DATA_PATH / "api_absolute_path_template.yaml")
+        .read_text()
+        .replace("__COMMON_ABSOLUTE_PATH__", common_path)
+    )
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=input_path,
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={common_path: "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "from mypackage.shared.models import User" in content
+    assert "class User(" not in content
+
+
+def test_main_openapi_external_ref_mapping_local_ref_unchanged(tmp_path: Path) -> None:
+    """Local refs remain unchanged when external mapping is configured."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api_local_ref.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "class User(" in content
+    assert "class UserResponse(" in content
+    assert "from mypackage.shared.models import" not in content
+
+
+def test_main_openapi_external_ref_mapping_ref_without_fragment_errors(tmp_path: Path) -> None:
+    """Refs without a fragment remain unsupported and fail clearly."""
+    output_file = tmp_path / "output.py"
+    with pytest.raises(Exception, match="A Parser can not resolve classes"):
+        generate(
+            input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api_no_fragment.yaml",
+            input_file_type=InputFileType.OpenAPI,
+            output=output_file,
+            external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+        )
+
+
+def test_main_openapi_external_ref_mapping_no_duplicate_classes(tmp_path: Path) -> None:
+    """When mapping is active, the external file's classes should not be generated."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+    )
+    content = output_file.read_text()
+    assert "class User(" not in content
+    assert "class Error(" not in content
+    assert "from mypackage.shared.models import" in content
+
+
+def test_main_openapi_external_ref_mapping_without_flag_generates_classes(tmp_path: Path) -> None:
+    """Without the flag, external refs generate classes (regression check)."""
+    output_file = tmp_path / "output.py"
+    generate(
+        input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+    )
+    content = output_file.read_text()
+    assert "class User(" in content
+    assert "class Error(" in content
+
+
+def test_main_openapi_external_ref_mapping_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
+    """Invalid format (no equals sign) produces a clear error."""
+    _assert_external_ref_mapping_cli_parse_error(capsys, "no-equals-sign", "Invalid --external-ref-mapping format")
+
+
+@pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
+def test_main_openapi_external_ref_mapping_invalid_empty_part(
+    capsys: pytest.CaptureFixture[str],
+    mapping: str,
+) -> None:
+    """Empty file path or package in mapping produces a clear error."""
+    _assert_external_ref_mapping_cli_parse_error(
+        capsys,
+        mapping,
+        "Both FILE_PATH and PYTHON_PACKAGE must be non-empty.",
+    )
+
+
+def test_main_openapi_external_ref_mapping_invalid_format_in_pyproject(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Invalid pyproject external-ref-mapping format returns Exit.ERROR."""
+    _assert_external_ref_mapping_pyproject_error(
+        tmp_path,
+        monkeypatch,
+        capsys,
+        "no-equals-sign",
+        "Invalid --external-ref-mapping format",
+    )
+
+
+@pytest.mark.parametrize("mapping", ["=mypackage.shared.models", "common.yaml="])
+def test_main_openapi_external_ref_mapping_invalid_empty_part_in_pyproject(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    mapping: str,
+) -> None:
+    """Empty file path or package in pyproject mapping returns Exit.ERROR."""
+    _assert_external_ref_mapping_pyproject_error(
+        tmp_path,
+        monkeypatch,
+        capsys,
+        mapping,
+        "Both FILE_PATH and PYTHON_PACKAGE must be non-empty.",
+    )
+
+
+def test_main_openapi_external_ref_mapping_programmatic_api(tmp_path: Path) -> None:
+    """Test using GenerateConfig with external_ref_mapping."""
+    output_file = tmp_path / "output.py"
+    config = GenerateConfig(
+        input_file_type=InputFileType.OpenAPI,
+        output=output_file,
+        external_ref_mapping={"common.yaml": "mypackage.shared.models"},
+    )
+    generate(
+        input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml",
+        config=config,
+    )
+    content = output_file.read_text()
+    assert "class User(" not in content
+    assert "from mypackage.shared.models import" in content
 
 
 def test_main_openapi_namespace_subns_ref(output_dir: Path) -> None:

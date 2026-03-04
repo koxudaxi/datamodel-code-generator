@@ -1,0 +1,14 @@
+openapi: "3.0.3"
+info:
+  title: API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "__COMMON_ABSOLUTE_PATH__#/components/schemas/User"
+      required:
+        - user
