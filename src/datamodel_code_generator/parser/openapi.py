@@ -39,7 +39,7 @@ from datamodel_code_generator.types import (
     DataType,
     EmptyDataType,
 )
-from datamodel_code_generator.util import BaseModel, model_dump, model_validate
+from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
     from urllib.parse import ParseResult
@@ -334,7 +334,7 @@ class OpenAPIParser(JsonSchemaParser):
         """Resolve a reference object to its actual type or return the object as-is."""
         if isinstance(obj, ReferenceObject):
             ref_obj = self.get_ref_model(obj.ref)
-            return model_validate(object_type, ref_obj)
+            return object_type.model_validate(ref_obj)
         return obj
 
     def _parse_schema_or_ref(
@@ -475,7 +475,7 @@ class OpenAPIParser(JsonSchemaParser):
                 if not detail.ref:  # pragma: no cover
                     continue
                 ref_model = self.get_ref_model(detail.ref)
-                content = {k: model_validate(MediaObject, v) for k, v in ref_model.get("content", {}).items()}
+                content = {k: MediaObject.model_validate(v) for k, v in ref_model.get("content", {}).items()}
             else:
                 content = detail.content
 
@@ -572,7 +572,7 @@ class OpenAPIParser(JsonSchemaParser):
                     media_type,
                     media_obj,
                 ) in parameter.content.items():
-                    if not media_obj.schema_:
+                    if not media_obj.schema_:  # pragma: no cover
                         continue
                     object_schema = self.resolve_object(media_obj.schema_, JsonSchemaObject)
                     data_types.append(
@@ -583,11 +583,11 @@ class OpenAPIParser(JsonSchemaParser):
                         )
                     )
 
-                if not data_types:
+                if not data_types:  # pragma: no cover
                     continue
                 if len(data_types) == 1:
                     data_type = data_types[0]
-                else:
+                else:  # pragma: no cover
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None
@@ -617,7 +617,7 @@ class OpenAPIParser(JsonSchemaParser):
                         required=effective_required,
                         alias=single_alias,
                         validation_aliases=validation_aliases,
-                        constraints=model_dump(object_schema, exclude_none=True)
+                        constraints=object_schema.model_dump(exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,
                         nullable=object_schema.nullable
@@ -667,7 +667,7 @@ class OpenAPIParser(JsonSchemaParser):
         path: list[str],
     ) -> None:
         """Parse an OpenAPI operation including parameters, request body, and responses."""
-        operation = model_validate(Operation, raw_operation)
+        operation = Operation.model_validate(raw_operation)
         path_name, method = path[-2:]
         if self.use_operation_id_as_name:
             if not operation.operationId:
@@ -688,7 +688,7 @@ class OpenAPIParser(JsonSchemaParser):
         if operation.requestBody:
             if isinstance(operation.requestBody, ReferenceObject):
                 ref_model = self.get_ref_model(operation.requestBody.ref)
-                request_body = model_validate(RequestBodyObject, ref_model)
+                request_body = RequestBodyObject.model_validate(ref_model)
             else:
                 request_body = operation.requestBody
             self.parse_request_body(

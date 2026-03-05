@@ -7,7 +7,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path  # noqa: TC003 - used at runtime by Pydantic
 from typing import TYPE_CHECKING, Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from datamodel_code_generator.enums import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -49,7 +49,6 @@ from datamodel_code_generator.model.scalar import DataTypeScalar
 from datamodel_code_generator.model.union import DataTypeUnion
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.types import DataTypeManager, StrictTypes  # noqa: TC001 - used by Pydantic at runtime
-from datamodel_code_generator.util import ConfigDict, is_pydantic_v2
 from datamodel_code_generator.validators import ModelValidators  # noqa: TC001 - used by Pydantic at runtime
 
 CallableSchema = Callable[[str], str]
@@ -57,24 +56,14 @@ DumpResolveReferenceAction = Callable[[Iterable[str]], str]
 DefaultPutDictSchema = DefaultPutDict[str, str]
 if TYPE_CHECKING:
     ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
-elif is_pydantic_v2():
+else:
     ExtraTemplateDataType = defaultdict[str, Annotated[dict[str, Any], Field(default_factory=dict)]]
-else:  # pragma: no cover
-    ExtraTemplateDataType = defaultdict[str, dict[str, Any]]
 
 
 class GenerateConfig(BaseModel):
     """Configuration model for generate()."""
 
-    if is_pydantic_v2():
-        model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:  # pragma: no cover
-
-        class Config:
-            """Pydantic v1 model config."""
-
-            extra = "forbid"
-            arbitrary_types_allowed = True
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     input_filename: str | None = None
     input_file_type: InputFileType = InputFileType.Auto
@@ -214,15 +203,7 @@ class GenerateConfig(BaseModel):
 class ParserConfig(BaseModel):
     """Configuration model for Parser.__init__()."""
 
-    if is_pydantic_v2():
-        model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:  # pragma: no cover
-
-        class Config:
-            """Pydantic v1 model config."""
-
-            extra = "forbid"
-            arbitrary_types_allowed = True
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     data_model_type: type[DataModel] = pydantic_model.BaseModel
     data_model_root_type: type[DataModel] = pydantic_model.CustomRootType
@@ -373,15 +354,7 @@ class OpenAPIParserConfig(JSONSchemaParserConfig):
 class ParseConfig(BaseModel):
     """Configuration model for Parser.parse()."""
 
-    if is_pydantic_v2():
-        model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
-    else:  # pragma: no cover
-
-        class Config:
-            """Pydantic v1 model config."""
-
-            extra = "forbid"
-            arbitrary_types_allowed = True
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
     with_import: bool | None = True
     format_: bool | None = True

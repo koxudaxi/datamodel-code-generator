@@ -264,57 +264,6 @@ def test_input_model_unsupported_type(capsys: pytest.CaptureFixture[str]) -> Non
 
 
 @SKIP_PYDANTIC_V1
-def test_input_model_pydantic_v1_runtime_error(
-    capsys: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test error when Pydantic v1 runtime is detected."""
-    import builtins
-
-    from tests.data.python.input_model import pydantic_models
-
-    original_hasattr = builtins.hasattr
-
-    def mock_hasattr(obj: object, name: str) -> bool:
-        if name == "model_json_schema" and obj is pydantic_models.User:
-            return False
-        return original_hasattr(obj, name)
-
-    monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
-
-    run_input_model_error_and_assert(
-        input_model="tests.data.python.input_model.pydantic_models:User",
-        capsys=capsys,
-        expected_stderr_contains="requires Pydantic v2 runtime",
-    )
-
-
-@SKIP_PYDANTIC_V1
-def test_input_model_dataclass_pydantic_import_error(
-    capsys: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test error when TypeAdapter import fails for dataclass."""
-    import builtins
-
-    original_import = builtins.__import__
-
-    def mock_import(name: str, *args: object, **kwargs: object) -> object:
-        if name == "pydantic" and "TypeAdapter" in str(args):
-            msg = "mocked import error"
-            raise ImportError(msg)
-        return original_import(name, *args, **kwargs)
-
-    monkeypatch.setattr(builtins, "__import__", mock_import)
-
-    run_input_model_error_and_assert(
-        input_model="tests.data.python.input_model.dataclass_models:User",
-        capsys=capsys,
-        expected_stderr_contains="requires Pydantic v2 runtime",
-    )
-
-
-@SKIP_PYDANTIC_V1
 def test_input_model_mutual_exclusion_with_input(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -1109,32 +1058,6 @@ def test_input_model_multiple_non_basemodel_error(
         extra_args=["--output", str(tmp_path / "output.py")],
         capsys=capsys,
         expected_stderr_contains="Multiple --input-model only supports Pydantic v2 BaseModel",
-    )
-
-
-def test_input_model_multiple_pydantic_v1_error(
-    capsys: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Test error when multiple --input-model used with Pydantic v1 model."""
-    import builtins
-
-    original_hasattr = builtins.hasattr
-
-    def mock_hasattr(obj: object, name: str) -> bool:
-        if name == "model_json_schema":
-            return False
-        return original_hasattr(obj, name)
-
-    monkeypatch.setattr(builtins, "hasattr", mock_hasattr)
-
-    run_multiple_input_models_error_and_assert(
-        input_models=[
-            "tests.data.python.input_model.inheritance_models:ChildA",
-            "tests.data.python.input_model.inheritance_models:ChildB",
-        ],
-        capsys=capsys,
-        expected_stderr_contains="requires Pydantic v2 runtime",
     )
 
 
