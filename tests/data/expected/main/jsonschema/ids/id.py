@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class Schema(BaseModel):
-    __root__: str = Field(
-        ..., description='Identifier string of this object.', title='id'
-    )
+class Schema(RootModel[str]):
+    root: str = Field(..., description='Identifier string of this object.', title='id')

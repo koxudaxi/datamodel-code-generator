@@ -8,13 +8,13 @@ from pydantic import BaseModel, Field
 
 
 class Extras(BaseModel):
-    name: str | None = Field(None, example='example')
+    name: str | None = Field(None, examples=['example'])
     """
     normal key
 
     Example: 'example'
     """
-    age: int | None = Field(None, example=12, examples=[13, 20])
+    age: int | None = Field(None, examples=[13, 20], json_schema_extra={'example': 12})
     """
     Examples:
     - 13

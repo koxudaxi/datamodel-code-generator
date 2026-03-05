@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Inner(BaseModel):
@@ -15,8 +15,8 @@ class Container(BaseModel):
     inner: Inner | None = None
 
 
-class Wrapper(BaseModel):
-    __root__: Inner
+class Wrapper(RootModel[Inner]):
+    root: Inner
 
 
 class Model(BaseModel):

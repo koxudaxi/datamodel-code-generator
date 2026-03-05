@@ -2,21 +2,21 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 from . import model_s
 
 
-class PetS(BaseModel):
-    __root__: List[model_s.PeT]
+class PetS(RootModel[List[model_s.PeT]]):
+    root: List[model_s.PeT]
 
 
-class UserS(BaseModel):
-    __root__: List[model_s.UseR]
+class UserS(RootModel[List[model_s.UseR]]):
+    root: List[model_s.UseR]
 
 
-class RuleS(BaseModel):
-    __root__: List[str]
+class RuleS(RootModel[List[str]]):
+    root: List[str]
 
 
 class Api(BaseModel):
@@ -34,5 +34,5 @@ class Api(BaseModel):
     )
 
 
-class ApiS(BaseModel):
-    __root__: List[Api]
+class ApiS(RootModel[List[Api]]):
+    root: List[Api]

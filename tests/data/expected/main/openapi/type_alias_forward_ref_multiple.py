@@ -4,19 +4,20 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import Union
 
 from pydantic import BaseModel
+from typing_extensions import TypeAliasType
 
 
 class RegularModel(BaseModel):
     name: str | None = None
 
 
-Third: TypeAlias = str
+Third = TypeAliasType("Third", str)
 
 
-Second: TypeAlias = Union["First", Third, RegularModel]
+Second = TypeAliasType("Second", Union["First", Third, RegularModel])
 
 
-First: TypeAlias = Second
+First = TypeAliasType("First", Second)

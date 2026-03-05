@@ -6,8 +6,8 @@ This is a multi-line docstring used for testing.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class FieldModel(BaseModel):
-    __root__: str = Field(..., example='green')
+class FieldModel(RootModel[str]):
+    root: str = Field(..., examples=['green'])

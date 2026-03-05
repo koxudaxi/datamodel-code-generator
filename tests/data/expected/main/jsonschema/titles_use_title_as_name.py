@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class ProcessingStatusTitle(Enum):
@@ -15,8 +15,8 @@ class ProcessingStatusTitle(Enum):
     FAILED = 'FAILED'
 
 
-class Kind(BaseModel):
-    __root__: str
+class Kind(RootModel[str]):
+    root: str
 
 
 class NestedCommentTitle(BaseModel):
@@ -28,31 +28,9 @@ class ProcessingStatusDetail(BaseModel):
     description: str | None = None
 
 
-class ProcessingTasksTitle(BaseModel):
-    __root__: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
-
-
-class ExtendedProcessingTask(BaseModel):
-    __root__: ProcessingTasksTitle | NestedCommentTitle = Field(
-        ..., title='Extended Processing Task Title'
-    )
-
-
-class ExtendedProcessingTasksTitle(BaseModel):
-    __root__: list[ExtendedProcessingTask] = Field(
-        ..., title='Extended Processing Tasks Title'
-    )
-
-
-class ProcessingStatusUnionTitle(BaseModel):
-    __root__: (
-        ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle
-    ) = Field('COMPLETED', title='Processing Status Union Title')
-
-
 class ProcessingTaskTitle(BaseModel):
     processing_status_union: ProcessingStatusUnionTitle | None = Field(
-        default_factory=lambda: ProcessingStatusUnionTitle.parse_obj('COMPLETED'),
+        default_factory=lambda: ProcessingStatusUnionTitle('COMPLETED'),
         title='Processing Status Union Title',
     )
     processing_status: ProcessingStatusTitle | None = 'COMPLETED'
@@ -60,4 +38,31 @@ class ProcessingTaskTitle(BaseModel):
     kind: Kind | None = None
 
 
-ProcessingTasksTitle.update_forward_refs()
+class ProcessingTasksTitle(RootModel[list[ProcessingTaskTitle]]):
+    root: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
+
+
+class ExtendedProcessingTask(RootModel[ProcessingTasksTitle | NestedCommentTitle]):
+    root: ProcessingTasksTitle | NestedCommentTitle = Field(
+        ..., title='Extended Processing Task Title'
+    )
+
+
+class ExtendedProcessingTasksTitle(RootModel[list[ExtendedProcessingTask]]):
+    root: list[ExtendedProcessingTask] = Field(
+        ..., title='Extended Processing Tasks Title'
+    )
+
+
+class ProcessingStatusUnionTitle(
+    RootModel[ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle]
+):
+    root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
+        Field(
+            default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
+            title='Processing Status Union Title',
+        )
+    )
+
+
+ProcessingTaskTitle.model_rebuild()

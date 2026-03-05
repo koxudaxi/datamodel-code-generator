@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import file_b
 
 
 class PersonC(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: str | None = Field(None, title='name')
     pet: file_b.Cat | file_b.Dog | None = Field(None, title='pet')

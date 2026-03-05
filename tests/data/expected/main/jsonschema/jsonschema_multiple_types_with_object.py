@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class External(BaseModel):
@@ -19,8 +19,8 @@ class TopLevelMultiType1(BaseModel):
     enabled: bool | None = None
 
 
-class TopLevelMultiType(BaseModel):
-    __root__: TopLevelMultiType1 | bool
+class TopLevelMultiType(RootModel[TopLevelMultiType1 | bool]):
+    root: TopLevelMultiType1 | bool
 
 
 class Model(BaseModel):

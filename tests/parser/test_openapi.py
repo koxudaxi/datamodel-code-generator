@@ -14,7 +14,7 @@ from packaging import version
 
 from datamodel_code_generator import OpenAPIScope, PythonVersionMin
 from datamodel_code_generator.model import DataModelFieldBase
-from datamodel_code_generator.model.pydantic import DataModelField
+from datamodel_code_generator.model.pydantic_v2 import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
 from datamodel_code_generator.parser.openapi import (
@@ -154,8 +154,8 @@ def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> Non
     name: Optional[str] = None
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]""",
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]""",
         ),
         (
             {
@@ -166,16 +166,16 @@ class Pets(BaseModel):
     name: Optional[str] = None
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]""",
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]""",
         ),
         (
             {
                 "type": "array",
                 "items": {},
             },
-            """class Pets(BaseModel):
-    __root__: List[Any]""",
+            """class Pets(RootModel[List[Any]]):
+    root: List[Any]""",
         ),
     ],
 )
@@ -223,13 +223,13 @@ def test_openapi_parser_parse(with_import: bool, format_: bool, base_class: str 
     [
         (
             {"type": "string", "nullable": True},
-            """class Name(BaseModel):
-    __root__: Optional[str] = None""",
+            """class Name(RootModel[Optional[str]]):
+    root: Optional[str] = None""",
         ),
         (
             {"type": "string", "nullable": False},
-            """class Name(BaseModel):
-    __root__: str""",
+            """class Name(RootModel[str]):
+    root: str""",
         ),
     ],
 )
@@ -280,7 +280,7 @@ def test_openapi_parser_parse_lazy_resolved_models(tmp_path: Path, monkeypatch: 
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Pet(BaseModel):
@@ -289,8 +289,8 @@ class Pet(BaseModel):
     tag: Optional[str] = None
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class Error(BaseModel):
@@ -303,8 +303,8 @@ class Event(BaseModel):
     event: Optional[Event] = None
 
 
-class Events(BaseModel):
-    __root__: List[Event]
+class Events(RootModel[List[Event]]):
+    root: List[Event]
 
 
 class Results(BaseModel):

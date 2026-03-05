@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Dict, List, Optional, Union
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, RootModel, constr
 
 
 class Pet(BaseModel):
@@ -22,8 +22,8 @@ class AnyOfItem1(BaseModel):
     name: Optional[str] = None
 
 
-class AnyOfItem(BaseModel):
-    __root__: Union[Pet, Car, AnyOfItem1, constr(max_length=5000)]
+class AnyOfItem(RootModel[Union[Pet, Car, AnyOfItem1, constr(max_length=5000)]]):
+    root: Union[Pet, Car, AnyOfItem1, constr(max_length=5000)]
 
 
 class Item(BaseModel):
@@ -39,8 +39,10 @@ class AnyOfArray1(BaseModel):
     birthday: Optional[date] = None
 
 
-class AnyOfArray(BaseModel):
-    __root__: List[Union[Pet, Car, AnyOfArray1, constr(max_length=5000)]]
+class AnyOfArray(
+    RootModel[List[Union[Pet, Car, AnyOfArray1, constr(max_length=5000)]]]
+):
+    root: List[Union[Pet, Car, AnyOfArray1, constr(max_length=5000)]]
 
 
 class Error(BaseModel):

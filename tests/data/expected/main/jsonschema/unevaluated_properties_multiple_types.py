@@ -4,18 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class MultiType1(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: str | None = None
 
 
-class MultiType(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: MultiType1 | str = Field(..., title='MultiType')
+class MultiType(RootModel[MultiType1 | str]):
+    root: MultiType1 | str = Field(..., title='MultiType')

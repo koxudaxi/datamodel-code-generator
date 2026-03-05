@@ -30,6 +30,3 @@ class Person(BaseModel):
     comment: None = None
     drink: list[coffee.Coffee | tea.Tea] | None = None
     food: list[food_1.Noodle | food_1.Soup] | None = None
-
-
-Person.update_forward_refs()

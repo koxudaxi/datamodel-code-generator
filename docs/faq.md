@@ -211,7 +211,6 @@ See [Model Reuse and Deduplication](model-reuse.md) for details.
 ### 🤷 Which output model type should I use?
 
 - **Pydantic v2** (`pydantic_v2.BaseModel`): ✨ Recommended for new projects. Better performance and modern API.
-- **Pydantic v1** (`pydantic.BaseModel`): 🔄 Default for backward compatibility with existing codebases.
 - **dataclasses**: Simple data containers without validation.
 - **TypedDict**: Type hints for dict structures.
 - **msgspec**: High-performance serialization.
@@ -223,7 +222,7 @@ See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a deta
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 ```
 
-See [Pydantic v1 vs v2](what_is_the_difference_between_v1_and_v2.md) for migration details.
+See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for more details.
 
 📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
 
@@ -237,9 +236,6 @@ python -c "import pydantic; print(pydantic.VERSION)"
 
 # Generate for Pydantic v2
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# Generate for Pydantic v1
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 ```
 
 ---

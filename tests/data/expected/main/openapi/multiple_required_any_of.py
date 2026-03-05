@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from ipaddress import IPv4Address, IPv6Address
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Addr1(BaseModel):
@@ -19,5 +19,5 @@ class Addr2(BaseModel):
     ipv6Addr: IPv6Address
 
 
-class Addr(BaseModel):
-    __root__: Addr1 | Addr2
+class Addr(RootModel[Addr1 | Addr2]):
+    root: Addr1 | Addr2

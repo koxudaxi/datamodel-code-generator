@@ -4,9 +4,11 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import Union
 
-NodeA: TypeAlias = Union[int, "NodeB"]
+from typing_extensions import TypeAliasType
+
+NodeA = TypeAliasType("NodeA", Union[int, "NodeB"])
 
 
-NodeB: TypeAlias = str | NodeA
+NodeB = TypeAliasType("NodeB", str | NodeA)

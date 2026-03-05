@@ -5,11 +5,11 @@
 from __future__ import annotations
 
 from mypackage.shared.models import User
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class UserAlias(BaseModel):
-    __root__: User
+class UserAlias(RootModel[User]):
+    root: User
 
 
 class UserResponse(BaseModel):

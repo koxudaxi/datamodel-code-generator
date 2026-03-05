@@ -4,18 +4,18 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, constr
+from pydantic import BaseModel, ConfigDict, constr
 
 
 class Network(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: str | None = None
 
 
 class Model(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    networks: dict[constr(regex=r'^[a-zA-Z0-9._-]+$'), Network | None]
+    model_config = ConfigDict(
+        extra='forbid',
+    )
+    networks: dict[constr(pattern=r'^[a-zA-Z0-9._-]+$'), Network | None]

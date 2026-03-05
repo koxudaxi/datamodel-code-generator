@@ -4,33 +4,34 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import RootModel
+from typing_extensions import TypeAliasType
 
-Boolean: TypeAlias = bool
+Boolean = TypeAliasType("Boolean", bool)
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-String: TypeAlias = str
+String = TypeAliasType("String", str)
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
 
 
-class Color(BaseModel):
-    __root__: Literal['BLUE', 'GREEN', 'RED']
+class Color(RootModel[Literal['BLUE', 'GREEN', 'RED']]):
+    root: Literal['BLUE', 'GREEN', 'RED']
 
 
-class EmployeeShiftStatus(BaseModel):
+class EmployeeShiftStatus(RootModel[Literal['NOT_ON_SHIFT', 'ON_SHIFT']]):
     """
     Employee shift status
     """
 
-    __root__: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
+    root: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
 
 
-class EnumWithOneField(BaseModel):
-    __root__: Literal['FIELD']
+class EnumWithOneField(RootModel[Literal['FIELD']]):
+    root: Literal['FIELD']

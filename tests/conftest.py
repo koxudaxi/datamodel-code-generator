@@ -187,7 +187,7 @@ def _validate_cli_doc_marker(node_id: str, kwargs: CliDocKwargs) -> list[str]:  
         if not isinstance(models, dict):
             errors.append(f"'model_outputs' must be a dict, got {type(models).__name__}")
         else:
-            valid_keys = {"pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"}
+            valid_keys = {"pydantic_v2", "dataclass", "typeddict", "msgspec"}
             for key, value in models.items():
                 if not isinstance(key, str):
                     errors.append(f"'model_outputs' keys must be strings, got {type(key).__name__}")

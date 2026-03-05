@@ -31,13 +31,8 @@ from datamodel_code_generator.enums import (
     VersionMode,
 )
 from datamodel_code_generator.format import PythonVersionMin
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
-from datamodel_code_generator.model import pydantic as pydantic_model
-from datamodel_code_generator.model.pydantic import BaseModel
+from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField, DataTypeManager, RootModel
 from datamodel_code_generator.parser.base import YamlValue, title_to_class_name
-from datamodel_code_generator.util import is_pydantic_v2
-
-PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -47,8 +42,8 @@ if TYPE_CHECKING:
 
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.format import DateClassType, DatetimeClassType, Formatter, PythonVersion
+    from datamodel_code_generator.model import DataModel, DataModelFieldBase
     from datamodel_code_generator.model.dataclass import DataclassArguments
-    from datamodel_code_generator.model.pydantic import DataTypeManager
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.parser import DefaultPutDict, LiteralType
     from datamodel_code_generator.types import StrictTypes
@@ -62,7 +57,7 @@ def _baseline_generate(
     input_filename: str | None = None,
     input_file_type: InputFileType = InputFileType.Auto,
     output: Path | None = None,
-    output_model_type: DataModelType = DataModelType.PydanticBaseModel,
+    output_model_type: DataModelType = DataModelType.PydanticV2BaseModel,
     target_python_version: PythonVersion = PythonVersionMin,
     target_pydantic_version: TargetPydanticVersion | None = None,
     base_class: str = "",
@@ -202,9 +197,9 @@ class _BaselineParser:
         source: str | Path | list[Path] | ParseResult | dict[str, YamlValue],
         *,
         data_model_type: type[DataModel] = BaseModel,
-        data_model_root_type: type[DataModel] = pydantic_model.CustomRootType,
-        data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager,
-        data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField,
+        data_model_root_type: type[DataModel] = RootModel,
+        data_type_manager_type: type[DataTypeManager] = DataTypeManager,
+        data_model_field_type: type[DataModelFieldBase] = DataModelField,
         base_class: str | None = None,
         base_class_map: dict[str, str | list[str]] | None = None,
         additional_imports: list[str] | None = None,
@@ -574,7 +569,6 @@ def test_parser_signature_matches_baseline() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_generate_config_dict_fields_match_generate_config() -> None:
     """Ensure GenerateConfigDict has same field names as GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict
@@ -585,7 +579,6 @@ def test_generate_config_dict_fields_match_generate_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
-@PYDANTIC_V2_SKIP
 def test_generate_config_dict_types_match_generate_config() -> None:
     """Ensure GenerateConfigDict field types match GenerateConfig."""
     from datamodel_code_generator._types import GenerateConfigDict
@@ -599,7 +592,6 @@ def test_generate_config_dict_types_match_generate_config() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_parser_config_dict_fields_match_parser_config() -> None:
     """Ensure ParserConfigDict has same field names as ParserConfig."""
     from datamodel_code_generator._types import ParserConfigDict
@@ -610,7 +602,6 @@ def test_parser_config_dict_fields_match_parser_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
-@PYDANTIC_V2_SKIP
 def test_parse_config_dict_fields_match_parse_config() -> None:
     """Ensure ParseConfigDict has same field names as ParseConfig."""
     from datamodel_code_generator._types import ParseConfigDict
@@ -621,7 +612,6 @@ def test_parse_config_dict_fields_match_parse_config() -> None:
     assert config_fields == dict_fields, f"Mismatch: {config_fields ^ dict_fields}"
 
 
-@PYDANTIC_V2_SKIP
 def test_parser_config_dict_types_match_parser_config() -> None:
     """Ensure ParserConfigDict field types match ParserConfig."""
     from datamodel_code_generator._types import ParserConfigDict
@@ -635,7 +625,6 @@ def test_parser_config_dict_types_match_parser_config() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_parse_config_dict_types_match_parse_config() -> None:
     """Ensure ParseConfigDict field types match ParseConfig."""
     from datamodel_code_generator._types import ParseConfigDict
@@ -649,7 +638,6 @@ def test_parse_config_dict_types_match_parse_config() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_generate_config_defaults_match_generate_signature() -> None:
     """Ensure GenerateConfig default values match generate() signature defaults."""
     from datamodel_code_generator.config import GenerateConfig
@@ -666,7 +654,6 @@ def test_generate_config_defaults_match_generate_signature() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_parser_config_defaults_match_parser_signature() -> None:
     """Ensure ParserConfig default values match Parser.__init__ signature defaults."""
     from datamodel_code_generator.config import ParserConfig
@@ -686,7 +673,6 @@ def test_parser_config_defaults_match_parser_signature() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_parse_config_defaults_match_parse_signature() -> None:
     """Ensure ParseConfig default values match Parser.parse() signature defaults."""
     from datamodel_code_generator.config import ParseConfig
@@ -703,22 +689,14 @@ def test_parse_config_defaults_match_parse_signature() -> None:
         )
 
 
-@PYDANTIC_V2_SKIP
 def test_generate_with_config_produces_same_result_as_kwargs(tmp_path: Path) -> None:
     """Ensure generate() with GenerateConfig produces same result as kwargs."""
     from datamodel_code_generator.config import GenerateConfig
     from datamodel_code_generator.enums import DataModelType
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
     from datamodel_code_generator.types import StrictTypes
 
-    if hasattr(GenerateConfig, "model_rebuild"):  # pragma: no branch
-        types_namespace: dict[str, type | None] = {"StrictTypes": StrictTypes, "UnionMode": None}
-        try:
-            from datamodel_code_generator.model.pydantic_v2 import UnionMode
-
-            types_namespace["UnionMode"] = UnionMode
-        except ImportError:  # pragma: no cover
-            pass
-        GenerateConfig.model_rebuild(_types_namespace=types_namespace)
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
     schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
     output_kwargs = tmp_path / "output_kwargs.py"

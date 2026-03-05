@@ -6,17 +6,17 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from . import models
 
 
-class Optional(BaseModel):
-    __root__: str
+class Optional(RootModel[str]):
+    root: str
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
 class Error(BaseModel):
@@ -60,8 +60,8 @@ class TeaClone(BaseModel):
     optional: Sequence[Optional] | None = None
 
 
-class List(BaseModel):
-    __root__: Sequence[Tea_1]
+class List(RootModel[Sequence[Tea_1]]):
+    root: Sequence[Tea_1]
 
 
-Tea_1.update_forward_refs()
+Tea_1.model_rebuild()

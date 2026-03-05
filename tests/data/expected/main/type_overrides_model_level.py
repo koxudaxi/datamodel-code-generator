@@ -7,11 +7,11 @@ from __future__ import annotations
 from typing import Any
 
 from my_app.types import CustomType
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class User(BaseModel):

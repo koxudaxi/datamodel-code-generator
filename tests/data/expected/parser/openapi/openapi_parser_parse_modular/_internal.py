@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from . import models
 
 
-class OptionalModel(BaseModel):
-    __root__: str
+class OptionalModel(RootModel[str]):
+    root: str
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
 class Error(BaseModel):
@@ -56,5 +56,5 @@ class TeaClone(BaseModel):
     optional: Optional[List[OptionalModel]] = None
 
 
-class ListModel(BaseModel):
-    __root__: List[Tea_1]
+class ListModel(RootModel[List[Tea_1]]):
+    root: List[Tea_1]

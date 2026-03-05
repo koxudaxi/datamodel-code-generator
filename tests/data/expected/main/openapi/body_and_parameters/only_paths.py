@@ -4,45 +4,43 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel, RootModel
 
 
-class FoodFoodIdGetResponse(BaseModel):
-    __root__: list[int]
+class FoodFoodIdGetResponse(RootModel[list[int]]):
+    root: list[int]
 
 
 class UserGetResponse(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: str | None = None
 
 
 class UserPostRequest(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: str | None = None
 
 
 class UsersGetResponseItem(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: str | None = None
 
 
-class UsersGetResponse(BaseModel):
-    __root__: list[UsersGetResponseItem]
+class UsersGetResponse(RootModel[list[UsersGetResponseItem]]):
+    root: list[UsersGetResponseItem]
 
 
 class UsersPostRequestItem(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: str | None = None
 
 
-class UsersPostRequest(BaseModel):
-    __root__: list[UsersPostRequestItem]
+class UsersPostRequest(RootModel[list[UsersPostRequestItem]]):
+    root: list[UsersPostRequestItem]
 
 
 class Error(BaseModel):
@@ -61,5 +59,5 @@ class PetForm(BaseModel):
     age: int | None = None
 
 
-class PetsGetResponse(BaseModel):
-    __root__: list[Pet]
+class PetsGetResponse(RootModel[list[Pet]]):
+    root: list[Pet]

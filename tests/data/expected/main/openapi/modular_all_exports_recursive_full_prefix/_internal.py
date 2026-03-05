@@ -3,17 +3,17 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from . import models
 
 
-class Optional(BaseModel):
-    __root__: str
+class Optional(RootModel[str]):
+    root: str
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
 class Error(BaseModel):
@@ -57,8 +57,8 @@ class TeaClone(BaseModel):
     optional: list[Optional] | None = None
 
 
-class List(BaseModel):
-    __root__: list[Tea_1]
+class List(RootModel[list[Tea_1]]):
+    root: list[Tea_1]
 
 
-Tea_1.update_forward_refs()
+Tea_1.model_rebuild()

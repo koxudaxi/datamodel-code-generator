@@ -8,11 +8,11 @@ from typing import Any
 
 from admin import AdminBase
 from mixins import AuditMixin, TimestampMixin
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class User(AuditMixin, TimestampMixin):

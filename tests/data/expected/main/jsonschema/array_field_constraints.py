@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
-class Number(BaseModel):
-    __root__: str = Field(
+class Number(RootModel[str]):
+    root: str = Field(
         ...,
         description='Just a number',
         examples=['1', '5464446', '684572369854259'],
-        regex='^\\d{1,15}$',
+        pattern='^\\d{1,15}$',
     )
 
 

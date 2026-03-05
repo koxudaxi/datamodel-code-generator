@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class ProcessingStatus(Enum):
@@ -15,8 +15,8 @@ class ProcessingStatus(Enum):
     FAILED = 'FAILED'
 
 
-class Kind(BaseModel):
-    __root__: str
+class Kind(RootModel[str]):
+    root: str
 
 
 class ExtendedProcessingTask1(BaseModel):
@@ -28,29 +28,32 @@ class ProcessingStatusUnion(BaseModel):
     description: str | None = None
 
 
-class ProcessingTasksTitle(BaseModel):
-    __root__: list[ProcessingTask] = Field(..., title='Processing Tasks Title')
-
-
-class ExtendedProcessingTask(BaseModel):
-    __root__: ProcessingTasksTitle | ExtendedProcessingTask1 = Field(
-        ..., title='Extended Processing Task Title'
-    )
-
-
-class ExtendedProcessingTasks(BaseModel):
-    __root__: list[ExtendedProcessingTask] = Field(
-        ..., title='Extended Processing Tasks Title'
-    )
-
-
 class ProcessingTask(BaseModel):
     processing_status_union: (
         ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = Field('COMPLETED', title='Processing Status Union Title')
+    ) = Field(
+        default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
+        title='Processing Status Union Title',
+    )
     processing_status: ProcessingStatus | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None
 
 
-ProcessingTasksTitle.update_forward_refs()
+class ProcessingTasksTitle(RootModel[list[ProcessingTask]]):
+    root: list[ProcessingTask] = Field(..., title='Processing Tasks Title')
+
+
+class ExtendedProcessingTask(RootModel[ProcessingTasksTitle | ExtendedProcessingTask1]):
+    root: ProcessingTasksTitle | ExtendedProcessingTask1 = Field(
+        ..., title='Extended Processing Task Title'
+    )
+
+
+class ExtendedProcessingTasks(RootModel[list[ExtendedProcessingTask]]):
+    root: list[ExtendedProcessingTask] = Field(
+        ..., title='Extended Processing Tasks Title'
+    )
+
+
+ProcessingTask.model_rebuild()

@@ -16,10 +16,8 @@ import black
 import pytest
 from packaging import version
 
-from datamodel_code_generator import DataModelType
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
-from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import (
     AssertFileContent,
     _validation_stats,
@@ -438,7 +436,7 @@ def _should_skip_compile(extra_arguments: Sequence[str] | None) -> bool:
 
 
 def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool = False) -> bool:
-    """Check if exec should be skipped based on model type, pydantic version, and Python version.
+    """Check if exec should be skipped based on model type and Python version.
 
     Args:
         extra_arguments: CLI arguments passed to the test.
@@ -446,13 +444,6 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool
             This only works when target version <= runtime version (older target on newer runtime).
             When target > runtime, compile will be skipped entirely regardless of this flag.
     """
-    output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
-    is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
-    if (is_pydantic_v1 and is_pydantic_v2()) or (
-        output_model_type in {DataModelType.PydanticV2BaseModel.value, DataModelType.PydanticV2Dataclass.value}
-        and not is_pydantic_v2()
-    ):
-        return True
     if (target_version := _parse_target_version(extra_arguments)) is None:
         return True
     if not force_exec and target_version != sys.version_info[:2]:

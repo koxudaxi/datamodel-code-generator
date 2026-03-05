@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IntEnum(Enum):
@@ -44,9 +44,9 @@ class UnknownEnum(Enum):
 
 
 class Model(BaseModel):
-    IntEnum: IntEnum | None = None
-    FloatEnum: FloatEnum | None = None
-    StrEnum: StrEnum | None = None
-    NonTypedEnum: NonTypedEnum | None = None
-    BooleanEnum: BooleanEnum | None = None
-    UnknownEnum: UnknownEnum | None = None
+    IntEnum_1: IntEnum | None = Field(None, alias='IntEnum')
+    FloatEnum_1: FloatEnum | None = Field(None, alias='FloatEnum')
+    StrEnum_1: StrEnum | None = Field(None, alias='StrEnum')
+    NonTypedEnum_1: NonTypedEnum | None = Field(None, alias='NonTypedEnum')
+    BooleanEnum_1: BooleanEnum | None = Field(None, alias='BooleanEnum')
+    UnknownEnum_1: UnknownEnum | None = Field(None, alias='UnknownEnum')

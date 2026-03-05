@@ -6,12 +6,12 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class SomeType(BaseModel):
     name: str | None = None
 
 
-class MixedUnion(BaseModel):
-    __root__: Literal['value1'] | SomeType = Field(..., title='MixedUnion')
+class MixedUnion(RootModel[Literal['value1'] | SomeType]):
+    root: Literal['value1'] | SomeType = Field(..., title='MixedUnion')

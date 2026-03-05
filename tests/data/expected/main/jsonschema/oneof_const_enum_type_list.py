@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
 class ModeWithNullEnum(Enum):
@@ -14,5 +14,5 @@ class ModeWithNullEnum(Enum):
     off = 'off'
 
 
-class ModeWithNull(BaseModel):
-    __root__: ModeWithNullEnum | None = Field(None, title='Mode With Null')
+class ModeWithNull(RootModel[ModeWithNullEnum | None]):
+    root: ModeWithNullEnum | None = Field(None, title='Mode With Null')

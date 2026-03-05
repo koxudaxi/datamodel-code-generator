@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Cursors(BaseModel):
@@ -41,8 +41,8 @@ class Api(BaseModel):
     )
 
 
-class Apis(BaseModel):
-    __root__: list[Api] | None = Field(...)
+class Apis(RootModel[list[Api] | None]):
+    root: list[Api] | None = Field(...)
 
 
 class EmailItem(BaseModel):
@@ -52,24 +52,24 @@ class EmailItem(BaseModel):
     tag: str | None = None
 
 
-class Email(BaseModel):
-    __root__: list[EmailItem]
+class Email(RootModel[list[EmailItem]]):
+    root: list[EmailItem]
 
 
-class Id(BaseModel):
-    __root__: int = 1
+class Id(RootModel[int]):
+    root: int = 1
 
 
-class Description(BaseModel):
-    __root__: str | None = 'example'
+class Description(RootModel[str | None]):
+    root: str | None = 'example'
 
 
-class Name(BaseModel):
-    __root__: str | None = None
+class Name(RootModel[str | None]):
+    root: str | None = None
 
 
-class Tag(BaseModel):
-    __root__: str
+class Tag(RootModel[str]):
+    root: str
 
 
 class Notes(BaseModel):

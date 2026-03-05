@@ -15,4 +15,4 @@ class BarEnum(Enum):
 
 
 class Foo(BaseModel):
-    bar: list[BarEnum] | None = Field(None, max_items=3)
+    bar: list[BarEnum] | None = Field(None, max_length=3)
