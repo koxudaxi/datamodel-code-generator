@@ -840,9 +840,6 @@ def _load_validators_config(
     if file_handle is None:
         return None, None
 
-    if ValidatorsConfig is None:
-        return None, "--validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option."
-
     with file_handle as data:
         try:
             raw = json.load(data)

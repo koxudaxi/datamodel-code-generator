@@ -44,7 +44,6 @@ from tests.main.conftest import (
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
-PYDANTIC_V1_ONLY = pytest.mark.skipif(is_pydantic_v2(), reason="Pydantic v1 only")
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -8262,26 +8261,6 @@ def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys:
         ],
         capsys=capsys,
         expected_stderr_contains="Invalid validators configuration",
-    )
-
-
-@PYDANTIC_V1_ONLY
-def test_validators_requires_pydantic_v2(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """Test that validators option requires Pydantic v2."""
-    config_file = tmp_path / "validators.json"
-    config_file.write_text('{"User": {"validators": []}}')
-
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        expected_exit=Exit.ERROR,
-        extra_args=[
-            "--validators",
-            str(config_file),
-        ],
-        capsys=capsys,
-        expected_stderr_contains="--validators option requires Pydantic v2",
     )
 
 
