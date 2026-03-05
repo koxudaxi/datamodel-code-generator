@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -30,4 +30,9 @@ class UpdateObjectRequest(ObjectBase):
 
 
 class Demo(BaseModel):
-    myArray: list[ObjectBase | CreateObjectRequest | UpdateObjectRequest]
+    myArray: list[
+        Annotated[
+            ObjectBase | CreateObjectRequest | UpdateObjectRequest,
+            Field(discriminator='type'),
+        ]
+    ]

@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, Field, RootModel
 
 
-class Schema(BaseModel):
-    __root__: AnyUrl = Field(..., description='String representing a URI.', title='URI')
+class Schema(RootModel[AnyUrl]):
+    root: AnyUrl = Field(..., description='String representing a URI.', title='URI')

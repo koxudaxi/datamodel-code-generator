@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class GrandParent(BaseModel):
@@ -23,5 +23,5 @@ class ChildB(Parent):
     child_b_field: bool = Field(..., title='Child B Field')
 
 
-class Model(BaseModel):
-    __root__: ChildA | ChildB
+class Model(RootModel[ChildA | ChildB]):
+    root: ChildA | ChildB

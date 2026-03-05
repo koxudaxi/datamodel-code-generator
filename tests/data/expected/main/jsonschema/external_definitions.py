@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, constr
+from pydantic import BaseModel, ConfigDict, RootModel, constr
 
 
-class ElegantName(BaseModel):
-    __root__: constr(min_length=3)
+class ElegantName(RootModel[constr(min_length=3)]):
+    root: constr(min_length=3)
 
 
 class Person(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: ElegantName

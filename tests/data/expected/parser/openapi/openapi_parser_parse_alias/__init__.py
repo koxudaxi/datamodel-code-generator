@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, conint
+from pydantic import AwareDatetime, BaseModel, Field, RootModel, conint
 
 from . import model_s
 
@@ -23,8 +23,8 @@ class HomeAddress(BaseModel):
     address_1: Optional[str] = Field(None, alias='address-1')
 
 
-class TeamMembers(BaseModel):
-    __root__: List[str]
+class TeamMembers(RootModel[List[str]]):
+    root: List[str]
 
 
 class AllOfObj(BaseModel):
@@ -32,8 +32,8 @@ class AllOfObj(BaseModel):
     number: Optional[str] = None
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
 class Result(BaseModel):
@@ -74,10 +74,10 @@ class AnyOfCombineInArrayItem(HomeAddress, UserName):
     age: Optional[str] = None
 
 
-class AnyOfCombineInArray(BaseModel):
-    __root__: List[AnyOfCombineInArrayItem]
+class AnyOfCombineInArray(RootModel[List[AnyOfCombineInArrayItem]]):
+    root: List[AnyOfCombineInArrayItem]
 
 
 class AnyOfCombineInRoot(HomeAddress, UserName):
     age: Optional[str] = None
-    birth_date: Optional[datetime] = Field(None, alias='birth-date')
+    birth_date: Optional[AwareDatetime] = Field(None, alias='birth-date')

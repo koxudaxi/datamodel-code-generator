@@ -64,7 +64,6 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model import dataclass as dataclass_model
 from datamodel_code_generator.model import msgspec as msgspec_model
-from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -84,7 +83,7 @@ from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import ANY, DataType, DataTypeManager
-from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
+from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -379,7 +378,7 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
     if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):  # pragma: no cover
-        return to_hashable(model_dump(item))
+        return to_hashable(item.model_dump())
     if item is None:
         return ""
     return item  # type: ignore[return-value]
@@ -780,11 +779,11 @@ def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
         elif data_type_.data_types:  # pragma: no cover
-            copied_data_type = model_copy(data_type_)
+            copied_data_type = data_type_.model_copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
         else:
-            copied_data_types.append(model_copy(data_type_))
+            copied_data_types.append(data_type_.model_copy())
     return copied_data_types
 
 
@@ -860,29 +859,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
         config_class = cls._get_config_class()
 
-        if is_pydantic_v2():
-            config_class.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return config_class.model_validate(options)  # type: ignore[return-value]
-        config_class.update_forward_refs(
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
+        config_class.model_rebuild(
+            _types_namespace={
+                "StrictTypes": types_module.StrictTypes,
+                "DataModel": model_base.DataModel,
+                "DataModelFieldBase": model_base.DataModelFieldBase,
+                "DataTypeManager": types_module.DataTypeManager,
+            }
         )
-        defaults = {name: field.default for name, field in config_class.__fields__.items()}
-        defaults.update(options)  # ty: ignore
-        return config_class.construct(**defaults)  # type: ignore[return-value]
+        return config_class.model_validate(options)  # type: ignore[return-value]
 
     def __init__(  # noqa: PLR0912, PLR0915
         self,
@@ -1001,7 +989,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if self.validators:
             for model_name, model_config in self.validators.items():
                 self.extra_template_data[model_name]["validators"] = [
-                    model_dump(v, mode="json") for v in model_config.validators
+                    v.model_dump(mode="json") for v in model_config.validators
                 ]
 
         self.use_generic_base_class: bool = config.use_generic_base_class
@@ -1123,7 +1111,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         if issubclass(
             self.data_model_type,
-            (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+            (pydantic_model_v2.BaseModel,),
         ):
             return ModelType.PYDANTIC
         return ModelType.CLASS
@@ -1543,7 +1531,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     type_names: list[str] = []
 
                     def check_paths(
-                        model: pydantic_model.BaseModel | pydantic_model_v2.BaseModel | Reference,
+                        model: pydantic_model_v2.BaseModel | Reference,
                         mapping: dict[str, str],
                         type_names: list[str] = type_names,
                     ) -> None:
@@ -1613,7 +1601,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             if not isinstance(  # pragma: no cover
                                 base_model,
                                 (
-                                    pydantic_model.BaseModel,
                                     pydantic_model_v2.BaseModel,
                                     dataclass_model.DataClass,
                                     msgspec_model.Struct,
@@ -1704,7 +1691,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
         if data_type.is_list:
-            new_data_type = model_copy(data_type)
+            new_data_type = data_type.model_copy()
             new_data_type.is_list = False
             new_data_type.is_set = True
             for data_type_ in new_data_type.data_types:
@@ -1863,7 +1850,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         supports_inheritance = issubclass(
             self.data_model_type,
             (
-                pydantic_model.BaseModel,
                 pydantic_model_v2.BaseModel,
                 dataclass_model.DataClass,
             ),
@@ -1925,10 +1911,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
-
-    def _is_pydantic_v2_model(self) -> bool:
-        """Check if the output model type is Pydantic v2."""
-        return self.data_model_type.__module__.startswith("datamodel_code_generator.model.pydantic_v2")
 
     def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -2025,7 +2007,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     # set copied data_type
-                    copied_data_type = model_copy(root_type_field.data_type)
+                    copied_data_type = root_type_field.data_type.model_copy()
                     if isinstance(data_type.parent, self.data_model_field_type):
                         # for field
                         # override empty field by root-type field
@@ -2048,9 +2030,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and isinstance(
-                            root_type_field, (pydantic_model.DataModelField, pydantic_model_v2.DataModelField)
-                        ):
+                        if discriminator and isinstance(root_type_field, pydantic_model_v2.DataModelField):
                             has_any_variant = any(
                                 dt.type == ANY
                                 or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
@@ -2062,8 +2042,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     if isinstance(discriminator, dict)
                                     else discriminator
                                 )
-                                if self._is_pydantic_v2_model():
-                                    copied_data_type.discriminator = prop_name
+                                copied_data_type.discriminator = prop_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
@@ -2194,18 +2173,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if not original_field:  # pragma: no cover
                     model.fields.remove(model_field)
                     continue
-                copied_original_field = model_copy(original_field)
+                copied_original_field = original_field.model_copy()
                 if original_field.data_type.reference:
                     data_type = self.data_type_manager.data_type(
                         reference=original_field.data_type.reference,
                     )
                 elif original_field.data_type.data_types:
-                    data_type = model_copy(original_field.data_type)
+                    data_type = original_field.data_type.model_copy()
                     data_type.data_types = _copy_data_types(original_field.data_type.data_types)
                     for data_type_ in data_type.data_types:
                         data_type_.parent = data_type
                 else:
-                    data_type = model_copy(original_field.data_type)
+                    data_type = original_field.data_type.model_copy()
                 data_type.parent = copied_original_field
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model

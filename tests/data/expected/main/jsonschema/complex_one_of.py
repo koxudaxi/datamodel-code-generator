@@ -4,24 +4,24 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict, RootModel
 
 
 class Key(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     address: str
     nat: str
 
 
 class ModelItem(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     key: Key
     value: str
 
 
-class Model(BaseModel):
-    __root__: int | list[ModelItem]
+class Model(RootModel[int | list[ModelItem]]):
+    root: int | list[ModelItem]

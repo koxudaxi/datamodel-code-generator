@@ -12,4 +12,4 @@ class Model(BaseModel):
     children: list[Model] | None = None
 
 
-Model.update_forward_refs()
+Model.model_rebuild()

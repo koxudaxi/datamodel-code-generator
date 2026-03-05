@@ -4,19 +4,19 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class NullableString(BaseModel):
-    __root__: str | None
+class NullableString(RootModel[str | None]):
+    root: str | None
 
 
-class NonNullableString(BaseModel):
-    __root__: str
+class NonNullableString(RootModel[str]):
+    root: str
 
 
-class NullOnly(BaseModel):
-    __root__: None
+class NullOnly(RootModel[None]):
+    root: None
 
 
 class Model(BaseModel):

@@ -11,4 +11,4 @@ class Node(BaseModel):
     child: Node | None = None
 
 
-Node.update_forward_refs()
+Node.model_rebuild()

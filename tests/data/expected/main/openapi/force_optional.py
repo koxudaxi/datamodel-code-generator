@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
@@ -13,8 +13,8 @@ class Pet(BaseModel):
     tag: str | None = None
 
 
-class Pets(BaseModel):
-    __root__: list[Pet] | None = None
+class Pets(RootModel[list[Pet] | None]):
+    root: list[Pet] | None = None
 
 
 class User(BaseModel):
@@ -23,16 +23,16 @@ class User(BaseModel):
     tag: str | None = None
 
 
-class Users(BaseModel):
-    __root__: list[User] | None = None
+class Users(RootModel[list[User] | None]):
+    root: list[User] | None = None
 
 
-class Id(BaseModel):
-    __root__: str | None = None
+class Id(RootModel[str | None]):
+    root: str | None = None
 
 
-class Rules(BaseModel):
-    __root__: list[str] | None = None
+class Rules(RootModel[list[str] | None]):
+    root: list[str] | None = None
 
 
 class Error(BaseModel):
@@ -55,8 +55,8 @@ class Api(BaseModel):
     )
 
 
-class Apis(BaseModel):
-    __root__: list[Api] | None = None
+class Apis(RootModel[list[Api] | None]):
+    root: list[Api] | None = None
 
 
 class Event(BaseModel):

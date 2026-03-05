@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class Pet(BaseModel):
@@ -18,4 +18,4 @@ class Pet(BaseModel):
     friends: list[Pet] | None = None
 
 
-Pet.update_forward_refs()
+Pet.model_rebuild()

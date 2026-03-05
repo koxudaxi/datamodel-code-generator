@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, RootModel
 
 
 class Email(BaseModel):
@@ -23,5 +23,5 @@ class Model2(BaseModel):
     errors: list[Error]
 
 
-class Model(BaseModel):
-    __root__: Model1 | Model2
+class Model(RootModel[Model1 | Model2]):
+    root: Model1 | Model2

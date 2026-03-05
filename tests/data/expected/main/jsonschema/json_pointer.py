@@ -7,11 +7,11 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
-class Pets(BaseModel):
-    __root__: Any
+class Pets(RootModel[Any]):
+    root: Any
 
 
 class PetType(Enum):
@@ -35,8 +35,8 @@ class Dog(BaseModel):
 
 
 class Person(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: str | None = Field(None, title='name')
     pet: Cat | Dog | None = Field(None, title='pet')

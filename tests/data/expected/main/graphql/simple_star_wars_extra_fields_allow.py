@@ -4,38 +4,39 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias
+from typing import Literal
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import TypeAliasType
 
-Boolean: TypeAlias = bool
+Boolean = TypeAliasType("Boolean", bool)
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-ID: TypeAlias = str
+ID = TypeAliasType("ID", str)
 """
 The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
 """
 
 
-Int: TypeAlias = int
+Int = TypeAliasType("Int", int)
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-String: TypeAlias = str
+String = TypeAliasType("String", str)
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
 
 
 class Film(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     characters: list[Person]
     characters_ids: list[ID]
     director: String
@@ -57,9 +58,9 @@ class Film(BaseModel):
 
 
 class Person(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     birth_year: String | None = None
     eye_color: String | None = None
     films: list[Film]
@@ -83,9 +84,9 @@ class Person(BaseModel):
 
 
 class Planet(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     climate: String | None = None
     diameter: String | None = None
     films: list[Film]
@@ -104,9 +105,9 @@ class Planet(BaseModel):
 
 
 class Species(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     average_height: String | None = None
     average_lifespan: String | None = None
     classification: String | None = None
@@ -125,9 +126,9 @@ class Species(BaseModel):
 
 
 class Starship(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     MGLT: String | None = None
     cargo_capacity: String | None = None
     consumables: String | None = None
@@ -150,9 +151,9 @@ class Starship(BaseModel):
 
 
 class Vehicle(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     cargo_capacity: String | None = None
     consumables: String | None = None
     cost_in_credits: String | None = None
@@ -172,5 +173,5 @@ class Vehicle(BaseModel):
     typename__: Literal['Vehicle'] | None = Field('Vehicle', alias='__typename')
 
 
-Film.update_forward_refs()
-Person.update_forward_refs()
+Film.model_rebuild()
+Person.model_rebuild()

@@ -33,7 +33,6 @@ CollapseRootModelsNameStrategy: TypeAlias = Literal['child', 'parent']
 
 
 DataModelType: TypeAlias = Literal[
-    'pydantic.BaseModel',
     'pydantic_v2.BaseModel',
     'pydantic_v2.dataclass',
     'dataclasses.dataclass',

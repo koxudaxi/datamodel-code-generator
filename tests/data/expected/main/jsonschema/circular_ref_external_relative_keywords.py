@@ -19,5 +19,5 @@ class Child(BaseModel):
     parent: Context | None = None
 
 
-Model.update_forward_refs()
-Context.update_forward_refs()
+Model.model_rebuild()
+Context.model_rebuild()

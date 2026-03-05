@@ -514,7 +514,6 @@ def _get_output_family(output_model_type: DataModelType) -> str:
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
     pydantic_types = {
-        DataModelType.PydanticBaseModel,
         DataModelType.PydanticV2BaseModel,
         DataModelType.PydanticV2Dataclass,
     }
@@ -705,7 +704,7 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     if output_model_type is None:
-        output_model_type = DataModelType.PydanticBaseModel
+        output_model_type = DataModelType.PydanticV2BaseModel
 
     if len(input_models) == 1:
         return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
@@ -765,13 +764,6 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
 
         if not (isinstance(obj, type) and issubclass(obj, BaseModel)):
             msg = f"Multiple --input-model only supports Pydantic v2 BaseModel classes, got {type(obj).__name__}"
-            raise Error(msg)
-
-        if not hasattr(obj, "model_json_schema"):
-            msg = (
-                "Multiple --input-model with Pydantic model requires Pydantic v2 runtime. "
-                "Please upgrade Pydantic to v2."
-            )
             raise Error(msg)
 
         model_classes.append(obj)
@@ -907,9 +899,6 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 f"got '{input_file_type.value}'"
             )
             raise Error(msg)
-        if not hasattr(obj, "model_json_schema"):
-            msg = "--input-model with Pydantic model requires Pydantic v2 runtime. Please upgrade Pydantic to v2."
-            raise Error(msg)
         _try_rebuild_model(obj)
         schema_generator = _get_input_model_json_schema_class()
         schema = obj.model_json_schema(schema_generator=schema_generator)
@@ -938,22 +927,18 @@ def _load_single_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
                 f"got '{input_file_type.value}'"
             )
             raise Error(msg)
-        try:
-            from pydantic import TypeAdapter  # noqa: PLC0415
+        from pydantic import TypeAdapter  # noqa: PLC0415
 
-            schema = TypeAdapter(obj).json_schema()
-            schema = _add_python_type_info_generic(schema, cast("type", obj))
+        schema = TypeAdapter(obj).json_schema()
+        schema = _add_python_type_info_generic(schema, cast("type", obj))
 
-            if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
-                obj_type = cast("type", obj)
-                nested_models = _collect_nested_models(obj_type)
-                obj_name = getattr(obj, "__name__", None)
-                if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
-                    nested_models[obj_name] = obj_type
-                schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
-        except ImportError as e:
-            msg = "--input-model with dataclass/TypedDict requires Pydantic v2 runtime."
-            raise Error(msg) from e
+        if ref_strategy and ref_strategy != InputModelRefStrategy.RegenerateAll:
+            obj_type = cast("type", obj)
+            nested_models = _collect_nested_models(obj_type)
+            obj_name = getattr(obj, "__name__", None)
+            if obj_name and "$defs" in schema and obj_name in schema["$defs"]:  # pragma: no cover
+                nested_models[obj_name] = obj_type
+            schema = _filter_defs_by_strategy(schema, nested_models, output_model_type, ref_strategy)
 
         return schema
 

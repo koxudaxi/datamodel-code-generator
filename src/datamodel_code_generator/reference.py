@@ -29,22 +29,19 @@ from typing import (
 )
 from urllib.parse import ParseResult, urlparse
 
-import pydantic
-from packaging import version
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing_extensions import TypeIs
 
 from datamodel_code_generator import Error, NamingStrategy
 from datamodel_code_generator.enums import ClassNameAffixScope
 from datamodel_code_generator.format import PythonVersion
-from datamodel_code_generator.util import ConfigDict, camel_to_snake, is_pydantic_v2, model_validator
+from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
     from collections.abc import Set as AbstractSet
 
     import inflect
-    from pydantic.typing import DictStrAny
 
     from datamodel_code_generator.model.base import DataModel
     from datamodel_code_generator.types import DataType
@@ -95,49 +92,25 @@ class _BaseModel(BaseModel):
                     setattr(self, pass_field_name, values[pass_field_name])
 
     if not TYPE_CHECKING:  # pragma: no branch
-        if is_pydantic_v2():
 
-            def dict(  # noqa: PLR0913  # pragma: no cover
-                self,
-                *,
-                include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
-                exclude: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
-                by_alias: bool = False,
-                exclude_unset: bool = False,
-                exclude_defaults: bool = False,
-                exclude_none: bool = False,
-            ) -> DictStrAny:
-                return self.model_dump(
-                    include=include,  # ty: ignore
-                    exclude=set(exclude or ()) | self._exclude_fields,
-                    by_alias=by_alias,
-                    exclude_unset=exclude_unset,
-                    exclude_defaults=exclude_defaults,
-                    exclude_none=exclude_none,
-                )
-
-        else:
-
-            def dict(  # noqa: PLR0913
-                self,
-                *,
-                include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
-                exclude: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
-                by_alias: bool = False,
-                skip_defaults: bool | None = None,
-                exclude_unset: bool = False,
-                exclude_defaults: bool = False,
-                exclude_none: bool = False,
-            ) -> DictStrAny:
-                return super().dict(
-                    include=include,  # ty: ignore
-                    exclude=set(exclude or ()) | self._exclude_fields,
-                    by_alias=by_alias,
-                    skip_defaults=skip_defaults,  # ty: ignore
-                    exclude_unset=exclude_unset,
-                    exclude_defaults=exclude_defaults,
-                    exclude_none=exclude_none,
-                )
+        def dict(  # noqa: PLR0913  # pragma: no cover
+            self,
+            *,
+            include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
+            exclude: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
+            by_alias: bool = False,
+            exclude_unset: bool = False,
+            exclude_defaults: bool = False,
+            exclude_none: bool = False,
+        ) -> dict[str, Any]:
+            return self.model_dump(
+                include=include,  # ty: ignore
+                exclude=set(exclude or ()) | self._exclude_fields,
+                by_alias=by_alias,
+                exclude_unset=exclude_unset,
+                exclude_defaults=exclude_defaults,
+                exclude_none=exclude_none,
+            )
 
 
 class Reference(_BaseModel):
@@ -167,22 +140,11 @@ class Reference(_BaseModel):
         values["original_name"] = values.get("name", original_name)
         return values
 
-    if is_pydantic_v2():
-        # TODO[pydantic]: The following keys were removed: `copy_on_model_validation`.
-        # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-        model_config = ConfigDict(  # ty: ignore
-            arbitrary_types_allowed=True,
-            ignored_types=(cached_property,),
-            revalidate_instances="never",
-        )
-    else:
-
-        class Config:
-            """Pydantic v1 configuration for Reference model."""
-
-            arbitrary_types_allowed = True
-            keep_untouched = (cached_property,)
-            copy_on_model_validation = False if version.parse(pydantic.VERSION) < version.parse("1.9.2") else "none"
+    model_config = ConfigDict(  # ty: ignore
+        arbitrary_types_allowed=True,
+        ignored_types=(cached_property,),
+        revalidate_instances="never",
+    )
 
     @property
     def short_name(self) -> str:
@@ -721,7 +683,7 @@ class ModelResolver:  # noqa: PLR0904
             joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url
-            return f"{joined_url}#"
+            return f"{joined_url}#"  # pragma: no cover
 
         if is_url(ref):
             file_part, path_part = ref.split("#", 1)

@@ -15,6 +15,3 @@ class Node(Node_1):
 
 class Model(BaseModel):
     node: Node | None = None
-
-
-Node.update_forward_refs()

@@ -3,21 +3,21 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import AnyUrl, BaseModel
+from pydantic import AnyUrl, BaseModel, RootModel
 
 from . import models
 
 
-class Pets(BaseModel):
-    __root__: List[models.Pet]
+class Pets(RootModel[List[models.Pet]]):
+    root: List[models.Pet]
 
 
-class Users(BaseModel):
-    __root__: List[models.User]
+class Users(RootModel[List[models.User]]):
+    root: List[models.User]
 
 
-class Rules(BaseModel):
-    __root__: List[str]
+class Rules(RootModel[List[str]]):
+    root: List[str]
 
 
 class Stage(Enum):
@@ -35,5 +35,5 @@ class Api(BaseModel):
     stage: Optional[Stage] = None
 
 
-class Apis(BaseModel):
-    __root__: List[Api]
+class Apis(RootModel[List[Api]]):
+    root: List[Api]

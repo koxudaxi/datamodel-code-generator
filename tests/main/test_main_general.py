@@ -7,7 +7,6 @@ from argparse import ArgumentTypeError, Namespace
 from typing import TYPE_CHECKING
 
 import black
-import pydantic
 import pytest
 from inline_snapshot import snapshot
 
@@ -29,7 +28,6 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
@@ -312,7 +310,6 @@ def test_class_decorators_with_empty_entries(output_file: Path) -> None:
 @pytest.mark.parametrize(
     ("output_model_type", "expected_file"),
     [
-        ("pydantic.BaseModel", "class_decorators_pydantic_BaseModel.py"),
         ("pydantic_v2.BaseModel", "class_decorators_pydantic_v2_BaseModel.py"),
         ("pydantic_v2.dataclass", "class_decorators_pydantic_v2_dataclass.py"),
         ("dataclasses.dataclass", "class_decorators_dataclasses_dataclass.py"),
@@ -320,7 +317,6 @@ def test_class_decorators_with_empty_entries(output_file: Path) -> None:
         # Note: TypedDict is excluded because its template doesn't support decorators
     ],
     ids=[
-        "pydantic_v1",
         "pydantic_v2",
         "pydantic_v2_dataclass",
         "dataclasses",
@@ -1340,7 +1336,7 @@ class Person(BaseModel):
         Field(
             max_length=100,
             min_length=1,
-            regex='^[A-Za-z]+$',
+            pattern='^[A-Za-z]+$',
         ),
     ]
 """
@@ -1842,11 +1838,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class Address(BaseModel):
@@ -1861,13 +1857,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 from . import address as address_1
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class User(BaseModel):
@@ -2028,19 +2024,6 @@ def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFi
         generate(auto_error_dict, input_file_type=input_file_type)
 
 
-def test_pydantic_v1_deprecation_warning(output_file: Path, mocker: MockerFixture) -> None:
-    """Test that deprecation warning is emitted when running with Pydantic v1."""
-    mocker.patch("datamodel_code_generator.__main__.is_pydantic_v2", return_value=False)
-
-    with pytest.warns(DeprecationWarning, match=r"Pydantic v1 runtime support is deprecated"):
-        run_main_and_assert(
-            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
-            output_path=output_file,
-            input_file_type="jsonschema",
-        )
-
-
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
 def test_generate_with_config_object(output_file: Path) -> None:
     """Test generate() with GenerateConfig object."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -2065,7 +2048,6 @@ def test_generate_with_config_object(output_file: Path) -> None:
     assert "user_name" in content
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
 def test_generate_config_with_union_mode() -> None:
     """Test GenerateConfig with union_mode field."""
     config = GenerateConfig(
@@ -2080,7 +2062,6 @@ def test_generate_config_with_union_mode() -> None:
     assert_output(result, EXPECTED_MAIN_PATH / "generate_config_union_mode.py")
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="GenerateConfig requires Pydantic v2")
 def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None:
     """Test generate() raises error when both config and kwargs are provided."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -2101,7 +2082,6 @@ def test_generate_with_config_and_kwargs_raises_error(output_file: Path) -> None
         )
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_parser_with_config_and_options_raises_error() -> None:
     """Test Parser raises error when both config and options are provided."""
     from datamodel_code_generator.config import ParserConfig
@@ -2151,7 +2131,6 @@ def test_graphql_parser_with_explicit_target_datetime_class() -> None:
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_jsonschema_parser_with_config_object() -> None:
     """Test JsonSchemaParser with ParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import ParserConfig
@@ -2173,7 +2152,6 @@ def test_jsonschema_parser_with_config_object() -> None:
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_openapi_parser_with_config_object() -> None:
     """Test OpenAPIParser with OpenAPIParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import OpenAPIParserConfig
@@ -2197,7 +2175,6 @@ def test_openapi_parser_with_config_object() -> None:
     assert parser.wrap_string_literal is True
 
 
-@pytest.mark.skipif(pydantic.VERSION < "2.0.0", reason="ParserConfig requires Pydantic v2")
 def test_graphql_parser_with_config_object() -> None:
     """Test GraphQLParser with GraphQLParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import GraphQLParserConfig
@@ -2298,20 +2275,6 @@ def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
     assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
 
 
-def test_use_annotated_no_warning_pydantic_v1(output_file: Path) -> None:
-    """Test that use_annotated warning is not emitted for Pydantic v1."""
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        run_main_and_assert(
-            input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
-            output_path=output_file,
-            input_file_type="jsonschema",
-            extra_args=["--output-model-type", "pydantic.BaseModel"],
-        )
-    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
-
-
-@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
 def test_import_generate_config_from_top_level() -> None:
     """Test that GenerateConfig can be imported from top-level module."""
     from datamodel_code_generator import GenerateConfig as TopLevelGenerateConfig
@@ -2320,7 +2283,6 @@ def test_import_generate_config_from_top_level() -> None:
     assert TopLevelGenerateConfig is GenerateConfig
 
 
-@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
 def test_generate_with_imported_config_from_top_level() -> None:
     """Test generate() with GenerateConfig imported from top-level."""
     config = datamodel_code_generator.GenerateConfig(class_name="TestModel")
@@ -2329,14 +2291,6 @@ def test_generate_with_imported_config_from_top_level() -> None:
     assert "class TestModel" in result
 
 
-@pytest.mark.skipif(not is_pydantic_v2(), reason="GenerateConfig requires Pydantic v2")
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig in Pydantic v2."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
-
-
-@pytest.mark.skipif(is_pydantic_v2(), reason="Test for Pydantic v1 only")
-def test_import_generate_config_fails_on_v1() -> None:
-    """GenerateConfig should not be importable from top-level in Pydantic v1."""
-    with pytest.raises(ImportError, match="only available in Pydantic v2"):
-        _ = datamodel_code_generator.GenerateConfig

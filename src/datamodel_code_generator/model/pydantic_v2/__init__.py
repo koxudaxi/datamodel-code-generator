@@ -47,12 +47,8 @@ class ConfigDict(_BaseModel):
     json_schema_extra: Optional[Dict[str, Any]] = None  # noqa: UP006, UP045
 
     def dict(self, **kwargs: Any) -> dict[str, Any]:  # type: ignore[override]
-        """Version-compatible dict method for templates."""
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
-
-        if is_pydantic_v2():
-            return self.model_dump(**kwargs)
-        return super().dict(**kwargs)  # pragma: no cover
+        """Return dict for templates."""
+        return self.model_dump(**kwargs)
 
 
 __all__ = [

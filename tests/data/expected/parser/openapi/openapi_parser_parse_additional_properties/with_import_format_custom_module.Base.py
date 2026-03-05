@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from pydantic import Extra
+from pydantic import ConfigDict, RootModel
 
 from custom_module import Base
 
@@ -13,35 +13,35 @@ class Pet(Base):
     tag: Optional[str] = None
 
 
-class Pets(Base):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class User(Base):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     id: int
     name: str
     tag: Optional[str] = None
 
 
-class Users(Base):
-    __root__: List[User]
+class Users(RootModel[List[User]]):
+    root: List[User]
 
 
-class Id(Base):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(Base):
-    __root__: List[str]
+class Rules(RootModel[List[str]]):
+    root: List[str]
 
 
 class Error(Base):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     code: int
     message: str
 
