@@ -29,7 +29,7 @@ from datamodel_code_generator.model.imports import (
     IMPORT_MSGSPEC_UNSET,
     IMPORT_MSGSPEC_UNSETTYPE,
 )
-from datamodel_code_generator.model.pydantic.base_model import (
+from datamodel_code_generator.model.pydantic_base import (
     Constraints as _Constraints,
 )
 from datamodel_code_generator.model.type_alias import TypeAliasBase

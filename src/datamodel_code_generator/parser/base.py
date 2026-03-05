@@ -2048,7 +2048,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and isinstance(root_type_field, pydantic_model.DataModelField):
+                        if discriminator and isinstance(
+                            root_type_field, (pydantic_model.DataModelField, pydantic_model_v2.DataModelField)
+                        ):
                             has_any_variant = any(
                                 dt.type == ANY
                                 or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)

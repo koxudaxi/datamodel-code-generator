@@ -24,7 +24,7 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
 from datamodel_code_generator.model.imports import IMPORT_DATACLASS, IMPORT_FIELD
-from datamodel_code_generator.model.pydantic.base_model import Constraints  # noqa: TC001 # needed for pydantic
+from datamodel_code_generator.model.pydantic_base import Constraints  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.model.types import DataTypeManager as _DataTypeManager
 from datamodel_code_generator.model.types import standard_primitive_type_map_factory, type_map_factory
 from datamodel_code_generator.reference import Reference
