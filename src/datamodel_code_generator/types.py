@@ -115,15 +115,15 @@ class UnionIntFloat:
         """Initialize with an int or float value."""
         self.value: int | float = value
 
-    def __int__(self) -> int:  # pragma: no cover
+    def __int__(self) -> int:
         """Convert value to int."""
         return int(self.value)
 
-    def __float__(self) -> float:  # pragma: no cover
+    def __float__(self) -> float:
         """Convert value to float."""
         return float(self.value)
 
-    def __str__(self) -> str:  # pragma: no cover
+    def __str__(self) -> str:
         """Convert value to string."""
         return str(self.value)
 
@@ -150,7 +150,7 @@ class UnionIntFloat:
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
         """Validate and convert value to UnionIntFloat."""
-        if isinstance(v, UnionIntFloat):  # pragma: no cover
+        if isinstance(v, UnionIntFloat):
             return v
         if not isinstance(v, (int, float)):  # pragma: no cover
             try:
@@ -781,7 +781,7 @@ class DataType(_BaseModel):
             if self.kwargs:
                 kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
                 return f"{type_}({kwargs})"
-            return f"{type_}()"  # pragma: no cover
+            return f"{type_}()"
         return type_
 
     @property
@@ -1022,7 +1022,7 @@ class DataTypeManager(ABC):
         """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
 
-    def get_data_type_from_value(self, value: Any) -> DataType:  # noqa: PLR0911  # pragma: no cover
+    def get_data_type_from_value(self, value: Any) -> DataType:  # noqa: PLR0911
         """Infer a DataType from a Python value."""
         match value:
             case str():

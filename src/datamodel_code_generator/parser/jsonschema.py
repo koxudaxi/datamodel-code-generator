@@ -3331,11 +3331,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         ]
         # TODO: decide special path word for a combined data model.
-        if obj.allOf:  # pragma: no cover
+        if obj.allOf:
             data_types.append(self.parse_all_of(name, obj, get_special_path("allOf", path)))
-        elif obj.is_object:  # pragma: no cover
+        elif obj.is_object:
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
-        if obj.enum and not self.ignore_enum_constraints:  # pragma: no cover
+        if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
         constraints = obj.model_dump(exclude_none=True)
         if suppress_item_constraints:
@@ -3371,7 +3371,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.set_schema_extensions(reference.path, obj)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
-        if any(d.reference == reference for d in field.data_type.all_data_types if d.reference):  # pragma: no cover
+        if any(d.reference == reference for d in field.data_type.all_data_types if d.reference):
             # self-reference
             field = self.data_model_field_type(
                 data_type=self.data_type(

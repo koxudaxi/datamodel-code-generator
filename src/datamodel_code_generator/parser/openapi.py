@@ -572,7 +572,7 @@ class OpenAPIParser(JsonSchemaParser):
                     media_type,
                     media_obj,
                 ) in parameter.content.items():
-                    if not media_obj.schema_:  # pragma: no cover
+                    if not media_obj.schema_:
                         continue
                     object_schema = self.resolve_object(media_obj.schema_, JsonSchemaObject)
                     data_types.append(
@@ -583,11 +583,11 @@ class OpenAPIParser(JsonSchemaParser):
                         )
                     )
 
-                if not data_types:  # pragma: no cover
+                if not data_types:
                     continue
                 if len(data_types) == 1:
                     data_type = data_types[0]
-                else:  # pragma: no cover
+                else:
                     data_type = self.data_type(data_types=data_types)
                     # multiple data_type parse as non-constraints field
                     object_schema = None

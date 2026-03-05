@@ -93,7 +93,7 @@ class _BaseModel(BaseModel):
 
     if not TYPE_CHECKING:  # pragma: no branch
 
-        def dict(  # noqa: PLR0913  # pragma: no cover
+        def dict(  # noqa: PLR0913
             self,
             *,
             include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,
@@ -683,7 +683,7 @@ class ModelResolver:  # noqa: PLR0904
             joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url
-            return f"{joined_url}#"  # pragma: no cover
+            return f"{joined_url}#"
 
         if is_url(ref):
             file_part, path_part = ref.split("#", 1)

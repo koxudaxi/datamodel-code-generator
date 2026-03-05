@@ -343,7 +343,7 @@ class DataModelFieldBase(_BaseModel):
             if examples and isinstance(examples, list) and len(examples) > 1:
                 examples_str = "\n".join(f"- {e!r}" for e in examples)
                 parts.append(f"Examples:\n{examples_str}")
-            elif example is not None:  # pragma: no cover
+            elif example is not None:
                 parts.append(f"Example: {example!r}")
             elif examples and isinstance(examples, list) and len(examples) == 1:  # pragma: no branch
                 parts.append(f"Example: {examples[0]!r}")
@@ -451,7 +451,7 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
 
     if custom_template_dir is not None:
         custom_dir = custom_template_dir / template_subdir
-        if cached_path_exists(custom_dir):  # pragma: no cover
+        if cached_path_exists(custom_dir):
             loaders.append(FileSystemLoader(str(custom_dir)))
 
     loaders.append(FileSystemLoader(str(TEMPLATE_DIR / template_subdir)))
