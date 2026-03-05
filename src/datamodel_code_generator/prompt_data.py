@@ -41,7 +41,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--duplicate-name-suffix": "Customize suffix for duplicate model names.",
     "--empty-enum-field-name": "Name for empty string enum field values.",
     "--enable-command-header": "Include command-line options in file header for reproducibility.",
-    "--enable-faux-immutability": "Enable faux immutability in Pydantic models (frozen=True).",
+    "--enable-faux-immutability": "Enable faux immutability in Pydantic v1 models (allow_mutation=False).",
     "--enable-version-header": "Include tool version information in file header.",
     "--encoding": "Specify character encoding for input and output files.",
     "--enum-field-as-literal": "Convert all enum fields to Literal types instead of Enum classes.",
