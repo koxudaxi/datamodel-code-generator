@@ -15,19 +15,19 @@ from pydantic import Field
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
-from datamodel_code_generator.model.pydantic.base_model import (
+from datamodel_code_generator.model.pydantic_base import (
     BaseModelBase,
 )
-from datamodel_code_generator.model.pydantic.base_model import (
+from datamodel_code_generator.model.pydantic_base import (
     Constraints as _Constraints,
 )
-from datamodel_code_generator.model.pydantic.base_model import (
+from datamodel_code_generator.model.pydantic_base import (
     DataModelField as DataModelFieldV1,
 )
-from datamodel_code_generator.model.pydantic.imports import IMPORT_FIELD
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_BASE_MODEL,
     IMPORT_CONFIG_DICT,
+    IMPORT_FIELD,
     IMPORT_FIELD_VALIDATOR,
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
