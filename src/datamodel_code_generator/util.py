@@ -179,7 +179,7 @@ def model_validator(  # ty: ignore
 
         return root_validator(method, pre=mode == "before")  # ty: ignore  # pragma: no cover
 
-    return inner
+    return inner  # pragma: no cover
 
 
 def field_validator(
@@ -198,7 +198,7 @@ def field_validator(
 
         return validator(field_name, *fields, pre=mode == "before")(method)  # ty: ignore  # pragma: no cover
 
-    return inner
+    return inner  # pragma: no cover
 
 
 @lru_cache(maxsize=1)
