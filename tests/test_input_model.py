@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 import pydantic
 import pytest
 
+from datamodel_code_generator import DataModelType, arguments
 from datamodel_code_generator import __main__ as main_module
-from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit, main
 from tests.conftest import assert_output, freeze_time
 
@@ -54,12 +54,16 @@ def run_input_model_and_assert(
     output_path: Path,
     expected_file: Path,
     extra_args: Sequence[str] | None = None,
+    default_output_model_type: str | None = DataModelType.PydanticBaseModel.value,
 ) -> None:
     """Run main with --input-model and assert results."""
     __tracebackhide__ = True
     args = ["--input-model", input_model, "--output", str(output_path)]
-    if extra_args:
-        args.extend(extra_args)
+    normalized_extra_args = list(extra_args) if extra_args else []
+    if default_output_model_type is not None and "--output-model-type" not in normalized_extra_args:
+        normalized_extra_args.extend(["--output-model-type", default_output_model_type])
+    if normalized_extra_args:
+        args.extend(normalized_extra_args)
 
     with freeze_time(TIMESTAMP):
         return_code = main(args)
@@ -111,6 +115,7 @@ def test_input_model_pydantic_basemodel(tmp_path: Path) -> None:
         input_model="tests.data.python.input_model.pydantic_models:User",
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
+        default_output_model_type=None,
     )
 
 

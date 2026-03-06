@@ -163,6 +163,32 @@ def _validate_extra_args(extra_args: Sequence[str] | None) -> None:
         pytest.fail(f"Invalid CLI options in extra_args: {invalid_args}. Valid options: {sorted(_VALID_CLI_OPTIONS)}")
 
 
+def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
+    """Extract argument value from arguments."""
+    if arguments is None:
+        return None
+    argument_list = list(arguments)
+    for index, argument in enumerate(argument_list):
+        if argument == argument_name and index + 1 < len(argument_list):
+            return argument_list[index + 1]
+    return None
+
+
+def _normalize_extra_args(
+    extra_args: Sequence[str] | None,
+    *,
+    default_output_model_type: str | None,
+) -> list[str] | None:
+    """Return a copy of extra_args with default output model injected when needed."""
+    normalized_extra_args = list(extra_args) if extra_args is not None else []
+    if (
+        default_output_model_type is not None
+        and _get_argument_value(normalized_extra_args, "--output-model-type") is None
+    ):
+        normalized_extra_args.extend(["--output-model-type", default_output_model_type])
+    return normalized_extra_args or None
+
+
 def _extend_args(
     args: list[str],
     *,
@@ -170,6 +196,7 @@ def _extend_args(
     output_path: Path | None = None,
     input_file_type: InputFileTypeLiteral | None = None,
     extra_args: Sequence[str] | None = None,
+    default_output_model_type: str | None = None,
 ) -> None:
     """Extend args with optional input_path, output_path, input_file_type and extra_args."""
     if input_path is not None:
@@ -178,6 +205,7 @@ def _extend_args(
         args.extend(["--output", str(output_path)])
     if input_file_type is not None:
         args.extend(["--input-file-type", input_file_type])
+    extra_args = _normalize_extra_args(extra_args, default_output_model_type=default_output_model_type)
     _validate_extra_args(extra_args)
     if extra_args is not None:
         args.extend(extra_args)
@@ -190,12 +218,18 @@ def _run_main(
     *,
     extra_args: Sequence[str] | None = None,
     copy_files: CopyFilesMapping | None = None,
+    default_output_model_type: str | None = None,
 ) -> Exit:
     """Execute main() with standard arguments (internal use)."""
     _copy_files(copy_files)
     args: list[str] = []
     _extend_args(
-        args, input_path=input_path, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args
+        args,
+        input_path=input_path,
+        output_path=output_path,
+        input_file_type=input_file_type,
+        extra_args=extra_args,
+        default_output_model_type=default_output_model_type,
     )
     return main(args)
 
@@ -206,10 +240,17 @@ def _run_main_url(
     input_file_type: InputFileTypeLiteral | None = None,
     *,
     extra_args: Sequence[str] | None = None,
+    default_output_model_type: str | None = None,
 ) -> Exit:
     """Execute main() with URL input (internal use)."""
     args = ["--url", url]
-    _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
+    _extend_args(
+        args,
+        output_path=output_path,
+        input_file_type=input_file_type,
+        extra_args=extra_args,
+        default_output_model_type=default_output_model_type,
+    )
     return main(args)
 
 
@@ -248,6 +289,7 @@ def run_main_and_assert(  # noqa: PLR0912
     output_path: Path | None = None,
     input_file_type: InputFileTypeLiteral | None = None,
     extra_args: Sequence[str] | None = None,
+    default_output_model_type: str | None = DataModelType.PydanticBaseModel.value,
     expected_exit: Exit = Exit.OK,
     # Output verification options (use one)
     assert_func: AssertFileContent | None = None,
@@ -289,6 +331,9 @@ def run_main_and_assert(  # noqa: PLR0912
     Common options:
         input_file_type: Type of input file (openapi, jsonschema, graphql, etc.)
         extra_args: Additional CLI arguments
+        default_output_model_type: Output model type injected when extra_args omits
+            --output-model-type. Set to None for tests that intentionally validate
+            the real CLI default.
         expected_exit: Expected exit code (default: Exit.OK)
         copy_files: Files to copy before running
 
@@ -325,20 +370,39 @@ def run_main_and_assert(  # noqa: PLR0912
             pytest.fail("monkeypatch is required when using stdin_path")
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
-        _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
+        _extend_args(
+            args,
+            output_path=output_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            default_output_model_type=default_output_model_type,
+        )
         return_code = main(args)
     # Handle stdout-only output (no output_path)
     elif output_path is None:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required when output_path is None")
         args = []
-        _extend_args(args, input_path=input_path, input_file_type=input_file_type, extra_args=extra_args)
+        _extend_args(
+            args,
+            input_path=input_path,
+            input_file_type=input_file_type,
+            extra_args=extra_args,
+            default_output_model_type=default_output_model_type,
+        )
         return_code = main(args)
     # Standard file input
     else:
         if input_path is None:  # pragma: no cover
             pytest.fail("input_path is required")
-        return_code = _run_main(input_path, output_path, input_file_type, extra_args=extra_args, copy_files=copy_files)
+        return_code = _run_main(
+            input_path,
+            output_path,
+            input_file_type,
+            extra_args=extra_args,
+            copy_files=copy_files,
+            default_output_model_type=default_output_model_type,
+        )
 
     _assert_exit_code(return_code, expected_exit, f"Input: {input_path}")
 
@@ -407,17 +471,6 @@ def run_main_and_assert(  # noqa: PLR0912
 
     if output_path is not None and not skip_code_validation:
         _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
-
-
-def _get_argument_value(arguments: Sequence[str] | None, argument_name: str) -> str | None:
-    """Extract argument value from arguments."""
-    if arguments is None:
-        return None
-    argument_list = list(arguments)
-    for index, argument in enumerate(argument_list):
-        if argument == argument_name and index + 1 < len(argument_list):
-            return argument_list[index + 1]
-    return None
 
 
 def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, int] | None:
