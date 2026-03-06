@@ -4,16 +4,16 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class RecursiveNode(BaseModel):
-    value: set[str] = Field(..., title='Value', unique_items=True)
+    value: set[str] = Field(..., title='Value')
     children: list[RecursiveNode] | None = Field(None, title='Children')
 
 
-class Model(BaseModel):
-    __root__: RecursiveNode
+class Model(RootModel[RecursiveNode]):
+    root: RecursiveNode
 
 
-RecursiveNode.update_forward_refs()
+RecursiveNode.model_rebuild()

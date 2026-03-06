@@ -47,7 +47,6 @@ def get_data_model_types(  # noqa: PLR0912
     from . import (  # noqa: PLC0415
         dataclass,
         msgspec,
-        pydantic,
         pydantic_v2,
         scalar,
         type_alias,
@@ -75,16 +74,6 @@ def get_data_model_types(  # noqa: PLR0912
         scalar_class = scalar.DataTypeScalar
         union_class = union.DataTypeUnion
 
-    if data_model_type == DataModelType.PydanticBaseModel:
-        return DataModelSet(
-            data_model=pydantic.BaseModel,
-            root_model=type_alias_class if use_type_alias else pydantic.CustomRootType,
-            field_model=pydantic.DataModelField,
-            data_type_manager=pydantic.DataTypeManager,
-            dump_resolve_reference_action=pydantic.dump_resolve_reference_action,
-            scalar_model=scalar_class,
-            union_model=union_class,
-        )
     if data_model_type == DataModelType.PydanticV2BaseModel:
         if use_type_alias:
             root_model_class: type[DataModel] = type_alias_class
