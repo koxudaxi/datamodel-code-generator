@@ -216,7 +216,6 @@ skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs
 [tool.pytest.ini_options]
 filterwarnings = [
   "error",
-  "ignore:^.*Pydantic v1 runtime support is deprecated.*:DeprecationWarning",
   "ignore:^.*No --output-model-type specified.*:DeprecationWarning",
   "ignore:^.*Pydantic v2 with --use-annotated is recommended.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",

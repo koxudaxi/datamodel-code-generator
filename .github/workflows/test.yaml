@@ -39,8 +39,6 @@ jobs:
             name: py312-isort6
           - tox_env: py312-isort5-parallel
             name: py312-isort5
-          - tox_env: py312-pydantic1-parallel
-            name: py312-pydantic1
     runs-on: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}

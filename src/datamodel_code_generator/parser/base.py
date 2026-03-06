@@ -84,7 +84,7 @@ from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import ANY, DataType, DataTypeManager
-from datamodel_code_generator.util import camel_to_snake, model_copy, model_dump
+from datamodel_code_generator.util import camel_to_snake
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator, Sequence
@@ -379,7 +379,7 @@ def to_hashable(item: Any) -> HashableComparable:  # noqa: PLR0911
     if isinstance(item, set):  # pragma: no cover
         return frozenset(to_hashable(i) for i in item)  # type: ignore[return-value]
     if isinstance(item, BaseModel):  # pragma: no cover
-        return to_hashable(model_dump(item))
+        return to_hashable(item.model_dump())
     if item is None:
         return ""
     return item  # type: ignore[return-value]
@@ -780,11 +780,11 @@ def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
         if data_type_.reference:
             copied_data_types.append(data_type_.__class__(reference=data_type_.reference))
         elif data_type_.data_types:  # pragma: no cover
-            copied_data_type = model_copy(data_type_)
+            copied_data_type = data_type_.model_copy()
             copied_data_type.data_types = _copy_data_types(data_type_.data_types)
             copied_data_types.append(copied_data_type)
         else:
-            copied_data_types.append(model_copy(data_type_))
+            copied_data_types.append(data_type_.model_copy())
     return copied_data_types
 
 
@@ -860,29 +860,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         from datamodel_code_generator import types as types_module  # noqa: PLC0415
         from datamodel_code_generator.model import base as model_base  # noqa: PLC0415
-        from datamodel_code_generator.util import is_pydantic_v2  # noqa: PLC0415
 
         config_class = cls._get_config_class()
 
-        if is_pydantic_v2():
-            config_class.model_rebuild(
-                _types_namespace={
-                    "StrictTypes": types_module.StrictTypes,
-                    "DataModel": model_base.DataModel,
-                    "DataModelFieldBase": model_base.DataModelFieldBase,
-                    "DataTypeManager": types_module.DataTypeManager,
-                }
-            )
-            return config_class.model_validate(options)  # type: ignore[return-value]
-        config_class.update_forward_refs(
-            StrictTypes=types_module.StrictTypes,
-            DataModel=model_base.DataModel,
-            DataModelFieldBase=model_base.DataModelFieldBase,
-            DataTypeManager=types_module.DataTypeManager,
+        config_class.model_rebuild(
+            _types_namespace={
+                "StrictTypes": types_module.StrictTypes,
+                "DataModel": model_base.DataModel,
+                "DataModelFieldBase": model_base.DataModelFieldBase,
+                "DataTypeManager": types_module.DataTypeManager,
+            }
         )
-        defaults = {name: field.default for name, field in config_class.__fields__.items()}
-        defaults.update(options)  # ty: ignore
-        return config_class.construct(**defaults)  # type: ignore[return-value]
+        return config_class.model_validate(options)  # type: ignore[return-value]
 
     def __init__(  # noqa: PLR0912, PLR0915
         self,
@@ -1001,7 +990,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if self.validators:
             for model_name, model_config in self.validators.items():
                 self.extra_template_data[model_name]["validators"] = [
-                    model_dump(v, mode="json") for v in model_config.validators
+                    v.model_dump(mode="json") for v in model_config.validators
                 ]
 
         self.use_generic_base_class: bool = config.use_generic_base_class
@@ -1704,7 +1693,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     @classmethod
     def _create_set_from_list(cls, data_type: DataType) -> DataType | None:
         if data_type.is_list:
-            new_data_type = model_copy(data_type)
+            new_data_type = data_type.model_copy()
             new_data_type.is_list = False
             new_data_type.is_set = True
             for data_type_ in new_data_type.data_types:
@@ -2025,7 +2014,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         continue
 
                     # set copied data_type
-                    copied_data_type = model_copy(root_type_field.data_type)
+                    copied_data_type = root_type_field.data_type.model_copy()
                     if isinstance(data_type.parent, self.data_model_field_type):
                         # for field
                         # override empty field by root-type field
@@ -2194,18 +2183,18 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if not original_field:  # pragma: no cover
                     model.fields.remove(model_field)
                     continue
-                copied_original_field = model_copy(original_field)
+                copied_original_field = original_field.model_copy()
                 if original_field.data_type.reference:
                     data_type = self.data_type_manager.data_type(
                         reference=original_field.data_type.reference,
                     )
                 elif original_field.data_type.data_types:
-                    data_type = model_copy(original_field.data_type)
+                    data_type = original_field.data_type.model_copy()
                     data_type.data_types = _copy_data_types(original_field.data_type.data_types)
                     for data_type_ in data_type.data_types:
                         data_type_.parent = data_type
                 else:
-                    data_type = model_copy(original_field.data_type)
+                    data_type = original_field.data_type.model_copy()
                 data_type.parent = copied_original_field
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model

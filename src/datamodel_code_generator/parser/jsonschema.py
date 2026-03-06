@@ -20,7 +20,10 @@ from urllib.parse import ParseResult, unquote
 from warnings import warn
 
 from pydantic import (
+    ConfigDict,
     Field,
+    field_validator,
+    model_validator,
 )
 from typing_extensions import Unpack
 
@@ -70,19 +73,7 @@ from datamodel_code_generator.types import (
     get_subscript_args,
     get_type_base_name,
 )
-from datamodel_code_generator.util import (
-    BaseModel,
-    field_validator,
-    get_fields_set,
-    is_pydantic_v2,
-    model_copy,
-    model_dump,
-    model_validate,
-    model_validator,
-)
-
-if is_pydantic_v2():
-    from pydantic import ConfigDict
+from datamodel_code_generator.util import BaseModel
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
@@ -208,24 +199,11 @@ class JsonSchemaObject(BaseModel):
     """Represent a JSON Schema object with validation and parsing capabilities."""
 
     if not TYPE_CHECKING:  # pragma: no branch
-        if is_pydantic_v2():
 
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                """Get fields for Pydantic v2 models."""
-                return cls.model_fields
-
-        else:
-
-            @classmethod
-            def get_fields(cls) -> dict[str, Any]:
-                """Get fields for Pydantic v1 models."""
-                return cls.__fields__
-
-            @classmethod
-            def model_rebuild(cls) -> None:
-                """Rebuild model by updating forward references."""
-                cls.update_forward_refs()
+        @classmethod
+        def get_fields(cls) -> dict[str, Any]:
+            """Get fields for Pydantic v2 models."""
+            return cls.model_fields
 
     __constraint_fields__: set[str] = {  # noqa: RUF012
         "exclusiveMinimum",
@@ -388,19 +366,10 @@ class JsonSchemaObject(BaseModel):
     custom_base_path: str | list[str] | None = Field(default=None, alias="customBasePath")
     extras: dict[str, Any] = Field(alias=__extra_key__, default_factory=dict)
     discriminator: Optional[Union[Discriminator, str]] = None  # noqa: UP007, UP045
-    if is_pydantic_v2():
-        model_config = ConfigDict(  # ty: ignore
-            arbitrary_types_allowed=True,
-            ignored_types=(cached_property,),
-        )
-    else:
-
-        class Config:
-            """Pydantic v1 configuration for JsonSchemaObject."""
-
-            arbitrary_types_allowed = True
-            keep_untouched = (cached_property,)
-            smart_casts = True
+    model_config = ConfigDict(  # ty: ignore
+        arbitrary_types_allowed=True,
+        ignored_types=(cached_property,),
+    )
 
     def __init__(self, **data: Any) -> None:
         """Initialize JsonSchemaObject with extra fields handling."""
@@ -417,7 +386,7 @@ class JsonSchemaObject(BaseModel):
         if "x-propertyNames" in self.extras and self.propertyNames is None:
             x_prop_names = self.extras.pop("x-propertyNames")
             if isinstance(x_prop_names, dict):
-                self.propertyNames = model_validate(JsonSchemaObject, x_prop_names)
+                self.propertyNames = JsonSchemaObject.model_validate(x_prop_names)
 
     @cached_property
     def is_object(self) -> bool:
@@ -445,12 +414,12 @@ class JsonSchemaObject(BaseModel):
     @cached_property
     def has_default(self) -> bool:
         """Check if the schema has a default value or default factory."""
-        return "default" in get_fields_set(self) or "default_factory" in self.extras
+        return "default" in self.model_fields_set or "default_factory" in self.extras
 
     @cached_property
     def has_constraint(self) -> bool:
         """Check if the schema has any constraint fields set."""
-        return bool(self.__constraint_fields__ & get_fields_set(self))
+        return bool(self.__constraint_fields__ & self.model_fields_set)
 
     @cached_property
     def ref_type(self) -> JSONReference | None:
@@ -490,7 +459,7 @@ class JsonSchemaObject(BaseModel):
         """
         if not self.ref:
             return False
-        other_fields = get_fields_set(self) - {"ref"}
+        other_fields = self.model_fields_set - {"ref"}
         schema_affecting_fields = other_fields - self.__metadata_only_fields__ - {"extras"}
         if self.extras:
             schema_affecting_extras = {k for k in self.extras if k in self.__schema_affecting_extras__}
@@ -508,7 +477,7 @@ class JsonSchemaObject(BaseModel):
         """
         if not self.ref or self.nullable is not True:
             return False
-        other_fields = get_fields_set(self) - {"ref", "nullable"} - self.__metadata_only_fields__ - {"extras"}
+        other_fields = self.model_fields_set - {"ref", "nullable"} - self.__metadata_only_fields__ - {"extras"}
         if other_fields:
             return False
         if self.extras:
@@ -1236,7 +1205,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         default_value = effective_default if effective_has_default is not None else field.default
         has_default = effective_has_default if effective_has_default is not None else field.has_default
 
-        constraints = model_dump(field, exclude_none=True) if self.is_constraints_field(field) else None
+        constraints = field.model_dump(exclude_none=True) if self.is_constraints_field(field) else None
         consumed = self.data_type_manager.CONSTRAINED_TYPE_CONSUMED_KEYS
         if constraints is not None and field_type.type in consumed:
             for key in consumed[field_type.type]:
@@ -1317,7 +1286,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         key = zero_bound_keys[0]
                         kwargs_to_pass = {key: number_kwargs[key]}
             else:
-                kwargs_to_pass = model_dump(obj)
+                kwargs_to_pass = obj.model_dump()
 
             return self.data_type_manager.get_data_type(
                 self._get_type_with_mappings(type_, format__),
@@ -1667,7 +1636,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             pointer = [p for p in fragment.split("/") if p]
             target_schema = get_model_by_path(raw_doc, pointer)
 
-        return model_validate(self.SCHEMA_OBJECT_TYPE, target_schema)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(target_schema)
 
     def _build_anchor_indexes(self, obj: JsonSchemaObject, path: list[str]) -> None:
         """Build $recursiveAnchor and $dynamicAnchor indexes for a schema object."""
@@ -1760,12 +1729,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return obj
 
         ref_schema = self._load_ref_schema_object(obj.ref)
-        ref_dict = model_dump(ref_schema, exclude_unset=True, by_alias=True)
-        current_dict = model_dump(obj, exclude={"ref"}, exclude_unset=True, by_alias=True)
+        ref_dict = ref_schema.model_dump(exclude_unset=True, by_alias=True)
+        current_dict = obj.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True)
         merged = self._deep_merge(ref_dict, current_dict)
         merged.pop("$ref", None)
 
-        return model_validate(self.SCHEMA_OBJECT_TYPE, merged)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(merged)
 
     def _is_ref_circular(self, resolved_ref: str) -> bool:
         """Check if a resolved $ref target contains a circular reference (cached)."""
@@ -1828,7 +1797,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         base_dict: dict[str, Any] = {}
         for item in items:  # pragma: no branch
             if item.type:  # pragma: no branch
-                base_dict = model_dump(item, exclude_unset=True, by_alias=True)
+                base_dict = item.model_dump(exclude_unset=True, by_alias=True)
                 break
 
         for item in items:
@@ -1842,7 +1811,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     else:
                         base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
 
-        return model_validate(self.SCHEMA_OBJECT_TYPE, base_dict)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
     def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
         """Merge primitive schemas for allOf, respecting allof_merge_mode setting."""
@@ -1857,15 +1826,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         if self.allof_merge_mode != AllOfMergeMode.NoMerge:
             merged = self._merge_primitive_schemas(items)
-            merged_dict = model_dump(merged, exclude_unset=True, by_alias=True)
+            merged_dict = merged.model_dump(exclude_unset=True, by_alias=True)
             if merged_format:
                 merged_dict["format"] = merged_format
-            return model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
+            return self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
         base_dict: dict[str, Any] = {}
         for item in items:
             if item.type:
-                base_dict = model_dump(item, exclude_unset=True, by_alias=True)
+                base_dict = item.model_dump(exclude_unset=True, by_alias=True)
                 break
 
         for item in items:
@@ -1879,7 +1848,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if merged_format:
             base_dict["format"] = merged_format
 
-        return model_validate(self.SCHEMA_OBJECT_TYPE, base_dict)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
     @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
@@ -2140,17 +2109,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 merged_properties[prop_name] = child_prop
                 continue
 
-            parent_dict = model_dump(parent_prop, exclude_unset=True, by_alias=True)
-            child_dict = model_dump(child_prop, exclude_unset=True, by_alias=True)
+            parent_dict = parent_prop.model_dump(exclude_unset=True, by_alias=True)
+            child_dict = child_prop.model_dump(exclude_unset=True, by_alias=True)
             merged_dict = self._merge_property_schemas(parent_dict, child_dict)
-            merged_properties[prop_name] = model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
+            merged_properties[prop_name] = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
-        merged_obj_dict = model_dump(child_obj, exclude_unset=True, by_alias=True)
+        merged_obj_dict = child_obj.model_dump(exclude_unset=True, by_alias=True)
         merged_obj_dict["properties"] = {
-            k: model_dump(v, exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
+            k: v.model_dump(exclude_unset=True, by_alias=True) if isinstance(v, JsonSchemaObject) else v
             for k, v in merged_properties.items()
         }
-        return model_validate(self.SCHEMA_OBJECT_TYPE, merged_obj_dict)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(merged_obj_dict)
 
     def _get_inherited_field_type(  # noqa: PLR0912
         self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
@@ -2204,7 +2173,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Normalize property schema for comparison across allOf items."""
         if isinstance(prop_schema, bool):
             return prop_schema
-        return json.dumps(model_dump(prop_schema, exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
+        return json.dumps(prop_schema.model_dump(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
     def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR0911
         """Check if schema represents a root model (primitive type with constraints).
@@ -2285,9 +2254,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
 
         if obj.description:
-            merged_dict = model_dump(merged_schema, exclude_unset=True, by_alias=True)
+            merged_dict = merged_schema.model_dump(exclude_unset=True, by_alias=True)
             merged_dict["description"] = obj.description
-            merged_schema = model_validate(self.SCHEMA_OBJECT_TYPE, merged_dict)
+            merged_schema = self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
         return self.parse_root_type(name, merged_schema, path)
 
@@ -2318,17 +2287,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not any(len(signatures) > 1 for signatures in property_signatures.values()):
             return None
 
-        merged_schema: dict[str, Any] = model_dump(obj, exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
         for resolved_item in resolved_items:
-            merged_schema = self._deep_merge(
-                merged_schema, model_dump(resolved_item, exclude_unset=True, by_alias=True)
-            )
+            merged_schema = self._deep_merge(merged_schema, resolved_item.model_dump(exclude_unset=True, by_alias=True))
 
         if "required" in merged_schema and isinstance(merged_schema["required"], list):
             merged_schema["required"] = list(dict.fromkeys(merged_schema["required"]))
 
         merged_schema.pop("allOf", None)
-        return model_validate(self.SCHEMA_OBJECT_TYPE, merged_schema)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
     def parse_combined_schema(
         self,
@@ -2338,7 +2305,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         target_attribute_name: str,
     ) -> list[DataType]:
         """Parse combined schema (anyOf, oneOf, allOf) into a list of data types."""
-        base_object = model_dump(obj, exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
+        base_object = obj.model_dump(exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
@@ -2350,10 +2317,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         refs.append(index)
                     else:
                         combined_schemas.append(
-                            model_validate(
-                                self.SCHEMA_OBJECT_TYPE,
+                            self.SCHEMA_OBJECT_TYPE.model_validate(
                                 self._deep_merge(
-                                    base_object, model_dump(merged_attr, exclude_unset=True, by_alias=True)
+                                    base_object, merged_attr.model_dump(exclude_unset=True, by_alias=True)
                                 ),
                             )
                         )
@@ -2362,11 +2328,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     refs.append(index)
             else:
                 combined_schemas.append(
-                    model_validate(
-                        self.SCHEMA_OBJECT_TYPE,
+                    self.SCHEMA_OBJECT_TYPE.model_validate(
                         self._deep_merge(
                             base_object,
-                            model_dump(target_attribute, exclude_unset=True, by_alias=True),
+                            target_attribute.model_dump(exclude_unset=True, by_alias=True),
                         ),
                     )
                 )
@@ -2459,7 +2424,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if current_type and current_type.type == ANY and field_name:
                     inherited_type = self._get_inherited_field_type(field_name, base_classes)
                     if inherited_type is not None:
-                        new_type = model_copy(inherited_type, deep=True)
+                        new_type = inherited_type.model_copy(deep=True)
                         new_type.is_optional = new_type.is_optional or current_type.is_optional
                         new_type.is_dict = new_type.is_dict or current_type.is_dict
                         new_type.is_list = new_type.is_list or current_type.is_list
@@ -2473,7 +2438,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if inherited_type is None or not inherited_type.is_list or not inherited_type.data_types:
                         continue
 
-                    new_type = model_copy(inherited_type, deep=True)
+                    new_type = inherited_type.model_copy(deep=True)
 
                     # Preserve modifiers coming from the overriding schema.
                     if current_type is not None:  # pragma: no branch
@@ -2492,7 +2457,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         and current_type.data_types[0].is_list
                     )
                     if is_wrapped:
-                        wrapper = model_copy(current_type, deep=True)
+                        wrapper = current_type.model_copy(deep=True)
                         wrapper.data_types[0] = new_type
                         field.data_type = wrapper
                         continue
@@ -3372,7 +3337,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
             data_types.append(self.parse_enum(name, obj, get_special_path("enum", path)))
-        constraints = model_dump(obj, exclude_none=True)
+        constraints = obj.model_dump(exclude_none=True)
         if suppress_item_constraints:
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
@@ -3536,7 +3501,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
-        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
+        constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -3598,7 +3563,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
-        constraints = model_dump(obj, exclude_none=True) if self.field_constraints else {}
+        constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
@@ -4027,7 +3992,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     ) -> JsonSchemaObject:
         """Validate raw data as JsonSchemaObject with path context in errors."""
         try:
-            return model_validate(self.SCHEMA_OBJECT_TYPE, raw)
+            return self.SCHEMA_OBJECT_TYPE.model_validate(raw)
         except SchemaParseError:
             raise
         except Exception as e:

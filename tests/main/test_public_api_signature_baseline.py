@@ -506,19 +506,18 @@ def test_generate_signature_matches_baseline() -> None:
             f"  TypedDict: {_normalize_type(dict_type)}"
         )
 
-    # 3. Verify default values match between baseline and GenerateConfig (Pydantic v2 only)
-    if is_pydantic_v2():
-        from datamodel_code_generator.config import GenerateConfig
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode
-        from datamodel_code_generator.types import StrictTypes
+    # 3. Verify default values match between baseline and GenerateConfig
+    from datamodel_code_generator.config import GenerateConfig
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import StrictTypes
 
-        GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
+    GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
 
-        for name, param in baseline_params.items():
-            config_default = GenerateConfig.model_fields[name].default
-            assert config_default == param.default, (
-                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
-            )
+    for name, param in baseline_params.items():
+        config_default = GenerateConfig.model_fields[name].default
+        assert config_default == param.default, (
+            f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  GenerateConfig: {config_default!r}"
+        )
 
 
 def test_parser_signature_matches_baseline() -> None:
@@ -551,29 +550,28 @@ def test_parser_signature_matches_baseline() -> None:
             f"  TypedDict: {_normalize_type(dict_type)}"
         )
 
-    if is_pydantic_v2():
-        from datamodel_code_generator.config import ParserConfig
-        from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
-        from datamodel_code_generator.model.pydantic_v2 import UnionMode
-        from datamodel_code_generator.types import DataTypeManager, StrictTypes
+    from datamodel_code_generator.config import ParserConfig
+    from datamodel_code_generator.model.base import DataModel, DataModelFieldBase
+    from datamodel_code_generator.model.pydantic_v2 import UnionMode
+    from datamodel_code_generator.types import DataTypeManager, StrictTypes
 
-        ParserConfig.model_rebuild(
-            _types_namespace={
-                "StrictTypes": StrictTypes,
-                "UnionMode": UnionMode,
-                "DataModel": DataModel,
-                "DataModelFieldBase": DataModelFieldBase,
-                "DataTypeManager": DataTypeManager,
-            }
+    ParserConfig.model_rebuild(
+        _types_namespace={
+            "StrictTypes": StrictTypes,
+            "UnionMode": UnionMode,
+            "DataModel": DataModel,
+            "DataModelFieldBase": DataModelFieldBase,
+            "DataTypeManager": DataTypeManager,
+        }
+    )
+
+    for name, param in baseline_params.items():
+        config_default = ParserConfig.model_fields[name].default
+        if callable(param.default) and config_default is None:
+            continue
+        assert config_default == param.default, (
+            f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  ParserConfig: {config_default!r}"
         )
-
-        for name, param in baseline_params.items():
-            config_default = ParserConfig.model_fields[name].default
-            if callable(param.default) and config_default is None:
-                continue
-            assert config_default == param.default, (
-                f"Default mismatch for '{name}':\n  Baseline: {param.default!r}\n  ParserConfig: {config_default!r}"
-            )
 
 
 @PYDANTIC_V2_SKIP

@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator, model_validator
 
 from datamodel_code_generator.imports import IMPORT_ANY, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
@@ -34,7 +34,6 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
 )
 from datamodel_code_generator.reference import ModelResolver
 from datamodel_code_generator.types import chain_as_tuple
-from datamodel_code_generator.util import field_validator, model_validate, model_validator
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -308,7 +307,7 @@ class BaseModel(BaseModelBase):
         if config_parameters:
             from datamodel_code_generator.model.pydantic_v2 import ConfigDict  # noqa: PLC0415
 
-            self.extra_template_data["config"] = model_validate(ConfigDict, config_parameters)  # ty: ignore
+            self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
         self._process_validators()

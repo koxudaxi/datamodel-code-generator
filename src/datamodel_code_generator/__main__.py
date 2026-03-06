@@ -41,12 +41,12 @@ import warnings
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence  # noqa: TC003  # pydantic needs it
 from enum import IntEnum
-from io import TextIOBase
+from io import TextIOBase  # noqa: TC003 # needed for pydantic
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Optional, TypeAlias, Union, cast
 from urllib.parse import ParseResult, urlparse
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, field_validator, model_validator
 
 from datamodel_code_generator import (
     DEFAULT_SHARED_MODULE_NAME,
@@ -87,13 +87,7 @@ from datamodel_code_generator.model.pydantic_v2 import UnionMode  # noqa: TC001 
 from datamodel_code_generator.parser import LiteralType  # noqa: TC001 # needed for pydantic
 from datamodel_code_generator.reference import is_url
 from datamodel_code_generator.types import StrictTypes  # noqa: TC001 # needed for pydantic
-from datamodel_code_generator.util import (
-    ConfigDict,
-    field_validator,
-    is_pydantic_v2,
-    load_toml,
-    model_validator,
-)
+from datamodel_code_generator.util import load_toml
 from datamodel_code_generator.validators import ValidatorsConfig
 
 if TYPE_CHECKING:
@@ -144,42 +138,28 @@ def sig_int_handler(_: int, __: Any) -> None:  # pragma: no cover
 signal.signal(signal.SIGINT, sig_int_handler)
 
 
-class Config(BaseModel):
+class Config(BaseModel):  # noqa: PLR0904
     """Configuration model for code generation."""
 
-    if is_pydantic_v2():
-        model_config = ConfigDict(arbitrary_types_allowed=True)  # ty: ignore
+    model_config = ConfigDict(arbitrary_types_allowed=True)  # ty: ignore
 
-        def get(self, item: str) -> Any:  # pragma: no cover
-            """Get attribute value by name."""
-            return getattr(self, item)
+    def get(self, item: str) -> Any:  # pragma: no cover
+        """Get attribute value by name."""
+        return getattr(self, item)
 
-        def __getitem__(self, item: str) -> Any:  # pragma: no cover
-            """Get item by key."""
-            return self.get(item)  # ty: ignore
+    def __getitem__(self, item: str) -> Any:  # pragma: no cover
+        """Get item by key."""
+        return self.get(item)  # ty: ignore
 
-        @classmethod
-        def parse_obj(cls, obj: Any) -> Self:
-            """Parse object into Config model."""
-            return cls.model_validate(obj)
+    @classmethod
+    def parse_obj(cls, obj: Any) -> Self:
+        """Parse object into Config model."""
+        return cls.model_validate(obj)
 
-        @classmethod
-        def get_fields(cls) -> dict[str, Any]:
-            """Get model fields."""
-            return cls.model_fields
-
-    else:
-
-        class Config:
-            """Pydantic v1 configuration."""
-
-            # Pydantic 1.5.1 doesn't support validate_assignment correctly
-            arbitrary_types_allowed = (TextIOBase,)
-
-        @classmethod
-        def get_fields(cls) -> dict[str, Any]:
-            """Get model fields."""
-            return cls.__fields__
+    @classmethod
+    def get_fields(cls) -> dict[str, Any]:
+        """Get model fields."""
+        return cls.model_fields
 
     @field_validator(
         "aliases", "extra_template_data", "custom_formatters_kwargs", "validators", "default_values", mode="before"
@@ -363,156 +343,78 @@ class Config(BaseModel):
         "`--all-exports-collision-strategy` can only be used with `--all-exports-scope=recursive`."
     )
 
-    if is_pydantic_v2():
+    @model_validator(mode="after")  # ty: ignore
+    def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
+        """Validate output datetime class compatibility."""
+        datetime_class_type: DatetimeClassType | None = self.output_datetime_class
+        if (
+            datetime_class_type
+            and datetime_class_type is not DatetimeClassType.Datetime
+            and self.output_model_type == DataModelType.DataclassesDataclass
+        ):
+            raise Error(self.__validate_output_datetime_class_err)
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
-            """Validate output datetime class compatibility."""
-            datetime_class_type: DatetimeClassType | None = self.output_datetime_class
-            if (
-                datetime_class_type
-                and datetime_class_type is not DatetimeClassType.Datetime
-                and self.output_model_type == DataModelType.DataclassesDataclass
-            ):
-                raise Error(self.__validate_output_datetime_class_err)
-            return self
+    @model_validator(mode="after")  # ty: ignore
+    def validate_original_field_name_delimiter(self: Self) -> Self:  # ty: ignore
+        """Validate original field name delimiter requires snake case."""
+        if self.original_field_name_delimiter is not None and not self.snake_case_field:
+            raise Error(self.__validate_original_field_name_delimiter_err)
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_original_field_name_delimiter(self: Self) -> Self:  # ty: ignore
-            """Validate original field name delimiter requires snake case."""
-            if self.original_field_name_delimiter is not None and not self.snake_case_field:
-                raise Error(self.__validate_original_field_name_delimiter_err)
-            return self
+    @model_validator(mode="after")  # ty: ignore
+    def validate_custom_file_header(self: Self) -> Self:  # ty: ignore
+        """Validate custom file header options are mutually exclusive."""
+        if self.custom_file_header and self.custom_file_header_path:
+            raise Error(self.__validate_custom_file_header_err)
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_custom_file_header(self: Self) -> Self:  # ty: ignore
-            """Validate custom file header options are mutually exclusive."""
-            if self.custom_file_header and self.custom_file_header_path:
-                raise Error(self.__validate_custom_file_header_err)
-            return self
+    @model_validator(mode="after")  # ty: ignore
+    def validate_keyword_only(self: Self) -> Self:  # ty: ignore
+        """Validate keyword-only compatibility with target Python version."""
+        output_model_type: DataModelType = self.output_model_type
+        python_target: PythonVersion = self.target_python_version
+        if (
+            self.keyword_only
+            and output_model_type == DataModelType.DataclassesDataclass
+            and not python_target.has_kw_only_dataclass
+        ):
+            raise Error(self.__validate_keyword_only_err)  # pragma: no cover
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_keyword_only(self: Self) -> Self:  # ty: ignore
-            """Validate keyword-only compatibility with target Python version."""
-            output_model_type: DataModelType = self.output_model_type
-            python_target: PythonVersion = self.target_python_version
-            if (
-                self.keyword_only
-                and output_model_type == DataModelType.DataclassesDataclass
-                and not python_target.has_kw_only_dataclass
-            ):
-                raise Error(self.__validate_keyword_only_err)  # pragma: no cover
-            return self
+    @model_validator(mode="after")  # ty: ignore
+    def validate_root(self: Self) -> Self:  # ty: ignore
+        """Validate root model configuration."""
+        if self.use_annotated:
+            self.field_constraints = True
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_root(self: Self) -> Self:  # ty: ignore
-            """Validate root model configuration."""
-            if self.use_annotated:
-                self.field_constraints = True
-            return self
+    @model_validator(mode="after")  # ty: ignore
+    def validate_all_exports_collision_strategy(self: Self) -> Self:  # ty: ignore
+        """Validate all_exports_collision_strategy requires recursive scope."""
+        if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
+            raise Error(self.__validate_all_exports_collision_strategy_err)
+        return self
 
-        @model_validator()  # ty: ignore
-        def validate_all_exports_collision_strategy(self: Self) -> Self:  # ty: ignore
-            """Validate all_exports_collision_strategy requires recursive scope."""
-            if self.all_exports_collision_strategy is not None and self.all_exports_scope != AllExportsScope.Recursive:
-                raise Error(self.__validate_all_exports_collision_strategy_err)
-            return self
+    from pydantic import field_validator as _field_validator  # noqa: PLC0415
 
-        from pydantic import field_validator as _field_validator  # noqa: PLC0415
+    @_field_validator("input_model", mode="before")
+    @classmethod
+    def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # ty: ignore
+        """Convert string input_model to list for backwards compatibility."""
+        if isinstance(v, str):
+            return [v]
+        return v
 
-        @_field_validator("input_model", mode="before")
-        @classmethod
-        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # ty: ignore
-            """Convert string input_model to list for backwards compatibility."""
-            if isinstance(v, str):
-                return [v]
-            return v
-
-        @_field_validator("class_name_affix_scope", mode="before")
-        @classmethod
-        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
-            """Convert string to ClassNameAffixScope enum."""
-            if v is None:  # pragma: no cover
-                return ClassNameAffixScope.All
-            if isinstance(v, str):
-                return ClassNameAffixScope(v)
-            return v  # pragma: no cover
-
-    else:
-
-        @model_validator()  # ty: ignore
-        def validate_output_datetime_class(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate output datetime class compatibility."""
-            datetime_class_type: DatetimeClassType | None = values.get("output_datetime_class")
-            if (
-                datetime_class_type
-                and datetime_class_type is not DatetimeClassType.Datetime
-                and values.get("output_model_type") == DataModelType.DataclassesDataclass
-            ):
-                raise Error(cls.__validate_output_datetime_class_err)
-            return values
-
-        @model_validator()  # ty: ignore
-        def validate_original_field_name_delimiter(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate original field name delimiter requires snake case."""
-            if values.get("original_field_name_delimiter") is not None and not values.get("snake_case_field"):
-                raise Error(cls.__validate_original_field_name_delimiter_err)
-            return values
-
-        @model_validator()  # ty: ignore
-        def validate_custom_file_header(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate custom file header options are mutually exclusive."""
-            if values.get("custom_file_header") and values.get("custom_file_header_path"):
-                raise Error(cls.__validate_custom_file_header_err)
-            return values
-
-        @model_validator()  # ty: ignore
-        def validate_keyword_only(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate keyword-only compatibility with target Python version."""
-            output_model_type: DataModelType = cast("DataModelType", values.get("output_model_type"))
-            python_target: PythonVersion = cast("PythonVersion", values.get("target_python_version"))
-            if (
-                values.get("keyword_only")
-                and output_model_type == DataModelType.DataclassesDataclass
-                and not python_target.has_kw_only_dataclass
-            ):
-                raise Error(cls.__validate_keyword_only_err)  # pragma: no cover
-            return values
-
-        @model_validator()  # ty: ignore
-        def validate_root(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate root model configuration."""
-            if values.get("use_annotated"):
-                values["field_constraints"] = True
-            return values
-
-        @model_validator()  # ty: ignore
-        def validate_all_exports_collision_strategy(cls, values: dict[str, Any]) -> dict[str, Any]:  # noqa: N805
-            """Validate all_exports_collision_strategy requires recursive scope."""
-            if (
-                values.get("all_exports_collision_strategy") is not None
-                and values.get("all_exports_scope") != AllExportsScope.Recursive
-            ):
-                raise Error(cls.__validate_all_exports_collision_strategy_err)
-            return values
-
-        @field_validator("input_model", mode="before")  # pragma: no cover
-        @classmethod
-        def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:
-            """Convert string input_model to list for backwards compatibility."""
-            if isinstance(v, str):
-                return [v]
-            return v
-
-        @field_validator("class_name_affix_scope", mode="before")  # pragma: no cover
-        @classmethod
-        def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:
-            """Convert string to ClassNameAffixScope enum."""
-            if v is None:
-                return ClassNameAffixScope.All
-            if isinstance(v, str):
-                return ClassNameAffixScope(v)
-            return v
+    @_field_validator("class_name_affix_scope", mode="before")
+    @classmethod
+    def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
+        """Convert string to ClassNameAffixScope enum."""
+        if v is None:  # pragma: no cover
+            return ClassNameAffixScope.All
+        if isinstance(v, str):
+            return ClassNameAffixScope(v)
+        return v  # pragma: no cover
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[list[str]] = None  # noqa: UP045
@@ -938,9 +840,6 @@ def _load_validators_config(
     if file_handle is None:
         return None, None
 
-    if ValidatorsConfig is None:
-        return None, "--validators option requires Pydantic v2. Please upgrade to Pydantic v2 or remove the option."
-
     with file_handle as data:
         try:
             raw = json.load(data)
@@ -1256,14 +1155,6 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             "'conint(ge=1, le=365)' which are discouraged in Pydantic v2. "
             "In a future version, --use-annotated will be enabled by default for Pydantic v2. "
             "Please explicitly specify --use-annotated or --no-use-annotated.",
-            DeprecationWarning,
-            stacklevel=1,
-        )
-
-    if not is_pydantic_v2():
-        warnings.warn(
-            "Pydantic v1 runtime support is deprecated and will be removed in a future version. "
-            "Please upgrade to Pydantic v2.",
             DeprecationWarning,
             stacklevel=1,
         )
