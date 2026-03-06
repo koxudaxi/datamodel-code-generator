@@ -112,6 +112,7 @@ def test_space_and_special_characters_dict(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="dict",
         assert_func=assert_file_content,
+        default_output_model_type=None,
     )
 
 
