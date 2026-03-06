@@ -1767,6 +1767,7 @@ def test_main_generate_custom_class_name_generator_modular(
             input_=input_,
             input_file_type=InputFileType.OpenAPI,
             output=output_path,
+            output_model_type=DataModelType.PydanticBaseModel,
             custom_class_name_generator=custom_class_name_generator,
         )
 

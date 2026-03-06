@@ -470,7 +470,11 @@ def run_main_and_assert(  # noqa: PLR0912
         assert_func(output_path, expected_file, transform=transform)
 
     if output_path is not None and not skip_code_validation:
-        _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
+        normalized_extra_args = _normalize_extra_args(
+            extra_args,
+            default_output_model_type=default_output_model_type,
+        )
+        _validate_output_files(output_path, normalized_extra_args, force_exec_validation=force_exec_validation)
 
 
 def _parse_target_version(extra_arguments: Sequence[str] | None) -> tuple[int, int] | None:
@@ -500,7 +504,7 @@ def _should_skip_exec(extra_arguments: Sequence[str] | None, *, force_exec: bool
             When target > runtime, compile will be skipped entirely regardless of this flag.
     """
     output_model_type = _get_argument_value(extra_arguments, "--output-model-type")
-    is_pydantic_v1 = output_model_type is None or output_model_type == DataModelType.PydanticBaseModel.value
+    is_pydantic_v1 = output_model_type == DataModelType.PydanticBaseModel.value
     if (is_pydantic_v1 and is_pydantic_v2()) or (
         output_model_type in {DataModelType.PydanticV2BaseModel.value, DataModelType.PydanticV2Dataclass.value}
         and not is_pydantic_v2()
@@ -601,6 +605,7 @@ def run_main_url_and_assert(
     assert_func: AssertFileContent,
     expected_file: str | Path,
     extra_args: Sequence[str] | None = None,
+    default_output_model_type: str | None = DataModelType.PydanticBaseModel.value,
     transform: Callable[[str], str] | None = None,
     force_exec_validation: bool = False,
 ) -> None:
@@ -613,13 +618,26 @@ def run_main_url_and_assert(
         assert_func: The assert_file_content function to use for verification
         expected_file: Expected output filename
         extra_args: Additional CLI arguments
+        default_output_model_type: Output model type injected when extra_args omits
+            --output-model-type. Set to None for tests that intentionally validate
+            the real CLI default.
         transform: Optional function to transform output before comparison
         force_exec_validation: Run exec() even when target Python version differs from
             the test environment (only effective when target <= runtime).
     """
     __tracebackhide__ = True
-    return_code = _run_main_url(url, output_path, input_file_type, extra_args=extra_args)
+    return_code = _run_main_url(
+        url,
+        output_path,
+        input_file_type,
+        extra_args=extra_args,
+        default_output_model_type=default_output_model_type,
+    )
     _assert_exit_code(return_code, Exit.OK, f"URL: {url}")
     assert_func(output_path, expected_file, transform=transform)
 
-    _validate_output_files(output_path, extra_args, force_exec_validation=force_exec_validation)
+    normalized_extra_args = _normalize_extra_args(
+        extra_args,
+        default_output_model_type=default_output_model_type,
+    )
+    _validate_output_files(output_path, normalized_extra_args, force_exec_validation=force_exec_validation)

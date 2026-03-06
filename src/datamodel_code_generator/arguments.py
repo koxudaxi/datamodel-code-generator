@@ -177,7 +177,7 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--output-model-type",
-    help="Output model type (default: pydantic.BaseModel)",
+    help="Output model type (default: pydantic_v2.BaseModel)",
     choices=[i.value for i in DataModelType],
 )
 base_options.add_argument(

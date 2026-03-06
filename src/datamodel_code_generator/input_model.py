@@ -705,7 +705,7 @@ def load_model_schema(  # noqa: PLR0912, PLR0914, PLR0915
     from datamodel_code_generator.arguments import InputModelRefStrategy  # noqa: PLC0415
 
     if output_model_type is None:
-        output_model_type = DataModelType.PydanticBaseModel
+        output_model_type = DataModelType.PydanticV2BaseModel
 
     if len(input_models) == 1:
         return _load_single_model_schema(input_models[0], input_file_type, ref_strategy, output_model_type)
