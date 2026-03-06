@@ -831,7 +831,7 @@ field_options.add_argument(
 )
 field_options.add_argument(
     "--use-frozen-field",
-    help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
+    help="Use Field(frozen=True) for readOnly fields (Pydantic v2).",
     action="store_true",
     default=None,
 )

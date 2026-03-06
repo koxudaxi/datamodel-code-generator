@@ -394,6 +394,19 @@ def test_main_use_field_description_example(output_file: Path) -> None:
     )
 
 
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example_dataclass(output_file: Path) -> None:
+    """Test single example docstrings with dataclass output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "single_line_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example_dataclass" / "output.py",
+        extra_args=["--use-field-description-example", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--use-field-description", "--use-field-description-example"],
     option_description="""Add field descriptions and examples to docstrings.

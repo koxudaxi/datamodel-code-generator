@@ -139,14 +139,7 @@ def test_main_type_alias_cycle_keep_model_order(output_file: Path) -> None:
 The --disable-future-imports option stops the generator from adding
 'from __future__ import annotations' to the output. This is useful when
 you need compatibility with tools or environments that don't support
-postponed evaluation of annotations (PEP 563).
-
-**Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
-
-- Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-- Use this `--disable-future-imports` flag as a workaround""",
+postponed evaluation of annotations (PEP 563).""",
     input_schema="jsonschema/keep_model_order_field_references.json",
     cli_args=["--disable-future-imports", "--target-python-version", "3.10"],
     golden_output="main/jsonschema/keep_model_order_field_references.py",
@@ -159,13 +152,6 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     'from __future__ import annotations' to the output. This is useful when
     you need compatibility with tools or environments that don't support
     postponed evaluation of annotations (PEP 563).
-
-    **Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-    with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-    deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
-
-    - Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-    - Use this `--disable-future-imports` flag as a workaround
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
@@ -6398,7 +6384,7 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+    option_description="""Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use.
 Each model type has different handling for reserved field names like 'schema':

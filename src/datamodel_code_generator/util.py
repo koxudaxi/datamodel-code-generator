@@ -49,7 +49,7 @@ def get_pydantic_version() -> tuple[Any, bool, bool]:
 _is_v2: bool | None = None
 
 
-def is_pydantic_v2() -> bool:
+def is_pydantic_v2() -> bool:  # pragma: no cover
     """Check if pydantic v2 is installed."""
     global _is_v2  # noqa: PLW0603
     if _is_v2 is None:
@@ -292,14 +292,14 @@ def camel_to_snake(string: str) -> str:
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
 
 
-def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # ty: ignore
+def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # ty: ignore  # pragma: no cover
     """Version-compatible model serialization (dict/model_dump)."""
     if is_pydantic_v2():
         return obj.model_dump(**kwargs)  # ty: ignore
     return obj.dict(**kwargs)  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
-def model_validate(cls: type[Model], obj: Any) -> Model:
+def model_validate(cls: type[Model], obj: Any) -> Model:  # pragma: no cover
     """Version-compatible model validation (parse_obj/model_validate)."""
     if is_pydantic_v2():
         return cls.model_validate(obj)  # ty: ignore

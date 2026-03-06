@@ -1295,7 +1295,7 @@ output-model-type = "typing.TypedDict"
 
 
 def test_input_model_output_model_type_default() -> None:
-    """Test that output_model_type defaults to PydanticBaseModel when not specified."""
+    """Test that output_model_type defaults to PydanticV2BaseModel when not specified."""
     from datamodel_code_generator import InputFileType
     from datamodel_code_generator.input_model import load_model_schema
 
