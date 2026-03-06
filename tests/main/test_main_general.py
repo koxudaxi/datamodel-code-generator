@@ -112,6 +112,7 @@ def test_space_and_special_characters_dict(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="dict",
         assert_func=assert_file_content,
+        expected_file="space_and_special_characters_dict_default_v2.py",
         default_output_model_type=None,
     )
 
@@ -1827,6 +1828,7 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
         tmp_path,
         input_file_type=InputFileType.JsonSchema,
         disable_timestamp=True,
+        output_model_type=DataModelType.PydanticBaseModel,
     )
 
     assert result == snapshot({

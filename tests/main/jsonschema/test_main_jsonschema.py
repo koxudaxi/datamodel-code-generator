@@ -2010,6 +2010,7 @@ def test_main_generate_from_directory(tmp_path: Path) -> None:
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
         output=tmp_path,
+        output_model_type=DataModelType.PydanticBaseModel,
     )
 
     main_nested_directory = EXPECTED_JSON_SCHEMA_PATH / "nested_directory"
