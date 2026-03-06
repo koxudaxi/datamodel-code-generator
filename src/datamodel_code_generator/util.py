@@ -166,7 +166,7 @@ def model_validator(  # ty: ignore
     @overload
     def inner(method: Callable[[Model], Model]) -> Callable[[Model], Model]: ...
 
-    def inner(
+    def inner(  # pragma: no cover
         method: Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model],
     ) -> Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model]:
         if is_pydantic_v2():
@@ -189,7 +189,7 @@ def field_validator(
 ) -> Callable[[Any], Callable[[Any, Any], Any]]:
     """Decorate field validators for both Pydantic v1 and v2."""
 
-    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:
+    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:  # pragma: no cover
         if is_pydantic_v2():
             from pydantic import field_validator as field_validator_v2  # noqa: PLC0415
 
@@ -202,7 +202,7 @@ def field_validator(
 
 
 @lru_cache(maxsize=1)
-def _get_config_dict() -> type:
+def _get_config_dict() -> type:  # pragma: no cover
     """Get ConfigDict type lazily. Only used with pydantic v2."""
     from pydantic import ConfigDict  # noqa: PLC0415
 
@@ -212,7 +212,7 @@ def _get_config_dict() -> type:
 class _ConfigDictProxy:
     """Proxy for lazy ConfigDict access."""
 
-    def __call__(self, **kwargs: Any) -> Any:
+    def __call__(self, **kwargs: Any) -> Any:  # pragma: no cover
         return _get_config_dict()(**kwargs)
 
 
@@ -306,14 +306,14 @@ def model_validate(cls: type[Model], obj: Any) -> Model:
     return cls.parse_obj(obj)  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
-def get_fields_set(obj: _BaseModel) -> set[str]:  # ty: ignore
+def get_fields_set(obj: _BaseModel) -> set[str]:  # ty: ignore  # pragma: no cover
     """Version-compatible access to fields set (__fields_set__/model_fields_set)."""
     if is_pydantic_v2():
         return obj.model_fields_set  # ty: ignore
     return obj.__fields_set__  # type: ignore[reportDeprecated]  # pragma: no cover
 
 
-def model_copy(obj: Model, **kwargs: Any) -> Model:
+def model_copy(obj: Model, **kwargs: Any) -> Model:  # pragma: no cover
     """Version-compatible model copy (copy/model_copy)."""
     if is_pydantic_v2():
         return obj.model_copy(**kwargs)  # ty: ignore
