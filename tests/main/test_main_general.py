@@ -2292,5 +2292,5 @@ def test_generate_with_imported_config_from_top_level() -> None:
 
 
 def test_all_exports_includes_generate_config() -> None:
-    """Test that __all__ includes GenerateConfig in Pydantic v2."""
+    """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
