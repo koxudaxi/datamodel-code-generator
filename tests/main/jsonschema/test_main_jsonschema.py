@@ -3383,6 +3383,42 @@ def test_main_jsonschema_unevaluated_properties(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_additional_properties_true_pydantic_v1(output_file: Path) -> None:
+    """Test additionalProperties: true generates extra='allow' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_additional_props_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_true_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
+def test_main_jsonschema_additional_properties_false_pydantic_v1(output_file: Path) -> None:
+    """Test additionalProperties: false generates extra='forbid' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_config.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_false_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_pydantic_v1(output_file: Path) -> None:
+    """Test unevaluatedProperties: false generates extra='forbid' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
 def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
     """Test unevaluatedProperties: true generates extra='allow'."""
     run_main_and_assert(
@@ -3391,6 +3427,18 @@ def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="unevaluated_properties_true.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_true_pydantic_v1(output_file: Path) -> None:
+    """Test unevaluatedProperties: true generates extra='allow' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_true_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
     )
 
 
@@ -5125,6 +5173,21 @@ def test_main_json_pointer_percent_encoded_segments(tmp_path: Path) -> None:
     [
         (
             "allow",
+            "pydantic.BaseModel",
+            "extra_fields_allow.py",
+        ),
+        (
+            "forbid",
+            "pydantic.BaseModel",
+            "extra_fields_forbid.py",
+        ),
+        (
+            "ignore",
+            "pydantic.BaseModel",
+            "extra_fields_ignore.py",
+        ),
+        (
+            "allow",
             "pydantic_v2.BaseModel",
             "extra_fields_v2_allow.py",
         ),
@@ -6482,6 +6545,7 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
 @pytest.mark.parametrize(
     ("output_model", "expected_file"),
     [
+        ("pydantic.BaseModel", "use_frozen_field_v1.py"),
         ("pydantic_v2.BaseModel", "use_frozen_field_v2.py"),
         ("dataclasses.dataclass", "use_frozen_field_dataclass.py"),
     ],
