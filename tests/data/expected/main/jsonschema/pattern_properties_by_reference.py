@@ -6,29 +6,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Extra, Field, constr
+from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
 
 
 class Stt(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     timeout: float | None = Field(None, title='STT Timeout')
 
 
-class TextResponse(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any]
+class TextResponse(RootModel[dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]]):
+    root: dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]
 
 
 class SomeschemaSchema(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     KeyWithExplicitPatternProperties: (
-        dict[constr(regex=r'^[a-z]{1}[0-9]{1}$'), Any] | None
+        dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any] | None
     ) = None
     KeyWithPatternPropertiesByReference: TextResponse | None = None
     SomeOtherBoringReference: Stt | None = None

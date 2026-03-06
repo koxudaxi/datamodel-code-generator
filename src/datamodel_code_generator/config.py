@@ -39,7 +39,7 @@ from datamodel_code_generator.format import (
     PythonVersion,
     PythonVersionMin,
 )
-from datamodel_code_generator.model import pydantic as pydantic_model
+from datamodel_code_generator.model import pydantic_v2
 from datamodel_code_generator.model.base import (  # noqa: TC001 - used by Pydantic at runtime
     DataModel,
     DataModelFieldBase,
@@ -205,10 +205,10 @@ class ParserConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
 
-    data_model_type: type[DataModel] = pydantic_model.BaseModel
-    data_model_root_type: type[DataModel] = pydantic_model.CustomRootType
-    data_type_manager_type: type[DataTypeManager] = pydantic_model.DataTypeManager
-    data_model_field_type: type[DataModelFieldBase] = pydantic_model.DataModelField
+    data_model_type: type[DataModel] = pydantic_v2.BaseModel
+    data_model_root_type: type[DataModel] = pydantic_v2.RootModel
+    data_type_manager_type: type[DataTypeManager] = pydantic_v2.DataTypeManager
+    data_model_field_type: type[DataModelFieldBase] = pydantic_v2.DataModelField
     base_class: str | None = None
     base_class_map: dict[str, str | list[str]] | None = None
     additional_imports: list[str] | None = None

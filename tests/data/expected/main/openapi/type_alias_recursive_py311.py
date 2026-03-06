@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
-from typing import TypeAlias, Union
+from typing import Union
 
 from pydantic import BaseModel
+from typing_extensions import TypeAliasType
 
 
 class File(BaseModel):
@@ -19,10 +20,12 @@ class Folder(BaseModel):
     subfolders: list[Folder] | None = None
 
 
-ElementaryType: TypeAlias = bool | str | int | float | None
+ElementaryType = TypeAliasType("ElementaryType", bool | str | int | float | None)
 
 
-JsonType: TypeAlias = Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]]
+JsonType = TypeAliasType(
+    "JsonType", Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]]
+)
 
 
 class Space(BaseModel):
@@ -37,5 +40,5 @@ class DualSpace(BaseModel):
     predual: Space | None = None
 
 
-Folder.update_forward_refs()
-Space.update_forward_refs()
+Folder.model_rebuild()
+Space.model_rebuild()

@@ -5,23 +5,24 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAliasType
 
-Boolean: TypeAlias = bool
+Boolean = TypeAliasType("Boolean", bool)
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-Int: TypeAlias = int
+Int = TypeAliasType("Int", int)
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-String: TypeAlias = str
+String = TypeAliasType("String", str)
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """

@@ -24,4 +24,4 @@ class Head(BaseModel):
 class Model(BaseModel):
     Arm_Right: ArmRight = Field(..., alias='Arm Right')
     Arm_Left: ArmLeft = Field(..., alias='Arm Left')
-    Head: Head
+    Head_1: Head = Field(..., alias='Head')

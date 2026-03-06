@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class Type(Enum):
@@ -16,9 +16,9 @@ class Type(Enum):
 
 
 class ComparisonFilter(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     type: Literal['ComparisonFilter']
     key: str
     value: str
@@ -29,16 +29,16 @@ class Type1(Enum):
     or_ = 'or'
 
 
-class Filters(BaseModel):
-    __root__: ComparisonFilter | CompoundFilter = Field(..., discriminator='type')
-
-
 class CompoundFilter(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     type: Literal['CompoundFilter']
     filters: list[Filters]
 
 
-Filters.update_forward_refs()
+class Filters(RootModel[ComparisonFilter | CompoundFilter]):
+    root: ComparisonFilter | CompoundFilter = Field(..., discriminator='type')
+
+
+CompoundFilter.model_rebuild()

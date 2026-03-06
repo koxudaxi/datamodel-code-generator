@@ -17,4 +17,4 @@ class Child(BaseModel):
     parent: Parent | None = None
 
 
-Parent.update_forward_refs()
+Parent.model_rebuild()

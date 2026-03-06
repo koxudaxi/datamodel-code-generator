@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Test(BaseModel):
     name: str | None = None
 
 
-class Model(BaseModel):
-    __root__: Test
+class Model(RootModel[Test]):
+    root: Test

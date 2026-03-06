@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Type(Enum):
@@ -30,7 +30,7 @@ class UpdateObjectRequest(ObjectBase):
     type: Literal['UpdateObjectRequest']
 
 
-class Demo(BaseModel):
-    __root__: ObjectBase | CreateObjectRequest | UpdateObjectRequest = Field(
+class Demo(RootModel[ObjectBase | CreateObjectRequest | UpdateObjectRequest]):
+    root: ObjectBase | CreateObjectRequest | UpdateObjectRequest = Field(
         ..., discriminator='type'
     )

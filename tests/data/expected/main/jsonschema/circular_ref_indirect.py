@@ -32,5 +32,5 @@ class NodeB(BaseModel):
     a: NodeA | None = None
 
 
-Model.update_forward_refs()
-NodeA.update_forward_refs()
+Model.model_rebuild()
+NodeA.model_rebuild()

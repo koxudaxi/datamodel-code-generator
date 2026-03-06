@@ -41,8 +41,8 @@ class Person(PersonBase, PersonRelationships):
     pass
 
 
-PersonsBestFriend.update_forward_refs()
-DogRelationships.update_forward_refs()
-PersonRelationships.update_forward_refs()
-Dog.update_forward_refs()
-Person.update_forward_refs()
+PersonsBestFriend.model_rebuild()
+DogRelationships.model_rebuild()
+PersonRelationships.model_rebuild()
+Dog.model_rebuild()
+Person.model_rebuild()

@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING
 import pytest
 
 from datamodel_code_generator.format import PythonVersion, is_supported_in_black
-from datamodel_code_generator.util import is_pydantic_v2
 
 from .conftest import (
     CURRENT_PYTHON_VERSION,
@@ -28,14 +27,12 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _CURRENT_PY_VERSION = PythonVersion(CURRENT_PYTHON_VERSION)
-_SKIP_PYDANTIC = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 _SKIP_BLACK = pytest.mark.skipif(
     not is_supported_in_black(_CURRENT_PY_VERSION),
     reason=f"Installed black doesn't support Python {CURRENT_PYTHON_VERSION}",
 )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_openapi_api_exec_current_version(output_file: Path) -> None:
     """Test that api.yaml schema generates executable code on current Python."""
@@ -48,7 +45,6 @@ def test_openapi_api_exec_current_version(output_file: Path) -> None:
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_openapi_with_refs_exec_current_version(output_file: Path) -> None:
     """Test that OpenAPI schema with $ref generates executable code."""
@@ -61,7 +57,6 @@ def test_openapi_with_refs_exec_current_version(output_file: Path) -> None:
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_openapi_allof_exec_current_version(output_file: Path) -> None:
     """Test that OpenAPI schema with allOf generates executable code."""
@@ -74,7 +69,6 @@ def test_openapi_allof_exec_current_version(output_file: Path) -> None:
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_jsonschema_person_exec_current_version(output_file: Path) -> None:
     """Test that person.json schema generates executable code on current Python."""
@@ -87,7 +81,6 @@ def test_jsonschema_person_exec_current_version(output_file: Path) -> None:
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_jsonschema_nested_array_exec_current_version(output_file: Path) -> None:
     """Test that nested array JSON Schema generates executable code."""
@@ -100,7 +93,6 @@ def test_jsonschema_nested_array_exec_current_version(output_file: Path) -> None
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 def test_jsonschema_circular_reference_exec_current_version(output_file: Path) -> None:
     """Test that circular reference JSON Schema generates executable code."""
@@ -113,7 +105,6 @@ def test_jsonschema_circular_reference_exec_current_version(output_file: Path) -
     )
 
 
-@_SKIP_PYDANTIC
 @_SKIP_BLACK
 @pytest.mark.skipif(
     sys.version_info[:2] <= (3, 10),

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
 class ModelEnum(Enum):
@@ -20,5 +20,5 @@ class ModelEnum(Enum):
     special__3 = '\\'
 
 
-class Model(BaseModel):
-    __root__: ModelEnum | None = None
+class Model(RootModel[ModelEnum | None]):
+    root: ModelEnum | None = None

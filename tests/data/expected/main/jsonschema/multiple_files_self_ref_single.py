@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
-class Second(BaseModel):
-    __root__: str
+class Second(RootModel[str]):
+    root: str
 
 
-class First(BaseModel):
-    __root__: Second
+class First(RootModel[Second]):
+    root: Second
 
 
 class Model(BaseModel):

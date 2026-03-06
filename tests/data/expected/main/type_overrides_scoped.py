@@ -7,15 +7,15 @@ from __future__ import annotations
 from typing import Any
 
 from my_app import Address
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
-class Address1(BaseModel):
-    __root__: str
+class Address1(RootModel[str]):
+    root: str
 
 
 class User(BaseModel):

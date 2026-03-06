@@ -211,11 +211,11 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class MyEnum(Enum):
@@ -391,6 +391,19 @@ def test_main_use_field_description_example(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example" / "output.py",
         extra_args=["--use-field-description-example"],
+    )
+
+
+@freeze_time("2022-11-11")
+def test_main_use_field_description_example_dataclass(output_file: Path) -> None:
+    """Test single example docstrings with dataclass output."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "single_line_description_with_example.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "main_use_field_description_example_dataclass" / "output.py",
+        extra_args=["--use-field-description-example", "--output-model-type", "dataclasses.dataclass"],
     )
 
 

@@ -13,5 +13,5 @@ class Foo(BaseModel):
 
 
 class Bar(Foo):
-    type: constr(regex=r'service')
+    type: constr(pattern=r'service')
     name: str | None = None

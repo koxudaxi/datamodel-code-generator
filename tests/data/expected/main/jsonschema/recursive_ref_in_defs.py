@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class TreeNode(BaseModel):
@@ -12,8 +12,8 @@ class TreeNode(BaseModel):
     children: list[TreeNode] | None = None
 
 
-class Model(BaseModel):
-    __root__: TreeNode
+class Model(RootModel[TreeNode]):
+    root: TreeNode
 
 
-TreeNode.update_forward_refs()
+TreeNode.model_rebuild()

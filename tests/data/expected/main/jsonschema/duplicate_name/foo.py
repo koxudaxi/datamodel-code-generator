@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Foo(BaseModel):
     pass
 
 
-class LogLevels(BaseModel):
-    __root__: str = Field(..., description='Supported logging levels')
+class LogLevels(RootModel[str]):
+    root: str = Field(..., description='Supported logging levels')

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, conint
+from pydantic import AwareDatetime, BaseModel, RootModel, conint
 
 
 class Pet(BaseModel):
@@ -46,17 +46,17 @@ class AnyOfCombineInArrayItem(Pet, Car):
     age: Optional[str] = None
 
 
-class AnyOfCombineInArray(BaseModel):
-    __root__: List[AnyOfCombineInArrayItem]
+class AnyOfCombineInArray(RootModel[List[AnyOfCombineInArrayItem]]):
+    root: List[AnyOfCombineInArrayItem]
 
 
 class AnyOfCombineInRoot(Pet, Car):
     age: Optional[str] = None
-    birthdate: Optional[datetime] = None
+    birthdate: Optional[AwareDatetime] = None
 
 
-class AnyOfCombineUnknownObjectInRoot(BaseModel):
-    __root__: List[Pet]
+class AnyOfCombineUnknownObjectInRoot(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class AnyOfCombineUnknownObjectInArray(Pet):

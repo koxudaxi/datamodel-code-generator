@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class First(BaseModel):
@@ -33,5 +33,5 @@ class Target9(Second, Target):
     pass
 
 
-class Target6(BaseModel):
-    __root__: Target8 | Target9
+class Target6(RootModel[Target8 | Target9]):
+    root: Target8 | Target9

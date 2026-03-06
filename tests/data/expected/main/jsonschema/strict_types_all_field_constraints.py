@@ -16,12 +16,12 @@ from pydantic import (
 
 
 class User(BaseModel):
-    name: StrictStr | None = Field(None, example='ken')
+    name: StrictStr | None = Field(None, examples=['ken'])
     age: StrictInt | None = None
     salary: StrictInt | None = Field(None, ge=0)
     debt: StrictInt | None = Field(None, le=0)
     loan: StrictFloat | None = Field(None, le=0.0)
-    tel: StrictStr | None = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+    tel: StrictStr | None = Field(None, pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
     height: StrictFloat | None = Field(None, ge=0.0)
     weight: StrictFloat | None = Field(None, ge=0.0)
     score: StrictFloat | None = Field(None, ge=1e-08)

@@ -4,20 +4,20 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Model(BaseModel):
     root: Node | None = None
 
 
-class Node(BaseModel):
-    __root__: BaseNode
-
-
 class BaseNode(BaseModel):
     next: Node | None = None
 
 
-Model.update_forward_refs()
-Node.update_forward_refs()
+class Node(RootModel[BaseNode]):
+    root: BaseNode
+
+
+Model.model_rebuild()
+BaseNode.model_rebuild()

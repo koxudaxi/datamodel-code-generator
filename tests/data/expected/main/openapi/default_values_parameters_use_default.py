@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Filter(BaseModel):
@@ -13,7 +13,7 @@ class Filter(BaseModel):
 
 class UsersGetParametersQuery(BaseModel):
     status: str | None = 'active'
-    filter: Filter | None = Field(default_factory=lambda: Filter.parse_obj({}))
+    filter: Filter | None = Field(default_factory=lambda: Filter.model_validate({}))
 
 
 class User(BaseModel):
@@ -21,5 +21,5 @@ class User(BaseModel):
     name: str | None = None
 
 
-class UserList(BaseModel):
-    __root__: list[User]
+class UserList(RootModel[list[User]]):
+    root: list[User]

@@ -6,8 +6,8 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class NodejsMode(BaseModel):
-    __root__: Literal['npm', 'yarn', 'npm_ci'] = Field(..., title='NodeJS mode')
+class NodejsMode(RootModel[Literal['npm', 'yarn', 'npm_ci']]):
+    root: Literal['npm', 'yarn', 'npm_ci'] = Field(..., title='NodeJS mode')

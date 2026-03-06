@@ -4,17 +4,17 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
-class Config(BaseModel):
-    __root__: str = Field(..., description='d2', min_length=1, title='t2')
+class Config(RootModel[str]):
+    root: str = Field(..., description='d2', min_length=1, title='t2')
 
 
 class In(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     input_dataset_path: str | None = Field(
         None, description='d1', min_length=1, title='Path to the input dataset'
     )
@@ -22,8 +22,8 @@ class In(BaseModel):
 
 
 class ValidatingSchemaId1(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     in_: In | None = Field(None, alias='in')
     n1: int | None = None

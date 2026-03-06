@@ -1,45 +1,44 @@
 from __future__ import annotations
 
-from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel, RootModel
 
 
-class FoodFoodIdGetResponse(BaseModel):
-    __root__: List[int]
+class FoodFoodIdGetResponse(RootModel[List[int]]):
+    root: List[int]
 
 
 class UserGetResponse(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: Optional[str] = None
 
 
 class UserPostRequest(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: Optional[str] = None
 
 
 class UsersGetResponseItem(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: Optional[str] = None
 
 
-class UsersGetResponse(BaseModel):
-    __root__: List[UsersGetResponseItem]
+class UsersGetResponse(RootModel[List[UsersGetResponseItem]]):
+    root: List[UsersGetResponseItem]
 
 
 class UsersPostRequestItem(BaseModel):
-    timestamp: datetime
+    timestamp: AwareDatetime
     name: str
     age: Optional[str] = None
 
 
-class UsersPostRequest(BaseModel):
-    __root__: List[UsersPostRequestItem]
+class UsersPostRequest(RootModel[List[UsersPostRequestItem]]):
+    root: List[UsersPostRequestItem]
 
 
 class Error(BaseModel):
@@ -58,5 +57,5 @@ class PetForm(BaseModel):
     age: Optional[int] = None
 
 
-class PetsGetResponse(BaseModel):
-    __root__: List[Pet]
+class PetsGetResponse(RootModel[List[Pet]]):
+    root: List[Pet]

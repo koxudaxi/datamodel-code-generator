@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Pet(BaseModel):
@@ -11,8 +11,8 @@ class Pet(BaseModel):
     tag: Optional[str] = None
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class Error(BaseModel):
@@ -28,12 +28,12 @@ class Result(BaseModel):
     event: Optional[Event] = None
 
 
-class Events(BaseModel):
-    __root__: List[Event]
+class Events(RootModel[List[Event]]):
+    root: List[Event]
 
 
-class EventRoot(BaseModel):
-    __root__: Event
+class EventRoot(RootModel[Event]):
+    root: Event
 
 
 class EventObject(BaseModel):
@@ -52,5 +52,5 @@ class DuplicateObject2(BaseModel):
     event: Optional[Event1] = None
 
 
-class DuplicateObject3(BaseModel):
-    __root__: Event
+class DuplicateObject3(RootModel[Event]):
+    root: Event
