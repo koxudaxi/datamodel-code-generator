@@ -10,7 +10,6 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-[![Pydantic v1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json)](https://pydantic.dev)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -19,7 +18,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
-- 🎯 Generates **Pydantic v1/v2**, **dataclasses**, **TypedDict**, or **msgspec** output
+- 🎯 Generates **Pydantic v2**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
 
@@ -67,7 +66,6 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 !!! warning "Omitting --output-model-type is deprecated"
     Starting from version 0.53.0, omitting `--output-model-type` is deprecated.
-    The implicit default `pydantic.BaseModel` (Pydantic v1) will be removed in a future version.
 
     We recommend using `--output-model-type pydantic_v2.BaseModel` for new projects.
 
@@ -114,9 +112,6 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 ```bash
 # 🆕 Pydantic v2 (recommended for new projects)
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# 🔄 Pydantic v1 (default, for compatibility)
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 
 # 🏗️ Python dataclasses
 datamodel-codegen --output-model-type dataclasses.dataclass ...
@@ -610,10 +605,8 @@ instead of generating duplicate classes from external schema files.
     
     from __future__ import annotations
     
-    from datetime import datetime
-    
     from mypackage.shared.models import Error, User
-    from pydantic import BaseModel
+    from pydantic import AwareDatetime, BaseModel
     
     
     class UserResponse(BaseModel):
@@ -623,7 +616,7 @@ instead of generating duplicate classes from external schema files.
     
     class ErrorResponse(BaseModel):
         error: Error
-        timestamp: datetime
+        timestamp: AwareDatetime
     ```
 
 ---
@@ -733,7 +726,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         from __future__ import annotations
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class Pet(BaseModel):
@@ -742,7 +735,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         
         class Model(BaseModel):
-            Pet: Pet
+            Pet_1: Pet = Field(..., alias='Pet')
         ```
 
     === "YAML"
@@ -764,7 +757,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         from __future__ import annotations
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class Pet(BaseModel):
@@ -773,7 +766,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         
         class Model(BaseModel):
-            Pet: Pet
+            Pet_1: Pet = Field(..., alias='Pet')
         ```
 
 ---
@@ -1249,7 +1242,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 | [`--collapse-root-models-name-strategy`](#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with o... |
 | [`--dataclass-arguments`](#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary.... |
 | [`--duplicate-name-suffix`](#duplicate-name-suffix) | Customize suffix for duplicate model names. |
-| [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutati... |
+| [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](#force-optional) | Force all fields to be Optional regardless of required statu... |
 | [`--frozen-dataclasses`](#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only field... |
 | [`--keep-model-order`](#keep-model-order) | Keep model definition order as specified in schema. |
@@ -1257,7 +1250,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
 | [`--naming-strategy`](#naming-strategy) | Use parent-prefixed naming strategy for duplicate model name... |
-| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, T... |
+| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, dataclasses, Type... |
 | [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
 | [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
 | [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -1479,111 +1472,6 @@ The `--allow-extra-fields` flag configures the code generation behavior.
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api.yaml
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import AnyUrl, BaseModel, Extra, Field
-        
-        
-        class Pet(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Pets(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            __root__: list[Pet]
-        
-        
-        class User(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Users(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            __root__: list[User]
-        
-        
-        class Id(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            __root__: list[str]
-        
-        
-        class Error(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            apiKey: str | None = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: str | None = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: AnyUrl | None = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: AnyUrl | None = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            __root__: list[Api]
-        
-        
-        class Event(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            name: str | None = None
-        
-        
-        class Result(BaseModel):
-            class Config:
-                extra = Extra.allow
-        
-            event: Event | None = None
-        ```
 
     === "Pydantic v2"
 
@@ -1878,111 +1766,6 @@ The `--allow-population-by-field-name` flag configures the code generation behav
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api.yaml
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Pets(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            __root__: list[Pet]
-        
-        
-        class User(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Users(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            __root__: list[User]
-        
-        
-        class Id(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            __root__: list[str]
-        
-        
-        class Error(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            apiKey: str | None = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: str | None = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: AnyUrl | None = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: AnyUrl | None = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            __root__: list[Api]
-        
-        
-        class Event(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            name: str | None = None
-        
-        
-        class Result(BaseModel):
-            class Config:
-                allow_population_by_field_name = True
-        
-            event: Event | None = None
-        ```
 
     === "Pydantic v2"
 
@@ -2285,7 +2068,7 @@ The `--base-class` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, Field
+    from pydantic import AnyUrl, Field, RootModel
     
     from custom_module import Base
     
@@ -2296,8 +2079,8 @@ The `--base-class` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(Base):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(Base):
@@ -2306,16 +2089,16 @@ The `--base-class` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(Base):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(Base):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(Base):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(Base):
@@ -2338,8 +2121,8 @@ The `--base-class` flag configures the code generation behavior.
         )
     
     
-    class Apis(Base):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(Base):
@@ -2801,7 +2584,7 @@ by replacing all references to duplicate models with the canonical model.
     class Model(BaseModel):
         Arm_Right: ArmRight = Field(..., alias='Arm Right')
         Arm_Left: ArmRight = Field(..., alias='Arm Left')
-        Head: Head
+        Head_1: Head = Field(..., alias='Head')
     ```
 
 ---
@@ -2812,7 +2595,7 @@ Inline root model definitions instead of creating separate wrapper classes.
 
 The `--collapse-root-models` option generates simpler output by inlining root models
 directly instead of creating separate wrapper types. This shows how different output
-model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
+model types (Pydantic v2, dataclass, TypedDict, msgspec) handle const fields.
 
 **See also:** [Model Reuse and Deduplication](../model-reuse.md)
 
@@ -2848,26 +2631,6 @@ model types (Pydantic v1/v2, dataclass, TypedDict, msgspec) handle const fields.
         ```
 
         **Output:**
-
-        === "Pydantic v1"
-
-            ```python
-            # generated by datamodel-codegen:
-            #   filename:  const.yaml
-            #   timestamp: 2019-07-26T00:00:00+00:00
-            
-            from __future__ import annotations
-            
-            from typing import Literal
-            
-            from pydantic import BaseModel, Field
-            
-            
-            class Api(BaseModel):
-                version: Literal['v1'] = Field(
-                    'v1', const=True, description='The version of this API'
-                )
-            ```
 
         === "Pydantic v2"
 
@@ -3502,7 +3265,7 @@ For example, `{"model": "Schema"}` changes `Item1` to `ItemSchema`.
 
 ## `--enable-faux-immutability` {#enable-faux-immutability}
 
-Enable faux immutability in Pydantic v1 models (allow_mutation=False).
+Enable faux immutability in Pydantic models (frozen=True).
 
 The `--enable-faux-immutability` flag configures the code generation behavior.
 
@@ -3701,111 +3464,6 @@ The `--enable-faux-immutability` flag configures the code generation behavior.
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api.yaml
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Pets(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            __root__: list[Pet]
-        
-        
-        class User(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Users(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            __root__: list[User]
-        
-        
-        class Id(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            __root__: list[str]
-        
-        
-        class Error(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            apiKey: str | None = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: str | None = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: AnyUrl | None = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: AnyUrl | None = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            __root__: list[Api]
-        
-        
-        class Event(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            name: str | None = None
-        
-        
-        class Result(BaseModel):
-            class Config:
-                allow_mutation = False
-        
-            event: Event | None = None
-        ```
 
     === "Pydantic v2"
 
@@ -4123,7 +3781,7 @@ The `--force-optional` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -4132,8 +3790,8 @@ The `--force-optional` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet] | None = None
+    class Pets(RootModel[list[Pet] | None]):
+        root: list[Pet] | None = None
     
     
     class User(BaseModel):
@@ -4142,16 +3800,16 @@ The `--force-optional` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User] | None = None
+    class Users(RootModel[list[User] | None]):
+        root: list[User] | None = None
     
     
-    class Id(BaseModel):
-        __root__: str | None = None
+    class Id(RootModel[str | None]):
+        root: str | None = None
     
     
-    class Rules(BaseModel):
-        __root__: list[str] | None = None
+    class Rules(RootModel[list[str] | None]):
+        root: list[str] | None = None
     
     
     class Error(BaseModel):
@@ -4174,8 +3832,8 @@ The `--force-optional` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api] | None = None
+    class Apis(RootModel[list[Api] | None]):
+        root: list[Api] | None = None
     
     
     class Event(BaseModel):
@@ -4425,11 +4083,10 @@ of model definitions matters for documentation or readability.
         person_relationships: PersonRelationships | None = None
     
     
-    DogRelationships.update_forward_refs()
-    Dog.update_forward_refs()
-    PersonRelationships.update_forward_refs()
-    Person.update_forward_refs()
-    PersonsBestFriend.update_forward_refs()
+    DogRelationships.model_rebuild()
+    Dog.model_rebuild()
+    PersonRelationships.model_rebuild()
+    Person.model_rebuild()
     ```
 
 ---
@@ -5028,19 +4685,18 @@ parent model name when duplicates occur. For example, if both `Order` and
 
 ## `--output-model-type` {#output-model-type}
 
-Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use
-for the generated code. Supported values include `pydantic.BaseModel`,
-`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
-`msgspec.Struct`.
+for the generated code. Supported values include `pydantic_v2.BaseModel`,
+`dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
 
 **See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
 
 !!! tip "Usage"
 
     ```bash
-    datamodel-codegen --input schema.json --output-model-type pydantic.BaseModel # (1)!
+    datamodel-codegen --input schema.json --output-model-type pydantic_v2.BaseModel # (1)!
     ```
 
     1. :material-arrow-left: `--output-model-type` - the option documented here
@@ -5081,28 +4737,6 @@ for the generated code. Supported values include `pydantic.BaseModel`,
         ```
 
         **Output:**
-
-        === "Pydantic v1"
-
-            ```python
-            # generated by datamodel-codegen:
-            #   filename:  null_and_array.json
-            #   timestamp: 2019-07-26T00:00:00+00:00
-            
-            from __future__ import annotations
-            
-            from typing import Any
-            
-            from pydantic import BaseModel
-            
-            
-            class MyObjItem(BaseModel):
-                items: list[Any] | None
-            
-            
-            class Model(BaseModel):
-                my_obj: list[MyObjItem]
-            ```
 
         === "Pydantic v2"
 
@@ -5277,7 +4911,7 @@ for the generated code. Supported values include `pydantic.BaseModel`,
 
         **Output:**
 
-        === "Pydantic v1"
+        === "Pydantic v2"
 
             ```python
             # generated by datamodel-codegen:
@@ -5286,29 +4920,30 @@ for the generated code. Supported values include `pydantic.BaseModel`,
             
             from __future__ import annotations
             
-            from typing import Literal, TypeAlias
+            from typing import Literal
             
             from pydantic import BaseModel, Field
+            from typing_extensions import TypeAliasType
             
-            Boolean: TypeAlias = bool
+            Boolean = TypeAliasType("Boolean", bool)
             """
             The `Boolean` scalar type represents `true` or `false`.
             """
             
             
-            ID: TypeAlias = str
+            ID = TypeAliasType("ID", str)
             """
             The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
             """
             
             
-            Int: TypeAlias = int
+            Int = TypeAliasType("Int", int)
             """
             The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
             """
             
             
-            String: TypeAlias = str
+            String = TypeAliasType("String", str)
             """
             The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
             """
@@ -5436,8 +5071,8 @@ for the generated code. Supported values include `pydantic.BaseModel`,
                 typename__: Literal['Vehicle'] | None = Field('Vehicle', alias='__typename')
             
             
-            Film.update_forward_refs()
-            Person.update_forward_refs()
+            Film.model_rebuild()
+            Person.model_rebuild()
             ```
 
         === "dataclass"
@@ -5845,7 +5480,7 @@ code duplication in the output.
     
     from enum import Enum
     
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, RootModel
     
     
     class Animal(Enum):
@@ -5866,8 +5501,8 @@ code duplication in the output.
         redistribute: list[RedistributeEnum] | None = None
     
     
-    class Redistribute(BaseModel):
-        __root__: list[RedistributeEnum] = Field(
+    class Redistribute(RootModel[list[RedistributeEnum]]):
+        root: list[RedistributeEnum] = Field(
             ..., description='Redistribute type for routes.'
         )
     ```
@@ -6208,7 +5843,7 @@ where optional fields have defaults but cannot accept `None` values.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Cursors(BaseModel):
@@ -6245,8 +5880,8 @@ where optional fields have defaults but cannot accept `None` values.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api] | None = Field(...)
+    class Apis(RootModel[list[Api] | None]):
+        root: list[Api] | None = Field(...)
     
     
     class EmailItem(BaseModel):
@@ -6256,24 +5891,24 @@ where optional fields have defaults but cannot accept `None` values.
         tag: str | None = None
     
     
-    class Email(BaseModel):
-        __root__: list[EmailItem]
+    class Email(RootModel[list[EmailItem]]):
+        root: list[EmailItem]
     
     
-    class Id(BaseModel):
-        __root__: int = 1
+    class Id(RootModel[int]):
+        root: int = 1
     
     
-    class Description(BaseModel):
-        __root__: str | None = 'example'
+    class Description(RootModel[str | None]):
+        root: str | None = 'example'
     
     
-    class Name(BaseModel):
-        __root__: str | None = None
+    class Name(RootModel[str | None]):
+        root: str | None = None
     
     
-    class Tag(BaseModel):
-        __root__: str
+    class Tag(RootModel[str]):
+        root: str
     
     
     class Notes(BaseModel):
@@ -6499,7 +6134,7 @@ default to None.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -6508,8 +6143,8 @@ default to None.
         tag: str | None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -6518,16 +6153,16 @@ default to None.
         tag: str | None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -6550,8 +6185,8 @@ default to None.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -7097,17 +6732,18 @@ default values.
     
     from __future__ import annotations
     
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
     from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -7131,7 +6767,6 @@ default values.
 Generate frozen (immutable) field definitions for readOnly properties.
 
 The `--use-frozen-field` flag generates frozen field definitions:
-- Pydantic v1: `Field(allow_mutation=False)`
 - Pydantic v2: `Field(frozen=True)`
 - Dataclasses: silently ignored (no frozen fields generated)
 
@@ -7177,30 +6812,6 @@ The `--use-frozen-field` flag generates frozen field definitions:
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  use_frozen_field.json
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from datetime import datetime
-        
-        from pydantic import BaseModel, Field
-        
-        
-        class User(BaseModel):
-            class Config:
-                validate_assignment = True
-        
-            id: int = Field(..., allow_mutation=False, description='Server-generated ID')
-            name: str
-            password: str = Field(..., description='User password')
-            created_at: datetime | None = Field(None, allow_mutation=False)
-        ```
 
     === "Pydantic v2"
 
@@ -7533,7 +7144,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     from enum import Enum
     from typing import Literal
     
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, RootModel
     
     
     class Kind(Enum):
@@ -7551,8 +7162,8 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
         boolean: Literal[True] = True
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class Kind1(Enum):
@@ -7602,12 +7213,12 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
         int_42 = 42
     
     
-    class SingleEnum(BaseModel):
-        __root__: Literal['pet'] = 'pet'
+    class SingleEnum(RootModel[Literal['pet']]):
+        root: Literal['pet'] = 'pet'
     
     
-    class ArrayEnum(BaseModel):
-        __root__: list[Literal['cat'] | Literal['dog']]
+    class ArrayEnum(RootModel[list[Literal['cat'] | Literal['dog']]]):
+        root: list[Literal['cat'] | Literal['dog']]
     
     
     class NestedVersionEnum(Enum):
@@ -7619,17 +7230,17 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
         RC4 = 'RC4'
     
     
-    class NestedVersion(BaseModel):
-        __root__: NestedVersionEnum | None = Field(
-            'RC1', description='nullable enum', example='RC2'
+    class NestedVersion(RootModel[NestedVersionEnum | None]):
+        root: NestedVersionEnum | None = Field(
+            'RC1', description='nullable enum', examples=['RC2']
         )
     
     
     class NestedNullableEnum(BaseModel):
         nested_version: NestedVersion | None = Field(
-            default_factory=lambda: NestedVersion.parse_obj('RC1'),
+            default_factory=lambda: NestedVersion('RC1'),
             description='nullable enum',
-            example='RC2',
+            examples=['RC2'],
         )
     
     
@@ -7642,9 +7253,9 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
         RC4 = 'RC4'
     
     
-    class Version(BaseModel):
-        __root__: VersionEnum | None = Field(
-            'RC1', description='nullable enum', example='RC2'
+    class Version(RootModel[VersionEnum | None]):
+        root: VersionEnum | None = Field(
+            'RC1', description='nullable enum', examples=['RC2']
         )
     ```
 
@@ -7806,15 +7417,16 @@ type, providing better type safety and IDE support.
     from __future__ import annotations
     
     from enum import Enum
-    from typing import TypeAlias
     
-    Boolean: TypeAlias = bool
+    from typing_extensions import TypeAliasType
+    
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -8085,78 +7697,6 @@ providing fine-grained control over generated names independent of schema defini
 
         **Output:**
 
-        === "Pydantic v1"
-
-            ```python
-            # generated by datamodel-codegen:
-            #   filename:  api.yaml
-            #   timestamp: 2019-07-26T00:00:00+00:00
-            
-            from __future__ import annotations
-            
-            from pydantic import AnyUrl, BaseModel, Field
-            
-            
-            class Pet(BaseModel):
-                id_: int = Field(..., alias='id')
-                name_: str = Field(..., alias='name')
-                tag: str | None = None
-            
-            
-            class Pets(BaseModel):
-                __root__: list[Pet]
-            
-            
-            class User(BaseModel):
-                id_: int = Field(..., alias='id')
-                name_: str = Field(..., alias='name')
-                tag: str | None = None
-            
-            
-            class Users(BaseModel):
-                __root__: list[User]
-            
-            
-            class Id(BaseModel):
-                __root__: str
-            
-            
-            class Rules(BaseModel):
-                __root__: list[str]
-            
-            
-            class Error(BaseModel):
-                code: int
-                message: str
-            
-            
-            class Api(BaseModel):
-                apiKey: str | None = Field(
-                    None, description='To be used as a dataset parameter value'
-                )
-                apiVersionNumber: str | None = Field(
-                    None, description='To be used as a version parameter value'
-                )
-                apiUrl: AnyUrl | None = Field(
-                    None, description="The URL describing the dataset's fields"
-                )
-                apiDocumentationUrl: AnyUrl | None = Field(
-                    None, description='A URL to the API console for each API'
-                )
-            
-            
-            class Apis(BaseModel):
-                __root__: list[Api]
-            
-            
-            class Event(BaseModel):
-                name_: str | None = Field(None, alias='name')
-            
-            
-            class Result(BaseModel):
-                event: Event | None = None
-            ```
-
         === "msgspec"
 
             ```python
@@ -8321,20 +7861,21 @@ providing fine-grained control over generated names independent of schema defini
         
         from __future__ import annotations
         
-        from typing import Literal, TypeAlias
+        from typing import Literal
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Boolean: TypeAlias = bool
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        DateTime: TypeAlias = str
+        DateTime = TypeAliasType("DateTime", str)
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -8459,11 +8000,11 @@ Supports scoped format (ClassName.field) for hierarchical overrides.
     
     from typing import Any
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
-    class Model(BaseModel):
-        __root__: Any
+    class Model(RootModel[Any]):
+        root: Any
     
     
     class User(BaseModel):
@@ -8521,7 +8062,7 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
     
     from enum import Enum
     
-    from pydantic import BaseModel
+    from pydantic import RootModel
     
     
     class ModelEnum(Enum):
@@ -8535,8 +8076,8 @@ The `--empty-enum-field-name` flag configures the code generation behavior.
         field__2 = '\\'
     
     
-    class Model(BaseModel):
-        __root__: ModelEnum | None = None
+    class Model(RootModel[ModelEnum | None]):
+        root: ModelEnum | None = None
     ```
 
 ---
@@ -8715,38 +8256,39 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     from __future__ import annotations
     
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
-    from pydantic import BaseModel, Extra, Field
+    from pydantic import BaseModel, ConfigDict, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    ID: TypeAlias = str
+    ID = TypeAliasType("ID", str)
     """
     The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
     """
     
     
-    Int: TypeAlias = int
+    Int = TypeAliasType("Int", int)
     """
     The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
     """
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
     
     
     class Film(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         characters: list[Person]
         characters_ids: list[ID]
         director: String
@@ -8768,9 +8310,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     
     class Person(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         birth_year: String | None = None
         eye_color: String | None = None
         films: list[Film]
@@ -8794,9 +8336,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     
     class Planet(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         climate: String | None = None
         diameter: String | None = None
         films: list[Film]
@@ -8815,9 +8357,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     
     class Species(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         average_height: String | None = None
         average_lifespan: String | None = None
         classification: String | None = None
@@ -8836,9 +8378,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     
     class Starship(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         MGLT: String | None = None
         cargo_capacity: String | None = None
         consumables: String | None = None
@@ -8861,9 +8403,9 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
     
     
     class Vehicle(BaseModel):
-        class Config:
-            extra = Extra.allow
-    
+        model_config = ConfigDict(
+            extra='allow',
+        )
         cargo_capacity: String | None = None
         consumables: String | None = None
         cost_in_credits: String | None = None
@@ -8883,8 +8425,8 @@ store fields not defined in the schema. Options: allow, ignore, forbid.
         typename__: Literal['Vehicle'] | None = Field('Vehicle', alias='__typename')
     
     
-    Film.update_forward_refs()
-    Person.update_forward_refs()
+    Film.model_rebuild()
+    Person.model_rebuild()
     ```
 
 ---
@@ -8895,7 +8437,6 @@ Generate Field() with validation constraints from schema.
 
 The `--field-constraints` flag generates Pydantic Field() definitions with
 validation constraints (min/max length, pattern, etc.) from the schema.
-Output differs between Pydantic v1 and v2 due to API changes.
 
 **Related:** [`--strict-types`](typing-customization.md#strict-types)
 
@@ -9149,97 +8690,6 @@ Output differs between Pydantic v1 and v2 due to API changes.
 
         **Output:**
 
-        === "Pydantic v1"
-
-            ```python
-            # generated by datamodel-codegen:
-            #   filename:  api_constrained.yaml
-            #   timestamp: 2019-07-26T00:00:00+00:00
-            
-            from __future__ import annotations
-            
-            from pydantic import AnyUrl, BaseModel, Field
-            
-            
-            class Pet(BaseModel):
-                id: int = Field(..., ge=0, le=9223372036854775807)
-                name: str = Field(..., max_length=256)
-                tag: str | None = Field(None, max_length=64)
-            
-            
-            class Pets(BaseModel):
-                __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
-            
-            
-            class UID(BaseModel):
-                __root__: int = Field(..., ge=0)
-            
-            
-            class Phone(BaseModel):
-                __root__: str = Field(..., min_length=3)
-            
-            
-            class FaxItem(BaseModel):
-                __root__: str = Field(..., min_length=3)
-            
-            
-            class User(BaseModel):
-                id: int = Field(..., ge=0)
-                name: str = Field(..., max_length=256)
-                tag: str | None = Field(None, max_length=64)
-                uid: UID
-                phones: list[Phone] | None = Field(None, max_items=10)
-                fax: list[FaxItem] | None = None
-                height: int | float | None = Field(None, ge=1.0, le=300.0)
-                weight: float | int | None = Field(None, ge=1.0, le=1000.0)
-                age: int | None = Field(None, gt=0, le=200)
-                rating: float | None = Field(None, gt=0.0, le=5.0)
-            
-            
-            class Users(BaseModel):
-                __root__: list[User]
-            
-            
-            class Id(BaseModel):
-                __root__: str
-            
-            
-            class Rules(BaseModel):
-                __root__: list[str]
-            
-            
-            class Error(BaseModel):
-                code: int
-                message: str
-            
-            
-            class Api(BaseModel):
-                apiKey: str | None = Field(
-                    None, description='To be used as a dataset parameter value'
-                )
-                apiVersionNumber: str | None = Field(
-                    None, description='To be used as a version parameter value'
-                )
-                apiUrl: AnyUrl | None = Field(
-                    None, description="The URL describing the dataset's fields"
-                )
-                apiDocumentationUrl: AnyUrl | None = Field(
-                    None, description='A URL to the API console for each API'
-                )
-            
-            
-            class Apis(BaseModel):
-                __root__: list[Api]
-            
-            
-            class Event(BaseModel):
-                name: str | None = None
-            
-            
-            class Result(BaseModel):
-                event: Event | None = None
-            ```
-
         === "Pydantic v2"
 
             ```python
@@ -9409,12 +8859,12 @@ Output differs between Pydantic v1 and v2 due to API changes.
         
         
         class User(BaseModel):
-            name: StrictStr | None = Field(None, example='ken')
+            name: StrictStr | None = Field(None, examples=['ken'])
             age: StrictInt | None = None
             salary: StrictInt | None = Field(None, ge=0)
             debt: StrictInt | None = Field(None, le=0)
             loan: StrictFloat | None = Field(None, le=0.0)
-            tel: StrictStr | None = Field(None, regex='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
+            tel: StrictStr | None = Field(None, pattern='^(\\([0-9]{3}\\))?[0-9]{3}-[0-9]{4}$')
             height: StrictFloat | None = Field(None, ge=0.0)
             weight: StrictFloat | None = Field(None, ge=0.0)
             score: StrictFloat | None = Field(None, ge=1e-08)
@@ -9485,31 +8935,6 @@ The `--field-extra-keys` flag configures the code generation behavior.
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  extras.json
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import BaseModel, Field
-        
-        
-        class Extras(BaseModel):
-            name: str | None = Field(
-                None,
-                description='normal key',
-                example='example',
-                invalid_key_1='abc',
-                key2=456,
-                repr=True,
-            )
-            age: int | None = Field(None, example=12, examples=[13, 20])
-            status: str | None = Field(None, examples=['active'])
-        ```
 
     === "Pydantic v2"
 
@@ -9601,39 +9026,6 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  extras.json
-        #   timestamp: 2019-07-26T00:00:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import BaseModel, Field
-        
-        
-        class Extras(BaseModel):
-            name: str | None = Field(
-                None,
-                description='normal key',
-                example='example',
-                field_comment='comment',
-                field_exclude=123,
-                field_invalid_key_2='efg',
-                invalid_key_1='abc',
-                key1=123,
-                key2=456,
-                readOnly=True,
-                register_='hij',
-                repr=True,
-                schema_='klm',
-                x_abc=True,
-            )
-            age: int | None = Field(None, example=12, examples=[13, 20], writeOnly=True)
-            status: str | None = Field(None, examples=['active'])
-        ```
 
     === "Pydantic v2"
 
@@ -10100,7 +9492,7 @@ The `--set-default-enum-member` flag configures the code generation behavior.
     
     from enum import Enum
     
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, RootModel
     
     
     class Animal(Enum):
@@ -10121,8 +9513,8 @@ The `--set-default-enum-member` flag configures the code generation behavior.
         redistribute: list[RedistributeEnum] | None = None
     
     
-    class Redistribute(BaseModel):
-        __root__: list[RedistributeEnum] = Field(
+    class Redistribute(RootModel[list[RedistributeEnum]]):
+        root: list[RedistributeEnum] = Field(
             ..., description='Redistribute type for routes.'
         )
     ```
@@ -10237,7 +9629,7 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
     
     from enum import Enum
     
-    from pydantic import BaseModel
+    from pydantic import RootModel
     
     
     class ModelEnum(Enum):
@@ -10251,8 +9643,8 @@ The `--special-field-name-prefix` flag configures the code generation behavior.
         special__3 = '\\'
     
     
-    class Model(BaseModel):
-        __root__: ModelEnum | None = None
+    class Model(RootModel[ModelEnum | None]):
+        root: ModelEnum | None = None
     ```
 
 ---
@@ -10642,7 +10034,7 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from pydantic import AnyUrl, BaseModel
+        from pydantic import AnyUrl, BaseModel, RootModel
         
         
         class Pet(BaseModel):
@@ -10651,8 +10043,8 @@ generated models, preserving documentation from the original schema.
             tag: str | None = None
         
         
-        class Pets(BaseModel):
-            __root__: list[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -10661,16 +10053,16 @@ generated models, preserving documentation from the original schema.
             tag: str | None = None
         
         
-        class Users(BaseModel):
-            __root__: list[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
-        class Id(BaseModel):
-            __root__: str
+        class Id(RootModel[str]):
+            root: str
         
         
-        class Rules(BaseModel):
-            __root__: list[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -10698,8 +10090,8 @@ generated models, preserving documentation from the original schema.
             """
         
         
-        class Apis(BaseModel):
-            __root__: list[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -10761,23 +10153,26 @@ generated models, preserving documentation from the original schema.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, TypeAlias
+        from typing import Annotated, Any
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Model: TypeAlias = Any
-        
-        
-        SimpleString: TypeAlias = str
+        Model = TypeAliasType("Model", Any)
         
         
-        UnionType: TypeAlias = str | int
+        SimpleString = TypeAliasType("SimpleString", str)
         
         
-        ArrayType: TypeAlias = list[str]
+        UnionType = TypeAliasType("UnionType", str | int)
         
         
-        AnnotatedType: TypeAlias = Annotated[str | bool, Field(..., title='MyAnnotatedType')]
+        ArrayType = TypeAliasType("ArrayType", list[str])
+        
+        
+        AnnotatedType = TypeAliasType(
+            "AnnotatedType", Annotated[str | bool, Field(..., title='MyAnnotatedType')]
+        )
         """
         An annotated union type
         """
@@ -10869,11 +10264,11 @@ is visible in IDE intellisense.
     
     
     class Extras(BaseModel):
-        name: str | None = Field(None, description='normal key', example='example')
+        name: str | None = Field(None, description='normal key', examples=['example'])
         """
         Example: 'example'
         """
-        age: int | None = Field(None, example=12, examples=[13, 20])
+        age: int | None = Field(None, examples=[13, 20], json_schema_extra={'example': 12})
         """
         Examples:
         - 13
@@ -11102,7 +10497,7 @@ documentation without using Field() wrappers.
         
         from __future__ import annotations
         
-        from pydantic import AnyUrl, BaseModel, Field
+        from pydantic import AnyUrl, BaseModel, Field, RootModel
         
         
         class Pet(BaseModel):
@@ -11111,8 +10506,8 @@ documentation without using Field() wrappers.
             tag: str | None = None
         
         
-        class Pets(BaseModel):
-            __root__: list[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class User(BaseModel):
@@ -11121,16 +10516,16 @@ documentation without using Field() wrappers.
             tag: str | None = None
         
         
-        class Users(BaseModel):
-            __root__: list[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
-        class Id(BaseModel):
-            __root__: str
+        class Id(RootModel[str]):
+            root: str
         
         
-        class Rules(BaseModel):
-            __root__: list[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -11164,8 +10559,8 @@ documentation without using Field() wrappers.
             """A URL to the API console for each API"""
         
         
-        class Apis(BaseModel):
-            __root__: list[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -11211,7 +10606,7 @@ documentation without using Field() wrappers.
             name: str | None = Field(
                 None,
                 description='User name.\nThis is a multi-line description.',
-                example='John Doe',
+                examples=['John Doe'],
             )
             """
             User name.
@@ -11436,7 +10831,7 @@ useful for preserving documentation from your schema in the generated code.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -11445,8 +10840,8 @@ useful for preserving documentation from your schema in the generated code.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -11455,16 +10850,16 @@ useful for preserving documentation from your schema in the generated code.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -11493,8 +10888,8 @@ useful for preserving documentation from your schema in the generated code.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -11718,7 +11113,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     from enum import Enum
     
-    from pydantic import BaseModel, Field
+    from pydantic import BaseModel, Field, RootModel
     
     
     class ProcessingStatusTitle(Enum):
@@ -11727,8 +11122,8 @@ This is useful when schemas have descriptive titles that should be preserved.
         FAILED = 'FAILED'
     
     
-    class Kind(BaseModel):
-        __root__: str
+    class Kind(RootModel[str]):
+        root: str
     
     
     class NestedCommentTitle(BaseModel):
@@ -11740,31 +11135,9 @@ This is useful when schemas have descriptive titles that should be preserved.
         description: str | None = None
     
     
-    class ProcessingTasksTitle(BaseModel):
-        __root__: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
-    
-    
-    class ExtendedProcessingTask(BaseModel):
-        __root__: ProcessingTasksTitle | NestedCommentTitle = Field(
-            ..., title='Extended Processing Task Title'
-        )
-    
-    
-    class ExtendedProcessingTasksTitle(BaseModel):
-        __root__: list[ExtendedProcessingTask] = Field(
-            ..., title='Extended Processing Tasks Title'
-        )
-    
-    
-    class ProcessingStatusUnionTitle(BaseModel):
-        __root__: (
-            ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle
-        ) = Field('COMPLETED', title='Processing Status Union Title')
-    
-    
     class ProcessingTaskTitle(BaseModel):
         processing_status_union: ProcessingStatusUnionTitle | None = Field(
-            default_factory=lambda: ProcessingStatusUnionTitle.parse_obj('COMPLETED'),
+            default_factory=lambda: ProcessingStatusUnionTitle('COMPLETED'),
             title='Processing Status Union Title',
         )
         processing_status: ProcessingStatusTitle | None = 'COMPLETED'
@@ -11772,7 +11145,34 @@ This is useful when schemas have descriptive titles that should be preserved.
         kind: Kind | None = None
     
     
-    ProcessingTasksTitle.update_forward_refs()
+    class ProcessingTasksTitle(RootModel[list[ProcessingTaskTitle]]):
+        root: list[ProcessingTaskTitle] = Field(..., title='Processing Tasks Title')
+    
+    
+    class ExtendedProcessingTask(RootModel[ProcessingTasksTitle | NestedCommentTitle]):
+        root: ProcessingTasksTitle | NestedCommentTitle = Field(
+            ..., title='Extended Processing Task Title'
+        )
+    
+    
+    class ExtendedProcessingTasksTitle(RootModel[list[ExtendedProcessingTask]]):
+        root: list[ExtendedProcessingTask] = Field(
+            ..., title='Extended Processing Tasks Title'
+        )
+    
+    
+    class ProcessingStatusUnionTitle(
+        RootModel[ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle]
+    ):
+        root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
+            Field(
+                default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
+                title='Processing Status Union Title',
+            )
+        )
+    
+    
+    ProcessingTaskTitle.model_rebuild()
     ```
 
 ---
@@ -12454,41 +11854,40 @@ other properties separate.
             
             from typing import Any
             
-            from pydantic import BaseModel, EmailStr, Field, conint, constr
+            from pydantic import BaseModel, ConfigDict, EmailStr, Field, RootModel, conint, constr
             
             
-            class StringDatatype(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$') = Field(
-                    ..., description='A base string type.'
+            class StringDatatype(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+                root: constr(pattern=r'^\S(.*\S)?$') = Field(..., description='A base string type.')
+            
+            
+            class ConstrainedStringDatatype(RootModel[str]):
+                model_config = ConfigDict(
+                    regex_engine="python-re",
                 )
-            
-            
-            class ConstrainedStringDatatype(BaseModel):
-                __root__: constr(regex=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
+                root: constr(pattern=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
                     ..., description='A constrained string.'
                 )
             
             
-            class IntegerDatatype(BaseModel):
-                __root__: int = Field(..., description='A whole number.')
+            class IntegerDatatype(RootModel[int]):
+                root: int = Field(..., description='A whole number.')
             
             
-            class NonNegativeIntegerDatatype(BaseModel):
-                __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+            class NonNegativeIntegerDatatype(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Non-negative integer.')
             
             
-            class BoundedIntegerDatatype(BaseModel):
-                __root__: conint(ge=0, le=100) = Field(
-                    ..., description='Integer between 0 and 100.'
-                )
+            class BoundedIntegerDatatype(RootModel[conint(ge=0, le=100)]):
+                root: conint(ge=0, le=100) = Field(..., description='Integer between 0 and 100.')
             
             
-            class EmailDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='Email with format.')
+            class EmailDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='Email with format.')
             
             
-            class FormattedStringDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='A string with email format.')
+            class FormattedStringDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='A string with email format.')
             
             
             class ObjectBase(BaseModel):
@@ -12519,20 +11918,20 @@ other properties separate.
                 pass
             
             
-            class NumberIntegerCompatible(BaseModel):
-                __root__: conint(ge=0) = Field(
-                    ..., description='Number and integer are compatible.'
-                )
+            class NumberIntegerCompatible(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Number and integer are compatible.')
             
             
-            class RefWithSchemaKeywords(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+            class RefWithSchemaKeywords(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
                     ..., description='Ref with additional schema keywords.'
                 )
             
             
-            class ArrayDatatype(BaseModel):
-                __root__: list[str]
+            class ArrayDatatype(RootModel[list[str]]):
+                root: list[str]
             
             
             class RefToArrayAllOf(BaseModel):
@@ -12547,8 +11946,8 @@ other properties separate.
                 pass
             
             
-            class PatternPropsDatatype(BaseModel):
-                __root__: dict[constr(regex=r'^S_'), str]
+            class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
+                root: dict[constr(pattern=r'^S_'), str]
             
             
             class RefToPatternPropsAllOf(BaseModel):
@@ -12563,22 +11962,24 @@ other properties separate.
                 pass
             
             
-            class ConstraintsOnlyDatatype(BaseModel):
-                __root__: Any = Field(..., description='Constraints only, no type.')
+            class ConstraintsOnlyDatatype(RootModel[Any]):
+                root: Any = Field(..., description='Constraints only, no type.')
             
             
-            class RefToConstraintsOnlyAllOf(BaseModel):
-                __root__: Any = Field(..., description='Ref to constraints-only schema.')
+            class RefToConstraintsOnlyAllOf(RootModel[Any]):
+                root: Any = Field(..., description='Ref to constraints-only schema.')
             
             
-            class NoDescriptionAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+            class NoDescriptionAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5)]):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5) = Field(
                     ..., description='A base string type.'
                 )
             
             
-            class EmptyConstraintItemAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+            class EmptyConstraintItemAllOf(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', max_length=50)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', max_length=50) = Field(
                     ..., description='AllOf with empty constraint item.'
                 )
             
@@ -12621,41 +12022,37 @@ other properties separate.
             
             from typing import Any
             
-            from pydantic import BaseModel, EmailStr, Field, conint, constr
+            from pydantic import BaseModel, EmailStr, Field, RootModel, conint, constr
             
             
-            class StringDatatype(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$') = Field(
-                    ..., description='A base string type.'
-                )
+            class StringDatatype(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+                root: constr(pattern=r'^\S(.*\S)?$') = Field(..., description='A base string type.')
             
             
-            class ConstrainedStringDatatype(BaseModel):
-                __root__: constr(regex=r'^[A-Z].*', min_length=1) = Field(
+            class ConstrainedStringDatatype(RootModel[constr(pattern=r'^[A-Z].*', min_length=1)]):
+                root: constr(pattern=r'^[A-Z].*', min_length=1) = Field(
                     ..., description='A constrained string.'
                 )
             
             
-            class IntegerDatatype(BaseModel):
-                __root__: int = Field(..., description='A whole number.')
+            class IntegerDatatype(RootModel[int]):
+                root: int = Field(..., description='A whole number.')
             
             
-            class NonNegativeIntegerDatatype(BaseModel):
-                __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+            class NonNegativeIntegerDatatype(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Non-negative integer.')
             
             
-            class BoundedIntegerDatatype(BaseModel):
-                __root__: conint(ge=0, le=100) = Field(
-                    ..., description='Integer between 0 and 100.'
-                )
+            class BoundedIntegerDatatype(RootModel[conint(ge=0, le=100)]):
+                root: conint(ge=0, le=100) = Field(..., description='Integer between 0 and 100.')
             
             
-            class EmailDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='Email with format.')
+            class EmailDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='Email with format.')
             
             
-            class FormattedStringDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='A string with email format.')
+            class FormattedStringDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='A string with email format.')
             
             
             class ObjectBase(BaseModel):
@@ -12686,20 +12083,20 @@ other properties separate.
                 pass
             
             
-            class NumberIntegerCompatible(BaseModel):
-                __root__: conint(ge=0) = Field(
-                    ..., description='Number and integer are compatible.'
-                )
+            class NumberIntegerCompatible(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Number and integer are compatible.')
             
             
-            class RefWithSchemaKeywords(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+            class RefWithSchemaKeywords(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
                     ..., description='Ref with additional schema keywords.'
                 )
             
             
-            class ArrayDatatype(BaseModel):
-                __root__: list[str]
+            class ArrayDatatype(RootModel[list[str]]):
+                root: list[str]
             
             
             class RefToArrayAllOf(BaseModel):
@@ -12714,8 +12111,8 @@ other properties separate.
                 pass
             
             
-            class PatternPropsDatatype(BaseModel):
-                __root__: dict[constr(regex=r'^S_'), str]
+            class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
+                root: dict[constr(pattern=r'^S_'), str]
             
             
             class RefToPatternPropsAllOf(BaseModel):
@@ -12730,22 +12127,24 @@ other properties separate.
                 pass
             
             
-            class ConstraintsOnlyDatatype(BaseModel):
-                __root__: Any = Field(..., description='Constraints only, no type.')
+            class ConstraintsOnlyDatatype(RootModel[Any]):
+                root: Any = Field(..., description='Constraints only, no type.')
             
             
-            class RefToConstraintsOnlyAllOf(BaseModel):
-                __root__: Any = Field(..., description='Ref to constraints-only schema.')
+            class RefToConstraintsOnlyAllOf(RootModel[Any]):
+                root: Any = Field(..., description='Ref to constraints-only schema.')
             
             
-            class NoDescriptionAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+            class NoDescriptionAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5)]):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5) = Field(
                     ..., description='A base string type.'
                 )
             
             
-            class EmptyConstraintItemAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+            class EmptyConstraintItemAllOf(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', max_length=50)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', max_length=50) = Field(
                     ..., description='AllOf with empty constraint item.'
                 )
             
@@ -13047,7 +12446,7 @@ of Enum classes for all enumerations.
         from enum import Enum
         from typing import Literal
         
-        from pydantic import BaseModel, Field
+        from pydantic import BaseModel, Field, RootModel
         
         
         class Kind(Enum):
@@ -13065,8 +12464,8 @@ of Enum classes for all enumerations.
             boolean: Literal[True]
         
         
-        class Pets(BaseModel):
-            __root__: list[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class Kind1(Enum):
@@ -13116,12 +12515,12 @@ of Enum classes for all enumerations.
             int_42 = 42
         
         
-        class SingleEnum(BaseModel):
-            __root__: Literal['pet']
+        class SingleEnum(RootModel[Literal['pet']]):
+            root: Literal['pet']
         
         
-        class ArrayEnum(BaseModel):
-            __root__: list[Literal['cat'] | Literal['dog']]
+        class ArrayEnum(RootModel[list[Literal['cat'] | Literal['dog']]]):
+            root: list[Literal['cat'] | Literal['dog']]
         
         
         class NestedVersionEnum(Enum):
@@ -13133,17 +12532,17 @@ of Enum classes for all enumerations.
             RC4 = 'RC4'
         
         
-        class NestedVersion(BaseModel):
-            __root__: NestedVersionEnum | None = Field(
-                'RC1', description='nullable enum', example='RC2'
+        class NestedVersion(RootModel[NestedVersionEnum | None]):
+            root: NestedVersionEnum | None = Field(
+                'RC1', description='nullable enum', examples=['RC2']
             )
         
         
         class NestedNullableEnum(BaseModel):
             nested_version: NestedVersion | None = Field(
-                default_factory=lambda: NestedVersion.parse_obj('RC1'),
+                default_factory=lambda: NestedVersion('RC1'),
                 description='nullable enum',
-                example='RC2',
+                examples=['RC2'],
             )
         
         
@@ -13156,9 +12555,9 @@ of Enum classes for all enumerations.
             RC4 = 'RC4'
         
         
-        class Version(BaseModel):
-            __root__: VersionEnum | None = Field(
-                'RC1', description='nullable enum', example='RC2'
+        class Version(RootModel[VersionEnum | None]):
+            root: VersionEnum | None = Field(
+                'RC1', description='nullable enum', examples=['RC2']
             )
         ```
 
@@ -13242,36 +12641,37 @@ of Enum classes for all enumerations.
             
             from __future__ import annotations
             
-            from typing import Literal, TypeAlias
+            from typing import Literal
             
-            from pydantic import BaseModel
+            from pydantic import RootModel
+            from typing_extensions import TypeAliasType
             
-            Boolean: TypeAlias = bool
+            Boolean = TypeAliasType("Boolean", bool)
             """
             The `Boolean` scalar type represents `true` or `false`.
             """
             
             
-            String: TypeAlias = str
+            String = TypeAliasType("String", str)
             """
             The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
             """
             
             
-            class Color(BaseModel):
-                __root__: Literal['BLUE', 'GREEN', 'RED']
+            class Color(RootModel[Literal['BLUE', 'GREEN', 'RED']]):
+                root: Literal['BLUE', 'GREEN', 'RED']
             
             
-            class EmployeeShiftStatus(BaseModel):
+            class EmployeeShiftStatus(RootModel[Literal['NOT_ON_SHIFT', 'ON_SHIFT']]):
                 """
                 Employee shift status
                 """
             
-                __root__: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
+                root: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
             
             
-            class EnumWithOneField(BaseModel):
-                __root__: Literal['FIELD']
+            class EnumWithOneField(RootModel[Literal['FIELD']]):
+                root: Literal['FIELD']
             ```
 
         === "Without Option"
@@ -13284,15 +12684,16 @@ of Enum classes for all enumerations.
             from __future__ import annotations
             
             from enum import Enum
-            from typing import TypeAlias
             
-            Boolean: TypeAlias = bool
+            from typing_extensions import TypeAliasType
+            
+            Boolean = TypeAliasType("Boolean", bool)
             """
             The `Boolean` scalar type represents `true` or `false`.
             """
             
             
-            String: TypeAlias = str
+            String = TypeAliasType("String", str)
             """
             The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
             """
@@ -13452,36 +12853,35 @@ defined enum members.
         
         from __future__ import annotations
         
-        from typing import TypeAlias
+        from pydantic import RootModel
+        from typing_extensions import TypeAliasType
         
-        from pydantic import BaseModel
-        
-        Boolean: TypeAlias = bool
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
         
         
-        class Color(BaseModel):
-            __root__: str
+        class Color(RootModel[str]):
+            root: str
         
         
-        class EmployeeShiftStatus(BaseModel):
+        class EmployeeShiftStatus(RootModel[str]):
             """
             Employee shift status
             """
         
-            __root__: str
+            root: str
         
         
-        class EnumWithOneField(BaseModel):
-            __root__: str
+        class EnumWithOneField(RootModel[str]):
+            root: str
         ```
 
     === "Without Option"
@@ -13494,15 +12894,16 @@ defined enum members.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import TypeAlias
         
-        Boolean: TypeAlias = bool
+        from typing_extensions import TypeAliasType
+        
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -13742,7 +13143,7 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         from enum import Enum
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class IntEnum(Enum):
@@ -13780,12 +13181,12 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         
         class Model(BaseModel):
-            IntEnum: IntEnum | None = None
-            FloatEnum: FloatEnum | None = None
-            StrEnum: StrEnum | None = None
-            NonTypedEnum: NonTypedEnum | None = None
-            BooleanEnum: BooleanEnum | None = None
-            UnknownEnum: UnknownEnum | None = None
+            IntEnum_1: IntEnum | None = Field(None, alias='IntEnum')
+            FloatEnum_1: FloatEnum | None = Field(None, alias='FloatEnum')
+            StrEnum_1: StrEnum | None = Field(None, alias='StrEnum')
+            NonTypedEnum_1: NonTypedEnum | None = Field(None, alias='NonTypedEnum')
+            BooleanEnum_1: BooleanEnum | None = Field(None, alias='BooleanEnum')
+            UnknownEnum_1: UnknownEnum | None = Field(None, alias='UnknownEnum')
         ```
 
     === "GraphQL"
@@ -13822,15 +13223,16 @@ Python 3.11+, falling back to standard Enum classes instead.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import TypeAlias
         
-        Boolean: TypeAlias = bool
+        from typing_extensions import TypeAliasType
+        
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -14489,12 +13891,14 @@ in Pydantic models, ensuring values match exactly without automatic conversion.
     
     
     class User(BaseModel):
-        name: StrictStr | None = Field(None, example='ken')
+        name: StrictStr | None = Field(None, examples=['ken'])
         age: StrictInt | None = None
         salary: conint(ge=0, strict=True) | None = None
         debt: conint(le=0, strict=True) | None = None
         loan: confloat(le=0.0, strict=True) | None = None
-        tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True) | None = None
+        tel: constr(
+            pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True
+        ) | None = None
         height: confloat(ge=0.0, strict=True) | None = None
         weight: confloat(ge=0.0, strict=True) | None = None
         score: confloat(ge=1e-08, strict=True) | None = None
@@ -14639,11 +14043,11 @@ instead of generating them.
     from typing import Any
     
     from my_app.types import CustomType
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
-    class Model(BaseModel):
-        __root__: Any
+    class Model(RootModel[Any]):
+        root: Any
     
     
     class User(BaseModel):
@@ -14919,7 +14323,7 @@ syntax instead of default values. This also enables `--field-constraints`.
         
         from typing import Annotated
         
-        from pydantic import AnyUrl, BaseModel, Field
+        from pydantic import AnyUrl, BaseModel, Field, RootModel
         
         
         class Pet(BaseModel):
@@ -14928,20 +14332,20 @@ syntax instead of default values. This also enables `--field-constraints`.
             tag: Annotated[str | None, Field(max_length=64)] = None
         
         
-        class Pets(BaseModel):
-            __root__: Annotated[list[Pet], Field(max_items=10, min_items=1, unique_items=True)]
+        class Pets(RootModel[list[Pet]]):
+            root: Annotated[list[Pet], Field(max_length=10, min_length=1)]
         
         
-        class UID(BaseModel):
-            __root__: Annotated[int, Field(ge=0)]
+        class UID(RootModel[int]):
+            root: Annotated[int, Field(ge=0)]
         
         
-        class Phone(BaseModel):
-            __root__: Annotated[str, Field(min_length=3)]
+        class Phone(RootModel[str]):
+            root: Annotated[str, Field(min_length=3)]
         
         
-        class FaxItem(BaseModel):
-            __root__: Annotated[str, Field(min_length=3)]
+        class FaxItem(RootModel[str]):
+            root: Annotated[str, Field(min_length=3)]
         
         
         class User(BaseModel):
@@ -14949,7 +14353,7 @@ syntax instead of default values. This also enables `--field-constraints`.
             name: Annotated[str, Field(max_length=256)]
             tag: Annotated[str | None, Field(max_length=64)] = None
             uid: UID
-            phones: Annotated[list[Phone] | None, Field(max_items=10)] = None
+            phones: Annotated[list[Phone] | None, Field(max_length=10)] = None
             fax: list[FaxItem] | None = None
             height: Annotated[int | float | None, Field(ge=1.0, le=300.0)] = None
             weight: Annotated[float | int | None, Field(ge=1.0, le=1000.0)] = None
@@ -14957,16 +14361,16 @@ syntax instead of default values. This also enables `--field-constraints`.
             rating: Annotated[float | None, Field(gt=0.0, le=5.0)] = None
         
         
-        class Users(BaseModel):
-            __root__: list[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
-        class Id(BaseModel):
-            __root__: str
+        class Id(RootModel[str]):
+            root: str
         
         
-        class Rules(BaseModel):
-            __root__: list[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -14989,8 +14393,8 @@ syntax instead of default values. This also enables `--field-constraints`.
             ] = None
         
         
-        class Apis(BaseModel):
-            __root__: list[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -15618,13 +15022,13 @@ working with the pendulum library for enhanced timezone and date handling.
     
     from __future__ import annotations
     
-    from pendulum import Date, DateTime, Duration
-    from pydantic import BaseModel
+    from pendulum import Date, Duration
+    from pydantic import AwareDatetime, BaseModel
     
     
     class Event(BaseModel):
         name: str
-        created_at: DateTime
+        created_at: AwareDatetime
         event_date: Date | None = None
         duration: Duration | None = None
     ```
@@ -15784,7 +15188,7 @@ This is the default behavior for Python 3.11+ targets.
     
     from enum import Enum, IntEnum, StrEnum
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, Field
     
     
     class IntEnumModel(IntEnum):
@@ -15823,11 +15227,11 @@ This is the default behavior for Python 3.11+ targets.
     
     class Model(BaseModel):
         IntEnum: IntEnumModel | None = None
-        FloatEnum: FloatEnum | None = None
+        FloatEnum_1: FloatEnum | None = Field(None, alias='FloatEnum')
         StrEnum: StrEnumModel | None = None
-        NonTypedEnum: NonTypedEnum | None = None
-        BooleanEnum: BooleanEnum | None = None
-        UnknownEnum: UnknownEnum | None = None
+        NonTypedEnum_1: NonTypedEnum | None = Field(None, alias='NonTypedEnum')
+        BooleanEnum_1: BooleanEnum | None = Field(None, alias='BooleanEnum')
+        UnknownEnum_1: UnknownEnum | None = Field(None, alias='UnknownEnum')
     ```
 
 ---
@@ -16233,26 +15637,30 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, TypeAlias
+        from typing import Annotated, Any
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Model: TypeAlias = Any
-        
-        
-        SimpleString: TypeAlias = str
+        Model = TypeAliasType("Model", Any)
         
         
-        UnionType: TypeAlias = str | int
+        SimpleString = TypeAliasType("SimpleString", str)
         
         
-        ArrayType: TypeAlias = list[str]
+        UnionType = TypeAliasType("UnionType", str | int)
         
         
-        AnnotatedType: TypeAlias = Annotated[
-            str | bool,
-            Field(..., description='An annotated union type', title='MyAnnotatedType'),
-        ]
+        ArrayType = TypeAliasType("ArrayType", list[str])
+        
+        
+        AnnotatedType = TypeAliasType(
+            "AnnotatedType",
+            Annotated[
+                str | bool,
+                Field(..., description='An annotated union type', title='MyAnnotatedType'),
+            ],
+        )
         
         
         class ModelWithTypeAliasField(BaseModel):
@@ -16297,26 +15705,27 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Literal, TypeAlias, Union
+        from typing import Literal, Union
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Boolean: TypeAlias = bool
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        Int: TypeAlias = int
+        Int = TypeAliasType("Int", int)
         """
         The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
         """
         
         
-        SimpleString: TypeAlias = str
+        SimpleString = TypeAliasType("SimpleString", str)
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -16334,10 +15743,13 @@ syntax. This feature is experimental.
             typename__: Literal['Pet'] | None = Field('Pet', alias='__typename')
         
         
-        UnionType: TypeAlias = Union[
-            'Person',
-            'Pet',
-        ]
+        UnionType = TypeAliasType(
+            "UnionType",
+            Union[
+                'Person',
+                'Pet',
+            ],
+        )
         
         
         class ModelWithTypeAliasField(BaseModel):
@@ -16849,30 +16261,31 @@ is useful when using custom types defined in external modules (e.g.,
     from __future__ import annotations
     
     from datetime import date, datetime
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
     from mymodule.myclass import MyCustomPythonClass
     from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    Date: TypeAlias = date
+    Date = TypeAliasType("Date", date)
     
     
-    DateTime: TypeAlias = datetime
+    DateTime = TypeAliasType("DateTime", datetime)
     """
     DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)
     """
     
     
-    MyCustomClass: TypeAlias = MyCustomPythonClass
+    MyCustomClass = TypeAliasType("MyCustomClass", MyCustomPythonClass)
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -17247,7 +16660,7 @@ to be inserted at the top of generated Python files.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -17256,8 +16669,8 @@ to be inserted at the top of generated Python files.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -17266,16 +16679,16 @@ to be inserted at the top of generated Python files.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -17298,8 +16711,8 @@ to be inserted at the top of generated Python files.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -17355,26 +16768,27 @@ formatting rules beyond what black/isort provide.
     # a comment
     from __future__ import annotations
     
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
     from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    ID: TypeAlias = str
+    ID = TypeAliasType("ID", str)
     """
     The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
     """
     
     
-    Long: TypeAlias = str
+    Long = TypeAliasType("Long", str)
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -17666,17 +17080,21 @@ to the templates.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
     
     
     class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            coerce_numbers_to_str=True,
+        )
         id: int
         name: str
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -17685,16 +17103,16 @@ to the templates.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -17703,14 +17121,22 @@ to the templates.
     
     
     class Api(BaseModel):
-        apiKey: str | None = None
-        apiVersionNumber: str | None = None
-        apiUrl: AnyUrl | None = None
-        apiDocumentationUrl: AnyUrl | None = None
+        apiKey: str | None = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: str | None = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: AnyUrl | None = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: AnyUrl | None = Field(
+            None, description='A URL to the API console for each API'
+        )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -17982,7 +17408,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -17991,20 +17417,20 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         tag: str | None = Field(None, max_length=64)
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet] = Field(..., max_length=10, min_length=1)
     
     
-    class UID(BaseModel):
-        __root__: int = Field(..., ge=0)
+    class UID(RootModel[int]):
+        root: int = Field(..., ge=0)
     
     
-    class Phone(BaseModel):
-        __root__: str = Field(..., min_length=3)
+    class Phone(RootModel[str]):
+        root: str = Field(..., min_length=3)
     
     
-    class Fax(BaseModel):
-        __root__: str = Field(..., min_length=3)
+    class Fax(RootModel[str]):
+        root: str = Field(..., min_length=3)
     
     
     class User(BaseModel):
@@ -18012,7 +17438,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         name: str = Field(..., max_length=256)
         tag: str | None = Field(None, max_length=64)
         uid: UID
-        phones: list[Phone] | None = Field(None, max_items=10)
+        phones: list[Phone] | None = Field(None, max_length=10)
         fax: list[Fax] | None = None
         height: int | float | None = Field(None, ge=1.0, le=300.0)
         weight: float | int | None = Field(None, ge=1.0, le=1000.0)
@@ -18020,16 +17446,16 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         rating: float | None = Field(None, gt=0.0, le=5.0)
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -18052,8 +17478,8 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -18126,15 +17552,16 @@ The `--disable-timestamp` flag configures the code generation behavior.
     class Info(BaseModel):
         hostName: (
             constr(
-                regex=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'
+                pattern=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'
             )
             | None
         ) = None
         arn: (
-            constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$') | None
+            constr(pattern=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$')
+            | None
         ) = None
-        tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
-        comment: constr(regex=r'[^\x08\f\n\r\t\\a+.?\'"|()]+$') | None = None
+        tel: constr(pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+        comment: constr(pattern=r'[^\x08\f\n\r\t\\a+.?\'"|()]+$') | None = None
     ```
 
 ---
@@ -18350,7 +17777,7 @@ the file to the header, making it easy to reproduce the generation.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -18359,8 +17786,8 @@ the file to the header, making it easy to reproduce the generation.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -18369,16 +17796,16 @@ the file to the header, making it easy to reproduce the generation.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -18401,8 +17828,8 @@ the file to the header, making it easy to reproduce the generation.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -18625,7 +18052,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -18634,8 +18061,8 @@ The `--enable-version-header` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -18644,16 +18071,16 @@ The `--enable-version-header` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -18676,8 +18103,8 @@ The `--enable-version-header` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -18895,81 +18322,6 @@ model settings like Config classes, enabling customization beyond standard optio
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api.yaml
-        #   timestamp: 1985-10-26T08:21:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
-            class Config:
-                arbitrary_types_allowed = True
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Pets(BaseModel):
-            __root__: list[Pet]
-        
-        
-        class User(BaseModel):
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Users(BaseModel):
-            __root__: list[User]
-        
-        
-        class Id(BaseModel):
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            __root__: list[str]
-        
-        
-        class Error(BaseModel):
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            apiKey: str | None = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: str | None = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: AnyUrl | None = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: AnyUrl | None = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            __root__: list[Api]
-        
-        
-        class Event(BaseModel):
-            name: str | None = None
-        
-        
-        class Result(BaseModel):
-            event: Event | None = None
-        ```
 
     === "Pydantic v2"
 
@@ -19331,26 +18683,22 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     from typing import Literal
     
-    from pydantic import BaseModel, Field, confloat
+    from pydantic import BaseModel, Field, RootModel, confloat
     
     
     class MapState1(BaseModel):
-        map_view_mode: Literal["MODE_2D"] = Field(
-            "MODE_2D", alias="mapViewMode", const=True
-        )
+        map_view_mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")
     
     
     class MapState2(BaseModel):
         latitude: Latitude
         longitude: Longitude
-        zoom: Zoom | None = Field(default_factory=lambda: Zoom.parse_obj(0))
+        zoom: Zoom | None = Field(default_factory=lambda: Zoom(0))
         bearing: Bearing | None = None
         pitch: Pitch
         drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
-        map_split_mode: Literal["SWIPE_COMPARE"] = Field(
-            "SWIPE_COMPARE", alias="mapSplitMode", const=True
-        )
-        is_split: Literal[True] = Field(True, alias="isSplit", const=True)
+        map_split_mode: Literal["SWIPE_COMPARE"] = Field(..., alias="mapSplitMode")
+        is_split: Literal[True] = Field(True, alias="isSplit")
     
     
     class MapState3(BaseModel):
@@ -19373,34 +18721,32 @@ helps maintain consistency with codebases that prefer double-quote formatting.
         pass
     
     
-    class MapState(BaseModel):
-        __root__: MapState4 | MapState5 | MapState6 | MapState7 = Field(
-            ..., title="MapState"
-        )
+    class MapState(RootModel[MapState4 | MapState5 | MapState6 | MapState7]):
+        root: MapState4 | MapState5 | MapState6 | MapState7 = Field(..., title="MapState")
     
     
-    class Bearing(BaseModel):
-        __root__: float
+    class Bearing(RootModel[float]):
+        root: float
     
     
-    class DragRotate(BaseModel):
-        __root__: bool
+    class DragRotate(RootModel[bool]):
+        root: bool
     
     
-    class Latitude(BaseModel):
-        __root__: confloat(ge=-90.0, le=90.0)
+    class Latitude(RootModel[confloat(ge=-90.0, le=90.0)]):
+        root: confloat(ge=-90.0, le=90.0)
     
     
-    class Longitude(BaseModel):
-        __root__: confloat(ge=-180.0, le=180.0)
+    class Longitude(RootModel[confloat(ge=-180.0, le=180.0)]):
+        root: confloat(ge=-180.0, le=180.0)
     
     
-    class Pitch(BaseModel):
-        __root__: confloat(ge=0.0, lt=90.0)
+    class Pitch(RootModel[confloat(ge=0.0, lt=90.0)]):
+        root: confloat(ge=0.0, lt=90.0)
     
     
-    class Zoom(BaseModel):
-        __root__: confloat(ge=0.0, le=25.0) = 0
+    class Zoom(RootModel[confloat(ge=0.0, le=25.0)]):
+        root: confloat(ge=0.0, le=25.0) = 0
     ```
 
 ---
@@ -20131,7 +19477,7 @@ The `--openapi-include-paths` flag allows filtering which paths are processed.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
     class Pet(BaseModel):
@@ -20150,8 +19496,8 @@ The `--openapi-include-paths` flag allows filtering which paths are processed.
         age: int | None = None
     
     
-    class PetsGetResponse(BaseModel):
-        __root__: list[Pet]
+    class PetsGetResponse(RootModel[list[Pet]]):
+        root: list[Pet]
     ```
 
 ---
@@ -20552,9 +19898,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from datetime import datetime
-    
-    from pydantic import BaseModel
+    from pydantic import AwareDatetime, BaseModel, RootModel
     
     
     class Pet(BaseModel):
@@ -20573,44 +19917,44 @@ The `--openapi-scopes` flag configures the code generation behavior.
         age: int | None = None
     
     
-    class PetsGetResponse(BaseModel):
-        __root__: list[Pet]
+    class PetsGetResponse(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
-    class FoodFoodIdGetResponse(BaseModel):
-        __root__: list[int]
+    class FoodFoodIdGetResponse(RootModel[list[int]]):
+        root: list[int]
     
     
     class UserGetResponse(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
     class UserPostRequest(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
     class UsersGetResponseItem(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
-    class UsersGetResponse(BaseModel):
-        __root__: list[UsersGetResponseItem]
+    class UsersGetResponse(RootModel[list[UsersGetResponseItem]]):
+        root: list[UsersGetResponseItem]
     
     
     class UsersPostRequestItem(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
-    class UsersPostRequest(BaseModel):
-        __root__: list[UsersPostRequestItem]
+    class UsersPostRequest(RootModel[list[UsersPostRequestItem]]):
+        root: list[UsersPostRequestItem]
     ```
 
 ---
@@ -20907,7 +20251,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -20916,8 +20260,8 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -20926,16 +20270,16 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -20958,8 +20302,8 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -21281,7 +20625,7 @@ The `--validation` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -21290,8 +20634,8 @@ The `--validation` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -21300,16 +20644,16 @@ The `--validation` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -21332,8 +20676,8 @@ The `--validation` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -21405,23 +20749,22 @@ don't expect this field in input data.
     
     from __future__ import annotations
     
-    from typing import TypeAlias
-    
     from pydantic import BaseModel
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    ID: TypeAlias = str
+    ID = TypeAliasType("ID", str)
     """
     The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
     """
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -21802,17 +21145,17 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     from . import models
     
     
-    class Optional(BaseModel):
-        __root__: str
+    class Optional(RootModel[str]):
+        root: str
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
     class Error(BaseModel):
@@ -21856,11 +21199,11 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
         optional: list[Optional] | None = None
     
     
-    class List(BaseModel):
-        __root__: list[Tea_1]
+    class List(RootModel[list[Tea_1]]):
+        root: list[Tea_1]
     
     
-    Tea_1.update_forward_refs()
+    Tea_1.model_rebuild()
     
     # bar.py
     # generated by datamodel-codegen:
@@ -21868,11 +21211,11 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel, Field
+    from pydantic import Field, RootModel
     
     
-    class FieldModel(BaseModel):
-        __root__: str = Field(..., example='green')
+    class FieldModel(RootModel[str]):
+        root: str = Field(..., examples=['green'])
     
     # collections.py
     # generated by datamodel-codegen:
@@ -21882,21 +21225,21 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
     
     from enum import Enum
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     from . import models
     
     
-    class Pets(BaseModel):
-        __root__: list[models.Pet]
+    class Pets(RootModel[list[models.Pet]]):
+        root: list[models.Pet]
     
     
-    class Users(BaseModel):
-        __root__: list[models.User]
+    class Users(RootModel[list[models.User]]):
+        root: list[models.User]
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Stage(Enum):
@@ -21922,8 +21265,8 @@ uses the complete module path. Requires `--all-exports-scope=recursive`.
         stage: Stage | None = None
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     # foo/__init__.py
     # generated by datamodel-codegen:
@@ -22371,17 +21714,17 @@ Use 'recursive' to include all descendant exports with collision handling.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     from . import models
     
     
-    class Optional(BaseModel):
-        __root__: str
+    class Optional(RootModel[str]):
+        root: str
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
     class Error(BaseModel):
@@ -22425,11 +21768,11 @@ Use 'recursive' to include all descendant exports with collision handling.
         optional: list[Optional] | None = None
     
     
-    class List(BaseModel):
-        __root__: list[Tea_1]
+    class List(RootModel[list[Tea_1]]):
+        root: list[Tea_1]
     
     
-    Tea_1.update_forward_refs()
+    Tea_1.model_rebuild()
     
     # bar.py
     # generated by datamodel-codegen:
@@ -22437,11 +21780,11 @@ Use 'recursive' to include all descendant exports with collision handling.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel, Field
+    from pydantic import Field, RootModel
     
     
-    class FieldModel(BaseModel):
-        __root__: str = Field(..., example='green')
+    class FieldModel(RootModel[str]):
+        root: str = Field(..., examples=['green'])
     
     # collections.py
     # generated by datamodel-codegen:
@@ -22451,21 +21794,21 @@ Use 'recursive' to include all descendant exports with collision handling.
     
     from enum import Enum
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     from . import models
     
     
-    class Pets(BaseModel):
-        __root__: list[models.Pet]
+    class Pets(RootModel[list[models.Pet]]):
+        root: list[models.Pet]
     
     
-    class Users(BaseModel):
-        __root__: list[models.User]
+    class Users(RootModel[list[models.User]]):
+        root: list[models.User]
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Stage(Enum):
@@ -22491,8 +21834,8 @@ Use 'recursive' to include all descendant exports with collision handling.
         stage: Stage | None = None
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     # foo/__init__.py
     # generated by datamodel-codegen:
@@ -23250,11 +22593,11 @@ create an __init__.py that re-exports all models for convenient imports.
     
     from typing import Any
     
-    from pydantic import BaseModel
+    from pydantic import RootModel
     
     
-    class Model(BaseModel):
-        __root__: Any
+    class Model(RootModel[Any]):
+        root: Any
     
     # order.py
     # generated by datamodel-codegen:
@@ -23655,8 +22998,8 @@ file. Each profile can override the default settings with its own set of options
     strict-nullable = true
 
     [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile for Pydantic v1
-    output-model-type = "pydantic.BaseModel"
+    # Legacy profile
+    output-model-type = "pydantic_v2.BaseModel"
     ```
 
     Use profiles:
@@ -23806,7 +23149,7 @@ datamodel-codegen [OPTIONS]
 | [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
 | [`--dataclass-arguments`](model-customization.md#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
-| [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutation=False). |
+| [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](model-customization.md#force-optional) | Force all fields to be Optional regardless of required status. |
 | [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only fields. |
 | [`--keep-model-order`](model-customization.md#keep-model-order) | Keep model definition order as specified in schema. |
@@ -23814,7 +23157,7 @@ datamodel-codegen [OPTIONS]
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
-| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec). |
+| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec). |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
 | [`--reuse-model`](model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
 | [`--reuse-scope`](model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -23947,7 +23290,7 @@ All options sorted alphabetically:
 - [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) - Customize suffix for duplicate model names.
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
 - [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
-- [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic v1 models (allow_mutati...
+- [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic models (frozen=True).
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...
@@ -23998,7 +23341,7 @@ All options sorted alphabetically:
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
-- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v1/v2, dataclasses, T...
+- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, dataclasses, Type...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
 - [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) - Generate separate request and response models for readOnly/w...
@@ -24189,8 +23532,8 @@ file. Each profile can override the default settings with its own set of options
     strict-nullable = true
 
     [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile for Pydantic v1
-    output-model-type = "pydantic.BaseModel"
+    # Legacy profile
+    output-model-type = "pydantic_v2.BaseModel"
     ```
 
     Use profiles:
@@ -24849,7 +24192,7 @@ If a schema named `UserRequest` or `UserResponse` already exists, the generated 
 
 This option works with all output formats:
 
-- `pydantic.BaseModel` / `pydantic_v2.BaseModel`
+- `pydantic_v2.BaseModel`
 - `dataclasses.dataclass`
 - `typing.TypedDict`
 - `msgspec.Struct`
@@ -25732,7 +25075,6 @@ datamodel-code-generator supports multiple output model types. This page compare
 |------------|------------|---------------|-------------|----------|
 | **Pydantic v2** | Runtime | Built-in | Fast | New projects, APIs, data validation |
 | **Pydantic v2 dataclass** | Runtime | Built-in | Fast | Pydantic validation with dataclass syntax |
-| **Pydantic v1** | Runtime | Built-in | Moderate | Legacy compatibility |
 | **dataclasses** | None | Manual | Fastest | Simple data containers, no validation needed |
 | **TypedDict** | Static only | Dict-compatible | N/A | Type hints for dicts, JSON APIs |
 | **msgspec** | Runtime | Built-in | Fastest | High-performance serialization |
@@ -25763,7 +25105,7 @@ class Pets(RootModel[list[Pet]]):
 
 ### When to use
 
-- New projects without Pydantic v1 dependencies
+- New projects requiring data validation
 - APIs requiring data validation
 - Projects needing JSON Schema generation from models
 
@@ -25795,47 +25137,6 @@ class Pet:
 - Want to use dataclass syntax with Pydantic validation
 - Migrating from dataclasses but need validation
 - Prefer decorator-based class definition
-
----
-
-## Pydantic v1
-
-**Use `--output-model-type pydantic.BaseModel`** (default)
-
-Pydantic v1 is the default for backward compatibility with existing codebases.
-
-```bash
-datamodel-codegen --input schema.json --output-model-type pydantic.BaseModel --output model.py
-```
-
-```python
-from pydantic import BaseModel, Field
-
-class Pet(BaseModel):
-    id: int = Field(..., ge=0)
-    name: str = Field(..., max_length=256)
-    tag: Optional[str] = None
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-```
-
-### Migration from v1 to v2
-
-Key differences when migrating:
-
-| v1 | v2 | Notes |
-|----|----|----|
-| `__root__` | `RootModel` | Custom root types now use `RootModel` class |
-| `const` | Removed | Use `Literal` types instead |
-| `min_items` | `min_length` | |
-| `max_items` | `max_length` | |
-| `unique_items` | Removed | List replaced by `set` type |
-| `allow_mutation` | `frozen` | Inverse value |
-| `regex` | `pattern` | |
-| `pydantic.Config` | `pydantic.ConfigDict` | |
-
-See [Pydantic v2 Migration Guide](https://docs.pydantic.dev/2.0/migration/) for details.
 
 ---
 
@@ -25946,9 +25247,7 @@ graph TD
     A[Need runtime validation?] -->|Yes| B[Need best performance?]
     A -->|No| C[Need type hints for dicts?]
     B -->|Yes| D[msgspec.Struct]
-    B -->|No| E[Pydantic v1 dependency?]
-    E -->|Yes| F[pydantic.BaseModel]
-    E -->|No| G[Prefer dataclass syntax?]
+    B -->|No| G[Prefer dataclass syntax?]
     G -->|Yes| H[pydantic_v2.dataclass]
     G -->|No| I[pydantic_v2.BaseModel]
     C -->|Yes| J[typing.TypedDict]
@@ -25959,10 +25258,9 @@ graph TD
 
 1. **API with validation** → Pydantic v2
 2. **Validation with dataclass syntax** → Pydantic v2 dataclass
-3. **Legacy Pydantic v1 project** → Pydantic v1
-4. **High-performance serialization** → msgspec
-5. **Simple data containers** → dataclasses
-6. **Dict-based JSON handling** → TypedDict
+3. **High-performance serialization** → msgspec
+4. **Simple data containers** → dataclasses
+5. **Dict-based JSON handling** → TypedDict
 
 ---
 
@@ -27232,7 +26530,6 @@ class User(BaseModel):
 
 - Compatibility with runtime annotation inspection
 - Libraries that don't support `__future__.annotations`
-- Pydantic v1 in some configurations
 - When using `get_type_hints()` at runtime
 
 ---
@@ -27347,7 +26644,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
 **Solutions:**
 
 1. **Upgrade Pydantic** (recommended):
-   - Pydantic v1: Upgrade to version 1.10.18 or later
    - Pydantic v2: Upgrade to the latest version
 
 2. **Use `--disable-future-imports`** as a workaround:
@@ -27360,9 +26656,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
    # pyproject.toml
    [tool.pytest.ini_options]
    filterwarnings = [
-       # For Pydantic v2's v1 compatibility layer (pydantic.v1)
-       "ignore::DeprecationWarning:pydantic.v1.typing",
-       # For standalone Pydantic v1
        "ignore::DeprecationWarning:pydantic.typing",
    ]
    ```
@@ -27404,8 +26697,6 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - 📌 RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See [Named Type Aliases](https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases) for details.
 - 🚫 Type aliases do not support some RootModel features (e.g. `model_config`)
 - 📄 A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
-- ❌ Type aliases cannot be combined with `Annotated` for Pydantic v1
-
 ## 📊 Type Alias Behavior by Output Type and Python Version
 
 The type of type alias generated depends on the output model type and target Python version:
@@ -27413,7 +26704,6 @@ The type of type alias generated depends on the output model type and target Pyt
 | Output Type | Python 3.12+ | Python 3.10-3.11 |
 |-------------|--------------|------------------|
 | **Pydantic v2** | `type` statement | `TypeAliasType` (typing_extensions) |
-| **Pydantic v1** | `TypeAlias` | `TypeAlias` |
 | **TypedDict** | `type` statement | `TypeAlias` |
 | **dataclasses** | `type` statement | `TypeAlias` |
 | **msgspec** | `type` statement | `TypeAlias` |
@@ -27450,76 +26740,6 @@ The type of type alias generated depends on the output model type and target Pyt
     }
   }
 }
-```
-
-### 🔹 Pydantic v1
-
-#### Generating RootModel
-
-```bash
-datamodel-codegen --input model.json --input-file-type jsonschema --output model.py
-```
-
-### ✨ Generated model.py (Pydantic v1)
-
-```python
-# generated by datamodel-codegen:
-#   filename:  model.json
-
-from __future__ import annotations
-
-from typing import Any, Optional, Union
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    __root__: Any
-
-
-class UserId(BaseModel):
-    __root__: str
-
-
-class Status(BaseModel):
-    __root__: Union[str, int]
-
-
-class User(BaseModel):
-    id: Optional[UserId] = None
-    status: Optional[Status] = None
-```
-
-#### Generating TypeAlias annotation
-
-```bash
-datamodel-codegen --input model.json --input-file-type jsonschema --use-type-alias --output model.py
-```
-
-### ✨ Generated model.py (Python 3.10+)
-
-```python
-# generated by datamodel-codegen:
-#   filename:  model.json
-
-from __future__ import annotations
-
-from typing import Any, Optional, TypeAlias, Union
-
-from pydantic import BaseModel
-
-Model: TypeAlias = Any
-
-
-UserId: TypeAlias = str
-
-
-Status: TypeAlias = Union[str, int]
-
-
-class User(BaseModel):
-    id: Optional[UserId] = None
-    status: Optional[Status] = None
 ```
 
 ### 🔸 Pydantic v2
@@ -29085,9 +28305,7 @@ pip install 'datamodel-code-generator[http]'
 When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
 
 !!! note
-    `GenerateConfig` is only available in Pydantic v2 environments.
-    For Pydantic v1, use `from datamodel_code_generator.config import GenerateConfig`
-    and call `update_forward_refs()` before use.
+    `GenerateConfig` requires a Pydantic v2 environment.
 
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType
@@ -29614,7 +28832,7 @@ assert all(r is results[0] for r in results)
 
 | Limitation | Details |
 |------------|---------|
-| Pydantic v2 only | Pydantic v1 is not supported |
+| Pydantic v2 only | Only Pydantic v2 is supported |
 | Not pickle-able | Use `model_dump()` to serialize instances |
 | Dict input only | Schema must be a `dict`, not a file path or string |
 
@@ -29626,7 +28844,7 @@ assert all(r is results[0] for r in results)
 | Use case | Code generation, file output | Runtime validation |
 | Caching | No | Yes (configurable) |
 | Thread-safe | Yes | Yes |
-| Pydantic v1 | Yes | No |
+| Pydantic v2 | Yes | Yes |
 
 ## See Also
 
@@ -29807,7 +29025,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
 | `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `json`, `yaml`, `csv`, `graphql`) |
-| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
+| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
 | `profile` | No | - | Named profile from `pyproject.toml` |
@@ -30584,7 +29802,6 @@ See [Model Reuse and Deduplication](model-reuse.md) for details.
 ### 🤷 Which output model type should I use?
 
 - **Pydantic v2** (`pydantic_v2.BaseModel`): ✨ Recommended for new projects. Better performance and modern API.
-- **Pydantic v1** (`pydantic.BaseModel`): 🔄 Default for backward compatibility with existing codebases.
 - **dataclasses**: Simple data containers without validation.
 - **TypedDict**: Type hints for dict structures.
 - **msgspec**: High-performance serialization.
@@ -30596,7 +29813,7 @@ See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a deta
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 ```
 
-See [Pydantic v1 vs v2](what_is_the_difference_between_v1_and_v2.md) for migration details.
+See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for more details.
 
 📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
 
@@ -30610,9 +29827,6 @@ python -c "import pydantic; print(pydantic.VERSION)"
 
 # Generate for Pydantic v2
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# Generate for Pydantic v1
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 ```
 
 ---
