@@ -10,7 +10,6 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-[![Pydantic v1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json)](https://pydantic.dev)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -19,7 +18,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
-- 🎯 Generates **Pydantic v1/v2**, **dataclasses**, **TypedDict**, or **msgspec** output
+- 🎯 Generates **Pydantic v2**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
 
@@ -67,7 +66,6 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 !!! warning "Omitting --output-model-type is deprecated"
     Starting from version 0.53.0, omitting `--output-model-type` is deprecated.
-    The implicit default `pydantic.BaseModel` (Pydantic v1) will be removed in a future version.
 
     We recommend using `--output-model-type pydantic_v2.BaseModel` for new projects.
 
@@ -114,9 +112,6 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 ```bash
 # 🆕 Pydantic v2 (recommended for new projects)
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# 🔄 Pydantic v1 (default, for compatibility)
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 
 # 🏗️ Python dataclasses
 datamodel-codegen --output-model-type dataclasses.dataclass ...
@@ -23003,8 +22998,8 @@ file. Each profile can override the default settings with its own set of options
     strict-nullable = true
 
     [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile for Pydantic v1
-    output-model-type = "pydantic.BaseModel"
+    # Legacy profile
+    output-model-type = "pydantic_v2.BaseModel"
     ```
 
     Use profiles:
@@ -23537,8 +23532,8 @@ file. Each profile can override the default settings with its own set of options
     strict-nullable = true
 
     [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile for Pydantic v1
-    output-model-type = "pydantic.BaseModel"
+    # Legacy profile
+    output-model-type = "pydantic_v2.BaseModel"
     ```
 
     Use profiles:
@@ -24197,7 +24192,7 @@ If a schema named `UserRequest` or `UserResponse` already exists, the generated 
 
 This option works with all output formats:
 
-- `pydantic.BaseModel` / `pydantic_v2.BaseModel`
+- `pydantic_v2.BaseModel`
 - `dataclasses.dataclass`
 - `typing.TypedDict`
 - `msgspec.Struct`
@@ -25080,7 +25075,6 @@ datamodel-code-generator supports multiple output model types. This page compare
 |------------|------------|---------------|-------------|----------|
 | **Pydantic v2** | Runtime | Built-in | Fast | New projects, APIs, data validation |
 | **Pydantic v2 dataclass** | Runtime | Built-in | Fast | Pydantic validation with dataclass syntax |
-| **Pydantic v1** | Runtime | Built-in | Moderate | Legacy compatibility |
 | **dataclasses** | None | Manual | Fastest | Simple data containers, no validation needed |
 | **TypedDict** | Static only | Dict-compatible | N/A | Type hints for dicts, JSON APIs |
 | **msgspec** | Runtime | Built-in | Fastest | High-performance serialization |
@@ -25111,7 +25105,7 @@ class Pets(RootModel[list[Pet]]):
 
 ### When to use
 
-- New projects without Pydantic v1 dependencies
+- New projects requiring data validation
 - APIs requiring data validation
 - Projects needing JSON Schema generation from models
 
@@ -25143,47 +25137,6 @@ class Pet:
 - Want to use dataclass syntax with Pydantic validation
 - Migrating from dataclasses but need validation
 - Prefer decorator-based class definition
-
----
-
-## Pydantic v1
-
-**Use `--output-model-type pydantic.BaseModel`** (default)
-
-Pydantic v1 is the default for backward compatibility with existing codebases.
-
-```bash
-datamodel-codegen --input schema.json --output-model-type pydantic.BaseModel --output model.py
-```
-
-```python
-from pydantic import BaseModel, Field
-
-class Pet(BaseModel):
-    id: int = Field(..., ge=0)
-    name: str = Field(..., max_length=256)
-    tag: Optional[str] = None
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-```
-
-### Migration from v1 to v2
-
-Key differences when migrating:
-
-| v1 | v2 | Notes |
-|----|----|----|
-| `__root__` | `RootModel` | Custom root types now use `RootModel` class |
-| `const` | Removed | Use `Literal` types instead |
-| `min_items` | `min_length` | |
-| `max_items` | `max_length` | |
-| `unique_items` | Removed | List replaced by `set` type |
-| `allow_mutation` | `frozen` | Inverse value |
-| `regex` | `pattern` | |
-| `pydantic.Config` | `pydantic.ConfigDict` | |
-
-See [Pydantic v2 Migration Guide](https://docs.pydantic.dev/2.0/migration/) for details.
 
 ---
 
@@ -25294,9 +25247,7 @@ graph TD
     A[Need runtime validation?] -->|Yes| B[Need best performance?]
     A -->|No| C[Need type hints for dicts?]
     B -->|Yes| D[msgspec.Struct]
-    B -->|No| E[Pydantic v1 dependency?]
-    E -->|Yes| F[pydantic.BaseModel]
-    E -->|No| G[Prefer dataclass syntax?]
+    B -->|No| G[Prefer dataclass syntax?]
     G -->|Yes| H[pydantic_v2.dataclass]
     G -->|No| I[pydantic_v2.BaseModel]
     C -->|Yes| J[typing.TypedDict]
@@ -25307,10 +25258,9 @@ graph TD
 
 1. **API with validation** → Pydantic v2
 2. **Validation with dataclass syntax** → Pydantic v2 dataclass
-3. **Legacy Pydantic v1 project** → Pydantic v1
-4. **High-performance serialization** → msgspec
-5. **Simple data containers** → dataclasses
-6. **Dict-based JSON handling** → TypedDict
+3. **High-performance serialization** → msgspec
+4. **Simple data containers** → dataclasses
+5. **Dict-based JSON handling** → TypedDict
 
 ---
 
@@ -26580,7 +26530,6 @@ class User(BaseModel):
 
 - Compatibility with runtime annotation inspection
 - Libraries that don't support `__future__.annotations`
-- Pydantic v1 in some configurations
 - When using `get_type_hints()` at runtime
 
 ---
@@ -26695,7 +26644,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
 **Solutions:**
 
 1. **Upgrade Pydantic** (recommended):
-   - Pydantic v1: Upgrade to version 1.10.18 or later
    - Pydantic v2: Upgrade to the latest version
 
 2. **Use `--disable-future-imports`** as a workaround:
@@ -26708,9 +26656,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
    # pyproject.toml
    [tool.pytest.ini_options]
    filterwarnings = [
-       # For Pydantic v2's v1 compatibility layer (pydantic.v1)
-       "ignore::DeprecationWarning:pydantic.v1.typing",
-       # For standalone Pydantic v1
        "ignore::DeprecationWarning:pydantic.typing",
    ]
    ```
@@ -26752,8 +26697,6 @@ When a schema defines a simple type (not an object with properties), `datamodel-
 - 📌 RootModel and type aliases do not fully support field-specific metadata (default, alias, etc). See [Named Type Aliases](https://docs.pydantic.dev/latest/concepts/types/#named-type-aliases) for details.
 - 🚫 Type aliases do not support some RootModel features (e.g. `model_config`)
 - 📄 A RootModel or type alias is also generated for the main schema, allowing you to define a single type alias from a schema file (e.g. `model.json` containing `{"title": "MyString", "type": "string"}`)
-- ❌ Type aliases cannot be combined with `Annotated` for Pydantic v1
-
 ## 📊 Type Alias Behavior by Output Type and Python Version
 
 The type of type alias generated depends on the output model type and target Python version:
@@ -26761,7 +26704,6 @@ The type of type alias generated depends on the output model type and target Pyt
 | Output Type | Python 3.12+ | Python 3.10-3.11 |
 |-------------|--------------|------------------|
 | **Pydantic v2** | `type` statement | `TypeAliasType` (typing_extensions) |
-| **Pydantic v1** | `TypeAlias` | `TypeAlias` |
 | **TypedDict** | `type` statement | `TypeAlias` |
 | **dataclasses** | `type` statement | `TypeAlias` |
 | **msgspec** | `type` statement | `TypeAlias` |
@@ -26798,76 +26740,6 @@ The type of type alias generated depends on the output model type and target Pyt
     }
   }
 }
-```
-
-### 🔹 Pydantic v1
-
-#### Generating RootModel
-
-```bash
-datamodel-codegen --input model.json --input-file-type jsonschema --output model.py
-```
-
-### ✨ Generated model.py (Pydantic v1)
-
-```python
-# generated by datamodel-codegen:
-#   filename:  model.json
-
-from __future__ import annotations
-
-from typing import Any, Optional, Union
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    __root__: Any
-
-
-class UserId(BaseModel):
-    __root__: str
-
-
-class Status(BaseModel):
-    __root__: Union[str, int]
-
-
-class User(BaseModel):
-    id: Optional[UserId] = None
-    status: Optional[Status] = None
-```
-
-#### Generating TypeAlias annotation
-
-```bash
-datamodel-codegen --input model.json --input-file-type jsonschema --use-type-alias --output model.py
-```
-
-### ✨ Generated model.py (Python 3.10+)
-
-```python
-# generated by datamodel-codegen:
-#   filename:  model.json
-
-from __future__ import annotations
-
-from typing import Any, Optional, TypeAlias, Union
-
-from pydantic import BaseModel
-
-Model: TypeAlias = Any
-
-
-UserId: TypeAlias = str
-
-
-Status: TypeAlias = Union[str, int]
-
-
-class User(BaseModel):
-    id: Optional[UserId] = None
-    status: Optional[Status] = None
 ```
 
 ### 🔸 Pydantic v2
@@ -28433,9 +28305,7 @@ pip install 'datamodel-code-generator[http]'
 When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
 
 !!! note
-    `GenerateConfig` is only available in Pydantic v2 environments.
-    For Pydantic v1, use `from datamodel_code_generator.config import GenerateConfig`
-    and call `update_forward_refs()` before use.
+    `GenerateConfig` requires a Pydantic v2 environment.
 
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType
@@ -28962,7 +28832,7 @@ assert all(r is results[0] for r in results)
 
 | Limitation | Details |
 |------------|---------|
-| Pydantic v2 only | Pydantic v1 is not supported |
+| Pydantic v2 only | Only Pydantic v2 is supported |
 | Not pickle-able | Use `model_dump()` to serialize instances |
 | Dict input only | Schema must be a `dict`, not a file path or string |
 
@@ -28974,7 +28844,7 @@ assert all(r is results[0] for r in results)
 | Use case | Code generation, file output | Runtime validation |
 | Caching | No | Yes (configurable) |
 | Thread-safe | Yes | Yes |
-| Pydantic v1 | Yes | No |
+| Pydantic v2 | Yes | Yes |
 
 ## See Also
 
@@ -29155,7 +29025,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
 | `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `json`, `yaml`, `csv`, `graphql`) |
-| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
+| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
 | `profile` | No | - | Named profile from `pyproject.toml` |
@@ -29932,7 +29802,6 @@ See [Model Reuse and Deduplication](model-reuse.md) for details.
 ### 🤷 Which output model type should I use?
 
 - **Pydantic v2** (`pydantic_v2.BaseModel`): ✨ Recommended for new projects. Better performance and modern API.
-- **Pydantic v1** (`pydantic.BaseModel`): 🔄 Default for backward compatibility with existing codebases.
 - **dataclasses**: Simple data containers without validation.
 - **TypedDict**: Type hints for dict structures.
 - **msgspec**: High-performance serialization.
@@ -29944,7 +29813,7 @@ See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a deta
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 ```
 
-See [Pydantic v1 vs v2](what_is_the_difference_between_v1_and_v2.md) for migration details.
+See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for more details.
 
 📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
 
@@ -29958,9 +29827,6 @@ python -c "import pydantic; print(pydantic.VERSION)"
 
 # Generate for Pydantic v2
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# Generate for Pydantic v1
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 ```
 
 ---

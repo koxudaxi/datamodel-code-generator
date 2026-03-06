@@ -17,9 +17,7 @@ pip install 'datamodel-code-generator[http]'
 When the `output` parameter is omitted (or set to `None`), `generate()` returns the generated code directly as a string:
 
 !!! note
-    `GenerateConfig` is only available in Pydantic v2 environments.
-    For Pydantic v1, use `from datamodel_code_generator.config import GenerateConfig`
-    and call `update_forward_refs()` before use.
+    `GenerateConfig` requires a Pydantic v2 environment.
 
 ```python
 from datamodel_code_generator import InputFileType, generate, GenerateConfig, DataModelType

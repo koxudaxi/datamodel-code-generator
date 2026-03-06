@@ -162,8 +162,8 @@ file. Each profile can override the default settings with its own set of options
     strict-nullable = true
 
     [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile for Pydantic v1
-    output-model-type = "pydantic.BaseModel"
+    # Legacy profile
+    output-model-type = "pydantic_v2.BaseModel"
     ```
 
     Use profiles:
