@@ -4,17 +4,21 @@
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
 
 
 class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        coerce_numbers_to_str=True,
+    )
     id: int
     name: str
     tag: str | None = None
 
 
-class Pets(BaseModel):
-    __root__: list[Pet]
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet]
 
 
 class User(BaseModel):
@@ -23,16 +27,16 @@ class User(BaseModel):
     tag: str | None = None
 
 
-class Users(BaseModel):
-    __root__: list[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(BaseModel):
-    __root__: list[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
@@ -41,14 +45,22 @@ class Error(BaseModel):
 
 
 class Api(BaseModel):
-    apiKey: str | None = None
-    apiVersionNumber: str | None = None
-    apiUrl: AnyUrl | None = None
-    apiDocumentationUrl: AnyUrl | None = None
+    apiKey: str | None = Field(
+        None, description='To be used as a dataset parameter value'
+    )
+    apiVersionNumber: str | None = Field(
+        None, description='To be used as a version parameter value'
+    )
+    apiUrl: AnyUrl | None = Field(
+        None, description="The URL describing the dataset's fields"
+    )
+    apiDocumentationUrl: AnyUrl | None = Field(
+        None, description='A URL to the API console for each API'
+    )
 
 
-class Apis(BaseModel):
-    __root__: list[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]
 
 
 class Event(BaseModel):

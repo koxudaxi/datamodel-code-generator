@@ -74,30 +74,31 @@ is useful when using custom types defined in external modules (e.g.,
     from __future__ import annotations
     
     from datetime import date, datetime
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
     from mymodule.myclass import MyCustomPythonClass
     from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    Date: TypeAlias = date
+    Date = TypeAliasType("Date", date)
     
     
-    DateTime: TypeAlias = datetime
+    DateTime = TypeAliasType("DateTime", datetime)
     """
     DateTime (ISO8601, example: 2020-01-01T10:11:12+00:00)
     """
     
     
-    MyCustomClass: TypeAlias = MyCustomPythonClass
+    MyCustomClass = TypeAliasType("MyCustomClass", MyCustomPythonClass)
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -472,7 +473,7 @@ to be inserted at the top of generated Python files.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -481,8 +482,8 @@ to be inserted at the top of generated Python files.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -491,16 +492,16 @@ to be inserted at the top of generated Python files.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -523,8 +524,8 @@ to be inserted at the top of generated Python files.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -580,26 +581,27 @@ formatting rules beyond what black/isort provide.
     # a comment
     from __future__ import annotations
     
-    from typing import Literal, TypeAlias
+    from typing import Literal
     
     from pydantic import BaseModel, Field
+    from typing_extensions import TypeAliasType
     
-    Boolean: TypeAlias = bool
+    Boolean = TypeAliasType("Boolean", bool)
     """
     The `Boolean` scalar type represents `true` or `false`.
     """
     
     
-    ID: TypeAlias = str
+    ID = TypeAliasType("ID", str)
     """
     The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
     """
     
     
-    Long: TypeAlias = str
+    Long = TypeAliasType("Long", str)
     
     
-    String: TypeAlias = str
+    String = TypeAliasType("String", str)
     """
     The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
     """
@@ -891,17 +893,21 @@ to the templates.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, ConfigDict, Field, RootModel
     
     
     class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
+        model_config = ConfigDict(
+            arbitrary_types_allowed=True,
+            coerce_numbers_to_str=True,
+        )
         id: int
         name: str
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -910,16 +916,16 @@ to the templates.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -928,14 +934,22 @@ to the templates.
     
     
     class Api(BaseModel):
-        apiKey: str | None = None
-        apiVersionNumber: str | None = None
-        apiUrl: AnyUrl | None = None
-        apiDocumentationUrl: AnyUrl | None = None
+        apiKey: str | None = Field(
+            None, description='To be used as a dataset parameter value'
+        )
+        apiVersionNumber: str | None = Field(
+            None, description='To be used as a version parameter value'
+        )
+        apiUrl: AnyUrl | None = Field(
+            None, description="The URL describing the dataset's fields"
+        )
+        apiDocumentationUrl: AnyUrl | None = Field(
+            None, description='A URL to the API console for each API'
+        )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -1207,7 +1221,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -1216,20 +1230,20 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         tag: str | None = Field(None, max_length=64)
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet] = Field(..., max_length=10, min_length=1)
     
     
-    class UID(BaseModel):
-        __root__: int = Field(..., ge=0)
+    class UID(RootModel[int]):
+        root: int = Field(..., ge=0)
     
     
-    class Phone(BaseModel):
-        __root__: str = Field(..., min_length=3)
+    class Phone(RootModel[str]):
+        root: str = Field(..., min_length=3)
     
     
-    class Fax(BaseModel):
-        __root__: str = Field(..., min_length=3)
+    class Fax(RootModel[str]):
+        root: str = Field(..., min_length=3)
     
     
     class User(BaseModel):
@@ -1237,7 +1251,7 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         name: str = Field(..., max_length=256)
         tag: str | None = Field(None, max_length=64)
         uid: UID
-        phones: list[Phone] | None = Field(None, max_items=10)
+        phones: list[Phone] | None = Field(None, max_length=10)
         fax: list[Fax] | None = None
         height: int | float | None = Field(None, ge=1.0, le=300.0)
         weight: float | int | None = Field(None, ge=1.0, le=1000.0)
@@ -1245,16 +1259,16 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         rating: float | None = Field(None, gt=0.0, le=5.0)
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -1277,8 +1291,8 @@ The `--disable-appending-item-suffix` flag configures the code generation behavi
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -1351,15 +1365,16 @@ The `--disable-timestamp` flag configures the code generation behavior.
     class Info(BaseModel):
         hostName: (
             constr(
-                regex=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])\Z'
+                pattern=r'^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]{0,61}[A-Za-z0-9])$'
             )
             | None
         ) = None
         arn: (
-            constr(regex=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$') | None
+            constr(pattern=r'(^arn:([^:]*):([^:]*):([^:]*):(|\*|[\d]{12}):(.+)$)|^\*$')
+            | None
         ) = None
-        tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
-        comment: constr(regex=r'[^\x08\f\n\r\t\\a+.?\'"|()]+$') | None = None
+        tel: constr(pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+        comment: constr(pattern=r'[^\x08\f\n\r\t\\a+.?\'"|()]+$') | None = None
     ```
 
 ---
@@ -1575,7 +1590,7 @@ the file to the header, making it easy to reproduce the generation.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -1584,8 +1599,8 @@ the file to the header, making it easy to reproduce the generation.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -1594,16 +1609,16 @@ the file to the header, making it easy to reproduce the generation.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -1626,8 +1641,8 @@ the file to the header, making it easy to reproduce the generation.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -1850,7 +1865,7 @@ The `--enable-version-header` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -1859,8 +1874,8 @@ The `--enable-version-header` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -1869,16 +1884,16 @@ The `--enable-version-header` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -1901,8 +1916,8 @@ The `--enable-version-header` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -2120,81 +2135,6 @@ model settings like Config classes, enabling customization beyond standard optio
     ```
 
     **Output:**
-
-    === "Pydantic v1"
-
-        ```python
-        # generated by datamodel-codegen:
-        #   filename:  api.yaml
-        #   timestamp: 1985-10-26T08:21:00+00:00
-        
-        from __future__ import annotations
-        
-        from pydantic import AnyUrl, BaseModel, Field
-        
-        
-        class Pet(BaseModel):  # 1 2, 1 2, this is just a pet
-            class Config:
-                arbitrary_types_allowed = True
-        
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Pets(BaseModel):
-            __root__: list[Pet]
-        
-        
-        class User(BaseModel):
-            id: int
-            name: str
-            tag: str | None = None
-        
-        
-        class Users(BaseModel):
-            __root__: list[User]
-        
-        
-        class Id(BaseModel):
-            __root__: str
-        
-        
-        class Rules(BaseModel):
-            __root__: list[str]
-        
-        
-        class Error(BaseModel):
-            code: int
-            message: str
-        
-        
-        class Api(BaseModel):
-            apiKey: str | None = Field(
-                None, description='To be used as a dataset parameter value'
-            )
-            apiVersionNumber: str | None = Field(
-                None, description='To be used as a version parameter value'
-            )
-            apiUrl: AnyUrl | None = Field(
-                None, description="The URL describing the dataset's fields"
-            )
-            apiDocumentationUrl: AnyUrl | None = Field(
-                None, description='A URL to the API console for each API'
-            )
-        
-        
-        class Apis(BaseModel):
-            __root__: list[Api]
-        
-        
-        class Event(BaseModel):
-            name: str | None = None
-        
-        
-        class Result(BaseModel):
-            event: Event | None = None
-        ```
 
     === "Pydantic v2"
 
@@ -2556,26 +2496,22 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     
     from typing import Literal
     
-    from pydantic import BaseModel, Field, confloat
+    from pydantic import BaseModel, Field, RootModel, confloat
     
     
     class MapState1(BaseModel):
-        map_view_mode: Literal["MODE_2D"] = Field(
-            "MODE_2D", alias="mapViewMode", const=True
-        )
+        map_view_mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")
     
     
     class MapState2(BaseModel):
         latitude: Latitude
         longitude: Longitude
-        zoom: Zoom | None = Field(default_factory=lambda: Zoom.parse_obj(0))
+        zoom: Zoom | None = Field(default_factory=lambda: Zoom(0))
         bearing: Bearing | None = None
         pitch: Pitch
         drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
-        map_split_mode: Literal["SWIPE_COMPARE"] = Field(
-            "SWIPE_COMPARE", alias="mapSplitMode", const=True
-        )
-        is_split: Literal[True] = Field(True, alias="isSplit", const=True)
+        map_split_mode: Literal["SWIPE_COMPARE"] = Field(..., alias="mapSplitMode")
+        is_split: Literal[True] = Field(True, alias="isSplit")
     
     
     class MapState3(BaseModel):
@@ -2598,34 +2534,32 @@ helps maintain consistency with codebases that prefer double-quote formatting.
         pass
     
     
-    class MapState(BaseModel):
-        __root__: MapState4 | MapState5 | MapState6 | MapState7 = Field(
-            ..., title="MapState"
-        )
+    class MapState(RootModel[MapState4 | MapState5 | MapState6 | MapState7]):
+        root: MapState4 | MapState5 | MapState6 | MapState7 = Field(..., title="MapState")
     
     
-    class Bearing(BaseModel):
-        __root__: float
+    class Bearing(RootModel[float]):
+        root: float
     
     
-    class DragRotate(BaseModel):
-        __root__: bool
+    class DragRotate(RootModel[bool]):
+        root: bool
     
     
-    class Latitude(BaseModel):
-        __root__: confloat(ge=-90.0, le=90.0)
+    class Latitude(RootModel[confloat(ge=-90.0, le=90.0)]):
+        root: confloat(ge=-90.0, le=90.0)
     
     
-    class Longitude(BaseModel):
-        __root__: confloat(ge=-180.0, le=180.0)
+    class Longitude(RootModel[confloat(ge=-180.0, le=180.0)]):
+        root: confloat(ge=-180.0, le=180.0)
     
     
-    class Pitch(BaseModel):
-        __root__: confloat(ge=0.0, lt=90.0)
+    class Pitch(RootModel[confloat(ge=0.0, lt=90.0)]):
+        root: confloat(ge=0.0, lt=90.0)
     
     
-    class Zoom(BaseModel):
-        __root__: confloat(ge=0.0, le=25.0) = 0
+    class Zoom(RootModel[confloat(ge=0.0, le=25.0)]):
+        root: confloat(ge=0.0, le=25.0) = 0
     ```
 
 ---

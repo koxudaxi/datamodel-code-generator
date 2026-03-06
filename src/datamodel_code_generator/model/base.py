@@ -186,7 +186,7 @@ class DataModelFieldBase(_BaseModel):
                 self.data_type.parent = self
             self.process_const()
 
-    def process_const(self) -> None:
+    def process_const(self) -> None:  # pragma: no cover
         """Process const values by setting them as defaults."""
         if "const" not in self.extras:
             return

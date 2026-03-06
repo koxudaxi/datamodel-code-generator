@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class MassUnit(Enum):
@@ -15,8 +15,8 @@ class MassUnit(Enum):
     t = 't'
 
 
-class QuantityTrunc(BaseModel):
-    __root__: MassUnit
+class QuantityTrunc(RootModel[MassUnit]):
+    root: MassUnit
 
 
 class CreateOrderByEstimateRequest(BaseModel):

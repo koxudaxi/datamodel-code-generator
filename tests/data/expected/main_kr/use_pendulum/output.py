@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from pendulum import Date, DateTime, Duration
-from pydantic import BaseModel
+from pendulum import Date, Duration
+from pydantic import AwareDatetime, BaseModel
 
 
 class Event(BaseModel):
     name: str
-    created_at: DateTime
+    created_at: AwareDatetime
     event_date: Date | None = None
     duration: Duration | None = None

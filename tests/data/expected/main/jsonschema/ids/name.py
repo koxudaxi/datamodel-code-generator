@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class Schema(BaseModel):
-    __root__: str = Field(
+class Schema(RootModel[str]):
+    root: str = Field(
         ...,
         description="A descriptive (full) name of the entity. For example, a dataset called 'Snow depth in the Northern Hemisphere' or a person called 'Sarah L. Jones' or a place called 'The Empire States Building'. Use unique names for distinct entities whenever possible.",
         title='name',

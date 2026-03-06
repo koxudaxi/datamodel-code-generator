@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, RootModel, conint
 
 
 class ConstraintOnlyBase(BaseModel):
@@ -21,8 +21,8 @@ class MultipleOfBase(BaseModel):
     multiple_field: MultipleField | None = None
 
 
-class SimpleString(BaseModel):
-    __root__: str
+class SimpleString(RootModel[str]):
+    root: str
 
 
 class NestedAnyOfWithRef(BaseModel):
@@ -119,8 +119,8 @@ class NestedIndirect2(NestedIndirect1):
     pass
 
 
-class NestedIndirect(BaseModel):
-    __root__: NestedIndirect2
+class NestedIndirect(RootModel[NestedIndirect2]):
+    root: NestedIndirect2
 
 
 class NestedAllOfWithoutDirectRef(BaseModel):

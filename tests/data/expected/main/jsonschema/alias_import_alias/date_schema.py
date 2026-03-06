@@ -5,11 +5,10 @@
 from __future__ import annotations
 
 from datetime import date as date_aliased
-from datetime import datetime as datetime_aliased
 
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel
 
 
 class TypeDate(BaseModel):
     date: date_aliased | None
-    datetime: datetime_aliased | None = None
+    datetime: AwareDatetime | None = None

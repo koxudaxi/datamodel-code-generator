@@ -31,9 +31,9 @@ class D1andB2(D1, B2):
     pass
 
 
-A.update_forward_refs()
-B1.update_forward_refs()
-B2.update_forward_refs()
-C1.update_forward_refs()
-D1.update_forward_refs()
-D1andB2.update_forward_refs()
+A.model_rebuild()
+B1.model_rebuild()
+B2.model_rebuild()
+C1.model_rebuild()
+D1.model_rebuild()
+D1andB2.model_rebuild()

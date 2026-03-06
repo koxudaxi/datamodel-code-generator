@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
-class MyJsonOfListOfString(BaseModel):
-    __root__: dict[str, list[str]]
+class MyJsonOfListOfString(RootModel[dict[str, list[str]]]):
+    root: dict[str, list[str]]

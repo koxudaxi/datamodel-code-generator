@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     ("output_model", "expected_output"),
     [
         (
-            "pydantic.BaseModel",
+            "pydantic_v2.BaseModel",
             "simple_star_wars.py",
         ),
         (
@@ -40,9 +40,9 @@ if TYPE_CHECKING:
 This example demonstrates using `--output-model-type` with GraphQL schemas
 to generate either Pydantic models or dataclasses.""",
     input_schema="graphql/simple-star-wars.graphql",
-    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel"],
     model_outputs={
-        "pydantic_v1": "graphql/simple_star_wars.py",
+        "pydantic_v2": "graphql/simple_star_wars.py",
         "dataclass": "graphql/simple_star_wars_dataclass.py",
     },
 )
@@ -110,34 +110,21 @@ def test_main_use_default_kwarg(output_file: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "empty_list_default.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "pydantic_v2_empty_list_default.py",
-        ),
-    ],
-)
 @pytest.mark.skipif(
     black.__version__.split(".")[0] in {"19", "22"},
     reason="Installed black doesn't support Python 3.12 target version",
 )
-def test_main_graphql_empty_list_default(output_model: str, expected_output: str, output_file: Path) -> None:
+def test_main_graphql_empty_list_default(output_file: Path) -> None:
     """Test GraphQL generation with empty list default values."""
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "empty_list_default.graphql",
         output_path=output_file,
         assert_func=assert_file_content,
-        expected_file=EXPECTED_GRAPHQL_PATH / expected_output,
+        expected_file=EXPECTED_GRAPHQL_PATH / "pydantic_v2_empty_list_default.py",
         input_file_type="graphql",
         extra_args=[
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
             "--target-python-version",
             "3.12",
         ],
@@ -744,7 +731,7 @@ def test_main_graphql_dataclass_arguments_with_pydantic(output_file: Path) -> No
         expected_file="simple_star_wars.py",
         extra_args=[
             "--output-model-type",
-            "pydantic.BaseModel",
+            "pydantic_v2.BaseModel",
             "--dataclass-arguments",
             '{"slots": true, "order": true}',
         ],

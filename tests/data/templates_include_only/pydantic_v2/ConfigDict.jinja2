@@ -1,0 +1,6 @@
+model_config = ConfigDict(
+    validate_assignment=True,
+{%- for field_name, value in config.dict(exclude_unset=True).items() %}
+    {{ field_name }}={{ value }},
+{%- endfor %}
+)

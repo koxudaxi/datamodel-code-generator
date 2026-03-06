@@ -8,12 +8,12 @@ from pydantic import BaseModel, Field, conbytes, confloat, conint, constr
 
 
 class User(BaseModel):
-    name: str | None = Field(None, example='ken')
+    name: str | None = Field(None, examples=['ken'])
     age: int | None = None
     salary: conint(ge=0) | None = None
     debt: conint(le=0) | None = None
     loan: confloat(le=0.0) | None = None
-    tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
+    tel: constr(pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$') | None = None
     height: confloat(ge=0.0) | None = None
     weight: confloat(ge=0.0) | None = None
     score: confloat(ge=1e-08) | None = None

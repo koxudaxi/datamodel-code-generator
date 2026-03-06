@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Pet(BaseModel):
@@ -57,8 +57,8 @@ class PetsGetParameters(BaseModel):
     ] = None
 
 
-class PetsGetResponse(BaseModel):
-    __root__: List[Pet]
+class PetsGetResponse(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class PetsPostRequest(BaseModel):

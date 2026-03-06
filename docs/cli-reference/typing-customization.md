@@ -671,41 +671,40 @@ other properties separate.
             
             from typing import Any
             
-            from pydantic import BaseModel, EmailStr, Field, conint, constr
+            from pydantic import BaseModel, ConfigDict, EmailStr, Field, RootModel, conint, constr
             
             
-            class StringDatatype(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$') = Field(
-                    ..., description='A base string type.'
+            class StringDatatype(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+                root: constr(pattern=r'^\S(.*\S)?$') = Field(..., description='A base string type.')
+            
+            
+            class ConstrainedStringDatatype(RootModel[str]):
+                model_config = ConfigDict(
+                    regex_engine="python-re",
                 )
-            
-            
-            class ConstrainedStringDatatype(BaseModel):
-                __root__: constr(regex=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
+                root: constr(pattern=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
                     ..., description='A constrained string.'
                 )
             
             
-            class IntegerDatatype(BaseModel):
-                __root__: int = Field(..., description='A whole number.')
+            class IntegerDatatype(RootModel[int]):
+                root: int = Field(..., description='A whole number.')
             
             
-            class NonNegativeIntegerDatatype(BaseModel):
-                __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+            class NonNegativeIntegerDatatype(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Non-negative integer.')
             
             
-            class BoundedIntegerDatatype(BaseModel):
-                __root__: conint(ge=0, le=100) = Field(
-                    ..., description='Integer between 0 and 100.'
-                )
+            class BoundedIntegerDatatype(RootModel[conint(ge=0, le=100)]):
+                root: conint(ge=0, le=100) = Field(..., description='Integer between 0 and 100.')
             
             
-            class EmailDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='Email with format.')
+            class EmailDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='Email with format.')
             
             
-            class FormattedStringDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='A string with email format.')
+            class FormattedStringDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='A string with email format.')
             
             
             class ObjectBase(BaseModel):
@@ -736,20 +735,20 @@ other properties separate.
                 pass
             
             
-            class NumberIntegerCompatible(BaseModel):
-                __root__: conint(ge=0) = Field(
-                    ..., description='Number and integer are compatible.'
-                )
+            class NumberIntegerCompatible(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Number and integer are compatible.')
             
             
-            class RefWithSchemaKeywords(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+            class RefWithSchemaKeywords(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
                     ..., description='Ref with additional schema keywords.'
                 )
             
             
-            class ArrayDatatype(BaseModel):
-                __root__: list[str]
+            class ArrayDatatype(RootModel[list[str]]):
+                root: list[str]
             
             
             class RefToArrayAllOf(BaseModel):
@@ -764,8 +763,8 @@ other properties separate.
                 pass
             
             
-            class PatternPropsDatatype(BaseModel):
-                __root__: dict[constr(regex=r'^S_'), str]
+            class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
+                root: dict[constr(pattern=r'^S_'), str]
             
             
             class RefToPatternPropsAllOf(BaseModel):
@@ -780,22 +779,24 @@ other properties separate.
                 pass
             
             
-            class ConstraintsOnlyDatatype(BaseModel):
-                __root__: Any = Field(..., description='Constraints only, no type.')
+            class ConstraintsOnlyDatatype(RootModel[Any]):
+                root: Any = Field(..., description='Constraints only, no type.')
             
             
-            class RefToConstraintsOnlyAllOf(BaseModel):
-                __root__: Any = Field(..., description='Ref to constraints-only schema.')
+            class RefToConstraintsOnlyAllOf(RootModel[Any]):
+                root: Any = Field(..., description='Ref to constraints-only schema.')
             
             
-            class NoDescriptionAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+            class NoDescriptionAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5)]):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5) = Field(
                     ..., description='A base string type.'
                 )
             
             
-            class EmptyConstraintItemAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+            class EmptyConstraintItemAllOf(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', max_length=50)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', max_length=50) = Field(
                     ..., description='AllOf with empty constraint item.'
                 )
             
@@ -838,41 +839,37 @@ other properties separate.
             
             from typing import Any
             
-            from pydantic import BaseModel, EmailStr, Field, conint, constr
+            from pydantic import BaseModel, EmailStr, Field, RootModel, conint, constr
             
             
-            class StringDatatype(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$') = Field(
-                    ..., description='A base string type.'
-                )
+            class StringDatatype(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+                root: constr(pattern=r'^\S(.*\S)?$') = Field(..., description='A base string type.')
             
             
-            class ConstrainedStringDatatype(BaseModel):
-                __root__: constr(regex=r'^[A-Z].*', min_length=1) = Field(
+            class ConstrainedStringDatatype(RootModel[constr(pattern=r'^[A-Z].*', min_length=1)]):
+                root: constr(pattern=r'^[A-Z].*', min_length=1) = Field(
                     ..., description='A constrained string.'
                 )
             
             
-            class IntegerDatatype(BaseModel):
-                __root__: int = Field(..., description='A whole number.')
+            class IntegerDatatype(RootModel[int]):
+                root: int = Field(..., description='A whole number.')
             
             
-            class NonNegativeIntegerDatatype(BaseModel):
-                __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+            class NonNegativeIntegerDatatype(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Non-negative integer.')
             
             
-            class BoundedIntegerDatatype(BaseModel):
-                __root__: conint(ge=0, le=100) = Field(
-                    ..., description='Integer between 0 and 100.'
-                )
+            class BoundedIntegerDatatype(RootModel[conint(ge=0, le=100)]):
+                root: conint(ge=0, le=100) = Field(..., description='Integer between 0 and 100.')
             
             
-            class EmailDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='Email with format.')
+            class EmailDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='Email with format.')
             
             
-            class FormattedStringDatatype(BaseModel):
-                __root__: EmailStr = Field(..., description='A string with email format.')
+            class FormattedStringDatatype(RootModel[EmailStr]):
+                root: EmailStr = Field(..., description='A string with email format.')
             
             
             class ObjectBase(BaseModel):
@@ -903,20 +900,20 @@ other properties separate.
                 pass
             
             
-            class NumberIntegerCompatible(BaseModel):
-                __root__: conint(ge=0) = Field(
-                    ..., description='Number and integer are compatible.'
-                )
+            class NumberIntegerCompatible(RootModel[conint(ge=0)]):
+                root: conint(ge=0) = Field(..., description='Number and integer are compatible.')
             
             
-            class RefWithSchemaKeywords(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+            class RefWithSchemaKeywords(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
                     ..., description='Ref with additional schema keywords.'
                 )
             
             
-            class ArrayDatatype(BaseModel):
-                __root__: list[str]
+            class ArrayDatatype(RootModel[list[str]]):
+                root: list[str]
             
             
             class RefToArrayAllOf(BaseModel):
@@ -931,8 +928,8 @@ other properties separate.
                 pass
             
             
-            class PatternPropsDatatype(BaseModel):
-                __root__: dict[constr(regex=r'^S_'), str]
+            class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
+                root: dict[constr(pattern=r'^S_'), str]
             
             
             class RefToPatternPropsAllOf(BaseModel):
@@ -947,22 +944,24 @@ other properties separate.
                 pass
             
             
-            class ConstraintsOnlyDatatype(BaseModel):
-                __root__: Any = Field(..., description='Constraints only, no type.')
+            class ConstraintsOnlyDatatype(RootModel[Any]):
+                root: Any = Field(..., description='Constraints only, no type.')
             
             
-            class RefToConstraintsOnlyAllOf(BaseModel):
-                __root__: Any = Field(..., description='Ref to constraints-only schema.')
+            class RefToConstraintsOnlyAllOf(RootModel[Any]):
+                root: Any = Field(..., description='Ref to constraints-only schema.')
             
             
-            class NoDescriptionAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+            class NoDescriptionAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5)]):
+                root: constr(pattern=r'^\S(.*\S)?$', min_length=5) = Field(
                     ..., description='A base string type.'
                 )
             
             
-            class EmptyConstraintItemAllOf(BaseModel):
-                __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+            class EmptyConstraintItemAllOf(
+                RootModel[constr(pattern=r'^\S(.*\S)?$', max_length=50)]
+            ):
+                root: constr(pattern=r'^\S(.*\S)?$', max_length=50) = Field(
                     ..., description='AllOf with empty constraint item.'
                 )
             
@@ -1004,13 +1003,6 @@ The --disable-future-imports option stops the generator from adding
 'from __future__ import annotations' to the output. This is useful when
 you need compatibility with tools or environments that don't support
 postponed evaluation of annotations (PEP 563).
-
-**Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
-
-- Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-- Use this `--disable-future-imports` flag as a workaround
 
 **See also:** [Python Version Compatibility](../python-version-compatibility.md)
 
@@ -1264,7 +1256,7 @@ of Enum classes for all enumerations.
         from enum import Enum
         from typing import Literal
         
-        from pydantic import BaseModel, Field
+        from pydantic import BaseModel, Field, RootModel
         
         
         class Kind(Enum):
@@ -1282,8 +1274,8 @@ of Enum classes for all enumerations.
             boolean: Literal[True]
         
         
-        class Pets(BaseModel):
-            __root__: list[Pet]
+        class Pets(RootModel[list[Pet]]):
+            root: list[Pet]
         
         
         class Kind1(Enum):
@@ -1333,12 +1325,12 @@ of Enum classes for all enumerations.
             int_42 = 42
         
         
-        class SingleEnum(BaseModel):
-            __root__: Literal['pet']
+        class SingleEnum(RootModel[Literal['pet']]):
+            root: Literal['pet']
         
         
-        class ArrayEnum(BaseModel):
-            __root__: list[Literal['cat'] | Literal['dog']]
+        class ArrayEnum(RootModel[list[Literal['cat'] | Literal['dog']]]):
+            root: list[Literal['cat'] | Literal['dog']]
         
         
         class NestedVersionEnum(Enum):
@@ -1350,17 +1342,17 @@ of Enum classes for all enumerations.
             RC4 = 'RC4'
         
         
-        class NestedVersion(BaseModel):
-            __root__: NestedVersionEnum | None = Field(
-                'RC1', description='nullable enum', example='RC2'
+        class NestedVersion(RootModel[NestedVersionEnum | None]):
+            root: NestedVersionEnum | None = Field(
+                'RC1', description='nullable enum', examples=['RC2']
             )
         
         
         class NestedNullableEnum(BaseModel):
             nested_version: NestedVersion | None = Field(
-                default_factory=lambda: NestedVersion.parse_obj('RC1'),
+                default_factory=lambda: NestedVersion('RC1'),
                 description='nullable enum',
-                example='RC2',
+                examples=['RC2'],
             )
         
         
@@ -1373,9 +1365,9 @@ of Enum classes for all enumerations.
             RC4 = 'RC4'
         
         
-        class Version(BaseModel):
-            __root__: VersionEnum | None = Field(
-                'RC1', description='nullable enum', example='RC2'
+        class Version(RootModel[VersionEnum | None]):
+            root: VersionEnum | None = Field(
+                'RC1', description='nullable enum', examples=['RC2']
             )
         ```
 
@@ -1459,36 +1451,37 @@ of Enum classes for all enumerations.
             
             from __future__ import annotations
             
-            from typing import Literal, TypeAlias
+            from typing import Literal
             
-            from pydantic import BaseModel
+            from pydantic import RootModel
+            from typing_extensions import TypeAliasType
             
-            Boolean: TypeAlias = bool
+            Boolean = TypeAliasType("Boolean", bool)
             """
             The `Boolean` scalar type represents `true` or `false`.
             """
             
             
-            String: TypeAlias = str
+            String = TypeAliasType("String", str)
             """
             The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
             """
             
             
-            class Color(BaseModel):
-                __root__: Literal['BLUE', 'GREEN', 'RED']
+            class Color(RootModel[Literal['BLUE', 'GREEN', 'RED']]):
+                root: Literal['BLUE', 'GREEN', 'RED']
             
             
-            class EmployeeShiftStatus(BaseModel):
+            class EmployeeShiftStatus(RootModel[Literal['NOT_ON_SHIFT', 'ON_SHIFT']]):
                 """
                 Employee shift status
                 """
             
-                __root__: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
+                root: Literal['NOT_ON_SHIFT', 'ON_SHIFT']
             
             
-            class EnumWithOneField(BaseModel):
-                __root__: Literal['FIELD']
+            class EnumWithOneField(RootModel[Literal['FIELD']]):
+                root: Literal['FIELD']
             ```
 
         === "Without Option"
@@ -1501,15 +1494,16 @@ of Enum classes for all enumerations.
             from __future__ import annotations
             
             from enum import Enum
-            from typing import TypeAlias
             
-            Boolean: TypeAlias = bool
+            from typing_extensions import TypeAliasType
+            
+            Boolean = TypeAliasType("Boolean", bool)
             """
             The `Boolean` scalar type represents `true` or `false`.
             """
             
             
-            String: TypeAlias = str
+            String = TypeAliasType("String", str)
             """
             The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
             """
@@ -1669,36 +1663,35 @@ defined enum members.
         
         from __future__ import annotations
         
-        from typing import TypeAlias
+        from pydantic import RootModel
+        from typing_extensions import TypeAliasType
         
-        from pydantic import BaseModel
-        
-        Boolean: TypeAlias = bool
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
         
         
-        class Color(BaseModel):
-            __root__: str
+        class Color(RootModel[str]):
+            root: str
         
         
-        class EmployeeShiftStatus(BaseModel):
+        class EmployeeShiftStatus(RootModel[str]):
             """
             Employee shift status
             """
         
-            __root__: str
+            root: str
         
         
-        class EnumWithOneField(BaseModel):
-            __root__: str
+        class EnumWithOneField(RootModel[str]):
+            root: str
         ```
 
     === "Without Option"
@@ -1711,15 +1704,16 @@ defined enum members.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import TypeAlias
         
-        Boolean: TypeAlias = bool
+        from typing_extensions import TypeAliasType
+        
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -1959,7 +1953,7 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         from enum import Enum
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class IntEnum(Enum):
@@ -1997,12 +1991,12 @@ Python 3.11+, falling back to standard Enum classes instead.
         
         
         class Model(BaseModel):
-            IntEnum: IntEnum | None = None
-            FloatEnum: FloatEnum | None = None
-            StrEnum: StrEnum | None = None
-            NonTypedEnum: NonTypedEnum | None = None
-            BooleanEnum: BooleanEnum | None = None
-            UnknownEnum: UnknownEnum | None = None
+            IntEnum_1: IntEnum | None = Field(None, alias='IntEnum')
+            FloatEnum_1: FloatEnum | None = Field(None, alias='FloatEnum')
+            StrEnum_1: StrEnum | None = Field(None, alias='StrEnum')
+            NonTypedEnum_1: NonTypedEnum | None = Field(None, alias='NonTypedEnum')
+            BooleanEnum_1: BooleanEnum | None = Field(None, alias='BooleanEnum')
+            UnknownEnum_1: UnknownEnum | None = Field(None, alias='UnknownEnum')
         ```
 
     === "GraphQL"
@@ -2039,15 +2033,16 @@ Python 3.11+, falling back to standard Enum classes instead.
         from __future__ import annotations
         
         from enum import Enum
-        from typing import TypeAlias
         
-        Boolean: TypeAlias = bool
+        from typing_extensions import TypeAliasType
+        
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -2706,12 +2701,14 @@ in Pydantic models, ensuring values match exactly without automatic conversion.
     
     
     class User(BaseModel):
-        name: StrictStr | None = Field(None, example='ken')
+        name: StrictStr | None = Field(None, examples=['ken'])
         age: StrictInt | None = None
         salary: conint(ge=0, strict=True) | None = None
         debt: conint(le=0, strict=True) | None = None
         loan: confloat(le=0.0, strict=True) | None = None
-        tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True) | None = None
+        tel: constr(
+            pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True
+        ) | None = None
         height: confloat(ge=0.0, strict=True) | None = None
         weight: confloat(ge=0.0, strict=True) | None = None
         score: confloat(ge=1e-08, strict=True) | None = None
@@ -2856,11 +2853,11 @@ instead of generating them.
     from typing import Any
     
     from my_app.types import CustomType
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
-    class Model(BaseModel):
-        __root__: Any
+    class Model(RootModel[Any]):
+        root: Any
     
     
     class User(BaseModel):
@@ -3136,7 +3133,7 @@ syntax instead of default values. This also enables `--field-constraints`.
         
         from typing import Annotated
         
-        from pydantic import AnyUrl, BaseModel, Field
+        from pydantic import AnyUrl, BaseModel, Field, RootModel
         
         
         class Pet(BaseModel):
@@ -3145,20 +3142,20 @@ syntax instead of default values. This also enables `--field-constraints`.
             tag: Annotated[str | None, Field(max_length=64)] = None
         
         
-        class Pets(BaseModel):
-            __root__: Annotated[list[Pet], Field(max_items=10, min_items=1, unique_items=True)]
+        class Pets(RootModel[list[Pet]]):
+            root: Annotated[list[Pet], Field(max_length=10, min_length=1)]
         
         
-        class UID(BaseModel):
-            __root__: Annotated[int, Field(ge=0)]
+        class UID(RootModel[int]):
+            root: Annotated[int, Field(ge=0)]
         
         
-        class Phone(BaseModel):
-            __root__: Annotated[str, Field(min_length=3)]
+        class Phone(RootModel[str]):
+            root: Annotated[str, Field(min_length=3)]
         
         
-        class FaxItem(BaseModel):
-            __root__: Annotated[str, Field(min_length=3)]
+        class FaxItem(RootModel[str]):
+            root: Annotated[str, Field(min_length=3)]
         
         
         class User(BaseModel):
@@ -3166,7 +3163,7 @@ syntax instead of default values. This also enables `--field-constraints`.
             name: Annotated[str, Field(max_length=256)]
             tag: Annotated[str | None, Field(max_length=64)] = None
             uid: UID
-            phones: Annotated[list[Phone] | None, Field(max_items=10)] = None
+            phones: Annotated[list[Phone] | None, Field(max_length=10)] = None
             fax: list[FaxItem] | None = None
             height: Annotated[int | float | None, Field(ge=1.0, le=300.0)] = None
             weight: Annotated[float | int | None, Field(ge=1.0, le=1000.0)] = None
@@ -3174,16 +3171,16 @@ syntax instead of default values. This also enables `--field-constraints`.
             rating: Annotated[float | None, Field(gt=0.0, le=5.0)] = None
         
         
-        class Users(BaseModel):
-            __root__: list[User]
+        class Users(RootModel[list[User]]):
+            root: list[User]
         
         
-        class Id(BaseModel):
-            __root__: str
+        class Id(RootModel[str]):
+            root: str
         
         
-        class Rules(BaseModel):
-            __root__: list[str]
+        class Rules(RootModel[list[str]]):
+            root: list[str]
         
         
         class Error(BaseModel):
@@ -3206,8 +3203,8 @@ syntax instead of default values. This also enables `--field-constraints`.
             ] = None
         
         
-        class Apis(BaseModel):
-            __root__: list[Api]
+        class Apis(RootModel[list[Api]]):
+            root: list[Api]
         
         
         class Event(BaseModel):
@@ -3835,13 +3832,13 @@ working with the pendulum library for enhanced timezone and date handling.
     
     from __future__ import annotations
     
-    from pendulum import Date, DateTime, Duration
-    from pydantic import BaseModel
+    from pendulum import Date, Duration
+    from pydantic import AwareDatetime, BaseModel
     
     
     class Event(BaseModel):
         name: str
-        created_at: DateTime
+        created_at: AwareDatetime
         event_date: Date | None = None
         duration: Duration | None = None
     ```
@@ -4001,7 +3998,7 @@ This is the default behavior for Python 3.11+ targets.
     
     from enum import Enum, IntEnum, StrEnum
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, Field
     
     
     class IntEnumModel(IntEnum):
@@ -4040,11 +4037,11 @@ This is the default behavior for Python 3.11+ targets.
     
     class Model(BaseModel):
         IntEnum: IntEnumModel | None = None
-        FloatEnum: FloatEnum | None = None
+        FloatEnum_1: FloatEnum | None = Field(None, alias='FloatEnum')
         StrEnum: StrEnumModel | None = None
-        NonTypedEnum: NonTypedEnum | None = None
-        BooleanEnum: BooleanEnum | None = None
-        UnknownEnum: UnknownEnum | None = None
+        NonTypedEnum_1: NonTypedEnum | None = Field(None, alias='NonTypedEnum')
+        BooleanEnum_1: BooleanEnum | None = Field(None, alias='BooleanEnum')
+        UnknownEnum_1: UnknownEnum | None = Field(None, alias='UnknownEnum')
     ```
 
 ---
@@ -4450,26 +4447,30 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Annotated, Any, TypeAlias
+        from typing import Annotated, Any
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Model: TypeAlias = Any
-        
-        
-        SimpleString: TypeAlias = str
+        Model = TypeAliasType("Model", Any)
         
         
-        UnionType: TypeAlias = str | int
+        SimpleString = TypeAliasType("SimpleString", str)
         
         
-        ArrayType: TypeAlias = list[str]
+        UnionType = TypeAliasType("UnionType", str | int)
         
         
-        AnnotatedType: TypeAlias = Annotated[
-            str | bool,
-            Field(..., description='An annotated union type', title='MyAnnotatedType'),
-        ]
+        ArrayType = TypeAliasType("ArrayType", list[str])
+        
+        
+        AnnotatedType = TypeAliasType(
+            "AnnotatedType",
+            Annotated[
+                str | bool,
+                Field(..., description='An annotated union type', title='MyAnnotatedType'),
+            ],
+        )
         
         
         class ModelWithTypeAliasField(BaseModel):
@@ -4514,26 +4515,27 @@ syntax. This feature is experimental.
         
         from __future__ import annotations
         
-        from typing import Literal, TypeAlias, Union
+        from typing import Literal, Union
         
         from pydantic import BaseModel, Field
+        from typing_extensions import TypeAliasType
         
-        Boolean: TypeAlias = bool
+        Boolean = TypeAliasType("Boolean", bool)
         """
         The `Boolean` scalar type represents `true` or `false`.
         """
         
         
-        Int: TypeAlias = int
+        Int = TypeAliasType("Int", int)
         """
         The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
         """
         
         
-        SimpleString: TypeAlias = str
+        SimpleString = TypeAliasType("SimpleString", str)
         
         
-        String: TypeAlias = str
+        String = TypeAliasType("String", str)
         """
         The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
         """
@@ -4551,10 +4553,13 @@ syntax. This feature is experimental.
             typename__: Literal['Pet'] | None = Field('Pet', alias='__typename')
         
         
-        UnionType: TypeAlias = Union[
-            'Person',
-            'Pet',
-        ]
+        UnionType = TypeAliasType(
+            "UnionType",
+            Union[
+                'Person',
+                'Pet',
+            ],
+        )
         
         
         class ModelWithTypeAliasField(BaseModel):

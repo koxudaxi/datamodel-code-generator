@@ -46,6 +46,5 @@ class Authorization(BaseModel):
     cardholder: Cardholder | None = None
 
 
-BalanceTransaction.update_forward_refs()
-Invoice.update_forward_refs()
-Authorization.update_forward_refs()
+BalanceTransaction.model_rebuild()
+Invoice.model_rebuild()

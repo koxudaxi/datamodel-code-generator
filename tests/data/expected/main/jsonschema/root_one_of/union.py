@@ -4,18 +4,13 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, Field, RootModel
 
 from . import bar, foo
 
 
-class ExecutionContext(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: foo.JobRun | bar.JobRun = Field(
-        ..., description='Execution Configuration.'
-    )
+class ExecutionContext(RootModel[foo.JobRun | bar.JobRun]):
+    root: foo.JobRun | bar.JobRun = Field(..., description='Execution Configuration.')
 
 
 class App(BaseModel):

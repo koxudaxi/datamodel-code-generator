@@ -48,7 +48,6 @@ class InputFileType(Enum):
 class DataModelType(Enum):
     """Supported output data model types."""
 
-    PydanticBaseModel = "pydantic.BaseModel"
     PydanticV2BaseModel = "pydantic_v2.BaseModel"
     PydanticV2Dataclass = "pydantic_v2.dataclass"
     DataclassesDataclass = "dataclasses.dataclass"

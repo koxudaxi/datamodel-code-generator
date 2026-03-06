@@ -6,26 +6,22 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, confloat
+from pydantic import BaseModel, Field, RootModel, confloat
 
 
 class MapState1(BaseModel):
-    map_view_mode: Literal["MODE_2D"] = Field(
-        "MODE_2D", alias="mapViewMode", const=True
-    )
+    map_view_mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")
 
 
 class MapState2(BaseModel):
     latitude: Latitude
     longitude: Longitude
-    zoom: Zoom | None = Field(default_factory=lambda: Zoom.parse_obj(0))
+    zoom: Zoom | None = Field(default_factory=lambda: Zoom(0))
     bearing: Bearing | None = None
     pitch: Pitch
     drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
-    map_split_mode: Literal["SWIPE_COMPARE"] = Field(
-        "SWIPE_COMPARE", alias="mapSplitMode", const=True
-    )
-    is_split: Literal[True] = Field(True, alias="isSplit", const=True)
+    map_split_mode: Literal["SWIPE_COMPARE"] = Field(..., alias="mapSplitMode")
+    is_split: Literal[True] = Field(True, alias="isSplit")
 
 
 class MapState3(BaseModel):
@@ -48,31 +44,29 @@ class MapState7(MapState5):
     pass
 
 
-class MapState(BaseModel):
-    __root__: MapState4 | MapState5 | MapState6 | MapState7 = Field(
-        ..., title="MapState"
-    )
+class MapState(RootModel[MapState4 | MapState5 | MapState6 | MapState7]):
+    root: MapState4 | MapState5 | MapState6 | MapState7 = Field(..., title="MapState")
 
 
-class Bearing(BaseModel):
-    __root__: float
+class Bearing(RootModel[float]):
+    root: float
 
 
-class DragRotate(BaseModel):
-    __root__: bool
+class DragRotate(RootModel[bool]):
+    root: bool
 
 
-class Latitude(BaseModel):
-    __root__: confloat(ge=-90.0, le=90.0)
+class Latitude(RootModel[confloat(ge=-90.0, le=90.0)]):
+    root: confloat(ge=-90.0, le=90.0)
 
 
-class Longitude(BaseModel):
-    __root__: confloat(ge=-180.0, le=180.0)
+class Longitude(RootModel[confloat(ge=-180.0, le=180.0)]):
+    root: confloat(ge=-180.0, le=180.0)
 
 
-class Pitch(BaseModel):
-    __root__: confloat(ge=0.0, lt=90.0)
+class Pitch(RootModel[confloat(ge=0.0, lt=90.0)]):
+    root: confloat(ge=0.0, lt=90.0)
 
 
-class Zoom(BaseModel):
-    __root__: confloat(ge=0.0, le=25.0) = 0
+class Zoom(RootModel[confloat(ge=0.0, le=25.0)]):
+    root: confloat(ge=0.0, le=25.0) = 0

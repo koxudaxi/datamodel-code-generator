@@ -6,12 +6,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
-class ForwardingArray(BaseModel):
-    __root__: list[Any]
+class ForwardingArray(RootModel[list[Any]]):
+    root: list[Any]

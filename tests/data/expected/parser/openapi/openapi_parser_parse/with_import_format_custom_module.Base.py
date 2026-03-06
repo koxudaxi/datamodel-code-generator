@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from pydantic import AnyUrl
+from pydantic import AnyUrl, RootModel
 
 from custom_module import Base
 
@@ -13,8 +13,8 @@ class Pet(Base):
     tag: Optional[str] = None
 
 
-class Pets(Base):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class User(Base):
@@ -23,16 +23,16 @@ class User(Base):
     tag: Optional[str] = None
 
 
-class Users(Base):
-    __root__: List[User]
+class Users(RootModel[List[User]]):
+    root: List[User]
 
 
-class Id(Base):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(Base):
-    __root__: List[str]
+class Rules(RootModel[List[str]]):
+    root: List[str]
 
 
 class Error(Base):
@@ -47,8 +47,8 @@ class Api(Base):
     apiDocumentationUrl: Optional[AnyUrl] = None
 
 
-class Apis(Base):
-    __root__: List[Api]
+class Apis(RootModel[List[Api]]):
+    root: List[Api]
 
 
 class Event(Base):

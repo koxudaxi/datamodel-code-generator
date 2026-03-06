@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, RootModel
 
 
 class ProcessingStatus(Enum):
@@ -15,8 +15,8 @@ class ProcessingStatus(Enum):
     FAILED = 'FAILED'
 
 
-class Kind(BaseModel):
-    __root__: str
+class Kind(RootModel[str]):
+    root: str
 
 
 class ExtendedProcessingTask1(BaseModel):
@@ -28,25 +28,25 @@ class ProcessingStatusUnion(BaseModel):
     description: str | None = None
 
 
-class Model(BaseModel):
-    __root__: list[ProcessingTask]
-
-
-class ExtendedProcessingTask(BaseModel):
-    __root__: Model | ExtendedProcessingTask1
-
-
-class ExtendedProcessingTasks(BaseModel):
-    __root__: list[ExtendedProcessingTask]
-
-
 class ProcessingTask(BaseModel):
     processing_status_union: (
         ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = 'COMPLETED'
+    ) = Field(default_factory=lambda: ExtendedProcessingTask('COMPLETED'))
     processing_status: ProcessingStatus | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None
 
 
-Model.update_forward_refs()
+class Model(RootModel[list[ProcessingTask]]):
+    root: list[ProcessingTask]
+
+
+class ExtendedProcessingTask(RootModel[Model | ExtendedProcessingTask1]):
+    root: Model | ExtendedProcessingTask1
+
+
+class ExtendedProcessingTasks(RootModel[list[ExtendedProcessingTask]]):
+    root: list[ExtendedProcessingTask]
+
+
+ProcessingTask.model_rebuild()

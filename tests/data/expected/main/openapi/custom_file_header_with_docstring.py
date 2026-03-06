@@ -5,7 +5,7 @@ This module contains generated models.
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
@@ -14,8 +14,8 @@ class Pet(BaseModel):
     tag: str | None = None
 
 
-class Pets(BaseModel):
-    __root__: list[Pet]
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet]
 
 
 class User(BaseModel):
@@ -24,16 +24,16 @@ class User(BaseModel):
     tag: str | None = None
 
 
-class Users(BaseModel):
-    __root__: list[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(BaseModel):
-    __root__: list[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
@@ -56,8 +56,8 @@ class Api(BaseModel):
     )
 
 
-class Apis(BaseModel):
-    __root__: list[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]
 
 
 class Event(BaseModel):

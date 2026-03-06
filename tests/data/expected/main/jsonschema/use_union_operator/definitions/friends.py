@@ -4,19 +4,19 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 from . import food as food_1
 
 
 class Friend(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    name: str = Field(..., example='John Doe')
-    phone_number: str | None = Field(None, example='(555) 555-1234')
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str = Field(..., examples=['John Doe'])
+    phone_number: str | None = Field(None, examples=['(555) 555-1234'])
     food: list[food_1.Noodle | food_1.Soup] | None = None
 
 
-class Friends(BaseModel):
-    __root__: list[Friend] = Field(..., title='Friends')
+class Friends(RootModel[list[Friend]]):
+    root: list[Friend] = Field(..., title='Friends')

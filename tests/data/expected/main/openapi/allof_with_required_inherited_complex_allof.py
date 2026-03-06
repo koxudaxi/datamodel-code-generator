@@ -4,15 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, confloat, constr
+from pydantic import BaseModel, RootModel, confloat, constr
 
 
-class StringConstraint(BaseModel):
-    __root__: constr(min_length=1)
+class StringConstraint(RootModel[constr(min_length=1)]):
+    root: constr(min_length=1)
 
 
-class NumberConstraint(BaseModel):
-    __root__: confloat(ge=0.0)
+class NumberConstraint(RootModel[confloat(ge=0.0)]):
+    root: confloat(ge=0.0)
 
 
 class BaseConfig(BaseModel):

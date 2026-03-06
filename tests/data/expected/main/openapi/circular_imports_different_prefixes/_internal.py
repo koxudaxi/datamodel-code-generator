@@ -27,6 +27,6 @@ class Model_2(BaseModel):
     root_ref: Root | None = None
 
 
-Root.update_forward_refs()
-Model.update_forward_refs()
-Model_1.update_forward_refs()
+Root.model_rebuild()
+Model.model_rebuild()
+Model_1.model_rebuild()

@@ -6,11 +6,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, conint
+from pydantic import BaseModel, Field, RootModel, conint
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class Person(BaseModel):
@@ -23,8 +23,8 @@ class Person(BaseModel):
     comment: None = None
 
 
-class OriginalPerson(BaseModel):
-    __root__: Person
+class OriginalPerson(RootModel[Person]):
+    root: Person
 
 
 class Pet(BaseModel):

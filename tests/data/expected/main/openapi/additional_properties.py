@@ -4,96 +4,84 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class Pet(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     id: int
     name: str
     tag: str | None = None
 
 
-class Pets(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: list[Pet]
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet]
 
 
 class User(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     id: int
     name: str
     tag: str | None = None
 
 
-class Users(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: list[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
-class Id(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
-    __root__: list[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     code: int
     message: str
 
 
 class Event(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     name: str | None = None
 
 
 class Result(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     event: Event | None = None
 
 
 class Broken(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     foo: str | None = None
     bar: int | None = None
 
 
 class BrokenArray(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     broken: dict[str, list[Broken]] | None = None
 
 
 class FileSetUpload(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     task_id: str | None = Field(None, title='task id')
     tags: dict[str, list[str]] = Field(
         ..., title='Dict of tags, each containing a list of file names'
@@ -101,8 +89,8 @@ class FileSetUpload(BaseModel):
 
 
 class Test(BaseModel):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     broken: dict[str, Broken] | None = None
     failing: dict[str, str] | None = {}

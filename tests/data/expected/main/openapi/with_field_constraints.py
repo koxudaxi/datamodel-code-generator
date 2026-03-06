@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
@@ -13,20 +13,20 @@ class Pet(BaseModel):
     tag: str | None = Field(None, max_length=64)
 
 
-class Pets(BaseModel):
-    __root__: list[Pet] = Field(..., max_items=10, min_items=1, unique_items=True)
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet] = Field(..., max_length=10, min_length=1)
 
 
-class UID(BaseModel):
-    __root__: int = Field(..., ge=0)
+class UID(RootModel[int]):
+    root: int = Field(..., ge=0)
 
 
-class Phone(BaseModel):
-    __root__: str = Field(..., min_length=3)
+class Phone(RootModel[str]):
+    root: str = Field(..., min_length=3)
 
 
-class FaxItem(BaseModel):
-    __root__: str = Field(..., min_length=3)
+class FaxItem(RootModel[str]):
+    root: str = Field(..., min_length=3)
 
 
 class User(BaseModel):
@@ -34,7 +34,7 @@ class User(BaseModel):
     name: str = Field(..., max_length=256)
     tag: str | None = Field(None, max_length=64)
     uid: UID
-    phones: list[Phone] | None = Field(None, max_items=10)
+    phones: list[Phone] | None = Field(None, max_length=10)
     fax: list[FaxItem] | None = None
     height: int | float | None = Field(None, ge=1.0, le=300.0)
     weight: float | int | None = Field(None, ge=1.0, le=1000.0)
@@ -42,16 +42,16 @@ class User(BaseModel):
     rating: float | None = Field(None, gt=0.0, le=5.0)
 
 
-class Users(BaseModel):
-    __root__: list[User]
+class Users(RootModel[list[User]]):
+    root: list[User]
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(BaseModel):
-    __root__: list[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Error(BaseModel):
@@ -74,8 +74,8 @@ class Api(BaseModel):
     )
 
 
-class Apis(BaseModel):
-    __root__: list[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]
 
 
 class Event(BaseModel):

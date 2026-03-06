@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 
 class DataclassWithPythonTypes(BaseModel):
-    tags: set[str] = Field(..., title='Tags', unique_items=True)
-    frozen_tags: frozenset[int] = Field(..., title='Frozen Tags', unique_items=True)
+    tags: set[str] = Field(..., title='Tags')
+    frozen_tags: frozenset[int] = Field(..., title='Frozen Tags')
     metadata: Mapping[str, int] = Field(..., title='Metadata')
     items: Sequence[str] = Field(..., title='Items')

@@ -503,7 +503,7 @@ The `--openapi-include-paths` flag allows filtering which paths are processed.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
     class Pet(BaseModel):
@@ -522,8 +522,8 @@ The `--openapi-include-paths` flag allows filtering which paths are processed.
         age: int | None = None
     
     
-    class PetsGetResponse(BaseModel):
-        __root__: list[Pet]
+    class PetsGetResponse(RootModel[list[Pet]]):
+        root: list[Pet]
     ```
 
 ---
@@ -924,9 +924,7 @@ The `--openapi-scopes` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from datetime import datetime
-    
-    from pydantic import BaseModel
+    from pydantic import AwareDatetime, BaseModel, RootModel
     
     
     class Pet(BaseModel):
@@ -945,44 +943,44 @@ The `--openapi-scopes` flag configures the code generation behavior.
         age: int | None = None
     
     
-    class PetsGetResponse(BaseModel):
-        __root__: list[Pet]
+    class PetsGetResponse(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
-    class FoodFoodIdGetResponse(BaseModel):
-        __root__: list[int]
+    class FoodFoodIdGetResponse(RootModel[list[int]]):
+        root: list[int]
     
     
     class UserGetResponse(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
     class UserPostRequest(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
     class UsersGetResponseItem(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
-    class UsersGetResponse(BaseModel):
-        __root__: list[UsersGetResponseItem]
+    class UsersGetResponse(RootModel[list[UsersGetResponseItem]]):
+        root: list[UsersGetResponseItem]
     
     
     class UsersPostRequestItem(BaseModel):
-        timestamp: datetime
+        timestamp: AwareDatetime
         name: str
         age: str | None = None
     
     
-    class UsersPostRequest(BaseModel):
-        __root__: list[UsersPostRequestItem]
+    class UsersPostRequest(RootModel[list[UsersPostRequestItem]]):
+        root: list[UsersPostRequestItem]
     ```
 
 ---
@@ -1279,7 +1277,7 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -1288,8 +1286,8 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -1298,16 +1296,16 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -1330,8 +1328,8 @@ The `--use-operation-id-as-name` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):
@@ -1653,7 +1651,7 @@ The `--validation` flag configures the code generation behavior.
     
     from __future__ import annotations
     
-    from pydantic import AnyUrl, BaseModel, Field
+    from pydantic import AnyUrl, BaseModel, Field, RootModel
     
     
     class Pet(BaseModel):
@@ -1662,8 +1660,8 @@ The `--validation` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Pets(BaseModel):
-        __root__: list[Pet]
+    class Pets(RootModel[list[Pet]]):
+        root: list[Pet]
     
     
     class User(BaseModel):
@@ -1672,16 +1670,16 @@ The `--validation` flag configures the code generation behavior.
         tag: str | None = None
     
     
-    class Users(BaseModel):
-        __root__: list[User]
+    class Users(RootModel[list[User]]):
+        root: list[User]
     
     
-    class Id(BaseModel):
-        __root__: str
+    class Id(RootModel[str]):
+        root: str
     
     
-    class Rules(BaseModel):
-        __root__: list[str]
+    class Rules(RootModel[list[str]]):
+        root: list[str]
     
     
     class Error(BaseModel):
@@ -1704,8 +1702,8 @@ The `--validation` flag configures the code generation behavior.
         )
     
     
-    class Apis(BaseModel):
-        __root__: list[Api]
+    class Apis(RootModel[list[Api]]):
+        root: list[Api]
     
     
     class Event(BaseModel):

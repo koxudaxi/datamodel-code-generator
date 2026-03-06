@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum, IntEnum
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Kind(Enum):
@@ -33,8 +33,8 @@ class Pet(BaseModel):
     boolean: Boolean
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class Kind1(Enum):
@@ -96,8 +96,8 @@ class ArrayEnumEnum1(Enum):
     dog = 'dog'
 
 
-class ArrayEnum(BaseModel):
-    __root__: List[Union[ArrayEnumEnum, ArrayEnumEnum1]]
+class ArrayEnum(RootModel[List[Union[ArrayEnumEnum, ArrayEnumEnum1]]]):
+    root: List[Union[ArrayEnumEnum, ArrayEnumEnum1]]
 
 
 class NestedVersionEnum(Enum):
@@ -109,17 +109,17 @@ class NestedVersionEnum(Enum):
     RC4 = 'RC4'
 
 
-class NestedVersion(BaseModel):
-    __root__: Optional[NestedVersionEnum] = Field(
-        'RC1', description='nullable enum', example='RC2'
+class NestedVersion(RootModel[Optional[NestedVersionEnum]]):
+    root: Optional[NestedVersionEnum] = Field(
+        'RC1', description='nullable enum', examples=['RC2']
     )
 
 
 class NestedNullableEnum(BaseModel):
     nested_version: Optional[NestedVersion] = Field(
-        default_factory=lambda: NestedVersion.parse_obj('RC1'),
+        default_factory=lambda: NestedVersion('RC1'),
         description='nullable enum',
-        example='RC2',
+        examples=['RC2'],
     )
 
 
@@ -132,7 +132,7 @@ class VersionEnum(Enum):
     RC4 = 'RC4'
 
 
-class Version(BaseModel):
-    __root__: Optional[VersionEnum] = Field(
-        'RC1', description='nullable enum', example='RC2'
+class Version(RootModel[Optional[VersionEnum]]):
+    root: Optional[VersionEnum] = Field(
+        'RC1', description='nullable enum', examples=['RC2']
     )

@@ -177,7 +177,7 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--output-model-type",
-    help="Output model type (default: pydantic.BaseModel)",
+    help="Output model type (default: pydantic_v2.BaseModel)",
     choices=[i.value for i in DataModelType],
 )
 base_options.add_argument(
@@ -831,7 +831,7 @@ field_options.add_argument(
 )
 field_options.add_argument(
     "--use-frozen-field",
-    help="Use Field(frozen=True) for readOnly fields (Pydantic v2) or Field(allow_mutation=False) (Pydantic v1)",
+    help="Use Field(frozen=True) for readOnly fields (Pydantic v2).",
     action="store_true",
     default=None,
 )

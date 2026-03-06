@@ -11,7 +11,7 @@ class MultilineDescriptionWithExample(BaseModel):
     name: str | None = Field(
         None,
         description='User name.\nThis is a multi-line description.',
-        example='John Doe',
+        examples=['John Doe'],
     )
     """
     User name.

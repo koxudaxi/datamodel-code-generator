@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Extra, Field, conint
+from pydantic import BaseModel, ConfigDict, Field, RootModel, conint
 
 
 class Fur(Enum):
@@ -42,16 +42,16 @@ class Pet(BaseModel):
 
 
 class Friend(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    name: str = Field(..., example='John Doe')
-    phone_number: str | None = Field(None, example='(555) 555-1234')
+    model_config = ConfigDict(
+        extra='allow',
+    )
+    name: str = Field(..., examples=['John Doe'])
+    phone_number: str | None = Field(None, examples=['(555) 555-1234'])
     food: list[Noodle | Soup] | None = None
 
 
-class Friends(BaseModel):
-    __root__: list[Friend] = Field(..., title='Friends')
+class Friends(RootModel[list[Friend]]):
+    root: list[Friend] = Field(..., title='Friends')
 
 
 class Person(BaseModel):
@@ -73,4 +73,4 @@ class Robot(Pet):
     pet: Pet | None = None
 
 
-Person.update_forward_refs()
+Person.model_rebuild()

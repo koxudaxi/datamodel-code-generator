@@ -22,7 +22,6 @@ from datamodel_code_generator.model import (
 from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
 from datamodel_code_generator.types import STANDARD_LIST, UnionIntFloat, chain_as_tuple
-from datamodel_code_generator.util import model_dump
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
@@ -216,7 +215,7 @@ class DataModelField(DataModelFieldBase):
                     if any(d.import_ == IMPORT_ANYURL for d in self.data_type.all_data_types)
                     else {
                         k: self._get_strict_field_constraint_value(k, v)
-                        for k, v in model_dump(self.constraints, exclude_unset=True).items()
+                        for k, v in self.constraints.model_dump(exclude_unset=True).items()
                     }
                 ),
             }

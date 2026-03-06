@@ -6,12 +6,12 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class ConstWithProps1(BaseModel):
     invalid: Any | None = None
 
 
-class ConstWithProps(BaseModel):
-    __root__: ConstWithProps1 | Literal['value2'] = Field(..., title='ConstWithProps')
+class ConstWithProps(RootModel[ConstWithProps1 | Literal['value2']]):
+    root: ConstWithProps1 | Literal['value2'] = Field(..., title='ConstWithProps')

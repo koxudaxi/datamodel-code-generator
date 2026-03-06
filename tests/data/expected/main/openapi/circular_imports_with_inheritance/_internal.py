@@ -32,6 +32,5 @@ class Authorization(BaseEntity):
     invoice: Invoice | None = None
 
 
-RootModel.update_forward_refs()
-Invoice.update_forward_refs()
-Authorization.update_forward_refs()
+RootModel.model_rebuild()
+Invoice.model_rebuild()
