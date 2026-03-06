@@ -134,10 +134,8 @@ instead of generating duplicate classes from external schema files.
     
     from __future__ import annotations
     
-    from datetime import datetime
-    
     from mypackage.shared.models import Error, User
-    from pydantic import BaseModel
+    from pydantic import AwareDatetime, BaseModel
     
     
     class UserResponse(BaseModel):
@@ -147,7 +145,7 @@ instead of generating duplicate classes from external schema files.
     
     class ErrorResponse(BaseModel):
         error: Error
-        timestamp: datetime
+        timestamp: AwareDatetime
     ```
 
 ---
@@ -257,7 +255,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         from __future__ import annotations
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class Pet(BaseModel):
@@ -266,7 +264,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         
         class Model(BaseModel):
-            Pet: Pet
+            Pet_1: Pet = Field(..., alias='Pet')
         ```
 
     === "YAML"
@@ -288,7 +286,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         from __future__ import annotations
         
-        from pydantic import BaseModel
+        from pydantic import BaseModel, Field
         
         
         class Pet(BaseModel):
@@ -297,7 +295,7 @@ not `--input-file-type yaml`. The `yaml` type treats the file as raw data and in
         
         
         class Model(BaseModel):
-            Pet: Pet
+            Pet_1: Pet = Field(..., alias='Pet')
         ```
 
 ---
