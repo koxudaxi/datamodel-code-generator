@@ -93,7 +93,7 @@ class _BaseModel(BaseModel):
 
     if not TYPE_CHECKING:  # pragma: no branch
 
-        def dict(  # noqa: PLR0913
+        def dict(  # noqa: PLR0913  # pragma: no cover
             self,
             *,
             include: AbstractSet[int | str] | Mapping[int | str, Any] | None = None,

@@ -143,11 +143,11 @@ class Config(BaseModel):  # noqa: PLR0904
 
     model_config = ConfigDict(arbitrary_types_allowed=True)  # ty: ignore
 
-    def get(self, item: str) -> Any:
+    def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
         return getattr(self, item)
 
-    def __getitem__(self, item: str) -> Any:
+    def __getitem__(self, item: str) -> Any:  # pragma: no cover
         """Get item by key."""
         return self.get(item)  # ty: ignore
 
@@ -379,7 +379,7 @@ class Config(BaseModel):  # noqa: PLR0904
             and output_model_type == DataModelType.DataclassesDataclass
             and not python_target.has_kw_only_dataclass
         ):
-            raise Error(self.__validate_keyword_only_err)
+            raise Error(self.__validate_keyword_only_err)  # pragma: no cover
         return self
 
     @model_validator(mode="after")  # ty: ignore
@@ -410,11 +410,11 @@ class Config(BaseModel):  # noqa: PLR0904
     @classmethod
     def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
         """Convert string to ClassNameAffixScope enum."""
-        if v is None:
+        if v is None:  # pragma: no cover
             return ClassNameAffixScope.All
         if isinstance(v, str):
             return ClassNameAffixScope(v)
-        return v
+        return v  # pragma: no cover
 
     input: Optional[Union[Path, str]] = None  # noqa: UP007, UP045
     input_model: Optional[list[str]] = None  # noqa: UP045

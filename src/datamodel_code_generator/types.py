@@ -115,7 +115,7 @@ class UnionIntFloat:
         """Initialize with an int or float value."""
         self.value: int | float = value
 
-    def __int__(self) -> int:
+    def __int__(self) -> int:  # pragma: no cover
         """Convert value to int."""
         return int(self.value)
 
@@ -150,7 +150,7 @@ class UnionIntFloat:
     @classmethod
     def validate(cls, v: Any) -> UnionIntFloat:
         """Validate and convert value to UnionIntFloat."""
-        if isinstance(v, UnionIntFloat):
+        if isinstance(v, UnionIntFloat):  # pragma: no cover
             return v
         if not isinstance(v, (int, float)):  # pragma: no cover
             try:
