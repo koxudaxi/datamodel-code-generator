@@ -123,10 +123,6 @@ class UnionIntFloat:
         """Convert value to float."""
         return float(self.value)
 
-    def __str__(self) -> str:
-        """Convert value to string."""
-        return str(self.value)
-
     @classmethod
     def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _source_type: Any, _handler: GetCoreSchemaHandler

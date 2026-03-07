@@ -313,7 +313,10 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             if self.use_decimal_for_multiple_of and "multiple_of" in data_type_kwargs:
                 return self.data_type.from_import(
                     IMPORT_CONDECIMAL,
-                    kwargs={k: Decimal(str(v)) for k, v in data_type_kwargs.items()},
+                    kwargs={
+                        k: Decimal(str(v.value if isinstance(v, UnionIntFloat) else v))
+                        for k, v in data_type_kwargs.items()
+                    },
                 )
             if not strict:
                 if data_type_kwargs == {"gt": 0}:
@@ -338,7 +341,9 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         if data_type_kwargs:
             return self.data_type.from_import(
                 IMPORT_CONDECIMAL,
-                kwargs={k: Decimal(str(v) if isinstance(v, UnionIntFloat) else v) for k, v in data_type_kwargs.items()},
+                kwargs={
+                    k: Decimal(str(v.value if isinstance(v, UnionIntFloat) else v)) for k, v in data_type_kwargs.items()
+                },
             )
         return self.type_map[types]
 
