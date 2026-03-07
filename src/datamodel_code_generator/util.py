@@ -290,31 +290,3 @@ def camel_to_snake(string: str) -> str:
     """Convert camelCase or PascalCase to snake_case."""
     subbed = _UNDER_SCORE_1.sub(r"\1_\2", string)
     return _UNDER_SCORE_2.sub(r"\1_\2", subbed).lower()
-
-
-def model_dump(obj: _BaseModel, **kwargs: Any) -> dict[str, Any]:  # ty: ignore  # pragma: no cover
-    """Version-compatible model serialization (dict/model_dump)."""
-    if is_pydantic_v2():
-        return obj.model_dump(**kwargs)  # ty: ignore
-    return obj.dict(**kwargs)  # type: ignore[reportDeprecated]  # pragma: no cover
-
-
-def model_validate(cls: type[Model], obj: Any) -> Model:  # pragma: no cover
-    """Version-compatible model validation (parse_obj/model_validate)."""
-    if is_pydantic_v2():
-        return cls.model_validate(obj)  # ty: ignore
-    return cls.parse_obj(obj)  # type: ignore[reportDeprecated]  # pragma: no cover
-
-
-def get_fields_set(obj: _BaseModel) -> set[str]:  # ty: ignore  # pragma: no cover
-    """Version-compatible access to fields set (__fields_set__/model_fields_set)."""
-    if is_pydantic_v2():
-        return obj.model_fields_set  # ty: ignore
-    return obj.__fields_set__  # type: ignore[reportDeprecated]  # pragma: no cover
-
-
-def model_copy(obj: Model, **kwargs: Any) -> Model:  # pragma: no cover
-    """Version-compatible model copy (copy/model_copy)."""
-    if is_pydantic_v2():
-        return obj.model_copy(**kwargs)  # ty: ignore
-    return obj.copy(**kwargs)  # type: ignore[reportDeprecated]  # pragma: no cover

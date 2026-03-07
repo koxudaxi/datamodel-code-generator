@@ -3018,7 +3018,7 @@ as the class name instead of deriving it from the property name or path.
 This is useful when schemas have descriptive titles that should be preserved.""",
     input_schema="jsonschema/titles.json",
     cli_args=["--use-title-as-name"],
-    golden_output="jsonschema/titles_use_title_as_name_cli_doc.py",
+    golden_output="jsonschema/cli_doc/titles_use_title_as_name.py",
     related_options=["--class-name"],
 )
 def test_jsonschema_titles_use_title_as_name(output_file: Path) -> None:
