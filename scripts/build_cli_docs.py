@@ -450,18 +450,19 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
             md += f"{prefix}```\n\n"
     elif example.comparison_output and example.model_outputs:
         model_labels = {
-            "pydantic_v1": "Pydantic v1",
             "pydantic_v2": "Pydantic v2",
             "dataclass": "dataclass",
             "typeddict": "TypedDict",
             "msgspec": "msgspec",
         }
-        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
+        order = ["pydantic_v2", "dataclass", "typeddict", "msgspec"]
         sorted_models = sorted(
             example.model_outputs.items(),
             key=lambda x: order.index(x[0]) if x[0] in order else len(order),
         )
         for model_key, output_file in sorted_models:
+            if model_key == "pydantic_v1":
+                continue
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
             try:
@@ -502,18 +503,19 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
                 md += f"{prefix}    > **Error:** {e}\n\n"
     elif example.model_outputs:
         model_labels = {
-            "pydantic_v1": "Pydantic v1",
             "pydantic_v2": "Pydantic v2",
             "dataclass": "dataclass",
             "typeddict": "TypedDict",
             "msgspec": "msgspec",
         }
-        order = ["pydantic_v1", "pydantic_v2", "dataclass", "typeddict", "msgspec"]
+        order = ["pydantic_v2", "dataclass", "typeddict", "msgspec"]
         sorted_models = sorted(
             example.model_outputs.items(),
             key=lambda x: order.index(x[0]) if x[0] in order else len(order),
         )
         for model_key, output_file in sorted_models:
+            if model_key == "pydantic_v1":
+                continue
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
             try:

@@ -210,7 +210,6 @@ class User(BaseModel):
 
 - Compatibility with runtime annotation inspection
 - Libraries that don't support `__future__.annotations`
-- Pydantic v1 in some configurations
 - When using `get_type_hints()` at runtime
 
 ---
@@ -325,7 +324,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
 **Solutions:**
 
 1. **Upgrade Pydantic** (recommended):
-   - Pydantic v1: Upgrade to version 1.10.18 or later
    - Pydantic v2: Upgrade to the latest version
 
 2. **Use `--disable-future-imports`** as a workaround:
@@ -338,9 +336,6 @@ This occurs because Python 3.13 deprecated calling `typing._eval_type()` without
    # pyproject.toml
    [tool.pytest.ini_options]
    filterwarnings = [
-       # For Pydantic v2's v1 compatibility layer (pydantic.v1)
-       "ignore::DeprecationWarning:pydantic.v1.typing",
-       # For standalone Pydantic v1
        "ignore::DeprecationWarning:pydantic.typing",
    ]
    ```

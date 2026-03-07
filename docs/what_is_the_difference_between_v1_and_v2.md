@@ -10,7 +10,6 @@ datamodel-code-generator supports multiple output model types. This page compare
 |------------|------------|---------------|-------------|----------|
 | **Pydantic v2** | Runtime | Built-in | Fast | New projects, APIs, data validation |
 | **Pydantic v2 dataclass** | Runtime | Built-in | Fast | Pydantic validation with dataclass syntax |
-| **Pydantic v1** | Runtime | Built-in | Moderate | Legacy compatibility |
 | **dataclasses** | None | Manual | Fastest | Simple data containers, no validation needed |
 | **TypedDict** | Static only | Dict-compatible | N/A | Type hints for dicts, JSON APIs |
 | **msgspec** | Runtime | Built-in | Fastest | High-performance serialization |
@@ -41,7 +40,7 @@ class Pets(RootModel[list[Pet]]):
 
 ### When to use
 
-- New projects without Pydantic v1 dependencies
+- New projects requiring data validation
 - APIs requiring data validation
 - Projects needing JSON Schema generation from models
 
@@ -73,47 +72,6 @@ class Pet:
 - Want to use dataclass syntax with Pydantic validation
 - Migrating from dataclasses but need validation
 - Prefer decorator-based class definition
-
----
-
-## Pydantic v1
-
-**Use `--output-model-type pydantic.BaseModel`** (default)
-
-Pydantic v1 is the default for backward compatibility with existing codebases.
-
-```bash
-datamodel-codegen --input schema.json --output-model-type pydantic.BaseModel --output model.py
-```
-
-```python
-from pydantic import BaseModel, Field
-
-class Pet(BaseModel):
-    id: int = Field(..., ge=0)
-    name: str = Field(..., max_length=256)
-    tag: Optional[str] = None
-
-class Pets(BaseModel):
-    __root__: List[Pet]
-```
-
-### Migration from v1 to v2
-
-Key differences when migrating:
-
-| v1 | v2 | Notes |
-|----|----|----|
-| `__root__` | `RootModel` | Custom root types now use `RootModel` class |
-| `const` | Removed | Use `Literal` types instead |
-| `min_items` | `min_length` | |
-| `max_items` | `max_length` | |
-| `unique_items` | Removed | List replaced by `set` type |
-| `allow_mutation` | `frozen` | Inverse value |
-| `regex` | `pattern` | |
-| `pydantic.Config` | `pydantic.ConfigDict` | |
-
-See [Pydantic v2 Migration Guide](https://docs.pydantic.dev/2.0/migration/) for details.
 
 ---
 
@@ -224,9 +182,7 @@ graph TD
     A[Need runtime validation?] -->|Yes| B[Need best performance?]
     A -->|No| C[Need type hints for dicts?]
     B -->|Yes| D[msgspec.Struct]
-    B -->|No| E[Pydantic v1 dependency?]
-    E -->|Yes| F[pydantic.BaseModel]
-    E -->|No| G[Prefer dataclass syntax?]
+    B -->|No| G[Prefer dataclass syntax?]
     G -->|Yes| H[pydantic_v2.dataclass]
     G -->|No| I[pydantic_v2.BaseModel]
     C -->|Yes| J[typing.TypedDict]
@@ -237,10 +193,9 @@ graph TD
 
 1. **API with validation** → Pydantic v2
 2. **Validation with dataclass syntax** → Pydantic v2 dataclass
-3. **Legacy Pydantic v1 project** → Pydantic v1
-4. **High-performance serialization** → msgspec
-5. **Simple data containers** → dataclasses
-6. **Dict-based JSON handling** → TypedDict
+3. **High-performance serialization** → msgspec
+4. **Simple data containers** → dataclasses
+5. **Dict-based JSON handling** → TypedDict
 
 ---
 
