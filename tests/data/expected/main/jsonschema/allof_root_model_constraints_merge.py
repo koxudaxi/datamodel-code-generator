@@ -6,41 +6,40 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, EmailStr, Field, conint, constr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, RootModel, conint, constr
 
 
-class StringDatatype(BaseModel):
-    __root__: constr(regex=r'^\S(.*\S)?$') = Field(
-        ..., description='A base string type.'
+class StringDatatype(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+    root: constr(pattern=r'^\S(.*\S)?$') = Field(..., description='A base string type.')
+
+
+class ConstrainedStringDatatype(RootModel[str]):
+    model_config = ConfigDict(
+        regex_engine="python-re",
     )
-
-
-class ConstrainedStringDatatype(BaseModel):
-    __root__: constr(regex=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
+    root: constr(pattern=r'(?=^\S(.*\S)?$)(?=^[A-Z].*)', min_length=1) = Field(
         ..., description='A constrained string.'
     )
 
 
-class IntegerDatatype(BaseModel):
-    __root__: int = Field(..., description='A whole number.')
+class IntegerDatatype(RootModel[int]):
+    root: int = Field(..., description='A whole number.')
 
 
-class NonNegativeIntegerDatatype(BaseModel):
-    __root__: conint(ge=0) = Field(..., description='Non-negative integer.')
+class NonNegativeIntegerDatatype(RootModel[conint(ge=0)]):
+    root: conint(ge=0) = Field(..., description='Non-negative integer.')
 
 
-class BoundedIntegerDatatype(BaseModel):
-    __root__: conint(ge=0, le=100) = Field(
-        ..., description='Integer between 0 and 100.'
-    )
+class BoundedIntegerDatatype(RootModel[conint(ge=0, le=100)]):
+    root: conint(ge=0, le=100) = Field(..., description='Integer between 0 and 100.')
 
 
-class EmailDatatype(BaseModel):
-    __root__: EmailStr = Field(..., description='Email with format.')
+class EmailDatatype(RootModel[EmailStr]):
+    root: EmailStr = Field(..., description='Email with format.')
 
 
-class FormattedStringDatatype(BaseModel):
-    __root__: EmailStr = Field(..., description='A string with email format.')
+class FormattedStringDatatype(RootModel[EmailStr]):
+    root: EmailStr = Field(..., description='A string with email format.')
 
 
 class ObjectBase(BaseModel):
@@ -71,20 +70,20 @@ class ConstraintWithItems(BaseModel):
     pass
 
 
-class NumberIntegerCompatible(BaseModel):
-    __root__: conint(ge=0) = Field(
-        ..., description='Number and integer are compatible.'
-    )
+class NumberIntegerCompatible(RootModel[conint(ge=0)]):
+    root: conint(ge=0) = Field(..., description='Number and integer are compatible.')
 
 
-class RefWithSchemaKeywords(BaseModel):
-    __root__: constr(regex=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
+class RefWithSchemaKeywords(
+    RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100)]
+):
+    root: constr(pattern=r'^\S(.*\S)?$', min_length=5, max_length=100) = Field(
         ..., description='Ref with additional schema keywords.'
     )
 
 
-class ArrayDatatype(BaseModel):
-    __root__: list[str]
+class ArrayDatatype(RootModel[list[str]]):
+    root: list[str]
 
 
 class RefToArrayAllOf(BaseModel):
@@ -99,8 +98,8 @@ class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
     pass
 
 
-class PatternPropsDatatype(BaseModel):
-    __root__: dict[constr(regex=r'^S_'), str]
+class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
+    root: dict[constr(pattern=r'^S_'), str]
 
 
 class RefToPatternPropsAllOf(BaseModel):
@@ -115,22 +114,24 @@ class RefToNestedAllOfAllOf(NestedAllOfDatatype):
     pass
 
 
-class ConstraintsOnlyDatatype(BaseModel):
-    __root__: Any = Field(..., description='Constraints only, no type.')
+class ConstraintsOnlyDatatype(RootModel[Any]):
+    root: Any = Field(..., description='Constraints only, no type.')
 
 
-class RefToConstraintsOnlyAllOf(BaseModel):
-    __root__: Any = Field(..., description='Ref to constraints-only schema.')
+class RefToConstraintsOnlyAllOf(RootModel[Any]):
+    root: Any = Field(..., description='Ref to constraints-only schema.')
 
 
-class NoDescriptionAllOf(BaseModel):
-    __root__: constr(regex=r'^\S(.*\S)?$', min_length=5) = Field(
+class NoDescriptionAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$', min_length=5)]):
+    root: constr(pattern=r'^\S(.*\S)?$', min_length=5) = Field(
         ..., description='A base string type.'
     )
 
 
-class EmptyConstraintItemAllOf(BaseModel):
-    __root__: constr(regex=r'^\S(.*\S)?$', max_length=50) = Field(
+class EmptyConstraintItemAllOf(
+    RootModel[constr(pattern=r'^\S(.*\S)?$', max_length=50)]
+):
+    root: constr(pattern=r'^\S(.*\S)?$', max_length=50) = Field(
         ..., description='AllOf with empty constraint item.'
     )
 

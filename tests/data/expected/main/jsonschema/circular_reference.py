@@ -4,11 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
-
-
-class Member(BaseModel):
-    __root__: User = Field(..., title='Member')
+from pydantic import BaseModel, Field, RootModel
 
 
 class User(BaseModel):
@@ -28,6 +24,9 @@ class House(BaseModel):
     owner: User | None = None
 
 
-Member.update_forward_refs()
-User.update_forward_refs()
-Animal.update_forward_refs()
+class Member(RootModel[User]):
+    root: User = Field(..., title='Member')
+
+
+User.model_rebuild()
+Animal.model_rebuild()

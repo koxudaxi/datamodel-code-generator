@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict, RootModel
 
 
 class Pet(BaseModel):
@@ -9,33 +9,35 @@ class Pet(BaseModel):
     tag: Optional[str] = None
 
 
-class Pets(BaseModel):
-    __root__: List[Pet]
+class Pets(RootModel[List[Pet]]):
+    root: List[Pet]
 
 
 class User(BaseModel):
-    class Config:
-        extra = Extra.allow
+    model_config = ConfigDict(
+        extra='allow',
+    )
     id: int
     name: str
     tag: Optional[str] = None
 
 
-class Users(BaseModel):
-    __root__: List[User]
+class Users(RootModel[List[User]]):
+    root: List[User]
 
 
-class Id(BaseModel):
-    __root__: str
+class Id(RootModel[str]):
+    root: str
 
 
-class Rules(BaseModel):
-    __root__: List[str]
+class Rules(RootModel[List[str]]):
+    root: List[str]
 
 
 class Error(BaseModel):
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     code: int
     message: str
 

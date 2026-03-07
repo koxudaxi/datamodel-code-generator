@@ -4,12 +4,13 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict, RootModel
 
 
 class Pets(BaseModel):
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        extra='forbid',
+    )
 
 
 class Pet(BaseModel):
@@ -27,13 +28,13 @@ class Resolved(BaseModel):
     resolved: list[str] | None = None
 
 
-class PetsModel(BaseModel):
-    __root__: list[Pet]
+class PetsModel(RootModel[list[Pet]]):
+    root: list[Pet]
 
 
-class Friends2(BaseModel):
-    __root__: PetsModel
+class Friends2(RootModel[PetsModel]):
+    root: PetsModel
 
 
-class Friends1(BaseModel):
-    __root__: PetsModel
+class Friends1(RootModel[PetsModel]):
+    root: PetsModel

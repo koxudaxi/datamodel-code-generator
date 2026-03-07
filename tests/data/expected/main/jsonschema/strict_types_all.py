@@ -18,12 +18,14 @@ from pydantic import (
 
 
 class User(BaseModel):
-    name: StrictStr | None = Field(None, example='ken')
+    name: StrictStr | None = Field(None, examples=['ken'])
     age: StrictInt | None = None
     salary: conint(ge=0, strict=True) | None = None
     debt: conint(le=0, strict=True) | None = None
     loan: confloat(le=0.0, strict=True) | None = None
-    tel: constr(regex=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True) | None = None
+    tel: constr(
+        pattern=r'^(\([0-9]{3}\))?[0-9]{3}-[0-9]{4}$', strict=True
+    ) | None = None
     height: confloat(ge=0.0, strict=True) | None = None
     weight: confloat(ge=0.0, strict=True) | None = None
     score: confloat(ge=1e-08, strict=True) | None = None

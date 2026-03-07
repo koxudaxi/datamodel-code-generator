@@ -42,6 +42,5 @@ class Authorization(BaseModel):
     invoice: Invoice | None = None
 
 
-Item.update_forward_refs()
-Invoice.update_forward_refs()
-Authorization.update_forward_refs()
+Item.model_rebuild()
+Invoice.model_rebuild()

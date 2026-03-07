@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class MySchema1(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     AddressLine1: str
     AddressLine2: str | None = None
     City: str | None = None
@@ -19,9 +19,9 @@ class MySchema1(BaseModel):
 
 
 class MySchema2(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     AddressLine1: str
     AddressLine2: str | None = None
     City: str | None = None
@@ -35,16 +35,13 @@ class US(BaseModel):
 
 
 class MySchema3(US):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     AddressLine1: str
     AddressLine2: str | None = None
     City: str | None = None
 
 
-class MySchema(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    __root__: MySchema1 | MySchema2 | MySchema3 = Field(..., title='My schema')
+class MySchema(RootModel[MySchema1 | MySchema2 | MySchema3]):
+    root: MySchema1 | MySchema2 | MySchema3 = Field(..., title='My schema')

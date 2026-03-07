@@ -15,7 +15,7 @@ from datamodel_code_generator import AllOfMergeMode
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
-from datamodel_code_generator.model.pydantic.base_model import BaseModel
+from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel
 from datamodel_code_generator.parser.base import Parser, dump_templates
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
@@ -102,7 +102,7 @@ def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
     assert (
         dump_templates(list(parser.results))
         == """class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')
+    name: Optional[str] = Field(None, examples=['ken'])
     pets: List[User] = Field(default_factory=list)
 
 
@@ -144,7 +144,7 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
 
 
 class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')
+    name: Optional[str] = Field(None, examples=['ken'])
     pets: List[User] = Field(default_factory=list)"""
     )
     mock_get.assert_called_once_with(
@@ -175,7 +175,7 @@ def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
 
 
 class User(BaseModel):
-    name: Optional[str] = Field(None, example='ken')
+    name: Optional[str] = Field(None, examples=['ken'])
     pets: List[User] = Field(default_factory=list)
 
 
@@ -277,8 +277,8 @@ def test_parse_object(source_obj: dict[str, Any], generated_classes: str) -> Non
                 "description": "This field accepts any object",
                 "discriminator": "type",
             },
-            """class AnyObject(BaseModel):
-    __root__: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
+            """class AnyObject(RootModel[Any]):
+    root: Any = Field(..., description='This field accepts any object', discriminator='type', title='AnyJson')""",
         )
     ],
 )
@@ -380,23 +380,23 @@ def test_parse_nested_array(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     [
         ("integer", "int32", "int", None, None, False),
         ("integer", "int64", "int", None, None, False),
-        ("integer", "date-time", "datetime", "datetime", "datetime", False),
-        ("integer", "date-time", "DateTime", "pendulum", "DateTime", True),
+        ("integer", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", False),
+        ("integer", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", True),
         ("integer", "unix-time", "int", None, None, False),
         ("number", "float", "float", None, None, False),
         ("number", "double", "float", None, None, False),
         ("number", "time", "time", "datetime", "time", False),
         ("number", "time", "Time", "pendulum", "Time", True),
-        ("number", "date-time", "datetime", "datetime", "datetime", False),
-        ("number", "date-time", "DateTime", "pendulum", "DateTime", True),
+        ("number", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", False),
+        ("number", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", True),
         ("string", None, "str", None, None, False),
-        ("string", "byte", "str", None, None, False),
+        ("string", "byte", "Base64Str", "pydantic", "Base64Str", False),
         ("string", "binary", "bytes", None, None, False),
         ("boolean", None, "bool", None, None, False),
         ("string", "date", "date", "datetime", "date", False),
         ("string", "date", "Date", "pendulum", "Date", True),
-        ("string", "date-time", "datetime", "datetime", "datetime", False),
-        ("string", "date-time", "DateTime", "pendulum", "DateTime", True),
+        ("string", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", False),
+        ("string", "date-time", "AwareDatetime", "pydantic", "AwareDatetime", True),
         ("string", "duration", "timedelta", "datetime", "timedelta", False),
         ("string", "duration", "Duration", "pendulum", "Duration", True),
         ("number", "time-delta", "timedelta", "datetime", "timedelta", False),
@@ -449,14 +449,17 @@ def test_get_data_type(
 def test_get_data_type_array(schema_types: list[str], result_types: list[str]) -> None:
     """Test data type resolution for array of types."""
     parser = JsonSchemaParser("")
-    assert parser.get_data_type(JsonSchemaObject(type=schema_types)) == parser.data_type(
-        data_types=[
-            parser.data_type(
-                type=r,
-            )
-            for r in result_types
-        ],
-        is_optional="null" in schema_types,
+    assert (
+        parser.get_data_type(JsonSchemaObject(type=schema_types)).model_dump()
+        == parser.data_type(
+            data_types=[
+                parser.data_type(
+                    type=r,
+                )
+                for r in result_types
+            ],
+            is_optional="null" in schema_types,
+        ).model_dump()
     )
 
 

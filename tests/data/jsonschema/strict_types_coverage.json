@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StrictTypesCoverage",
+  "type": "object",
+  "properties": {
+    "int_with_range": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "float_with_range": {
+      "type": "number",
+      "minimum": 1.5,
+      "maximum": 99.9
+    },
+    "decimal_value": {
+      "type": "number",
+      "format": "decimal"
+    },
+    "decimal_with_range": {
+      "type": "number",
+      "format": "decimal",
+      "minimum": 0,
+      "maximum": 1000
+    },
+    "hostname_value": {
+      "type": "string",
+      "format": "hostname"
+    }
+  }
+}

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
@@ -19,8 +19,8 @@ class Pet(BaseModel):
     boolean: Literal[True]
 
 
-class Pets(BaseModel):
-    __root__: list[Pet]
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet]
 
 
 class Animal(BaseModel):
@@ -36,37 +36,37 @@ class EnumObject(BaseModel):
     type: Literal['a', 'b'] | None = None
 
 
-class EnumRoot(BaseModel):
-    __root__: Literal['a', 'b']
+class EnumRoot(RootModel[Literal['a', 'b']]):
+    root: Literal['a', 'b']
 
 
-class IntEnum(BaseModel):
-    __root__: Literal[1, 2]
+class IntEnum(RootModel[Literal[1, 2]]):
+    root: Literal[1, 2]
 
 
-class AliasEnum(BaseModel):
-    __root__: Literal[1, 2, 3]
+class AliasEnum(RootModel[Literal[1, 2, 3]]):
+    root: Literal[1, 2, 3]
 
 
-class MultipleTypeEnum(BaseModel):
-    __root__: Literal['red', 'amber', 'green', 42] | None
+class MultipleTypeEnum(RootModel[Literal['red', 'amber', 'green', 42] | None]):
+    root: Literal['red', 'amber', 'green', 42] | None
 
 
-class SingleEnum(BaseModel):
-    __root__: Literal['pet']
+class SingleEnum(RootModel[Literal['pet']]):
+    root: Literal['pet']
 
 
-class ArrayEnum(BaseModel):
-    __root__: list[Literal['cat'] | Literal['dog']]
+class ArrayEnum(RootModel[list[Literal['cat'] | Literal['dog']]]):
+    root: list[Literal['cat'] | Literal['dog']]
 
 
 class NestedNullableEnum(BaseModel):
     nested_version: Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None = Field(
-        'RC1', description='nullable enum', example='RC2'
+        'RC1', description='nullable enum', examples=['RC2']
     )
 
 
-class Version(BaseModel):
-    __root__: Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None = Field(
-        'RC1', description='nullable enum', example='RC2'
+class Version(RootModel[Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None]):
+    root: Literal['RC1', 'RC1N', 'RC2', 'RC2N', 'RC3', 'RC4'] | None = Field(
+        'RC1', description='nullable enum', examples=['RC2']
     )

@@ -8,21 +8,21 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 from . import models
 
 
-class Pets(BaseModel):
-    __root__: list[models.Pet]
+class Pets(RootModel[list[models.Pet]]):
+    root: list[models.Pet]
 
 
-class Users(BaseModel):
-    __root__: list[models.User]
+class Users(RootModel[list[models.User]]):
+    root: list[models.User]
 
 
-class Rules(BaseModel):
-    __root__: list[str]
+class Rules(RootModel[list[str]]):
+    root: list[str]
 
 
 class Stage(Enum):
@@ -48,5 +48,5 @@ class Api(BaseModel):
     stage: Stage | None = None
 
 
-class Apis(BaseModel):
-    __root__: list[Api]
+class Apis(RootModel[list[Api]]):
+    root: list[Api]

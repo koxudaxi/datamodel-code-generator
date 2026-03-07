@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, ConfigDict, constr
 
 
 class Status(Enum):
@@ -70,6 +70,9 @@ class ProjectedEntity(BaseModel):
 
 
 class Entity(ProjectedEntity):
+    model_config = ConfigDict(
+        regex_engine="python-re",
+    )
     extra: str | None = None
     primitive_string: str
     primitive_int: int
@@ -86,7 +89,7 @@ class Entity(ProjectedEntity):
     allof_single_ref: BaseType
     allof_multiple_refs: BaseType
     allof_primitives_with_constraints: constr(min_length=5, max_length=100)
-    allof_with_pattern: constr(regex=r'(?=^[a-z]+)(?=[0-9]$)')
+    allof_with_pattern: constr(pattern=r'(?=^[a-z]+)(?=[0-9]$)')
     allof_with_unique: list[str]
     type_list: str | None
     deep_nested: dict[str, Any]

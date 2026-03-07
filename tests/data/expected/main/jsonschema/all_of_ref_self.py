@@ -4,11 +4,11 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
-class Version(BaseModel):
-    __root__: None
+class Version(RootModel[None]):
+    root: None
 
 
 class Model(BaseModel):

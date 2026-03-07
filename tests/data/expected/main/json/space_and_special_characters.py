@@ -41,6 +41,6 @@ class Recursive(BaseModel):
 class Model(BaseModel):
     Serial_Number: str = Field(..., alias='Serial Number')
     Timestamp: str
-    Data: Data
+    Data_1: Data = Field(..., alias='Data')
     values: Values
     recursive: Recursive

@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict
 
 
 class PartialResource(BaseModel):
@@ -12,7 +12,7 @@ class PartialResource(BaseModel):
 
 
 class Resource(PartialResource):
-    class Config:
-        extra = Extra.forbid
-
+    model_config = ConfigDict(
+        extra='forbid',
+    )
     id: int | None = None

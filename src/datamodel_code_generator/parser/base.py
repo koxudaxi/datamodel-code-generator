@@ -64,7 +64,6 @@ from datamodel_code_generator.imports import (
 )
 from datamodel_code_generator.model import dataclass as dataclass_model
 from datamodel_code_generator.model import msgspec as msgspec_model
-from datamodel_code_generator.model import pydantic as pydantic_model
 from datamodel_code_generator.model import pydantic_v2 as pydantic_model_v2
 from datamodel_code_generator.model.base import (
     ALL_MODEL,
@@ -1112,7 +1111,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """
         if issubclass(
             self.data_model_type,
-            (pydantic_model.BaseModel, pydantic_model_v2.BaseModel),
+            (pydantic_model_v2.BaseModel,),
         ):
             return ModelType.PYDANTIC
         return ModelType.CLASS
@@ -1532,7 +1531,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     type_names: list[str] = []
 
                     def check_paths(
-                        model: pydantic_model.BaseModel | pydantic_model_v2.BaseModel | Reference,
+                        model: pydantic_model_v2.BaseModel | Reference,
                         mapping: dict[str, str],
                         type_names: list[str] = type_names,
                     ) -> None:
@@ -1602,7 +1601,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             if not isinstance(  # pragma: no cover
                                 base_model,
                                 (
-                                    pydantic_model.BaseModel,
                                     pydantic_model_v2.BaseModel,
                                     dataclass_model.DataClass,
                                     msgspec_model.Struct,
@@ -1852,7 +1850,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         supports_inheritance = issubclass(
             self.data_model_type,
             (
-                pydantic_model.BaseModel,
                 pydantic_model_v2.BaseModel,
                 dataclass_model.DataClass,
             ),
@@ -1914,10 +1911,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.__validate_shared_module_name(module_models)
         return self.__create_shared_module_from_duplicates(module_models, duplicates, require_update_action_models)
-
-    def _is_pydantic_v2_model(self) -> bool:
-        """Check if the output model type is Pydantic v2."""
-        return self.data_model_type.__module__.startswith("datamodel_code_generator.model.pydantic_v2")
 
     def __collapse_root_models(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -2037,9 +2030,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
                         discriminator = root_type_field.extras.get("discriminator")
-                        if discriminator and isinstance(
-                            root_type_field, (pydantic_model.DataModelField, pydantic_model_v2.DataModelField)
-                        ):
+                        if discriminator and isinstance(root_type_field, pydantic_model_v2.DataModelField):
                             has_any_variant = any(
                                 dt.type == ANY
                                 or (not dt.reference and not dt.data_types and not dt.literals and not dt.type)
@@ -2051,8 +2042,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     if isinstance(discriminator, dict)
                                     else discriminator
                                 )
-                                if self._is_pydantic_v2_model():
-                                    copied_data_type.discriminator = prop_name
+                                copied_data_type.discriminator = prop_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)

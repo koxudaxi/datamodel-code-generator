@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class MyStringDict(BaseModel):
-    __root__: dict[str, str] = Field(..., title='MyStringDict')
+class MyStringDict(RootModel[dict[str, str]]):
+    root: dict[str, str] = Field(..., title='MyStringDict')

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Extra, Field
+from pydantic import BaseModel, ConfigDict, Field, RootModel
 
 
 class Field1(Enum):
@@ -18,9 +18,9 @@ class Field2(Enum):
 
 
 class V2Test1(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     field_1: Field1
     field_2: Field2
 
@@ -34,9 +34,9 @@ class Field21(Enum):
 
 
 class V2Test2(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     field_1: Field11
     field_2: Field21
 
@@ -46,15 +46,12 @@ class Field22(Enum):
 
 
 class V2Test3(BaseModel):
-    class Config:
-        extra = Extra.allow
-
+    model_config = ConfigDict(
+        extra='allow',
+    )
     field_1: Field11
     field_2: Field22
 
 
-class V2Test(BaseModel):
-    class Config:
-        extra = Extra.allow
-
-    __root__: V2Test1 | V2Test2 | V2Test3 = Field(..., title='v2_test')
+class V2Test(RootModel[V2Test1 | V2Test2 | V2Test3]):
+    root: V2Test1 | V2Test2 | V2Test3 = Field(..., title='v2_test')

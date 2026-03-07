@@ -16,4 +16,4 @@ class Model(BaseModel):
     root: Context | None = None
 
 
-Context.update_forward_refs()
+Context.model_rebuild()

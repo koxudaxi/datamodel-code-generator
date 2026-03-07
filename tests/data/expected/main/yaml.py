@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Pet(BaseModel):
@@ -13,4 +13,4 @@ class Pet(BaseModel):
 
 
 class Model(BaseModel):
-    Pet: Pet
+    Pet_1: Pet = Field(..., alias='Pet')

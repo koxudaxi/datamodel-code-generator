@@ -6,25 +6,26 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Extra
+from pydantic import BaseModel, ConfigDict, RootModel
 
 
-class Model(BaseModel):
-    __root__: Any
+class Model(RootModel[Any]):
+    root: Any
 
 
 class Friends(BaseModel):
-    class Config:
-        extra = Extra.forbid
+    model_config = ConfigDict(
+        extra='forbid',
+    )
 
 
-class FriendsModel(BaseModel):
-    __root__: list[Any]
+class FriendsModel(RootModel[list[Any]]):
+    root: list[Any]
 
 
-class Tst2(BaseModel):
-    __root__: FriendsModel
+class Tst2(RootModel[FriendsModel]):
+    root: FriendsModel
 
 
-class Tst1(BaseModel):
-    __root__: FriendsModel
+class Tst1(RootModel[FriendsModel]):
+    root: FriendsModel

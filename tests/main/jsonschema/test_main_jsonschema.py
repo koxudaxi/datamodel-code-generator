@@ -25,7 +25,6 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from datamodel_code_generator.util import is_pydantic_v2
 from tests.conftest import assert_directory_content, freeze_time
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
@@ -42,8 +41,6 @@ from tests.main.conftest import (
     run_main_with_args,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
-
-PYDANTIC_V2_SKIP = pytest.mark.skipif(not is_pydantic_v2(), reason="Pydantic v2 required")
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -142,14 +139,7 @@ def test_main_type_alias_cycle_keep_model_order(output_file: Path) -> None:
 The --disable-future-imports option stops the generator from adding
 'from __future__ import annotations' to the output. This is useful when
 you need compatibility with tools or environments that don't support
-postponed evaluation of annotations (PEP 563).
-
-**Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
-
-- Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-- Use this `--disable-future-imports` flag as a workaround""",
+postponed evaluation of annotations (PEP 563).""",
     input_schema="jsonschema/keep_model_order_field_references.json",
     cli_args=["--disable-future-imports", "--target-python-version", "3.10"],
     golden_output="main/jsonschema/keep_model_order_field_references.py",
@@ -162,13 +152,6 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     'from __future__ import annotations' to the output. This is useful when
     you need compatibility with tools or environments that don't support
     postponed evaluation of annotations (PEP 563).
-
-    **Python 3.13+ Deprecation Warning:** When using `from __future__ import annotations`
-    with older versions of Pydantic v1 (before 1.10.18), Python 3.13 may raise
-    deprecation warnings related to `typing._eval_type()`. To avoid these warnings:
-
-    - Upgrade to Pydantic v1 >= 1.10.18 or Pydantic v2 (recommended)
-    - Use this `--disable-future-imports` flag as a workaround
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
@@ -320,26 +303,6 @@ def test_main_jsonschema(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_dataclass_arguments_with_pydantic(output_file: Path) -> None:
-    """Test JSON Schema code generation with dataclass arguments passed but using Pydantic model.
-
-    This verifies that dataclass_arguments is properly ignored for non-dataclass models.
-    """
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="general.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic.BaseModel",
-            "--dataclass-arguments",
-            '{"slots": true, "order": true}',
-        ],
-    )
-
-
 @pytest.mark.cli_doc(
     options=["--keyword-only"],
     option_description="""Generate dataclass fields as keyword-only arguments.
@@ -457,50 +420,34 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
     assert (tmp_path / "__init__.py").exists()
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "null_and_array.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "null_and_array_v2.py",
-        ),
-    ],
-)
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+    option_description="""Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use
-for the generated code. Supported values include `pydantic.BaseModel`,
-`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
-`msgspec.Struct`.""",
+for the generated code. Supported values include `pydantic_v2.BaseModel`,
+`dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.""",
     input_schema="jsonschema/null_and_array.json",
-    cli_args=["--output-model-type", "pydantic.BaseModel"],
+    cli_args=["--output-model-type", "pydantic_v2.BaseModel"],
     model_outputs={
-        "pydantic_v1": "main/jsonschema/null_and_array.py",
         "pydantic_v2": "main/jsonschema/null_and_array_v2.py",
     },
     primary=True,
 )
-def test_main_null_and_array(output_model: str, expected_output: str, output_file: Path) -> None:
-    """Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+def test_main_null_and_array(output_file: Path) -> None:
+    """Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
 
     The `--output-model-type` flag specifies which Python data model framework to use
-    for the generated code. Supported values include `pydantic.BaseModel`,
-    `pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, and
-    `msgspec.Struct`.
+    for the generated code. Supported values include `pydantic_v2.BaseModel`,
+    `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model-type", output_model],
+        expected_file="null_and_array_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
@@ -562,11 +509,6 @@ def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> No
 @pytest.mark.parametrize(
     ("output_model", "expected_output", "option"),
     [
-        (
-            "pydantic.BaseModel",
-            "complicated_enum_default_member.py",
-            "--set-default-enum-member",
-        ),
         (
             "dataclasses.dataclass",
             "complicated_enum_default_member_dataclass.py",
@@ -1227,69 +1169,39 @@ def test_main_similar_nested_array(output_file: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "require_referenced_field",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "require_referenced_field_pydantic_v2",
-        ),
-    ],
-)
-def test_main_require_referenced_field(output_model: str, expected_output: str, tmp_path: Path) -> None:
+def test_main_require_referenced_field(tmp_path: Path) -> None:
     """Test required referenced fields."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         output_to_expected=[
-            ("referenced.py", f"{expected_output}/referenced.py"),
-            ("required.py", f"{expected_output}/required.py"),
+            ("referenced.py", "require_referenced_field_pydantic_v2/referenced.py"),
+            ("required.py", "require_referenced_field_pydantic_v2/required.py"),
         ],
         assert_func=assert_file_content,
         input_file_type="jsonschema",
-        extra_args=["--output-datetime-class", "AwareDatetime", "--output-model-type", output_model],
+        extra_args=["--output-datetime-class", "AwareDatetime", "--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "require_referenced_field",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "require_referenced_field_naivedatetime",
-        ),
-    ],
-)
-def test_main_require_referenced_field_naive_datetime(output_model: str, expected_output: str, tmp_path: Path) -> None:
+def test_main_require_referenced_field_naive_datetime(tmp_path: Path) -> None:
     """Test required referenced field with naive datetime."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "require_referenced_field/",
         output_path=tmp_path,
         output_to_expected=[
-            ("referenced.py", f"{expected_output}/referenced.py"),
-            ("required.py", f"{expected_output}/required.py"),
+            ("referenced.py", "require_referenced_field_naivedatetime/referenced.py"),
+            ("required.py", "require_referenced_field_naivedatetime/required.py"),
         ],
         assert_func=assert_file_content,
         input_file_type="jsonschema",
-        extra_args=["--output-datetime-class", "NaiveDatetime", "--output-model-type", output_model],
+        extra_args=["--output-datetime-class", "NaiveDatetime", "--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
-        (
-            "pydantic.BaseModel",
-            "require_referenced_field",
-        ),
         (
             "pydantic_v2.BaseModel",
             "require_referenced_field_pydantic_v2",
@@ -2010,7 +1922,6 @@ def test_main_generate_from_directory(tmp_path: Path) -> None:
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
         output=tmp_path,
-        output_model_type=DataModelType.PydanticBaseModel,
     )
 
     main_nested_directory = EXPECTED_JSON_SCHEMA_PATH / "nested_directory"
@@ -2423,6 +2334,32 @@ def test_main_strict_types_all_with_field_constraints(output_file: Path) -> None
     )
 
 
+@LEGACY_BLACK_SKIP
+def test_main_strict_types_with_constraints(output_file: Path) -> None:
+    """Test strict int/float with constraints generates conint/confloat with strict=True, and decimal format."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="strict_types_with_constraints.py",
+        extra_args=["--strict-types", "int", "float", "str"],
+    )
+
+
+@LEGACY_BLACK_SKIP
+def test_main_hostname_strict_field_constraints(output_file: Path) -> None:
+    """Test hostname with --strict-types str and --field-constraints returns StrictStr."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "strict_types_coverage.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="hostname_strict_field_constraints.py",
+        extra_args=["--strict-types", "str", "--field-constraints"],
+    )
+
+
 def test_main_hostname_field_constraints_pydantic_v2(output_file: Path) -> None:
     """Test hostname format uses Field(pattern=) instead of constr with --field-constraints."""
     run_main_and_assert(
@@ -2432,30 +2369,6 @@ def test_main_hostname_field_constraints_pydantic_v2(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="hostname_field_constraints_pydantic_v2.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
-    )
-
-
-def test_main_hostname_field_constraints_pydantic_v1(output_file: Path) -> None:
-    """Test hostname format uses Field(regex=) instead of constr with --field-constraints for v1."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="hostname_field_constraints_pydantic_v1.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints"],
-    )
-
-
-def test_main_hostname_field_constraints_strict_pydantic_v1(output_file: Path) -> None:
-    """Test hostname format uses StrictStr with --field-constraints and --strict-types."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "hostname_field_constraints.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="hostname_field_constraints_strict_pydantic_v1.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel", "--field-constraints", "--strict-types", "str"],
     )
 
 
@@ -2734,7 +2647,6 @@ def test_main_jsonschema_combine_one_of_object(output_file: Path) -> None:
 @pytest.mark.parametrize(
     ("union_mode", "output_model", "expected_output"),
     [
-        (None, "pydantic.BaseModel", "combine_any_of_object.py"),
         (None, "pydantic_v2.BaseModel", "combine_any_of_object_v2.py"),
         (
             "left_to_right",
@@ -2820,19 +2732,6 @@ def test_main_jsonschema_field_include_all_keys(output_file: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "field_extras_field_include_all_keys.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "field_extras_field_include_all_keys_v2.py",
-        ),
-    ],
-)
 @pytest.mark.cli_doc(
     options=["--field-extra-keys-without-x-prefix"],
     option_description="""Include schema extension keys in Field() without requiring 'x-' prefix.
@@ -2844,13 +2743,10 @@ in Field(). This is useful for custom schema extensions and vendor-specific meta
     input_schema="jsonschema/extras.json",
     cli_args=["--field-include-all-keys", "--field-extra-keys-without-x-prefix", "x-repr"],
     model_outputs={
-        "pydantic_v1": "main/jsonschema/field_extras_field_include_all_keys.py",
         "pydantic_v2": "main/jsonschema/field_extras_field_include_all_keys_v2.py",
     },
 )
-def test_main_jsonschema_field_extras_field_include_all_keys(
-    output_model: str, expected_output: str, output_file: Path
-) -> None:
+def test_main_jsonschema_field_extras_field_include_all_keys(output_file: Path) -> None:
     """Include schema extension keys in Field() without requiring 'x-' prefix.
 
     The --field-extra-keys-without-x-prefix option allows you to specify custom
@@ -2863,10 +2759,10 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_output,
+        expected_file="field_extras_field_include_all_keys_v2.py",
         extra_args=[
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
             "--field-include-all-keys",
             "--field-extra-keys-without-x-prefix",
             "x-repr",
@@ -2874,19 +2770,6 @@ def test_main_jsonschema_field_extras_field_include_all_keys(
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "field_extras_field_extra_keys.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "field_extras_field_extra_keys_v2.py",
-        ),
-    ],
-)
 @pytest.mark.cli_doc(
     options=["--field-extra-keys"],
     option_description="""Include specific extra keys in Field() definitions.
@@ -2895,13 +2778,10 @@ The `--field-extra-keys` flag configures the code generation behavior.""",
     input_schema="jsonschema/extras.json",
     cli_args=["--field-extra-keys", "key2", "--field-extra-keys-without-x-prefix", "x-repr"],
     model_outputs={
-        "pydantic_v1": "main/jsonschema/field_extras_field_extra_keys.py",
         "pydantic_v2": "main/jsonschema/field_extras_field_extra_keys_v2.py",
     },
 )
-def test_main_jsonschema_field_extras_field_extra_keys(
-    output_model: str, expected_output: str, output_file: Path
-) -> None:
+def test_main_jsonschema_field_extras_field_extra_keys(output_file: Path) -> None:
     """Include specific extra keys in Field() definitions.
 
     The `--field-extra-keys` flag configures the code generation behavior.
@@ -2911,10 +2791,10 @@ def test_main_jsonschema_field_extras_field_extra_keys(
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_output,
+        expected_file="field_extras_field_extra_keys_v2.py",
         extra_args=[
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
             "--field-extra-keys",
             "key2",
             "invalid-key-1",
@@ -2924,28 +2804,15 @@ def test_main_jsonschema_field_extras_field_extra_keys(
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic.BaseModel",
-            "field_extras.py",
-        ),
-        (
-            "pydantic_v2.BaseModel",
-            "field_extras_v2.py",
-        ),
-    ],
-)
-def test_main_jsonschema_field_extras(output_model: str, expected_output: str, output_file: Path) -> None:
+def test_main_jsonschema_field_extras(output_file: Path) -> None:
     """Test field extras generation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "extras.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model-type", output_model],
+        expected_file="field_extras_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
@@ -3300,26 +3167,15 @@ def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) 
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_file"),
-    [
-        ("pydantic.BaseModel", "has_default_value.py"),
-        pytest.param(
-            "pydantic_v2.BaseModel",
-            "has_default_value_pydantic_v2.py",
-            marks=PYDANTIC_V2_SKIP,
-        ),
-    ],
-)
-def test_main_jsonschema_has_default_value(output_model: str, expected_file: str, output_file: Path) -> None:
+def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "has_default_value.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_file,
-        extra_args=["--output-model-type", output_model],
+        expected_file="has_default_value_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
@@ -3527,6 +3383,42 @@ def test_main_jsonschema_unevaluated_properties(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_additional_properties_true_pydantic_v1(output_file: Path) -> None:
+    """Test additionalProperties: true generates extra='allow' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_additional_props_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_true_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
+def test_main_jsonschema_additional_properties_false_pydantic_v1(output_file: Path) -> None:
+    """Test additionalProperties: false generates extra='forbid' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_config.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_false_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_pydantic_v1(output_file: Path) -> None:
+    """Test unevaluatedProperties: false generates extra='forbid' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
+    )
+
+
 def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
     """Test unevaluatedProperties: true generates extra='allow'."""
     run_main_and_assert(
@@ -3535,6 +3427,18 @@ def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="unevaluated_properties_true.py",
+    )
+
+
+def test_main_jsonschema_unevaluated_properties_true_pydantic_v1(output_file: Path) -> None:
+    """Test unevaluatedProperties: true generates extra='allow' for Pydantic v1."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_true_pydantic_v1.py",
+        extra_args=["--output-model-type", "pydantic.BaseModel"],
     )
 
 
@@ -4682,10 +4586,6 @@ def test_main_jsonschema_external_discriminator(
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [
-        (
-            "pydantic.BaseModel",
-            "discriminator_with_external_references_folder",
-        ),
         pytest.param(
             "msgspec.Struct",
             "discriminator_with_external_references_folder_msgspec",
@@ -5090,28 +4990,15 @@ def test_main_alias_import_alias(output_dir: Path) -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_output"),
-    [
-        (
-            "pydantic_v2.BaseModel",
-            "field_has_same_name_v2.py",
-        ),
-        (
-            "pydantic.BaseModel",
-            "field_has_same_name.py",
-        ),
-    ],
-)
-def test_main_jsonschema_field_has_same_name(output_model: str, expected_output: str, output_file: Path) -> None:
+def test_main_jsonschema_field_has_same_name(output_file: Path) -> None:
     """Test field with same name as parent."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "field_has_same_name.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
-        expected_file=expected_output,
-        extra_args=["--output-model-type", output_model],
+        expected_file="field_has_same_name_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
@@ -6296,10 +6183,7 @@ def test_main_jsonschema_collapse_root_models_name_strategy_with_inheritance(out
     )
 
 
-@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
-def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_child(
-    output_model: str, output_file: Path
-) -> None:
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_child(output_file: Path) -> None:
     """Test nested wrappers with child strategy - all wrappers collapsed."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_nested_wrappers.json",
@@ -6312,21 +6196,12 @@ def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_chil
             "--collapse-root-models-name-strategy",
             "child",
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
         ],
     )
 
 
-@pytest.mark.parametrize(
-    ("output_model", "expected_file"),
-    [
-        ("pydantic.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent.py"),
-        ("pydantic_v2.BaseModel", "jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent_v2.py"),
-    ],
-)
-def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent(
-    output_model: str, expected_file: str, output_file: Path
-) -> None:
+def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent(output_file: Path) -> None:
     """Test nested wrappers with parent strategy - partial collapse due to multiple refs."""
     with pytest.warns(UserWarning, match="Cannot apply 'parent' strategy.*multiple root models"):
         run_main_and_assert(
@@ -6334,19 +6209,18 @@ def test_main_jsonschema_collapse_root_models_name_strategy_nested_wrappers_pare
             output_path=output_file,
             input_file_type="jsonschema",
             assert_func=assert_file_content,
-            expected_file=expected_file,
+            expected_file="jsonschema_collapse_root_models_name_strategy_nested_wrappers_parent_v2.py",
             extra_args=[
                 "--collapse-root-models",
                 "--collapse-root-models-name-strategy",
                 "parent",
                 "--output-model-type",
-                output_model,
+                "pydantic_v2.BaseModel",
             ],
         )
 
 
-@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
-def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output_model: str, output_file: Path) -> None:
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output_file: Path) -> None:
     """Test complex schema with multiple wrappers and inheritance using child strategy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
@@ -6359,15 +6233,12 @@ def test_main_jsonschema_collapse_root_models_name_strategy_complex_child(output
             "--collapse-root-models-name-strategy",
             "child",
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
         ],
     )
 
 
-@pytest.mark.parametrize("output_model", ["pydantic.BaseModel", "pydantic_v2.BaseModel"])
-def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(
-    output_model: str, output_file: Path
-) -> None:
+def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(output_file: Path) -> None:
     """Test complex schema with multiple wrappers and inheritance using parent strategy."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "collapse_root_models_name_strategy_complex.json",
@@ -6380,7 +6251,7 @@ def test_main_jsonschema_collapse_root_models_name_strategy_complex_parent(
             "--collapse-root-models-name-strategy",
             "parent",
             "--output-model-type",
-            output_model,
+            "pydantic_v2.BaseModel",
         ],
     )
 
@@ -6576,7 +6447,7 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec).
+    option_description="""Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use.
 Each model type has different handling for reserved field names like 'schema':
@@ -6684,13 +6555,11 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     option_description="""Generate frozen (immutable) field definitions for readOnly properties.
 
 The `--use-frozen-field` flag generates frozen field definitions:
-- Pydantic v1: `Field(allow_mutation=False)`
 - Pydantic v2: `Field(frozen=True)`
 - Dataclasses: silently ignored (no frozen fields generated)""",
     input_schema="jsonschema/use_frozen_field.json",
     cli_args=["--use-frozen-field"],
     model_outputs={
-        "pydantic_v1": "main/jsonschema/use_frozen_field_v1.py",
         "pydantic_v2": "main/jsonschema/use_frozen_field_v2.py",
         "dataclass": "main/jsonschema/use_frozen_field_dataclass.py",
     },
@@ -6701,7 +6570,6 @@ def test_main_use_frozen_field(output_model: str, expected_file: str, output_fil
     """Generate frozen (immutable) field definitions for readOnly properties.
 
     The `--use-frozen-field` flag generates frozen field definitions:
-    - Pydantic v1: `Field(allow_mutation=False)`
     - Pydantic v2: `Field(frozen=True)`
     - Dataclasses: silently ignored (no frozen fields generated)
     """
@@ -8026,7 +7894,6 @@ def test_reduce_duplicate_field_types(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 @pytest.mark.cli_doc(
     options=["--validators"],
     option_description="""Add custom field validators to generated Pydantic v2 models.
@@ -8070,7 +7937,6 @@ def test_field_validators(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_field_validators_multi_fields(output_file: Path) -> None:
     """Test validators with multiple fields."""
     run_main_and_assert(
@@ -8090,7 +7956,6 @@ def test_field_validators_multi_fields(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
     """Test validators with wrap mode."""
     config_file = tmp_path / "wrap_mode_config.json"
@@ -8121,7 +7986,6 @@ def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that validators without fields are skipped gracefully."""
     config_file = tmp_path / "no_field_validators_config.json"
@@ -8156,7 +8020,6 @@ def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Pat
     assert "validate_something" not in content
 
 
-@PYDANTIC_V2_SKIP
 def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
     """Test validators with plain mode (no ValidationInfo import)."""
     config_file = tmp_path / "plain_mode_config.json"
@@ -8187,7 +8050,6 @@ def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that when all validators have no fields, output has no validators."""
     config_file = tmp_path / "all_skipped_config.json"
@@ -8221,7 +8083,6 @@ def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None
     assert "validate_something" not in content
 
 
-@PYDANTIC_V2_SKIP
 def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test error handling for invalid validators JSON file."""
     invalid_json = tmp_path / "invalid.json"
@@ -8243,7 +8104,6 @@ def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pyte
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_validators_invalid_structure(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test error handling for validators JSON with invalid structure (not an object)."""
     invalid_structure = tmp_path / "invalid_structure.json"
@@ -8311,7 +8171,6 @@ def test_jsonschema_classvar_extra_annotated_pydantic_v2(output_file: Path) -> N
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_unique_items_enum_set(output_file: Path) -> None:
     """Test set with enum items does not add __hash__ to enum (already hashable)."""
     run_main_and_assert(
@@ -8477,7 +8336,6 @@ def test_main_jsonschema_recursive_ref(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_jsonschema_recursive_ref_pydantic_v2(output_file: Path) -> None:
     """Test JSON Schema 2019-09 $recursiveRef with Pydantic v2."""
     run_main_and_assert(
@@ -8501,7 +8359,6 @@ def test_main_jsonschema_dynamic_ref(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_jsonschema_dynamic_ref_pydantic_v2(output_file: Path) -> None:
     """Test JSON Schema 2020-12 $dynamicRef with Pydantic v2."""
     run_main_and_assert(
@@ -8525,7 +8382,6 @@ def test_main_jsonschema_recursive_ref_no_anchor(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_jsonschema_recursive_ref_no_anchor_pydantic_v2(output_file: Path) -> None:
     """Test JSON Schema 2019-09 $recursiveRef without $recursiveAnchor for Pydantic v2."""
     run_main_and_assert(
@@ -8549,7 +8405,6 @@ def test_main_jsonschema_recursive_ref_in_defs(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_jsonschema_recursive_ref_in_defs_pydantic_v2(output_file: Path) -> None:
     """Test JSON Schema 2019-09 $recursiveRef with anchor in $defs for Pydantic v2."""
     run_main_and_assert(
@@ -8573,7 +8428,6 @@ def test_main_jsonschema_dynamic_ref_in_defs(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_jsonschema_dynamic_ref_in_defs_pydantic_v2(output_file: Path) -> None:
     """Test JSON Schema 2020-12 $dynamicRef with anchor in $defs for Pydantic v2."""
     run_main_and_assert(
@@ -8688,7 +8542,6 @@ def test_ref_merge_additional_properties(output_file: Path) -> None:
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_exact_imports_collapse_root_models_module_class_collision(output_dir: Path) -> None:
     """Test --use-exact-imports with --collapse-root-models when module and class names collide."""
     run_main_and_assert(
@@ -8711,7 +8564,6 @@ def test_main_exact_imports_collapse_root_models_module_class_collision(output_d
     )
 
 
-@PYDANTIC_V2_SKIP
 def test_main_exact_imports_collapse_root_models_title_array(output_dir: Path) -> None:
     """Test --use-exact-imports with --collapse-root-models when array field has title.
 

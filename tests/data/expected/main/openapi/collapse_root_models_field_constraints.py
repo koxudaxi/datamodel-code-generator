@@ -4,24 +4,24 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Tweet(BaseModel):
     author_id: str | None = None
 
 
-class Users(BaseModel):
-    __root__: list[str]
+class Users(RootModel[list[str]]):
+    root: list[str]
 
 
-class FileHash(BaseModel):
-    __root__: str = Field(
+class FileHash(RootModel[str]):
+    root: str = Field(
         ...,
         description='For file',
         max_length=32,
         min_length=32,
-        regex='^[a-fA-F\\d]{32}$',
+        pattern='^[a-fA-F\\d]{32}$',
     )
 
 
@@ -31,7 +31,7 @@ class FileRequest(BaseModel):
         description='For file',
         max_length=32,
         min_length=32,
-        regex='^[a-fA-F\\d]{32}$',
+        pattern='^[a-fA-F\\d]{32}$',
     )
 
 
@@ -41,9 +41,9 @@ class ImageRequest(BaseModel):
         description='For image',
         max_length=64,
         min_length=64,
-        regex='^[a-fA-F\\d]{32}$',
+        pattern='^[a-fA-F\\d]{32}$',
     )
 
 
-class FileHashes(BaseModel):
-    __root__: list[FileHash]
+class FileHashes(RootModel[list[FileHash]]):
+    root: list[FileHash]

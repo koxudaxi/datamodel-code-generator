@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class Error(BaseModel):
@@ -18,5 +18,5 @@ class Pet(BaseModel):
     tag: str | None = None
 
 
-class Pets(BaseModel):
-    __root__: list[Pet]
+class Pets(RootModel[list[Pet]]):
+    root: list[Pet]

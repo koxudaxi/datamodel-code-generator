@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import RootModel
 
 
 class Type1Enum(Enum):
@@ -11,8 +11,8 @@ class Type1Enum(Enum):
     enumTwo = 'enumTwo'
 
 
-class Type1(BaseModel):
-    __root__: List[Type1Enum]
+class Type1(RootModel[List[Type1Enum]]):
+    root: List[Type1Enum]
 
 
 class Type2(Enum):

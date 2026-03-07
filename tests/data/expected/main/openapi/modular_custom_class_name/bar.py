@@ -4,8 +4,8 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import Field, RootModel
 
 
-class CustomField(BaseModel):
-    __root__: str = Field(..., example='green')
+class CustomField(RootModel[str]):
+    root: str = Field(..., examples=['green'])

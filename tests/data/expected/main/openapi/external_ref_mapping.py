@@ -4,10 +4,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from mypackage.shared.models import Error, User
-from pydantic import BaseModel
+from pydantic import AwareDatetime, BaseModel
 
 
 class UserResponse(BaseModel):
@@ -17,4 +15,4 @@ class UserResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     error: Error
-    timestamp: datetime
+    timestamp: AwareDatetime

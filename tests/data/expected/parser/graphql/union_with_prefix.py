@@ -4,29 +4,30 @@
 
 from __future__ import annotations
 
-from typing import Literal, TypeAlias, Union
+from typing import Literal, Union
 
 from pydantic import BaseModel, Field
+from typing_extensions import TypeAliasType
 
-FooBoolean: TypeAlias = bool
+FooBoolean = TypeAliasType("FooBoolean", bool)
 """
 The `Boolean` scalar type represents `true` or `false`.
 """
 
 
-FooID: TypeAlias = str
+FooID = TypeAliasType("FooID", str)
 """
 The `ID` scalar type represents a unique identifier, often used to refetch an object or as key for a cache. The ID type appears in a JSON response as a String; however, it is not intended to be human-readable. When expected as an input type, any string (such as `"4"`) or integer (such as `4`) input value will be accepted as an ID.
 """
 
 
-FooInt: TypeAlias = int
+FooInt = TypeAliasType("FooInt", int)
 """
 The `Int` scalar type represents non-fractional signed whole numeric values. Int can represent values between -(2^31) and 2^31 - 1.
 """
 
 
-FooString: TypeAlias = str
+FooString = TypeAliasType("FooString", str)
 """
 The `String` scalar type represents textual data, represented as UTF-8 character sequences. The String type is most often used by GraphQL to represent free-form human-readable text.
 """
@@ -50,10 +51,13 @@ class FooEmployee(FooIResource):
     typename__: Literal['Employee'] | None = Field('Employee', alias='__typename')
 
 
-FooResource: TypeAlias = Union[
-    'FooCar',
-    'FooEmployee',
-]
+FooResource = TypeAliasType(
+    "FooResource",
+    Union[
+        'FooCar',
+        'FooEmployee',
+    ],
+)
 
 
-FooTechnicalResource: TypeAlias = FooCar
+FooTechnicalResource = TypeAliasType("FooTechnicalResource", FooCar)

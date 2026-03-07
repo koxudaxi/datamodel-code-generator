@@ -10,7 +10,7 @@ class Fields(BaseModel):
 
 
 class Fields1(BaseModel):
-    b: Optional[str] = Field(None, regex='^[a-zA-Z_]+$')
+    b: Optional[str] = Field(None, pattern='^[a-zA-Z_]+$')
 
 
 class BadSchema(BaseModel):

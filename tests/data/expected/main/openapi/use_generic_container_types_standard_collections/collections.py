@@ -7,21 +7,21 @@ from __future__ import annotations
 from collections.abc import Sequence
 from enum import Enum
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 from . import models
 
 
-class Pets(BaseModel):
-    __root__: Sequence[models.Pet]
+class Pets(RootModel[Sequence[models.Pet]]):
+    root: Sequence[models.Pet]
 
 
-class Users(BaseModel):
-    __root__: Sequence[models.User]
+class Users(RootModel[Sequence[models.User]]):
+    root: Sequence[models.User]
 
 
-class Rules(BaseModel):
-    __root__: Sequence[str]
+class Rules(RootModel[Sequence[str]]):
+    root: Sequence[str]
 
 
 class Stage(Enum):
@@ -47,5 +47,5 @@ class Api(BaseModel):
     stage: Stage | None = None
 
 
-class Apis(BaseModel):
-    __root__: Sequence[Api]
+class Apis(RootModel[Sequence[Api]]):
+    root: Sequence[Api]

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Animal(Enum):
@@ -27,7 +27,7 @@ class User(BaseModel):
     redistribute: list[RedistributeEnum] | None = None
 
 
-class Redistribute(BaseModel):
-    __root__: list[RedistributeEnum] = Field(
+class Redistribute(RootModel[list[RedistributeEnum]]):
+    root: list[RedistributeEnum] = Field(
         ..., description='Redistribute type for routes.'
     )

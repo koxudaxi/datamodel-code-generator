@@ -4,19 +4,19 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel
+from pydantic import BaseModel, RootModel
 
 
 class SharedInner(BaseModel):
     value: str
 
 
-class Wrapper1(BaseModel):
-    __root__: SharedInner
+class Wrapper1(RootModel[SharedInner]):
+    root: SharedInner
 
 
-class Wrapper2(BaseModel):
-    __root__: SharedInner
+class Wrapper2(RootModel[SharedInner]):
+    root: SharedInner
 
 
 class Model(BaseModel):
