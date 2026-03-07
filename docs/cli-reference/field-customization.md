@@ -3707,7 +3707,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     ):
         root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
             Field(
-                default_factory=lambda: ProcessingStatusUnionTitle('COMPLETED'),
+                default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
                 title='Processing Status Union Title',
             )
         )
