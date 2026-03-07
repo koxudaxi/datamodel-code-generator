@@ -14062,6 +14062,10 @@ Use typing.Annotated for Field() with constraints.
 The `--use-annotated` flag generates Field definitions using typing.Annotated
 syntax instead of default values. This also enables `--field-constraints`.
 
+`--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
+generated type to enforce uniqueness for array schemas.
+
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
 
 !!! tip "Usage"
