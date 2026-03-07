@@ -46,15 +46,9 @@ def get_pydantic_version() -> tuple[Any, bool, bool]:
     return pydantic_version, is_v2, is_v2_11
 
 
-_is_v2: bool | None = None
-
-
-def is_pydantic_v2() -> bool:  # pragma: no cover
+def is_pydantic_v2() -> bool:
     """Check if pydantic v2 is installed."""
-    global _is_v2  # noqa: PLW0603
-    if _is_v2 is None:
-        _is_v2 = get_pydantic_version()[1]
-    return _is_v2
+    return get_pydantic_version()[1]
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
