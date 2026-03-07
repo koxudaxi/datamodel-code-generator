@@ -1912,7 +1912,11 @@ def test_main_openapi_json_pointer(output_file: Path) -> None:
 
 The `--use-annotated` flag wraps field types with `typing.Annotated` to
 include constraint metadata, enabling runtime validation frameworks to
-access constraints directly from type annotations.""",
+access constraints directly from type annotations.
+
+`--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
+generated type to enforce uniqueness for array schemas like `Pets`.""",
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--field-constraints", "--use-annotated"],
     golden_output="openapi/use_annotated_with_field_constraints_pydantic_v2.py",
@@ -1924,6 +1928,10 @@ def test_main_use_annotated_with_field_constraints(min_version: str, output_file
     The `--use-annotated` flag wraps field types with `typing.Annotated` to
     include constraint metadata, enabling runtime validation frameworks to
     access constraints directly from type annotations.
+
+    `--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+    Use `--use-unique-items-as-set` when you need the generated type to enforce
+    uniqueness for array schemas like `Pets`.
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",

@@ -131,7 +131,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-non-positive-negative-number-constrained-types": "Use NonPositive/NonNegative types for number constraints.",
     "--use-one-literal-as-default": "Use single literal value as default when enum has only one option.",
     "--use-operation-id-as-name": "Use OpenAPI operationId as the generated function/class name.",
-    "--use-pendulum": "Use pendulum types for date/time fields instead of datetime module.",
+    "--use-pendulum": "Use pendulum types for date, time, and duration fields.",
     "--use-root-model-type-alias": "Generate RootModel as type alias format for better mypy support.",
     "--use-schema-description": "Use schema description as class docstring.",
     "--use-serialization-alias": "Use serialization_alias instead of alias for field aliasing (Pydantic v2 only).",

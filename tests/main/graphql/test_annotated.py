@@ -18,7 +18,11 @@ if TYPE_CHECKING:
     option_description="""Use typing.Annotated for Field() with constraints.
 
 The `--use-annotated` flag generates Field definitions using typing.Annotated
-syntax instead of default values. This also enables `--field-constraints`.""",
+syntax instead of default values. This also enables `--field-constraints`.
+
+`--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
+generated type to enforce uniqueness for array schemas.""",
     input_schema="graphql/annotated.graphql",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
     golden_output="graphql/annotated.py",
@@ -28,6 +32,10 @@ def test_annotated(output_file: Path) -> None:
 
     The `--use-annotated` flag generates Field definitions using typing.Annotated
     syntax instead of default values. This also enables `--field-constraints`.
+
+    `--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+    Use `--use-unique-items-as-set` when you need the generated type to enforce
+    uniqueness for array schemas.
     """
     run_main_and_assert(
         input_path=GRAPHQL_DATA_PATH / "annotated.graphql",

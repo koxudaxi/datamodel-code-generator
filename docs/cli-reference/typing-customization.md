@@ -24,7 +24,7 @@
 | [`--use-decimal-for-multiple-of`](#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint... |
 | [`--use-generic-container-types`](#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hin... |
 | [`--use-non-positive-negative-number-constrained-types`](#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
-| [`--use-pendulum`](#use-pendulum) | Use pendulum types for date/time fields instead of datetime ... |
+| [`--use-pendulum`](#use-pendulum) | Use pendulum types for date, time, and duration fields. |
 | [`--use-root-model-type-alias`](#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy supp... |
 | [`--use-specialized-enum`](#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.... |
 | [`--use-standard-collections`](#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
@@ -2874,6 +2874,10 @@ Use typing.Annotated for Field() with constraints.
 The `--use-annotated` flag generates Field definitions using typing.Annotated
 syntax instead of default values. This also enables `--field-constraints`.
 
+`--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
+generated type to enforce uniqueness for array schemas.
+
 **Related:** [`--field-constraints`](field-customization.md#field-constraints)
 
 !!! tip "Usage"
@@ -3777,11 +3781,14 @@ conint/confloat with ge/le parameters.
 
 ## `--use-pendulum` {#use-pendulum}
 
-Use pendulum types for date/time fields instead of datetime module.
+Use pendulum types for date, time, and duration fields.
 
-The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
-Time, Duration) instead of standard datetime types. This is useful when
-working with the pendulum library for enhanced timezone and date handling.
+The `--use-pendulum` flag maps schema `date`, `time`, and `duration` values to
+Pendulum types such as `pendulum.Date`, `pendulum.Time`, and `pendulum.Duration`.
+`date-time` fields continue to use `pydantic.AwareDatetime`.
+
+If you need a different datetime class for `date-time` fields, use
+[`--output-datetime-class`](#output-datetime-class).
 
 **See also:** [Type Mappings and Custom Types](../type-mappings.md)
 
