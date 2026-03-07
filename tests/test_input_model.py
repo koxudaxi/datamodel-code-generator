@@ -7,11 +7,10 @@ from argparse import Namespace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import pydantic
 import pytest
 
-from datamodel_code_generator import DataModelType, arguments
 from datamodel_code_generator import __main__ as main_module
+from datamodel_code_generator import arguments
 from datamodel_code_generator.__main__ import Exit, main
 from tests.conftest import assert_output, freeze_time
 
@@ -20,11 +19,6 @@ if TYPE_CHECKING:
 
 EXPECTED_INPUT_MODEL_PATH = Path(__file__).parent / "data" / "expected" / "main" / "input_model"
 TIMESTAMP = "1985-10-26T01:21:00-07:00"
-
-SKIP_PYDANTIC_V1 = pytest.mark.skipif(
-    pydantic.VERSION < "2.0.0",
-    reason="--input-model with Pydantic models requires Pydantic v2",
-)
 
 
 def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> None:
@@ -54,16 +48,12 @@ def run_input_model_and_assert(
     output_path: Path,
     expected_file: Path,
     extra_args: Sequence[str] | None = None,
-    default_output_model_type: str | None = DataModelType.PydanticBaseModel.value,
 ) -> None:
     """Run main with --input-model and assert results."""
     __tracebackhide__ = True
     args = ["--input-model", input_model, "--output", str(output_path)]
-    normalized_extra_args = list(extra_args) if extra_args else []
-    if default_output_model_type is not None and "--output-model-type" not in normalized_extra_args:
-        normalized_extra_args.extend(["--output-model-type", default_output_model_type])
-    if normalized_extra_args:
-        args.extend(normalized_extra_args)
+    if extra_args:
+        args.extend(extra_args)
 
     with freeze_time(TIMESTAMP):
         return_code = main(args)
@@ -99,7 +89,6 @@ def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(main_module, "namespace", new_namespace)
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.cli_doc(
     options=["--input-model"],
     option_description="""Import a Python type or dict schema from a module.
@@ -115,11 +104,9 @@ def test_input_model_pydantic_basemodel(tmp_path: Path) -> None:
         input_model="tests.data.python.input_model.pydantic_models:User",
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "pydantic_basemodel.py",
-        default_output_model_type=None,
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_pydantic_to_typeddict(tmp_path: Path) -> None:
     """Test generating TypedDict from Pydantic model."""
     run_input_model_and_assert(
@@ -130,7 +117,6 @@ def test_input_model_pydantic_to_typeddict(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_pydantic_with_jsonschema_type(tmp_path: Path) -> None:
     """Test --input-model with explicit jsonschema input-file-type."""
     run_input_model_and_assert(
@@ -141,7 +127,6 @@ def test_input_model_pydantic_with_jsonschema_type(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_pydantic_non_jsonschema_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -188,7 +173,6 @@ def test_input_model_dict_openapi(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_std_dataclass(tmp_path: Path) -> None:
     """Test stdlib dataclass input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
@@ -198,7 +182,6 @@ def test_input_model_std_dataclass(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_pydantic_dataclass(tmp_path: Path) -> None:
     """Test Pydantic dataclass input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
@@ -208,7 +191,6 @@ def test_input_model_pydantic_dataclass(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_typeddict(tmp_path: Path) -> None:
     """Test TypedDict input converts to Pydantic BaseModel output (default)."""
     run_input_model_and_assert(
@@ -218,7 +200,6 @@ def test_input_model_typeddict(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_dataclass_non_jsonschema_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -268,7 +249,6 @@ def test_input_model_unsupported_type(capsys: pytest.CaptureFixture[str]) -> Non
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_mutual_exclusion_with_input(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -282,7 +262,6 @@ def test_input_model_mutual_exclusion_with_input(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_mutual_exclusion_with_url(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -295,7 +274,6 @@ def test_input_model_mutual_exclusion_with_url(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_mutual_exclusion_with_watch(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -309,7 +287,6 @@ def test_input_model_mutual_exclusion_with_watch(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_adds_cwd_to_sys_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -331,7 +308,6 @@ def test_input_model_adds_cwd_to_sys_path(
         sys.path[:] = original_sys_path
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_path_format(tmp_path: Path) -> None:
     """Test --input-model with path format (path/to/file.py:Object)."""
     run_input_model_and_assert(
@@ -341,7 +317,6 @@ def test_input_model_path_format(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_path_format_filename_only(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -419,7 +394,6 @@ def test_input_model_module_import_error(
 # ============================================================================
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.parametrize(
     "test_id",
     [
@@ -440,7 +414,6 @@ def test_input_model_preserves_python_types(tmp_path: Path, test_id: str) -> Non
     )
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.parametrize(
     ("output_model_type", "expected_file"),
     [
@@ -458,7 +431,6 @@ def test_input_model_x_python_type_output_formats(tmp_path: Path, output_model_t
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_dataclass_with_python_types(tmp_path: Path) -> None:
     """Test that Set/Mapping types are preserved from dataclass input."""
     run_input_model_and_assert(
@@ -468,7 +440,6 @@ def test_input_model_dataclass_with_python_types(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_recursive_model_types(tmp_path: Path) -> None:
     """Test that recursive models handle x-python-type correctly."""
     run_input_model_and_assert(
@@ -478,7 +449,6 @@ def test_input_model_recursive_model_types(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.parametrize(
     "test_id",
     [
@@ -502,7 +472,6 @@ def test_input_model_optional_types(tmp_path: Path, test_id: str) -> None:
 # ============================================================================
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.parametrize(
     "test_id",
     [
@@ -525,7 +494,6 @@ def test_input_model_callable_types(tmp_path: Path, test_id: str) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_nested_model_with_callable(tmp_path: Path) -> None:
     """Test that nested models with Callable types in $defs are processed."""
     run_input_model_and_assert(
@@ -535,7 +503,6 @@ def test_input_model_nested_model_with_callable(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_custom_class(tmp_path: Path) -> None:
     """Test that custom classes trigger handle_invalid_for_json_schema."""
     run_input_model_and_assert(
@@ -545,7 +512,6 @@ def test_input_model_custom_class(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_union_callable(tmp_path: Path) -> None:
     """Test that Union[Callable, int] and raw Callable are preserved."""
     run_input_model_and_assert(
@@ -555,7 +521,6 @@ def test_input_model_union_callable(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_custom_generic_type_import(tmp_path: Path) -> None:
     """Test that custom generic types are properly imported with full module path."""
     run_input_model_and_assert(
@@ -565,7 +530,6 @@ def test_input_model_custom_generic_type_import(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_default_put_dict_import(tmp_path: Path) -> None:
     """Test that DefaultPutDict generic type is properly imported from parser module."""
     run_input_model_and_assert(
@@ -580,7 +544,6 @@ def test_input_model_default_put_dict_import(tmp_path: Path) -> None:
 # ============================================================================
 
 
-@SKIP_PYDANTIC_V1
 @pytest.mark.cli_doc(
     options=["--input-model-ref-strategy"],
     option_description="""Strategy for referenced types when using --input-model.
@@ -604,7 +567,6 @@ def test_input_model_ref_strategy_regenerate_all_default(tmp_path: Path) -> None
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_regenerate_all_explicit(tmp_path: Path) -> None:
     """Test explicit regenerate-all strategy regenerates all types."""
     run_input_model_and_assert(
@@ -620,7 +582,6 @@ def test_input_model_ref_strategy_regenerate_all_explicit(tmp_path: Path) -> Non
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign(tmp_path: Path) -> None:
     """Test reuse-foreign imports enum (always) and same-family types."""
     run_input_model_and_assert(
@@ -636,7 +597,6 @@ def test_input_model_ref_strategy_reuse_foreign(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_no_regeneration(tmp_path: Path) -> None:
     """Test reuse-foreign imports only types compatible with output (enum always, same family)."""
     run_input_model_and_assert(
@@ -652,7 +612,6 @@ def test_input_model_ref_strategy_reuse_foreign_no_regeneration(tmp_path: Path) 
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_all(tmp_path: Path) -> None:
     """Test reuse-all strategy imports all referenced types."""
     run_input_model_and_assert(
@@ -668,7 +627,6 @@ def test_input_model_ref_strategy_reuse_all(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_all_no_regeneration(tmp_path: Path) -> None:
     """Test reuse-all strategy does not regenerate any referenced classes."""
     run_input_model_and_assert(
@@ -684,7 +642,6 @@ def test_input_model_ref_strategy_reuse_all_no_regeneration(tmp_path: Path) -> N
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_without_input_model(tmp_path: Path) -> None:
     """Test that --input-model-ref-strategy is ignored without --input-model."""
     schema_file = tmp_path / "schema.json"
@@ -702,7 +659,6 @@ def test_input_model_ref_strategy_without_input_model(tmp_path: Path) -> None:
     assert return_code == Exit.OK
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_no_nested_types(tmp_path: Path) -> None:
     """Test reuse-all strategy with Pydantic model that has no nested types (no $defs)."""
     run_input_model_and_assert(
@@ -718,7 +674,6 @@ def test_input_model_ref_strategy_no_nested_types(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_dataclass_reuse_foreign(tmp_path: Path) -> None:
     """Test reuse-foreign strategy with dataclass input."""
     run_input_model_and_assert(
@@ -734,7 +689,6 @@ def test_input_model_ref_strategy_dataclass_reuse_foreign(tmp_path: Path) -> Non
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_typeddict_reuse_all(tmp_path: Path) -> None:
     """Test reuse-all strategy with TypedDict input."""
     run_input_model_and_assert(
@@ -750,7 +704,6 @@ def test_input_model_ref_strategy_typeddict_reuse_all(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_typeddict_reuse_foreign(tmp_path: Path) -> None:
     """Test reuse-foreign strategy with TypedDict input imports enum, regenerates typeddict."""
     run_input_model_and_assert(
@@ -766,7 +719,6 @@ def test_input_model_ref_strategy_typeddict_reuse_foreign(tmp_path: Path) -> Non
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_same_family_typeddict(tmp_path: Path) -> None:
     """Test reuse-foreign imports TypedDict when output is TypedDict (same family)."""
     run_input_model_and_assert(
@@ -782,7 +734,6 @@ def test_input_model_ref_strategy_reuse_foreign_same_family_typeddict(tmp_path: 
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_different_family_regenerate(tmp_path: Path) -> None:
     """Test reuse-foreign regenerates Pydantic model when output is TypedDict."""
     run_input_model_and_assert(
@@ -798,7 +749,6 @@ def test_input_model_ref_strategy_reuse_foreign_different_family_regenerate(tmp_
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_same_family_dataclass(tmp_path: Path) -> None:
     """Test reuse-foreign imports dataclass when output is dataclass (same family)."""
     run_input_model_and_assert(
@@ -814,7 +764,6 @@ def test_input_model_ref_strategy_reuse_foreign_same_family_dataclass(tmp_path: 
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_mixed_types(tmp_path: Path) -> None:
     """Test reuse-foreign with mixed nested types (TypedDict, Pydantic, dataclass)."""
     run_input_model_and_assert(
@@ -830,7 +779,6 @@ def test_input_model_ref_strategy_reuse_foreign_mixed_types(tmp_path: Path) -> N
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_pydantic_output(tmp_path: Path) -> None:
     """Test reuse-foreign imports Pydantic when output is Pydantic (same family)."""
     run_input_model_and_assert(
@@ -839,14 +787,13 @@ def test_input_model_ref_strategy_reuse_foreign_pydantic_output(tmp_path: Path) 
         expected_file=EXPECTED_INPUT_MODEL_PATH / "ref_strategy_reuse_foreign_pydantic_output.py",
         extra_args=[
             "--output-model-type",
-            "pydantic.BaseModel",
+            "pydantic_v2.BaseModel",
             "--input-model-ref-strategy",
             "reuse-foreign",
         ],
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_ref_strategy_reuse_foreign_msgspec_output(tmp_path: Path) -> None:
     """Test reuse-foreign regenerates non-msgspec types when output is msgspec."""
     run_input_model_and_assert(
@@ -862,7 +809,6 @@ def test_input_model_ref_strategy_reuse_foreign_msgspec_output(tmp_path: Path) -
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_config_class(tmp_path: Path) -> None:
     """Test that config classes like GenerateConfig are properly handled."""
     run_input_model_and_assert(
@@ -922,7 +868,6 @@ def run_multiple_input_models_error_and_assert(
     _assert_stderr_contains(captured.err, expected_stderr_contains)
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with inherited model generates inheritance chain."""
     with freeze_time(TIMESTAMP):
@@ -941,7 +886,6 @@ def test_input_model_single_with_inheritance(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with multi-level inheritance."""
     with freeze_time(TIMESTAMP):
@@ -960,7 +904,6 @@ def test_input_model_single_multi_level_inheritance(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
     """Test single --input-model with model that has no inheritance."""
     with freeze_time(TIMESTAMP):
@@ -979,7 +922,6 @@ def test_input_model_single_no_inheritance(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with forked inheritance shares common parent."""
     with freeze_time(TIMESTAMP):
@@ -1000,7 +942,6 @@ def test_input_model_multiple_forked_inheritance(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
     """Test multiple --input-model with different inheritance depths."""
     with freeze_time(TIMESTAMP):
@@ -1021,7 +962,6 @@ def test_input_model_multiple_mixed_inheritance(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_with_pydantic_output(tmp_path: Path) -> None:
     """Test multiple --input-model works with Pydantic output."""
     run_multiple_input_models_and_assert(
@@ -1031,11 +971,10 @@ def test_input_model_multiple_with_pydantic_output(tmp_path: Path) -> None:
         ],
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_with_pydantic_output.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel"],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_with_dataclass_output(tmp_path: Path) -> None:
     """Test multiple --input-model works with dataclass output."""
     run_multiple_input_models_and_assert(
@@ -1049,7 +988,6 @@ def test_input_model_multiple_with_dataclass_output(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_non_basemodel_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -1066,7 +1004,6 @@ def test_input_model_multiple_non_basemodel_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_invalid_format_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -1081,7 +1018,6 @@ def test_input_model_multiple_invalid_format_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_file_not_found_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -1096,7 +1032,6 @@ def test_input_model_multiple_file_not_found_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_module_not_found_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -1111,7 +1046,6 @@ def test_input_model_multiple_module_not_found_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_attribute_not_found_error(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -1126,7 +1060,6 @@ def test_input_model_multiple_attribute_not_found_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_non_jsonschema_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -1143,7 +1076,6 @@ def test_input_model_multiple_non_jsonschema_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_same_module(tmp_path: Path) -> None:
     """Test multiple --input-model from same module reuses module load."""
     run_multiple_input_models_and_assert(
@@ -1158,7 +1090,6 @@ def test_input_model_multiple_same_module(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
     """Test multiple --input-model with file path format."""
     run_multiple_input_models_and_assert(
@@ -1172,7 +1103,6 @@ def test_input_model_multiple_file_path_format(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:
     """Test multiple --input-model works with --input-model-ref-strategy."""
     run_multiple_input_models_and_assert(
@@ -1191,7 +1121,6 @@ def test_input_model_multiple_with_ref_strategy(tmp_path: Path) -> None:
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_cannot_load_module_error(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -1224,7 +1153,6 @@ def test_input_model_multiple_cannot_load_module_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_import_error(
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
@@ -1266,7 +1194,6 @@ def test_input_model_multiple_import_error(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_empty_child_no_properties(
     tmp_path: Path,
 ) -> None:
@@ -1278,7 +1205,6 @@ def test_input_model_empty_child_no_properties(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_optional_only_child_no_required(
     tmp_path: Path,
 ) -> None:
@@ -1290,7 +1216,6 @@ def test_input_model_optional_only_child_no_required(
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_cwd_already_in_path(
     tmp_path: Path,
 ) -> None:
@@ -1307,13 +1232,12 @@ def test_input_model_cwd_already_in_path(
         ],
         output_path=tmp_path / "output.py",
         expected_file=EXPECTED_INPUT_MODEL_PATH / "multiple_with_pydantic_output.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel"],
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
     final_count = sys.path.count(cwd)
     assert final_count <= initial_count + 1
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_multiple_py_file_without_path_separator(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -1349,7 +1273,6 @@ class TempModel(BaseModel):
     assert "value:" in content
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_config_string_coercion(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that string input_model in config is coerced to list."""
     config_content = """\
@@ -1371,7 +1294,6 @@ output-model-type = "typing.TypedDict"
     )
 
 
-@SKIP_PYDANTIC_V1
 def test_input_model_output_model_type_default() -> None:
     """Test that output_model_type defaults to PydanticV2BaseModel when not specified."""
     from datamodel_code_generator import InputFileType

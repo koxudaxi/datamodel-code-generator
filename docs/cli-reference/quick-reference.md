@@ -51,7 +51,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) | Generate Decimal types for fields with multipleOf constraint. |
 | [`--use-generic-container-types`](typing-customization.md#use-generic-container-types) | Use generic container types (Sequence, Mapping) for type hinting. |
 | [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) | Use NonPositive/NonNegative types for number constraints. |
-| [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date/time fields instead of datetime module. |
+| [`--use-pendulum`](typing-customization.md#use-pendulum) | Use pendulum types for date, time, and duration fields. |
 | [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) | Generate RootModel as type alias format for better mypy support. |
 | [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) | Generate StrEnum/IntEnum for string/integer enums (Python 3.11+). |
 | [`--use-standard-collections`](typing-customization.md#use-standard-collections) | Use built-in dict/list instead of typing.Dict/List. |
@@ -107,7 +107,7 @@ datamodel-codegen [OPTIONS]
 | [`--collapse-root-models-name-strategy`](model-customization.md#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with object references. |
 | [`--dataclass-arguments`](model-customization.md#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) | Customize suffix for duplicate model names. |
-| [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic v1 models (allow_mutation=False). |
+| [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](model-customization.md#force-optional) | Force all fields to be Optional regardless of required status. |
 | [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only fields. |
 | [`--keep-model-order`](model-customization.md#keep-model-order) | Keep model definition order as specified in schema. |
@@ -115,7 +115,7 @@ datamodel-codegen [OPTIONS]
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
-| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v1/v2, dataclasses, TypedDict, msgspec). |
+| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec). |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
 | [`--reuse-model`](model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
 | [`--reuse-scope`](model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -248,7 +248,7 @@ All options sorted alphabetically:
 - [`--duplicate-name-suffix`](model-customization.md#duplicate-name-suffix) - Customize suffix for duplicate model names.
 - [`--empty-enum-field-name`](field-customization.md#empty-enum-field-name) - Name for empty string enum field values.
 - [`--enable-command-header`](template-customization.md#enable-command-header) - Include command-line options in file header for reproducibil...
-- [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic v1 models (allow_mutati...
+- [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) - Enable faux immutability in Pydantic models (frozen=True).
 - [`--enable-version-header`](template-customization.md#enable-version-header) - Include tool version information in file header.
 - [`--encoding`](base-options.md#encoding) - Specify character encoding for input and output files.
 - [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) - Convert all enum fields to Literal types instead of Enum cla...
@@ -299,7 +299,7 @@ All options sorted alphabetically:
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
-- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v1/v2, dataclasses, T...
+- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, dataclasses, Type...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
 - [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) - Generate separate request and response models for readOnly/w...
@@ -342,7 +342,7 @@ All options sorted alphabetically:
 - [`--use-non-positive-negative-number-constrained-types`](typing-customization.md#use-non-positive-negative-number-constrained-types) - Use NonPositive/NonNegative types for number constraints.
 - [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) - Use single literal value as default when enum has only one o...
 - [`--use-operation-id-as-name`](openapi-only-options.md#use-operation-id-as-name) - Use OpenAPI operationId as the generated function/class name...
-- [`--use-pendulum`](typing-customization.md#use-pendulum) - Use pendulum types for date/time fields instead of datetime ...
+- [`--use-pendulum`](typing-customization.md#use-pendulum) - Use pendulum types for date, time, and duration fields.
 - [`--use-root-model-type-alias`](typing-customization.md#use-root-model-type-alias) - Generate RootModel as type alias format for better mypy supp...
 - [`--use-schema-description`](field-customization.md#use-schema-description) - Use schema description as class docstring.
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias) - Use serialization_alias instead of alias for field aliasing ...

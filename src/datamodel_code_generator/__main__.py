@@ -152,11 +152,6 @@ class Config(BaseModel):  # noqa: PLR0904
         return self.get(item)  # ty: ignore
 
     @classmethod
-    def parse_obj(cls, obj: Any) -> Self:
-        """Parse object into Config model."""
-        return cls.model_validate(obj)
-
-    @classmethod
     def get_fields(cls) -> dict[str, Any]:
         """Get model fields."""
         return cls.model_fields
@@ -396,9 +391,7 @@ class Config(BaseModel):  # noqa: PLR0904
             raise Error(self.__validate_all_exports_collision_strategy_err)
         return self
 
-    from pydantic import field_validator as _field_validator  # noqa: PLC0415
-
-    @_field_validator("input_model", mode="before")
+    @field_validator("input_model", mode="before")
     @classmethod
     def coerce_input_model_to_list(cls, v: str | list[str] | None) -> list[str] | None:  # ty: ignore
         """Convert string input_model to list for backwards compatibility."""
@@ -406,7 +399,7 @@ class Config(BaseModel):  # noqa: PLR0904
             return [v]
         return v
 
-    @_field_validator("class_name_affix_scope", mode="before")
+    @field_validator("class_name_affix_scope", mode="before")
     @classmethod
     def validate_class_name_affix_scope(cls, v: str | ClassNameAffixScope | None) -> ClassNameAffixScope:  # ty: ignore
         """Convert string to ClassNameAffixScope enum."""
@@ -564,7 +557,7 @@ class Config(BaseModel):  # noqa: PLR0904
         if set_args.get("use_annotated"):
             set_args["field_constraints"] = True
 
-        parsed_args = Config.parse_obj(set_args)
+        parsed_args = Config.model_validate(set_args)
         for field_name in set_args:
             setattr(self, field_name, getattr(parsed_args, field_name))
 
@@ -1063,7 +1056,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         return Exit.OK
 
     try:
-        config = Config.parse_obj(pyproject_config)
+        config = Config.model_validate(pyproject_config)
         config.merge_args(namespace)
     except Error as e:
         print(e.message, file=sys.stderr)  # noqa: T201

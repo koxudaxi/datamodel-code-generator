@@ -514,7 +514,6 @@ def _get_output_family(output_model_type: DataModelType) -> str:
     from datamodel_code_generator import DataModelType  # noqa: PLC0415
 
     pydantic_types = {
-        DataModelType.PydanticBaseModel,
         DataModelType.PydanticV2BaseModel,
         DataModelType.PydanticV2Dataclass,
     }

@@ -123,10 +123,6 @@ class UnionIntFloat:
         """Convert value to float."""
         return float(self.value)
 
-    def __str__(self) -> str:
-        """Convert value to string."""
-        return str(self.value)
-
     @classmethod
     def __get_pydantic_core_schema__(  # noqa: PLW3201
         cls, _source_type: Any, _handler: GetCoreSchemaHandler
@@ -777,11 +773,9 @@ class DataType(_BaseModel):
                 type_ = dict_
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
-        if self.is_func:
-            if self.kwargs:
-                kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
-                return f"{type_}({kwargs})"
-            return f"{type_}()"
+        if self.is_func and self.kwargs:
+            kwargs: str = ", ".join(f"{k}={v}" for k, v in self.kwargs.items())
+            return f"{type_}({kwargs})"
         return type_
 
     @property
@@ -904,8 +898,6 @@ class DataType(_BaseModel):
 
         if self.is_optional and type_ != ANY:
             return get_optional_type(type_, self.use_union_operator)
-        if self.is_func:  # pragma: no cover
-            return f"{type_}()"
         return type_
 
 
@@ -1021,20 +1013,3 @@ class DataTypeManager(ABC):
     def get_data_type_from_full_path(self, full_path: str, is_custom_type: bool) -> DataType:  # noqa: FBT001
         """Create a DataType from a fully qualified Python path."""
         return self.data_type.from_import(Import.from_full_path(full_path), is_custom_type=is_custom_type)
-
-    def get_data_type_from_value(self, value: Any) -> DataType:  # noqa: PLR0911
-        """Infer a DataType from a Python value."""
-        match value:
-            case str():
-                return self.get_data_type(Types.string)
-            case bool():  # bool must come before int (bool is subclass of int)
-                return self.get_data_type(Types.boolean)
-            case int():
-                return self.get_data_type(Types.integer)
-            case float():
-                return self.get_data_type(Types.float)
-            case dict():
-                return self.data_type.from_import(IMPORT_DICT)
-            case list():
-                return self.data_type.from_import(IMPORT_LIST)
-        return self.get_data_type(Types.any)

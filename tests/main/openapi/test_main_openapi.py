@@ -542,24 +542,6 @@ def test_main_openapi_extra_template_data_config(
         )
 
 
-def test_main_openapi_extra_template_data_config_pydantic_v1(output_file: Path) -> None:
-    """Test extra template data config generation for Pydantic v1."""
-    with freeze_time(TIMESTAMP):
-        run_main_and_assert(
-            input_path=OPEN_API_DATA_PATH / "api.yaml",
-            output_path=output_file,
-            input_file_type=None,
-            assert_func=assert_file_content,
-            expected_file="extra_template_data_config.py",
-            extra_args=[
-                "--extra-template-data",
-                str(OPEN_API_DATA_PATH / "extra_data.json"),
-                "--output-model-type",
-                "pydantic.BaseModel",
-            ],
-        )
-
-
 def test_main_custom_template_dir_old_style(
     capsys: pytest.CaptureFixture, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -1148,18 +1130,6 @@ def test_allow_extra_fields(output_file: Path) -> None:
     )
 
 
-def test_allow_extra_fields_pydantic_v1(output_file: Path) -> None:
-    """Test allow extra fields generation for Pydantic v1."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "api.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="allow_extra_fields.py",
-        extra_args=["--allow-extra-fields", "--output-model-type", "pydantic.BaseModel"],
-    )
-
-
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
@@ -1187,18 +1157,6 @@ def test_enable_faux_immutability(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="enable_faux_immutability_pydantic_v2.py",
         extra_args=["--enable-faux-immutability", "--output-model-type", "pydantic_v2.BaseModel"],
-    )
-
-
-def test_enable_faux_immutability_pydantic_v1(output_file: Path) -> None:
-    """Test faux immutability generation for Pydantic v1."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "api.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="enable_faux_immutability.py",
-        extra_args=["--enable-faux-immutability", "--output-model-type", "pydantic.BaseModel"],
     )
 
 
@@ -1954,7 +1912,11 @@ def test_main_openapi_json_pointer(output_file: Path) -> None:
 
 The `--use-annotated` flag wraps field types with `typing.Annotated` to
 include constraint metadata, enabling runtime validation frameworks to
-access constraints directly from type annotations.""",
+access constraints directly from type annotations.
+
+`--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+Use [`--use-unique-items-as-set`](#use-unique-items-as-set) when you need the
+generated type to enforce uniqueness for array schemas like `Pets`.""",
     input_schema="openapi/api_constrained.yaml",
     cli_args=["--field-constraints", "--use-annotated"],
     golden_output="openapi/use_annotated_with_field_constraints_pydantic_v2.py",
@@ -1966,6 +1928,10 @@ def test_main_use_annotated_with_field_constraints(min_version: str, output_file
     The `--use-annotated` flag wraps field types with `typing.Annotated` to
     include constraint metadata, enabling runtime validation frameworks to
     access constraints directly from type annotations.
+
+    `--use-annotated` alone does not preserve `uniqueItems: true` as set semantics.
+    Use `--use-unique-items-as-set` when you need the generated type to enforce
+    uniqueness for array schemas like `Pets`.
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
@@ -1980,23 +1946,6 @@ def test_main_use_annotated_with_field_constraints(min_version: str, output_file
             min_version,
             "--output-model-type",
             "pydantic_v2.BaseModel",
-        ],
-    )
-
-
-def test_main_use_annotated_with_field_constraints_pydantic_v1(output_file: Path) -> None:
-    """Test Annotated field constraints generation for Pydantic v1."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "api_constrained.yaml",
-        output_path=output_file,
-        input_file_type=None,
-        assert_func=assert_file_content,
-        expected_file="use_annotated_with_field_constraints.py",
-        extra_args=[
-            "--field-constraints",
-            "--use-annotated",
-            "--output-model-type",
-            "pydantic.BaseModel",
         ],
     )
 
@@ -2201,18 +2150,6 @@ def test_main_openapi_const_field(output_model: str, expected_output: str, outpu
         assert_func=assert_file_content,
         expected_file=expected_output,
         extra_args=["--output-model-type", output_model, "--collapse-root-models"],
-    )
-
-
-def test_main_openapi_const_field_pydantic_v1(output_file: Path) -> None:
-    """Test collapsed const field generation for Pydantic v1."""
-    run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "const.yaml",
-        output_path=output_file,
-        input_file_type="openapi",
-        assert_func=assert_file_content,
-        expected_file="const_field.py",
-        extra_args=["--output-model-type", "pydantic.BaseModel", "--collapse-root-models"],
     )
 
 

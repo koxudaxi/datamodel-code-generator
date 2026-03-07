@@ -1313,22 +1313,29 @@ def test_use_decimal_for_multiple_of(output_file: Path) -> None:
 
 @pytest.mark.cli_doc(
     options=["--use-pendulum"],
-    option_description="""Use pendulum types for date/time fields instead of datetime module.
+    option_description="""Use pendulum types for date, time, and duration fields.
 
-The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
-Time, Duration) instead of standard datetime types. This is useful when
-working with the pendulum library for enhanced timezone and date handling.""",
+The `--use-pendulum` flag maps schema `date`, `time`, and `duration` values to
+Pendulum types such as `pendulum.Date`, `pendulum.Time`, and `pendulum.Duration`.
+`date-time` fields continue to use `pydantic.AwareDatetime`.
+
+If you need a different datetime class for `date-time` fields, use
+[`--output-datetime-class`](#output-datetime-class).""",
     input_schema="jsonschema/use_pendulum.json",
     cli_args=["--use-pendulum"],
     golden_output="main_kr/use_pendulum/output.py",
 )
 @freeze_time("2019-07-26")
 def test_use_pendulum(output_file: Path) -> None:
-    """Use pendulum types for date/time fields instead of datetime module.
+    """Use pendulum types for date, time, and duration fields.
 
-    The `--use-pendulum` flag generates pendulum library types (DateTime, Date,
-    Time, Duration) instead of standard datetime types. This is useful when
-    working with the pendulum library for enhanced timezone and date handling.
+    The `--use-pendulum` flag maps schema `date`, `time`, and `duration` values
+    to Pendulum types such as `pendulum.Date`, `pendulum.Time`, and
+    `pendulum.Duration`. `date-time` fields continue to use
+    `pydantic.AwareDatetime`.
+
+    If you need a different datetime class for `date-time` fields, use
+    `--output-datetime-class`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_pendulum.json",
