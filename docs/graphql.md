@@ -145,7 +145,7 @@ from model import Book
 response = {...}
 
 books = [
-    Book.parse_obj(book_raw) for book_raw in response["getAuthorBooks"]
+    Book.model_validate(book_raw) for book_raw in response["getAuthorBooks"]
 ]
 print(books)
 # [Book(author=Author(books=[], id='51341cdscwef14r13', name='J. K. Rowling', typename__='Author'), id='1321dfvrt211wdw', title='Harry Potter and the Prisoner of Azkaban', typename__='Book'), Book(author=Author(books=[], id='51341cdscwef14r13', name='J. K. Rowling', typename__='Author'), id='dvsmu12e19xmqacqw9', title='Fantastic Beasts: The Crimes of Grindelwald', typename__='Book')]
