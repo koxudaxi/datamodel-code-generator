@@ -1,0 +1,37 @@
+{
+  "$defs": {
+    "B": {
+      "title": "B",
+      "properties": {
+        "type": {
+          "const": "b"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    },
+    "Alias": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/B"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "x_value": {
+      "$ref": "#/$defs/Alias",
+      "default": {
+        "type": "b",
+        "value": 1
+      }
+    }
+  }
+}
