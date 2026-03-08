@@ -161,9 +161,9 @@ file. Each profile can override the default settings with its own set of options
     strict-types = ["str", "int", "float", "bool"]
     strict-nullable = true
 
-    [tool.datamodel-codegen.profiles.legacy]
-    # Legacy profile
-    output-model-type = "pydantic_v2.BaseModel"
+    [tool.datamodel-codegen.profiles.dataclass]
+    # Dataclass profile
+    output-model-type = "dataclasses.dataclass"
     ```
 
     Use profiles:
@@ -172,8 +172,8 @@ file. Each profile can override the default settings with its own set of options
     # Use the strict profile
     datamodel-codegen --input schema.json --profile strict
 
-    # Use the legacy profile
-    datamodel-codegen --input schema.json --profile legacy
+    # Use the dataclass profile
+    datamodel-codegen --input schema.json --profile dataclass
     ```
 
 ---
@@ -199,4 +199,3 @@ Displays the installed version of datamodel-code-generator.
     ```
 
 ---
-
