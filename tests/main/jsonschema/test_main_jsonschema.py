@@ -5678,6 +5678,28 @@ def test_main_jsonschema_type_alias_list_model_default_object_ref(output_file: P
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_recursive_default_list(output_file: Path) -> None:
+    """Avoid recursive alias traversal loops when checking structured defaults."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_recursive_default_list.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive_default_list.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_jsonschema_type_alias_inline_union_default_object(output_file: Path) -> None:
     """Validate inline object-union defaults through the union type."""
     run_main_and_assert(
