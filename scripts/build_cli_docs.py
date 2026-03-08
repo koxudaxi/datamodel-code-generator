@@ -401,9 +401,29 @@ def indent_code_block(content: str, prefix: str) -> str:
     return result
 
 
+ORDERED_MODEL_OUTPUT_LABELS: tuple[tuple[str, str], ...] = (
+    ("pydantic_v2", "Pydantic v2"),
+    ("pydantic_v2.dataclass", "Pydantic v2 dataclass"),
+    ("dataclass", "dataclass"),
+    ("dataclasses.dataclass", "dataclass"),
+    ("typeddict", "TypedDict"),
+    ("typing.TypedDict", "TypedDict"),
+    ("msgspec", "msgspec"),
+    ("msgspec.Struct", "msgspec"),
+)
+
+
+def summarize_description(description: str, max_length: int | None = None) -> str:
+    """Collapse the first paragraph of a description to a single summary line."""
+    summary = " ".join(description.strip().split("\n\n", 1)[0].split())
+    if max_length is not None and len(summary) > max_length:
+        return summary[:max_length] + "..."
+    return summary
+
+
 def validated_model_outputs(example: CLIDocExample) -> list[tuple[str, str]]:
     """Return model outputs in display order and reject stale model keys."""
-    display_order = ("pydantic_v2", "dataclass", "typeddict", "msgspec")
+    display_order = tuple(key for key, _ in ORDERED_MODEL_OUTPUT_LABELS)
     unexpected_keys = sorted(set(example.model_outputs or ()) - set(display_order))
     if unexpected_keys:
         msg = f"Unexpected model output key(s) {unexpected_keys!r} in CLI doc example {example.node_id!r}"
@@ -459,12 +479,7 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
                 md += f"{prefix}{line}\n" if line else f"{prefix}\n"
             md += f"{prefix}```\n\n"
     elif example.comparison_output and example.model_outputs:
-        model_labels = {
-            "pydantic_v2": "Pydantic v2",
-            "dataclass": "dataclass",
-            "typeddict": "TypedDict",
-            "msgspec": "msgspec",
-        }
+        model_labels = dict(ORDERED_MODEL_OUTPUT_LABELS)
         for model_key, output_file in validated_model_outputs(example):
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
@@ -505,12 +520,7 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
             except (FileNotFoundError, ValueError) as e:
                 md += f"{prefix}    > **Error:** {e}\n\n"
     elif example.model_outputs:
-        model_labels = {
-            "pydantic_v2": "Pydantic v2",
-            "dataclass": "dataclass",
-            "typeddict": "TypedDict",
-            "msgspec": "msgspec",
-        }
+        model_labels = dict(ORDERED_MODEL_OUTPUT_LABELS)
         for model_key, output_file in validated_model_outputs(example):
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
@@ -711,9 +721,7 @@ def generate_category_page(
     for option in sorted(options.keys()):
         cli_doc_option = options[option]
         option_description = cli_doc_option.get_option_description()
-        desc = option_description.split("\n")[0][:DESC_LENGTH_SHORT] if option_description else ""
-        if len(desc) == DESC_LENGTH_SHORT:
-            desc += "..."
+        desc = summarize_description(option_description, DESC_LENGTH_SHORT) if option_description else ""
         md += f"| [`{option}`](#{slugify(option)}) | {desc} |\n"
     md += "\n---\n\n"
 
@@ -738,7 +746,7 @@ def generate_quick_reference(
     for category, options in categories.items():
         for option, cli_doc_option in options.items():
             option_description = cli_doc_option.get_option_description()
-            desc = option_description.split("\n")[0] if option_description else ""
+            desc = summarize_description(option_description) if option_description else ""
             all_options.append((option, desc, category))
     if manual_docs:
         for option in manual_docs:
@@ -772,9 +780,7 @@ def generate_quick_reference(
         for option in sorted(options.keys()):
             cli_doc_option = options[option]
             option_description = cli_doc_option.get_option_description()
-            desc = option_description.split("\n")[0][:DESC_LENGTH_LONG] if option_description else ""
-            if len(desc) == DESC_LENGTH_LONG:
-                desc += "..."
+            desc = summarize_description(option_description, DESC_LENGTH_LONG) if option_description else ""
             slug_opt = slugify(option)
             md += f"| [`{option}`]({slug_cat}.md#{slug_opt}) | {desc} |\n"
 
@@ -997,7 +1003,7 @@ def build_docs(*, check: bool = False) -> int:
             if not output_path.exists():
                 mismatches.append(f"{label}: file does not exist")
                 return False
-            existing = output_path.read_text(encoding="utf-8")
+            existing = output_path.read_text(encoding="utf-8").rstrip() + "\n"
             if existing != normalized_content:
                 mismatches.append(f"{label}: content differs")
                 return False

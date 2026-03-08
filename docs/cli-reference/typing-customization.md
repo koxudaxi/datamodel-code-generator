@@ -8,7 +8,7 @@
 | [`--allof-merge-mode`](#allof-merge-mode) | Merge constraints from root model references in allOf schema... |
 | [`--disable-future-imports`](#disable-future-imports) | Prevent automatic addition of __future__ imports in generate... |
 | [`--enum-field-as-literal`](#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum cla... |
-| [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping.... |
+| [`--enum-field-as-literal-map`](#enum-field-as-literal-map) | Override enum/literal generation per-field via JSON mapping. |
 | [`--ignore-enum-constraints`](#ignore-enum-constraints) | Ignore enum constraints and use base string type instead of ... |
 | [`--no-use-closed-typed-dict`](#no-use-closed-typed-dict) | Disable PEP 728 TypedDict closed/extra_items generation. |
 | [`--no-use-specialized-enum`](#no-use-specialized-enum) | Disable specialized Enum classes for Python 3.11+ code gener... |

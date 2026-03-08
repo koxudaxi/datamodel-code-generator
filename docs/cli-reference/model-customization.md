@@ -15,7 +15,7 @@
 | [`--collapse-reuse-models`](#collapse-reuse-models) | Collapse duplicate models by replacing references instead of... |
 | [`--collapse-root-models`](#collapse-root-models) | Inline root model definitions instead of creating separate w... |
 | [`--collapse-root-models-name-strategy`](#collapse-root-models-name-strategy) | Select which name to keep when collapsing root models with o... |
-| [`--dataclass-arguments`](#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary.... |
+| [`--dataclass-arguments`](#dataclass-arguments) | Customize dataclass decorator arguments via JSON dictionary. |
 | [`--duplicate-name-suffix`](#duplicate-name-suffix) | Customize suffix for duplicate model names. |
 | [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](#force-optional) | Force all fields to be Optional regardless of required statu... |
@@ -33,7 +33,7 @@
 | [`--strict-nullable`](#strict-nullable) | Treat default field as a non-nullable field. |
 | [`--strip-default-none`](#strip-default-none) | Remove fields with None as default value from generated mode... |
 | [`--target-pydantic-version`](#target-pydantic-version) | Target Pydantic version for generated code compatibility. |
-| [`--target-python-version`](#target-python-version) | Target Python version for generated code syntax and imports.... |
+| [`--target-python-version`](#target-python-version) | Target Python version for generated code syntax and imports. |
 | [`--union-mode`](#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_... |
 | [`--use-default`](#use-default) | Use default values from schema in generated models. |
 | [`--use-default-factory-for-optional-nested-models`](#use-default-factory-for-optional-nested-models) | Generate default_factory for optional nested model fields. |

@@ -21,7 +21,7 @@
 | [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
-| [`--validators`](#validators) | Add custom field validators to generated Pydantic v2 models.... |
+| [`--validators`](#validators) | Add custom field validators to generated Pydantic v2 models. |
 | [`--wrap-string-literal`](#wrap-string-literal) | Wrap long string literals across multiple lines. |
 
 ---

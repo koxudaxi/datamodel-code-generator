@@ -31,7 +31,7 @@ datamodel-codegen [OPTIONS]
 
 | Option | Description |
 |--------|-------------|
-| [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) | Controls how allOf schemas are represented in the generated class hierarchy. |
+| [`--allof-class-hierarchy`](typing-customization.md#allof-class-hierarchy) | Controls how allOf schemas are represented in the generated class hierarchy. `--... |
 | [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) | Merge constraints from root model references in allOf schemas. |
 | [`--disable-future-imports`](typing-customization.md#disable-future-imports) | Prevent automatic addition of __future__ imports in generated code. |
 | [`--enum-field-as-literal`](typing-customization.md#enum-field-as-literal) | Convert all enum fields to Literal types instead of Enum classes. |
@@ -115,7 +115,7 @@ datamodel-codegen [OPTIONS]
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
-| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, |
+| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, dataclasses, T... |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
 | [`--reuse-model`](model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
 | [`--reuse-scope`](model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -129,7 +129,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) | Generate default_factory for optional nested model fields. |
 | [`--use-default-kwarg`](model-customization.md#use-default-kwarg) | Use default= keyword argument instead of positional argument for fields with def... |
 | [`--use-frozen-field`](model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
-| [`--use-generic-base-class`](model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY).... |
+| [`--use-generic-base-class`](model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY). |
 | [`--use-one-literal-as-default`](model-customization.md#use-one-literal-as-default) | Use single literal value as default when enum has only one option. |
 | [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) | Wrap fields with subtypes in Pydantic's SerializeAsAny. |
 | [`--use-subclass-enum`](model-customization.md#use-subclass-enum) | Generate typed Enum subclasses for enums with specific field types. |
