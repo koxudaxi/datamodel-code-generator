@@ -25,7 +25,7 @@
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
 | [`--naming-strategy`](#naming-strategy) | Use parent-prefixed naming strategy for duplicate model name... |
-| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, dataclasses, Type... |
+| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 datac... |
 | [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
 | [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
 | [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -1624,7 +1624,7 @@ control over dataclass generation.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -2631,7 +2631,7 @@ keyword-only arguments.
 
 **Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -2878,7 +2878,7 @@ positional argument errors.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -3460,13 +3460,14 @@ parent model name when duplicates occur. For example, if both `Order` and
 
 ## `--output-model-type` {#output-model-type}
 
-Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
+Select the output model type (Pydantic v2, Pydantic v2 dataclass,
+dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use
 for the generated code. Supported values include `pydantic_v2.BaseModel`,
-`dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
+`pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -5066,7 +5067,7 @@ The `--target-python-version` flag controls Python version-specific syntax:
 
 This affects import statements and type annotation syntax in generated code.
 
-**See also:** [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [CI/CD Integration](../ci-cd.md), [Output Model Types](../output-model-types.md), [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -6227,4 +6228,3 @@ type, providing better type safety and IDE support.
     ```
 
 ---
-

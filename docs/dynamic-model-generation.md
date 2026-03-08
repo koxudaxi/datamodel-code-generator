@@ -280,7 +280,7 @@ assert all(r is results[0] for r in results)
 
 | Limitation | Details |
 |------------|---------|
-| Pydantic v2 only | Only Pydantic v2 is supported |
+| Pydantic v2 only | Pydantic v2 is the only supported output |
 | Not pickle-able | Use `model_dump()` to serialize instances |
 | Dict input only | Schema must be a `dict`, not a file path or string |
 

@@ -215,14 +215,14 @@ See [Model Reuse and Deduplication](model-reuse.md) for details.
 - **TypedDict**: Type hints for dict structures.
 - **msgspec**: High-performance serialization.
 
-See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a detailed comparison.
+See [Output Model Types](output-model-types.md) for a detailed comparison.
 
 ```bash
 # For new projects
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 ```
 
-See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for more details.
+See [Output Model Types](output-model-types.md) for more details.
 
 📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
 

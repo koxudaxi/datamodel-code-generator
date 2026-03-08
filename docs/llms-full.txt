@@ -18,7 +18,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
-- 🎯 Generates **Pydantic v2**, **dataclasses**, **TypedDict**, or **msgspec** output
+- 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
 
@@ -1250,7 +1250,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
 | [`--naming-strategy`](#naming-strategy) | Use parent-prefixed naming strategy for duplicate model name... |
-| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, dataclasses, Type... |
+| [`--output-model-type`](#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 datac... |
 | [`--parent-scoped-naming`](#parent-scoped-naming) | Namespace models by their parent scope to avoid naming confl... |
 | [`--reuse-model`](#reuse-model) | Reuse identical model definitions instead of generating dupl... |
 | [`--reuse-scope`](#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -2849,7 +2849,7 @@ control over dataclass generation.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--keyword-only`](model-customization.md#keyword-only)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -3856,7 +3856,7 @@ keyword-only arguments.
 
 **Related:** [`--keyword-only`](model-customization.md#keyword-only), [`--output-model-type`](model-customization.md#output-model-type)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -4103,7 +4103,7 @@ positional argument errors.
 
 **Related:** [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses), [`--output-model-type`](model-customization.md#output-model-type), [`--target-python-version`](model-customization.md#target-python-version)
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -4685,13 +4685,14 @@ parent model name when duplicates occur. For example, if both `Order` and
 
 ## `--output-model-type` {#output-model-type}
 
-Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
+Select the output model type (Pydantic v2, Pydantic v2 dataclass,
+dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use
 for the generated code. Supported values include `pydantic_v2.BaseModel`,
-`dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
+`pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
 
-**See also:** [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [Output Model Types](../output-model-types.md)
 
 !!! tip "Usage"
 
@@ -6291,7 +6292,7 @@ The `--target-python-version` flag controls Python version-specific syntax:
 
 This affects import statements and type annotation syntax in generated code.
 
-**See also:** [CI/CD Integration](../ci-cd.md), [Python Version Compatibility](../python-version-compatibility.md), [Output Model Types](../what_is_the_difference_between_v1_and_v2.md)
+**See also:** [CI/CD Integration](../ci-cd.md), [Output Model Types](../output-model-types.md), [Python Version Compatibility](../python-version-compatibility.md)
 
 !!! tip "Usage"
 
@@ -23157,7 +23158,7 @@ datamodel-codegen [OPTIONS]
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
 | [`--naming-strategy`](model-customization.md#naming-strategy) | Use parent-prefixed naming strategy for duplicate model names. |
-| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec). |
+| [`--output-model-type`](model-customization.md#output-model-type) | Select the output model type (Pydantic v2, Pydantic v2 dataclass, |
 | [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) | Namespace models by their parent scope to avoid naming conflicts. |
 | [`--reuse-model`](model-customization.md#reuse-model) | Reuse identical model definitions instead of generating duplicates. |
 | [`--reuse-scope`](model-customization.md#reuse-scope) | Scope for model reuse detection (root or tree). |
@@ -23341,7 +23342,7 @@ All options sorted alphabetically:
 - [`--output`](base-options.md#output) - Specify the destination path for generated Python code.
 - [`--output-date-class`](typing-customization.md#output-date-class) - Specify date class type for date schema fields.
 - [`--output-datetime-class`](typing-customization.md#output-datetime-class) - Specify datetime class type for date-time schema fields.
-- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, dataclasses, Type...
+- [`--output-model-type`](model-customization.md#output-model-type) - Select the output model type (Pydantic v2, Pydantic v2 datac...
 - [`--parent-scoped-naming`](model-customization.md#parent-scoped-naming) - Namespace models by their parent scope to avoid naming confl...
 - [`--profile`](utility-options.md#profile) - Use a named profile from pyproject.toml
 - [`--read-only-write-only-model-type`](openapi-only-options.md#read-only-write-only-model-type) - Generate separate request and response models for readOnly/w...
@@ -25061,7 +25062,7 @@ class Config(TypedDict):
 
 # Output Model Types
 
-Source: https://datamodel-code-generator.koxudaxi.dev/what_is_the_difference_between_v1_and_v2/
+Source: https://datamodel-code-generator.koxudaxi.dev/output-model-types/
 
 <!-- related-cli-options: --output-model-type, --frozen-dataclasses, --keyword-only, --dataclass-arguments, --target-python-version -->
 
@@ -26678,7 +26679,7 @@ Some IDEs don't fully understand `from __future__ import annotations`.
 - [CLI Reference: `--use-union-operator`](cli-reference/typing-customization.md#use-union-operator)
 - [CLI Reference: `--use-standard-collections`](cli-reference/typing-customization.md#use-standard-collections)
 - [CLI Reference: `--use-annotated`](cli-reference/typing-customization.md#use-annotated)
-- [Output Model Types](what_is_the_difference_between_v1_and_v2.md)
+- [Output Model Types](output-model-types.md)
 - [Type Mappings and Custom Types](type-mappings.md)
 - [CI/CD Integration](ci-cd.md)
 
@@ -28832,7 +28833,7 @@ assert all(r is results[0] for r in results)
 
 | Limitation | Details |
 |------------|---------|
-| Pydantic v2 only | Only Pydantic v2 is supported |
+| Pydantic v2 only | Pydantic v2 is the only supported output |
 | Not pickle-able | Use `model_dump()` to serialize instances |
 | Dict input only | Schema must be a `dict`, not a file path or string |
 
@@ -29025,7 +29026,7 @@ By default, the action runs in **check mode** (`--check`), which validates that 
 | `input` | Yes | - | Input schema file or directory |
 | `output` | Yes | - | Output file or directory |
 | `input-file-type` | Yes | - | Input file type (`openapi`, `jsonschema`, `json`, `yaml`, `csv`, `graphql`) |
-| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
+| `output-model-type` | Yes | - | Output model type (`pydantic_v2.BaseModel`, `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, `msgspec.Struct`) |
 | `check` | No | `true` | Validate that existing output is up to date (no generation) |
 | `working-directory` | No | `.` | Working directory (where `pyproject.toml` is located) |
 | `profile` | No | - | Named profile from `pyproject.toml` |
@@ -29806,14 +29807,14 @@ See [Model Reuse and Deduplication](model-reuse.md) for details.
 - **TypedDict**: Type hints for dict structures.
 - **msgspec**: High-performance serialization.
 
-See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for a detailed comparison.
+See [Output Model Types](output-model-types.md) for a detailed comparison.
 
 ```bash
 # For new projects
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
 ```
 
-See [Output Model Types](what_is_the_difference_between_v1_and_v2.md) for more details.
+See [Output Model Types](output-model-types.md) for more details.
 
 📎 Related: [#803](https://github.com/koxudaxi/datamodel-code-generator/issues/803)
 

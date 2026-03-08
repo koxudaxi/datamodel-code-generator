@@ -401,6 +401,16 @@ def indent_code_block(content: str, prefix: str) -> str:
     return result
 
 
+def validated_model_outputs(example: CLIDocExample) -> list[tuple[str, str]]:
+    """Return model outputs in display order and reject stale model keys."""
+    display_order = ("pydantic_v2", "dataclass", "typeddict", "msgspec")
+    unexpected_keys = sorted(set(example.model_outputs or ()) - set(display_order))
+    if unexpected_keys:
+        msg = f"Unexpected model output key(s) {unexpected_keys!r} in CLI doc example {example.node_id!r}"
+        raise ValueError(msg)
+    return sorted(example.model_outputs.items(), key=lambda item: display_order.index(item[0]))
+
+
 def format_cli_args(cli_args: list[str]) -> list[str]:
     """Format cli_args as proper command line (group option with its value)."""
     formatted = []
@@ -455,14 +465,7 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
             "typeddict": "TypedDict",
             "msgspec": "msgspec",
         }
-        order = ["pydantic_v2", "dataclass", "typeddict", "msgspec"]
-        sorted_models = sorted(
-            example.model_outputs.items(),
-            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
-        )
-        for model_key, output_file in sorted_models:
-            if model_key == "pydantic_v1":
-                continue
+        for model_key, output_file in validated_model_outputs(example):
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
             try:
@@ -508,14 +511,7 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
             "typeddict": "TypedDict",
             "msgspec": "msgspec",
         }
-        order = ["pydantic_v2", "dataclass", "typeddict", "msgspec"]
-        sorted_models = sorted(
-            example.model_outputs.items(),
-            key=lambda x: order.index(x[0]) if x[0] in order else len(order),
-        )
-        for model_key, output_file in sorted_models:
-            if model_key == "pydantic_v1":
-                continue
+        for model_key, output_file in validated_model_outputs(example):
             label = model_labels.get(model_key, model_key)
             md += f'{prefix}=== "{label}"\n\n'
             try:
@@ -996,16 +992,17 @@ def build_docs(*, check: bool = False) -> int:
     def write_or_check(output_path: Path, content: str, label: str) -> bool:
         """Write content to file or check if it matches existing content."""
         nonlocal generated, errors
+        normalized_content = content.rstrip() + "\n"
         if check:
             if not output_path.exists():
                 mismatches.append(f"{label}: file does not exist")
                 return False
             existing = output_path.read_text(encoding="utf-8")
-            if existing != content:
+            if existing != normalized_content:
                 mismatches.append(f"{label}: content differs")
                 return False
             return True
-        output_path.write_text(content, encoding="utf-8")
+        output_path.write_text(normalized_content, encoding="utf-8")
         generated += 1
         return True
 

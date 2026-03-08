@@ -199,4 +199,3 @@ Displays the installed version of datamodel-code-generator.
     ```
 
 ---
-

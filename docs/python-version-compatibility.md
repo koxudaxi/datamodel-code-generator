@@ -358,6 +358,6 @@ Some IDEs don't fully understand `from __future__ import annotations`.
 - [CLI Reference: `--use-union-operator`](cli-reference/typing-customization.md#use-union-operator)
 - [CLI Reference: `--use-standard-collections`](cli-reference/typing-customization.md#use-standard-collections)
 - [CLI Reference: `--use-annotated`](cli-reference/typing-customization.md#use-annotated)
-- [Output Model Types](what_is_the_difference_between_v1_and_v2.md)
+- [Output Model Types](output-model-types.md)
 - [Type Mappings and Custom Types](type-mappings.md)
 - [CI/CD Integration](ci-cd.md)
