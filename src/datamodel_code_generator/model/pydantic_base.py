@@ -141,6 +141,47 @@ class DataModelField(DataModelFieldBase):
                     f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
                     f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
                 )
+        # If the field references a type alias whose underlying type is a union of BaseModels,
+        # use TypeAdapter to validate the default value against the full union.
+        if (
+            not self.data_type.data_types
+            and self.data_type.reference
+            and isinstance(self.data_type.reference.source, DataModel)
+            and getattr(self.data_type.reference.source, "IS_ALIAS", False)
+            and isinstance(self.default, (dict, list))
+        ):
+            alias_source = self.data_type.reference.source
+            if alias_source.fields and alias_source.fields[0].data_type.data_types:
+                has_base_model = any(
+                    dt.reference and isinstance(dt.reference.source, BaseModelBase)
+                    for dt in alias_source.fields[0].data_type.data_types
+                )
+                if has_base_model:
+                    alias_name = self.data_type.alias or alias_source.class_name
+                    self.__dict__["_type_adapter_import_needed"] = True
+                    return f"lambda :TypeAdapter({alias_name}).validate_python({self.default!r})"
+
+        # Inline union with multiple BaseModel candidates: validate against the full union via TypeAdapter
+        if (
+            self.data_type.is_union
+            and isinstance(self.default, dict)
+            and not any(dt.is_dict for dt in self.data_type.data_types)
+        ):
+            base_model_count = sum(
+                1 for dt in self.data_type.data_types if dt.reference and isinstance(dt.reference.source, BaseModelBase)
+            )
+            if base_model_count > 1:
+                type_parts = []
+                for dt in self.data_type.data_types:
+                    hint = dt.type_hint
+                    if hint and hint != "None":
+                        type_parts.append(hint)
+                if type_parts:
+                    union_expr = ", ".join(type_parts)
+                    self.__dict__["_type_adapter_import_needed"] = True
+                    self.__dict__["_union_import_for_type_adapter"] = True
+                    return f"lambda :TypeAdapter(Union[{union_expr}]).validate_python({self.default!r})"
+
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:

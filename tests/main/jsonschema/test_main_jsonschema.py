@@ -5591,6 +5591,74 @@ def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> N
     )
 
 
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_ref_union_default_object(output_file: Path) -> None:
+    """TypeAlias ref to union of BaseModels uses TypeAdapter for dict default (#3034)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_union_default_object.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="ref_union_default_object.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_pydantic_v2_multi_model_union_default_object_type_alias(output_file: Path) -> None:
+    """Inline union of multiple BaseModels uses TypeAdapter with --use-type-alias (#3035)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multi_model_union_default_object.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_multi_model_union_default_object_type_alias.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_pydantic_v2_multi_model_union_default_object(output_file: Path) -> None:
+    """Inline union of multiple BaseModels uses TypeAdapter without --use-type-alias (#3035)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multi_model_union_default_object.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_multi_model_union_default_object.py",
+        extra_args=[
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--type-mappings"],
     option_description="""Override default type mappings for schema formats.

@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "$defs": {
+    "A": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "a",
+          "type": "string"
+        }
+      },
+      "required": ["type"]
+    },
+    "B": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "b",
+          "type": "string"
+        }
+      },
+      "required": ["type"]
+    }
+  },
+  "properties": {
+    "x": {
+      "anyOf": [
+        { "$ref": "#/$defs/A" },
+        { "$ref": "#/$defs/B" }
+      ],
+      "default": { "type": "b" }
+    }
+  }
+}

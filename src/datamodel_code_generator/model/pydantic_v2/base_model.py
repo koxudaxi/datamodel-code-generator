@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Literal, NamedTuple, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from datamodel_code_generator.imports import IMPORT_ANY, Import
+from datamodel_code_generator.imports import IMPORT_ANY, IMPORT_UNION, Import
 from datamodel_code_generator.model.base import ALL_MODEL, UNDEFINED, BaseClassDataType, DataModelFieldBase
 from datamodel_code_generator.model.imports import IMPORT_CLASSVAR
 from datamodel_code_generator.model.pydantic_base import (
@@ -200,6 +200,12 @@ class DataModelField(DataModelFieldV1):
             extra_imports.append(IMPORT_ALIAS_CHOICES)
         if self._has_discriminator_in_data_type():
             extra_imports.append(IMPORT_FIELD)
+        if getattr(self, "_type_adapter_import_needed", False):
+            from datamodel_code_generator.model.pydantic_v2.imports import IMPORT_TYPE_ADAPTER  # noqa: PLC0415
+
+            extra_imports.append(IMPORT_TYPE_ADAPTER)
+        if getattr(self, "_union_import_for_type_adapter", False):
+            extra_imports.append(IMPORT_UNION)
         if extra_imports:
             return chain_as_tuple(base_imports, tuple(extra_imports))
         return base_imports
