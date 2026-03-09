@@ -478,7 +478,7 @@ def _needs_validated_default(default: Any, data_type: DataType) -> bool:
         return False
 
     if resolved.is_union:
-        non_none_branches = tuple(branch for branch in data_type.data_types if branch.type_hint != NONE)
+        non_none_branches = tuple(branch for branch in resolved.data_types if branch.type_hint != NONE)
         if len(non_none_branches) == 1 and _uses_existing_model_factory_path(non_none_branches[0]):
             return False
         return not any(_default_matches_plain_container_branch(default, branch) for branch in resolved.data_types)
