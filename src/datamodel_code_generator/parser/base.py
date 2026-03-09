@@ -2701,14 +2701,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     ) -> list[tuple[str, tuple[str, ...], str]]:
         """Collect exports for __init__.py based on scope."""
         exports: list[tuple[str, tuple[str, ...], str]] = []
-        base = module[:-1] if module[-1] == "__init__.py" else module
+        normalized_module = tuple(part.replace("-", "_") for part in module)
+        base = normalized_module[:-1] if normalized_module[-1] == "__init__.py" else normalized_module
         base_len = len(base)
 
         for proc_module, _, proc_models, _, _, _ in processed_models:
-            if not proc_models or proc_module == module:
+            normalized_proc_module = tuple(part.replace("-", "_") for part in proc_module)
+            if not proc_models or normalized_proc_module == normalized_module:
                 continue
-            last = proc_module[-1]
-            prefix = proc_module[:-1] if last == "__init__.py" else (*proc_module[:-1], last[:-3])
+            last = normalized_proc_module[-1]
+            prefix = normalized_proc_module[:-1] if last == "__init__.py" else (*normalized_proc_module[:-1], last[:-3])
             if prefix[:base_len] != base or (depth := len(prefix) - base_len) < 1:
                 continue
             if scope == AllExportsScope.Children and depth != 1:

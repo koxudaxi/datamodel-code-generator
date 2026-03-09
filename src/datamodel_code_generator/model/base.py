@@ -204,7 +204,7 @@ class DataModelFieldBase(_BaseModel):
         """Check if field references its parent model.
 
         Result is cached after first call since parent is stable at render time.
-        Uses __dict__ for caching to avoid Pydantic v1 field assignment restrictions.
+        Uses __dict__ for caching to avoid Pydantic-managed field assignment.
         """
         if "_self_reference_cache" in self.__dict__:
             return self.__dict__["_self_reference_cache"]

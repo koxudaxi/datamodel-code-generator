@@ -271,7 +271,8 @@ If a schema named `UserRequest` or `UserResponse` already exists, the generated 
 
 This option works with all output formats:
 
-- `pydantic.BaseModel` / `pydantic_v2.BaseModel`
+- `pydantic_v2.BaseModel`
+- `pydantic_v2.dataclass`
 - `dataclasses.dataclass`
 - `typing.TypedDict`
 - `msgspec.Struct`

@@ -1288,6 +1288,21 @@ def test_all_exports_scope_children_with_local_models(output_dir: Path) -> None:
     )
 
 
+def test_all_exports_scope_children_jsonschema_hyphenated_package(output_dir: Path) -> None:
+    """Test --all-exports-scope=children with hyphenated JSON Schema directories."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "all_exports_hyphenated_directory",
+        output_path=output_dir,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--disable-timestamp",
+            "--all-exports-scope",
+            "children",
+        ],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_hyphenated_directory",
+    )
+
+
 def test_check_respects_pyproject_toml_settings(tmp_path: Path) -> None:
     """Test --check uses pyproject.toml formatter settings from output path.
 
