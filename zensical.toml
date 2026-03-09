@@ -39,7 +39,7 @@ nav = [
       { "Python Models" = "python-model.md" }
     ]},
     { "Output Customization" = [
-      { "Output Model Types" = "what_is_the_difference_between_v1_and_v2.md" },
+      { "Output Model Types" = "output-model-types.md" },
       { "Model Reuse and Deduplication" = "model-reuse.md" },
       { "Module Structure and Exports" = "module-exports.md" },
       { "Type Mappings and Custom Types" = "type-mappings.md" },

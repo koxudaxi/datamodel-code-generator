@@ -1,21 +1,15 @@
-"""Utility functions and Pydantic version compatibility helpers.
-
-Provides Pydantic version detection (PYDANTIC_V2), YAML/TOML loading,
-and version-compatible decorators (model_validator, field_validator).
-"""
+"""Utility functions for YAML/TOML loading and lazy BaseModel access."""
 
 from __future__ import annotations
 
 import re
 import warnings
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Literal, TypeVar, overload
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
-
-    from pydantic import BaseModel as _BaseModel
 
 try:
     from tomllib import load as load_tomllib  # type: ignore[ignoreMissingImports]
@@ -27,28 +21,6 @@ def load_toml(path: Path) -> dict[str, Any]:
     """Load and parse a TOML file."""
     with path.open("rb") as f:
         return load_tomllib(f)
-
-
-@lru_cache(maxsize=1)
-def get_pydantic_version() -> tuple[Any, bool, bool]:
-    """Get pydantic version info lazily. Returns (version, is_v2, is_v2_11)."""
-    # Apply pydantic patch before importing pydantic
-    from datamodel_code_generator.pydantic_patch import apply_patch  # noqa: PLC0415
-
-    apply_patch()
-
-    import pydantic  # noqa: PLC0415
-    from packaging import version  # noqa: PLC0415
-
-    pydantic_version = version.parse(pydantic.VERSION if isinstance(pydantic.VERSION, str) else str(pydantic.VERSION))
-    is_v2 = version.parse("2.0b3") <= pydantic_version
-    is_v2_11 = version.parse("2.11") <= pydantic_version
-    return pydantic_version, is_v2, is_v2_11
-
-
-def is_pydantic_v2() -> bool:
-    """Check if pydantic v2 is installed."""
-    return get_pydantic_version()[1]
 
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
@@ -111,121 +83,16 @@ def get_safe_loader() -> type:
     return CustomSafeLoader
 
 
-Model = TypeVar("Model", bound="_BaseModel")  # ty: ignore
-T = TypeVar("T")
-
-
-@overload
-def model_validator(
-    mode: Literal["before"],
-) -> (
-    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
-    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
-): ...
-
-
-@overload
-def model_validator(
-    mode: Literal["after"],
-) -> (
-    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
-    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
-    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
-): ...
-
-
-@overload
-def model_validator() -> (
-    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
-    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
-    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
-): ...
-
-
-def model_validator(  # ty: ignore
-    mode: Literal["before", "after"] = "after",
-) -> (
-    Callable[[Callable[[type[Model], T], T]], Callable[[type[Model], T], T]]
-    | Callable[[Callable[[Model, T], T]], Callable[[Model, T], T]]
-    | Callable[[Callable[[Model], Model]], Callable[[Model], Model]]
-):
-    """Decorate model validators for both Pydantic v1 and v2."""
-
-    @overload
-    def inner(method: Callable[[type[Model], T], T]) -> Callable[[type[Model], T], T]: ...
-
-    @overload
-    def inner(method: Callable[[Model, T], T]) -> Callable[[Model, T], T]: ...
-
-    @overload
-    def inner(method: Callable[[Model], Model]) -> Callable[[Model], Model]: ...
-
-    def inner(  # pragma: no cover
-        method: Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model],
-    ) -> Callable[[type[Model], T], T] | Callable[[Model, T], T] | Callable[[Model], Model]:
-        if is_pydantic_v2():
-            from pydantic import model_validator as model_validator_v2  # noqa: PLC0415
-
-            if mode == "before":
-                return model_validator_v2(mode=mode)(classmethod(method))  # type: ignore[reportReturnType]
-            return model_validator_v2(mode=mode)(method)  # type: ignore[reportReturnType]
-        from pydantic import root_validator  # noqa: PLC0415  # pragma: no cover
-
-        return root_validator(method, pre=mode == "before")  # ty: ignore  # pragma: no cover
-
-    return inner  # pragma: no cover
-
-
-def field_validator(
-    field_name: str,
-    *fields: str,
-    mode: Literal["before", "after"] = "after",
-) -> Callable[[Any], Callable[[Any, Any], Any]]:
-    """Decorate field validators for both Pydantic v1 and v2."""
-
-    def inner(method: Callable[[Model, Any], Any]) -> Callable[[Model, Any], Any]:  # pragma: no cover
-        if is_pydantic_v2():
-            from pydantic import field_validator as field_validator_v2  # noqa: PLC0415
-
-            return field_validator_v2(field_name, *fields, mode=mode)(method)  # ty: ignore
-        from pydantic import validator  # noqa: PLC0415  # pragma: no cover
-
-        return validator(field_name, *fields, pre=mode == "before")(method)  # ty: ignore  # pragma: no cover
-
-    return inner  # pragma: no cover
-
-
-@lru_cache(maxsize=1)
-def _get_config_dict() -> type:  # pragma: no cover
-    """Get ConfigDict type lazily. Only used with pydantic v2."""
-    from pydantic import ConfigDict  # noqa: PLC0415
-
-    return ConfigDict
-
-
-class _ConfigDictProxy:
-    """Proxy for lazy ConfigDict access."""
-
-    def __call__(self, **kwargs: Any) -> Any:  # pragma: no cover
-        return _get_config_dict()(**kwargs)
-
-
-ConfigDict: type = _ConfigDictProxy()  # type: ignore[assignment]
-
-
 @lru_cache(maxsize=1)
 def _get_base_model_class() -> type:
-    """Get version-compatible BaseModel class lazily."""
+    """Get BaseModel class with strict=False config lazily."""
     from pydantic import BaseModel as _PydanticBaseModel  # noqa: PLC0415
+    from pydantic import ConfigDict as _ConfigDict  # noqa: PLC0415
 
-    if is_pydantic_v2():
-        from pydantic import ConfigDict as _ConfigDict  # noqa: PLC0415
+    class _BaseModelV2(_PydanticBaseModel):
+        model_config = _ConfigDict(strict=False)
 
-        class _BaseModelV2(_PydanticBaseModel):
-            model_config = _ConfigDict(strict=False)
-
-        return _BaseModelV2
-    return _PydanticBaseModel  # pragma: no cover
+    return _BaseModelV2
 
 
 _BaseModel: type | None = None

@@ -422,11 +422,12 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
 
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
+    option_description="""Select the output model type (Pydantic v2, Pydantic v2 dataclass,
+dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use
 for the generated code. Supported values include `pydantic_v2.BaseModel`,
-`dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.""",
+`pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.""",
     input_schema="jsonschema/null_and_array.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel"],
     model_outputs={
@@ -435,11 +436,11 @@ for the generated code. Supported values include `pydantic_v2.BaseModel`,
     primary=True,
 )
 def test_main_null_and_array(output_file: Path) -> None:
-    """Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
+    """Select the output model type.
 
     The `--output-model-type` flag specifies which Python data model framework to use
     for the generated code. Supported values include `pydantic_v2.BaseModel`,
-    `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
+    `pydantic_v2.dataclass`, `dataclasses.dataclass`, `typing.TypedDict`, and `msgspec.Struct`.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null_and_array.json",
@@ -6384,7 +6385,8 @@ def test_main_jsonschema_ref_with_additional_keywords(output_dir: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--output-model-type"],
-    option_description="""Select the output model type (Pydantic v2, dataclasses, TypedDict, msgspec).
+    option_description="""Select the output model type (Pydantic v2, Pydantic v2 dataclass,
+dataclasses, TypedDict, msgspec).
 
 The `--output-model-type` flag specifies which Python data model framework to use.
 Each model type has different handling for reserved field names like 'schema':

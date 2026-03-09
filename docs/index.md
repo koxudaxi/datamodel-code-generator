@@ -8,7 +8,6 @@
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/datamodel-code-generator)](https://pypi.python.org/pypi/datamodel-code-generator)
 [![codecov](https://codecov.io/gh/koxudaxi/datamodel-code-generator/graph/badge.svg?token=plzSSFb9Li)](https://codecov.io/gh/koxudaxi/datamodel-code-generator)
 ![license](https://img.shields.io/github/license/koxudaxi/datamodel-code-generator.svg)
-[![Pydantic v1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v1.json)](https://pydantic.dev)
 [![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
 
 ---
@@ -17,7 +16,7 @@
 
 - 📄 Converts **OpenAPI 3**, **JSON Schema**, **GraphQL**, and raw data (JSON/YAML/CSV) into Python models
 - 🐍 Generates from **existing Python types** (Pydantic, dataclass, TypedDict) via `--input-model`
-- 🎯 Generates **Pydantic v1/v2**, **dataclasses**, **TypedDict**, or **msgspec** output
+- 🎯 Generates **Pydantic v2**, **Pydantic v2 dataclass**, **dataclasses**, **TypedDict**, or **msgspec** output
 - 🔗 Handles complex schemas: `$ref`, `allOf`, `oneOf`, `anyOf`, enums, and nested types
 - ✅ Produces type-safe, validated code ready for your IDE and type checker
 
@@ -65,7 +64,6 @@
 
 !!! warning "Omitting --output-model-type is deprecated"
     Starting from version 0.53.0, omitting `--output-model-type` is deprecated.
-    The implicit default `pydantic.BaseModel` (Pydantic v1) will be removed in a future version.
 
     We recommend using `--output-model-type pydantic_v2.BaseModel` for new projects.
 
@@ -112,9 +110,6 @@ datamodel-codegen --input pet.json --input-file-type jsonschema --output-model-t
 ```bash
 # 🆕 Pydantic v2 (recommended for new projects)
 datamodel-codegen --output-model-type pydantic_v2.BaseModel ...
-
-# 🔄 Pydantic v1 (default, for compatibility)
-datamodel-codegen --output-model-type pydantic.BaseModel ...
 
 # 🏗️ Python dataclasses
 datamodel-codegen --output-model-type dataclasses.dataclass ...
