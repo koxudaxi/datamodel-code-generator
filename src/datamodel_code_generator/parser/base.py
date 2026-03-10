@@ -452,8 +452,9 @@ def _uses_existing_model_factory_path(data_type: DataType) -> bool:
 
 
 def _default_matches_plain_container_branch(default: Any, data_type: DataType) -> bool:
-    return (isinstance(default, dict) and data_type.is_dict and not _contains_model_reference(data_type)) or (
-        isinstance(default, list) and data_type.is_list and not _contains_model_reference(data_type)
+    resolved = _unwrap_type_alias(data_type)
+    return (isinstance(default, dict) and resolved.is_dict and not _contains_model_reference(resolved)) or (
+        isinstance(default, list) and resolved.is_list and not _contains_model_reference(resolved)
     )
 
 

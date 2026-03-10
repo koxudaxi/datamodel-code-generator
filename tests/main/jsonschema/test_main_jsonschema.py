@@ -6072,6 +6072,33 @@ def test_main_jsonschema_type_alias_dict_union_default_object_ref_relevant_flags
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
+def test_main_jsonschema_type_alias_union_default_object_ref_dict_alias_branch_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Keep raw defaults when a plain dict union branch is hidden behind a type alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref_dict_alias_branch.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref_dict_alias_branch.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
 def test_main_jsonschema_type_alias_union_default_object_ref_mixed_scalar_relevant_flags(
     output_file: Path,
 ) -> None:
