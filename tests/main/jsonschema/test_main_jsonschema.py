@@ -1647,8 +1647,32 @@ def test_main_generate_non_pydantic_output(output_file: Path) -> None:
         output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
         assert_func=assert_file_content,
-        expected_file="generate_non_pydantic_output.py",
         output_model_type=DataModelType.DataclassesDataclass,
+    )
+
+
+def test_main_generate_relative_input_path(output_file: Path) -> None:
+    """Test helper with a relative input path."""
+    run_generate_file_and_assert(
+        input_path=(JSON_SCHEMA_DATA_PATH / "person.json").relative_to(Path.cwd()),
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
+
+
+def test_main_generate_external_absolute_input_path(tmp_path: Path) -> None:
+    """Test helper keeps absolute input paths that are outside the repository root."""
+    input_path = tmp_path / "person.json"
+    input_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+
+    run_generate_file_and_assert(
+        input_path=input_path,
+        output_path=tmp_path / "output.py",
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="general.py",
     )
 
 
