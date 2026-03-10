@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import importlib
 import os
 import platform
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -12,8 +14,9 @@ import pydantic
 import pytest
 from packaging import version
 
-from datamodel_code_generator import OpenAPIScope, PythonVersionMin
-from datamodel_code_generator.model import DataModelFieldBase
+from datamodel_code_generator import DataModelType, OpenAPIScope, PythonVersionMin
+from datamodel_code_generator.format import Formatter
+from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.pydantic_v2 import DataModelField
 from datamodel_code_generator.parser.base import dump_templates
 from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
@@ -470,6 +473,49 @@ def test_openapi_parser_parse_modular(tmp_path: Path, monkeypatch: pytest.Monkey
     parser = OpenAPIParser(Path(DATA_PATH / "modular.yaml"), data_model_field_type=DataModelFieldBase)
     modules = parser.parse()
     assert_parser_modules(modules, EXPECTED_OPEN_API_PATH / "openapi_parser_parse_modular")
+
+
+def test_openapi_parser_parse_modular_pydantic_v2_ruff_keeps_runtime_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test OpenAPIParser.parse() keeps runtime imports for modular Pydantic v2 Ruff output."""
+    monkeypatch.chdir(tmp_path)
+    data_model_types = get_data_model_types(DataModelType.PydanticV2BaseModel, target_python_version=PythonVersionMin)
+    parser = OpenAPIParser(
+        Path(DATA_PATH / "modular.yaml"),
+        data_model_type=data_model_types.data_model,
+        data_model_root_type=data_model_types.root_model,
+        data_model_field_type=data_model_types.field_model,
+        data_type_manager_type=data_model_types.data_type_manager,
+        dump_resolve_reference_action=data_model_types.dump_resolve_reference_action,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+    )
+
+    modules = parser.parse(settings_path=DATA_PATH.parent)
+    assert isinstance(modules, dict)
+
+    internal = modules["_internal.py",].body
+    assert "TYPE_CHECKING" not in internal
+    assert "from . import models" in internal
+
+    package_dir = tmp_path / "model"
+    for module_path, result in modules.items():
+        file_path = package_dir.joinpath(*module_path)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(result.body, encoding="utf-8")
+
+    sys.path.insert(0, str(tmp_path))
+    importlib.invalidate_caches()
+    try:
+        from model._internal import Result
+
+        result = Result.model_validate({"event": {"id": "abc"}})
+        assert result.event is not None
+        assert result.event.__class__.__name__ == "Event"
+    finally:
+        sys.path.pop(0)
+        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
+            del sys.modules[name]
 
 
 @pytest.mark.parametrize(

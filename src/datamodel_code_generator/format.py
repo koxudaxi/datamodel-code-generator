@@ -208,14 +208,14 @@ def resolve_use_type_checking_imports(
     *,
     is_multi_module_output: bool,
     formatters: list[Formatter] | None,
-    preserve_runtime_imports_for_multi_module_ruff: bool,
+    requires_runtime_imports_with_ruff_check: bool,
 ) -> bool:
     """Resolve the effective TYPE_CHECKING import behavior."""
     if use_type_checking_imports is not None:
         return use_type_checking_imports
 
     has_ruff_check = bool(formatters) and Formatter.RUFF_CHECK in formatters
-    return not (is_multi_module_output and has_ruff_check and preserve_runtime_imports_for_multi_module_ruff)
+    return not (is_multi_module_output and has_ruff_check and requires_runtime_imports_with_ruff_check)
 
 
 class CodeFormatter:

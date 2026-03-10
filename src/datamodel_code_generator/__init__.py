@@ -909,8 +909,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             config.use_type_checking_imports,
             is_multi_module_output=True,
             formatters=config.formatters,
-            preserve_runtime_imports_for_multi_module_ruff=(
-                data_model_types.data_model.PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF
+            requires_runtime_imports_with_ruff_check=(
+                data_model_types.data_model.REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK
             ),
         )
         code_formatter = CodeFormatter(

@@ -3054,9 +3054,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             self.use_type_checking_imports,
             is_multi_module_output=is_multi_module_output,
             formatters=self.formatters,
-            preserve_runtime_imports_for_multi_module_ruff=(
-                self.data_model_type.PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF
-            ),
+            requires_runtime_imports_with_ruff_check=self.data_model_type.REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK,
         )
         return CodeFormatter(
             self.target_python_version,

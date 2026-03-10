@@ -246,7 +246,7 @@ def test_resolve_use_type_checking_imports_respects_explicit_value(explicit_valu
             explicit_value,
             is_multi_module_output=True,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            preserve_runtime_imports_for_multi_module_ruff=True,
+            requires_runtime_imports_with_ruff_check=True,
         )
         is explicit_value
     )
@@ -258,7 +258,7 @@ def test_resolve_use_type_checking_imports_defaults_to_runtime_imports_for_defer
         None,
         is_multi_module_output=True,
         formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-        preserve_runtime_imports_for_multi_module_ruff=True,
+        requires_runtime_imports_with_ruff_check=True,
     )
 
 
@@ -268,19 +268,19 @@ def test_resolve_use_type_checking_imports_keeps_existing_default_outside_deferr
         None,
         is_multi_module_output=False,
         formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-        preserve_runtime_imports_for_multi_module_ruff=True,
+        requires_runtime_imports_with_ruff_check=True,
     )
     assert resolve_use_type_checking_imports(
         None,
         is_multi_module_output=True,
         formatters=[Formatter.RUFF_CHECK],
-        preserve_runtime_imports_for_multi_module_ruff=False,
+        requires_runtime_imports_with_ruff_check=False,
     )
     assert resolve_use_type_checking_imports(
         None,
         is_multi_module_output=True,
         formatters=[Formatter.RUFF_FORMAT],
-        preserve_runtime_imports_for_multi_module_ruff=True,
+        requires_runtime_imports_with_ruff_check=True,
     )
 
 
