@@ -97,6 +97,7 @@ class DataClass(DataModel):
                 self.dataclass_arguments["frozen"] = True
             if keyword_only:
                 self.dataclass_arguments["kw_only"] = True
+        self._set_deprecated_decorator()
 
     def create_reuse_model(self, base_ref: Reference) -> DataClass:
         """Create inherited model with empty fields pointing to base reference."""

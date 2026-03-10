@@ -25,7 +25,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, freeze_time
+from tests.conftest import assert_directory_content, freeze_time, validate_generated_code
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
@@ -46,6 +46,27 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
+
+
+def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    package_dir = base_dir / "my_app"
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text(
+        """from typing import Literal
+
+from pydantic import BaseModel
+
+
+class AliasA(BaseModel):
+    type: Literal["a"] = "a"
+
+
+class B(BaseModel):
+    type: Literal["b"] = "b"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(base_dir))
 
 
 @pytest.mark.benchmark
@@ -4002,6 +4023,85 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+def test_main_dataclass_deprecated_model(output_file: Path) -> None:
+    """Test dataclass generation with deprecated schema metadata."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_main_dataclass_deprecated_model_preserves_existing_decorator(output_file: Path) -> None:
+    """Test deprecated dataclass generation keeps the import with an existing decorator."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@deprecated('LegacyUser is deprecated.')",
+        ],
+    )
+
+
+def test_main_dataclass_deprecated_model_with_other_decorator(output_file: Path) -> None:
+    """Test deprecated dataclass generation adds deprecation alongside other decorators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass_with_other_decorator.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@some_decorator",
+            "--additional-imports",
+            "some_module.some_decorator",
+        ],
+    )
+
+
+def test_main_pydantic_v2_dataclass_deprecated_model(output_file: Path) -> None:
+    """Test pydantic v2 dataclass generation with deprecated schema metadata."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_pydantic_v2_dataclass.py",
+        extra_args=["--output-model-type", "pydantic_v2.dataclass"],
+    )
+
+
+def test_main_pydantic_v2_dataclass_deprecated_model_with_other_decorator(output_file: Path) -> None:
+    """Test pydantic v2 dataclass generation adds deprecation alongside other decorators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_pydantic_v2_dataclass_with_other_decorator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--class-decorators",
+            "@some_decorator",
+            "--additional-imports",
+            "some_module.some_decorator",
+        ],
+    )
+
+
 @pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_312),
     reason="Black does not support Python 3.12",
@@ -5647,6 +5747,545 @@ def test_main_jsonschema_enum_literal_type_alias_default(output_file: Path) -> N
             "3.12",
             "--output-model-type",
             "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_union_default_object_ref(output_file: Path) -> None:
+    """Validate $ref object-union defaults through the type alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_model_default_object_ref(output_file: Path) -> None:
+    """Validate model-backed type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_chain_model_default_object_ref(output_file: Path) -> None:
+    """Validate recursively chained model-backed aliases for structured defaults."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_chain_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_chain_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_list_model_default_object_ref(output_file: Path) -> None:
+    """Validate list-of-model type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_list_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_list_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_nullable_model_default_object_ref(output_file: Path) -> None:
+    """Validate nullable model-backed type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_nullable_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_nullable_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_nullable_list_model_default_object_ref(output_file: Path) -> None:
+    """Validate nullable list-of-model type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_nullable_list_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_nullable_list_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_recursive_default_list(output_file: Path) -> None:
+    """Avoid recursive alias traversal loops when checking structured defaults."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_recursive_default_list.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_recursive_default_list.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_union_default_object(output_file: Path) -> None:
+    """Validate inline object-union defaults through the union type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_union_default_object_ref_any_of_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate anyOf alias union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref_any_of.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref_any_of.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_chain_union_default_object_ref_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate chained alias union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_chain_union_default_object_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_chain_union_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_union_default_object_ref_one_of_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate oneOf alias union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref_one_of.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref_one_of.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_union_default_object_one_of_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate oneOf inline union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object_one_of.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object_one_of.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_union_default_object_import_collision_relevant_flags(
+    output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep TypeAdapter targets aligned after imported-name collision renames local models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object_import_collision.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object_import_collision.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+            "--type-overrides",
+            '{"Other.a": "my_app.B"}',
+        ],
+        skip_code_validation=True,
+    )
+    _install_test_my_app(output_file.parent, monkeypatch)
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file), do_exec=True)
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_union_default_object_type_override_relevant_flags(
+    output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Validate TypeAdapter targets after late type overrides change field types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object_type_override.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object_type_override.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+            "--type-overrides",
+            '{"A": "my_app.AliasA"}',
+        ],
+        skip_code_validation=True,
+    )
+    _install_test_my_app(output_file.parent, monkeypatch)
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file), do_exec=True)
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_union_default_object_silent_wrong_branch_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate inline unions that would silently pick the wrong branch."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object_silent_wrong_branch.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object_silent_wrong_branch.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_list_union_default_object_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate list-of-union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_list_union_default_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_list_union_default_object.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_list_union_default_object_ref_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate aliased list-of-union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_list_union_default_object_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_list_union_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_inline_dict_union_default_object_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate dict-of-union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_dict_union_default_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_dict_union_default_object.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_dict_union_default_object_ref_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate aliased dict-of-union defaults with the relevant type-alias flags."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_dict_union_default_object_ref.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_dict_union_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_union_default_object_ref_dict_alias_branch_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Keep raw defaults when a plain dict union branch is hidden behind a type alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref_dict_alias_branch.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref_dict_alias_branch.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_union_default_object_ref_mixed_scalar_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Validate aliased mixed scalar/model union defaults."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_union_default_object_ref_mixed_scalar.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_union_default_object_ref_mixed_scalar.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
         ],
     )
 

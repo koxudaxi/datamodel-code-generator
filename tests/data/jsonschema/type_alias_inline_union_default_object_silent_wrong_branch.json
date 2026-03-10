@@ -1,0 +1,42 @@
+{
+  "$defs": {
+    "A": {
+      "title": "A",
+      "properties": {
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "B": {
+      "title": "B",
+      "properties": {
+        "type": {
+          "const": "b"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  },
+  "properties": {
+    "x_value": {
+      "default": {
+        "type": "b",
+        "value": 1
+      },
+      "anyOf": [
+        {
+          "$ref": "#/$defs/A"
+        },
+        {
+          "$ref": "#/$defs/B"
+        }
+      ]
+    }
+  }
+}

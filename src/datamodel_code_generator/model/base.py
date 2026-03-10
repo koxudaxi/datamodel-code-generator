@@ -25,7 +25,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.model._types import WrappedDefault
+from datamodel_code_generator.model._types import ValidatedDefault, WrappedDefault
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -38,7 +38,7 @@ from datamodel_code_generator.types import (
     get_optional_type,
 )
 
-__all__ = ["WrappedDefault"]
+__all__ = ["ValidatedDefault", "WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -599,7 +599,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
+    SUPPORTS_VALIDATED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913
@@ -738,6 +740,15 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
             keyword_only=self.keyword_only,
             treat_dot_as_module=self._treat_dot_as_module,
         )
+
+    def _set_deprecated_decorator(self) -> None:
+        """Add a class-level deprecated decorator when schema metadata requires it."""
+        if not self.extra_template_data.get("deprecated"):
+            return
+        if not any(decorator.startswith("@deprecated") for decorator in self.decorators):
+            message = f"{self.class_name} is deprecated."
+            self.decorators = [*self.decorators, f"@deprecated({message!r})"]
+        self._additional_imports.append(Import.from_full_path("typing_extensions.deprecated"))
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:
         """Replace reference children if their parent model is in models list."""

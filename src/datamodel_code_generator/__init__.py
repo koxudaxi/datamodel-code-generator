@@ -61,6 +61,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    resolve_use_type_checking_imports,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
@@ -713,6 +714,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
+        "use_type_checking_imports": config.use_type_checking_imports,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None
@@ -903,6 +905,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         and config.formatters
         and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters)
     ):
+        effective_use_type_checking_imports = resolve_use_type_checking_imports(
+            config.use_type_checking_imports,
+            is_multi_module_output=True,
+            formatters=config.formatters,
+            requires_runtime_imports_with_ruff_check=(
+                data_model_types.data_model.REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK
+            ),
+        )
         code_formatter = CodeFormatter(
             config.target_python_version,
             config.settings_path,
@@ -913,6 +923,8 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             custom_formatters_kwargs=config.custom_formatters_kwargs,
             encoding=config.encoding,
             formatters=config.formatters,
+            use_type_checking_imports=effective_use_type_checking_imports,
+            defer_formatting=True,
         )
         code_formatter.format_directory(output)
 

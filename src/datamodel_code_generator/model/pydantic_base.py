@@ -19,7 +19,7 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model._types import WrappedDefault
+from datamodel_code_generator.model._types import ValidatedDefault, WrappedDefault
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
 from datamodel_code_generator.types import STANDARD_DICT, STANDARD_LIST, UnionIntFloat, chain_as_tuple
 
@@ -27,6 +27,7 @@ from datamodel_code_generator.types import STANDARD_DICT, STANDARD_LIST, UnionIn
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
 IMPORT_ANYURL = Import.from_full_path("pydantic.AnyUrl")
 IMPORT_FIELD = Import.from_full_path("pydantic.Field")
+IMPORT_TYPE_ADAPTER = Import.from_full_path("pydantic.TypeAdapter")
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -126,7 +127,7 @@ class DataModelField(DataModelFieldBase):
         return int(value)
 
     def _get_default_as_pydantic_model(self) -> str | None:  # noqa: PLR0911, PLR0912
-        if isinstance(self.default, WrappedDefault):
+        if isinstance(self.default, (ValidatedDefault, WrappedDefault)):
             return f"lambda :{self.default!r}"
         if self.data_type.is_list and len(self.data_type.data_types) == 1:
             data_type_child = self.data_type.data_types[0]
@@ -322,13 +323,19 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        if self.field:
-            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
+        field = self.field
+        if field:
+            extra_imports = [IMPORT_FIELD]
+            if isinstance(self.default, ValidatedDefault):
+                extra_imports.append(IMPORT_TYPE_ADAPTER)
+            return chain_as_tuple(super().imports, extra_imports)
         return super().imports
 
 
 class BaseModelBase(DataModel, ABC):
     """Abstract base class for Pydantic BaseModel implementations."""
+
+    REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = True
 
     def __init__(  # noqa: PLR0913
         self,

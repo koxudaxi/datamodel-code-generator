@@ -33,6 +33,7 @@ class DataClass(DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
+    REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
     # frozen/allow_mutation are handled as dataclass decorator arguments, not ConfigDict
@@ -94,6 +95,7 @@ class DataClass(DataModel):
                 self.dataclass_arguments["frozen"] = True
             if keyword_only:
                 self.dataclass_arguments["kw_only"] = True
+        self._set_deprecated_decorator()
 
         config_parameters: dict[str, Any] = {}
 
