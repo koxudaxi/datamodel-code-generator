@@ -36,6 +36,7 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
+    run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
@@ -1628,311 +1629,251 @@ def test_main_jsonschema_pattern(output_file: Path) -> None:
     )
 
 
-def test_main_generate(tmp_path: Path) -> None:
+def test_main_generate(output_file: Path) -> None:
     """Test code generation function."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "person.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="general.py",
     )
 
-    assert_file_content(output_file, "general.py")
 
-
-def test_main_generate_non_pydantic_output(tmp_path: Path) -> None:
+def test_main_generate_non_pydantic_output(output_file: Path) -> None:
     """Test generation with non-Pydantic output models (see issue #1452)."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="generate_non_pydantic_output.py",
         output_model_type=DataModelType.DataclassesDataclass,
     )
 
-    assert_file_content(output_file, "generate_non_pydantic_output.py")
 
-
-def test_main_generate_pydantic_v2_dataclass(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass(output_file: Path) -> None:
     """Test generation with pydantic_v2.dataclass output model."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="generate_pydantic_v2_dataclass.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "generate_pydantic_v2_dataclass.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_with_config(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_with_config(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with ConfigDict from additionalProperties."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_config.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_config.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_config.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_config.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_additional_props_true(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_additional_props_true(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with additionalProperties: true."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_additional_props_true.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_additional_props_true.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_additional_props_true.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_additional_props_true.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_unevaluated_props_true(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_unevaluated_props_true(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with unevaluatedProperties: true."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_true_dataclass.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "unevaluated_properties_true_dataclass.py")
 
-
-def test_main_generate_pydantic_v2_base_model_unevaluated_props(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_base_model_unevaluated_props(output_file: Path) -> None:
     """Test pydantic_v2.BaseModel with unevaluatedProperties: false."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_pydantic_v2.py",
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
 
-    assert_file_content(output_file, "unevaluated_properties_pydantic_v2.py")
 
-
-def test_main_generate_pydantic_v2_base_model_unevaluated_props_true(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_base_model_unevaluated_props_true(output_file: Path) -> None:
     """Test pydantic_v2.BaseModel with unevaluatedProperties: true."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_true.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_true_pydantic_v2.py",
         output_model_type=DataModelType.PydanticV2BaseModel,
     )
 
-    assert_file_content(output_file, "unevaluated_properties_true_pydantic_v2.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_unevaluated_props_false(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_unevaluated_props_false(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with unevaluatedProperties: false."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="unevaluated_properties_dataclass.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "unevaluated_properties_dataclass.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_use_attribute_docstrings(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with use_attribute_docstrings."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_use_attribute_docstrings.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         use_attribute_docstrings=True,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_use_attribute_docstrings.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with allow_population_by_field_name."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_populate_by_name.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         allow_population_by_field_name=True,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_populate_by_name.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name_v2_11(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_allow_population_by_field_name_v2_11(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with allow_population_by_field_name and target v2.11."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_validate_by_name.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         allow_population_by_field_name=True,
         target_pydantic_version=TargetPydanticVersion.V2_11,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_validate_by_name.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_extra_allow(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_extra_allow(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with extra='allow'."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_extra_allow.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         extra_fields="allow",
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_extra_allow.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_extra_forbid(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_extra_forbid(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with extra='forbid'."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_extra_forbid.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         extra_fields="forbid",
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_extra_forbid.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_extra_ignore(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_extra_ignore(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with extra='ignore'."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "simple_string.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "simple_string.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_extra_ignore.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         extra_fields="ignore",
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_extra_ignore.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_nested(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_nested(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with nested models."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_nested.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_nested.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_constraints(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_constraints(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with field constraints."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_constraints.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_constraints.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_constraints.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_constraints.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_nested_frozen(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_nested_frozen(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with nested models and frozen=True."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_nested.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_nested_frozen.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
         frozen_dataclasses=True,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_nested_frozen.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_field(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_field(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with Field constraints and defaults."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_field.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_field.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_field.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
 
-    assert_file_content(output_file, "pydantic_v2_dataclass_field.py")
 
-
-def test_main_generate_pydantic_v2_dataclass_enum(tmp_path: Path) -> None:
+def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
     """Test pydantic_v2.dataclass with enum types."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_enum.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pydantic_v2_dataclass_enum.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="pydantic_v2_dataclass_enum.py",
         output_model_type=DataModelType.PydanticV2Dataclass,
     )
-
-    assert_file_content(output_file, "pydantic_v2_dataclass_enum.py")
 
 
 def test_main_generate_from_directory(tmp_path: Path) -> None:
