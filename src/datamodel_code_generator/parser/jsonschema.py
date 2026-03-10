@@ -3769,12 +3769,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             loaded=True,
             model_type="enum",
         )
+        self._set_schema_metadata(reference.path, obj)
+        self.set_schema_extensions(reference.path, obj)
 
         if not nullable:
             return create_enum(reference)
 
-        self._set_schema_metadata(reference.path, obj)
-        self.set_schema_extensions(reference.path, obj)
         enum_reference = self.model_resolver.add(
             [*path, "Enum"],
             f"{reference.name}Enum",

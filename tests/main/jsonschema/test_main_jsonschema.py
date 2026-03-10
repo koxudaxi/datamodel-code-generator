@@ -3954,6 +3954,37 @@ def test_main_dataclass_deprecated_model(output_file: Path) -> None:
     )
 
 
+def test_main_dataclass_deprecated_model_preserves_existing_decorator(output_file: Path) -> None:
+    """Test deprecated dataclass generation does not duplicate existing decorators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@deprecated('LegacyUser is deprecated.')",
+            "--additional-imports",
+            "typing_extensions.deprecated",
+        ],
+    )
+
+
+def test_main_pydantic_v2_dataclass_deprecated_model(output_file: Path) -> None:
+    """Test pydantic v2 dataclass generation with deprecated schema metadata."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_pydantic_v2_dataclass.py",
+        extra_args=["--output-model-type", "pydantic_v2.dataclass"],
+    )
+
+
 @pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_312),
     reason="Black does not support Python 3.12",

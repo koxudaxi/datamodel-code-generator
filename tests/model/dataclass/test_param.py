@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
-
 from datamodel_code_generator.model.dataclass import DataClass, DataModelField
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
@@ -207,51 +205,6 @@ def test_dataclass_with_custom_dataclass_arguments() -> None:
     rendered = dataclass.render()
     assert "@dataclass(slots=True, order=True)" in rendered
     assert "repr=False" not in rendered
-
-
-def test_dataclass_with_deprecated_decorator() -> None:
-    """Test dataclass generation with schema-level deprecated metadata."""
-    reference = Reference(path="TestModel", name="TestModel")
-    field = DataModelField(
-        name="field1",
-        data_type=DataType(type="str"),
-        required=True,
-    )
-
-    dataclass = DataClass(
-        reference=reference,
-        fields=[field],
-        extra_template_data=defaultdict(dict, {"TestModel": {"deprecated": True}}),
-    )
-
-    rendered = dataclass.render()
-    assert "@deprecated('TestModel is deprecated.')" in rendered
-    assert any(
-        import_.from_ == "typing_extensions" and import_.import_ == "deprecated" for import_ in dataclass.imports
-    )
-
-
-def test_dataclass_preserves_existing_deprecated_decorator() -> None:
-    """Test dataclass generation does not duplicate deprecated decorators."""
-    reference = Reference(path="TestModel", name="TestModel")
-    field = DataModelField(
-        name="field1",
-        data_type=DataType(type="str"),
-        required=True,
-    )
-
-    dataclass = DataClass(
-        reference=reference,
-        fields=[field],
-        decorators=["@deprecated('Already deprecated.')"],
-        extra_template_data=defaultdict(dict, {"TestModel": {"deprecated": True}}),
-    )
-
-    rendered = dataclass.render()
-    assert rendered.count("@deprecated(") == 1
-    assert not any(
-        import_.from_ == "typing_extensions" and import_.import_ == "deprecated" for import_ in dataclass.imports
-    )
 
 
 def test_dataclass_both_legacy_and_dataclass_arguments() -> None:
