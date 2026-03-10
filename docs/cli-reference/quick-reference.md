@@ -152,9 +152,11 @@ datamodel-codegen [OPTIONS]
 | [`--extra-template-data`](template-customization.md#extra-template-data) | Pass custom template variables from JSON file for code generation. |
 | [`--formatters`](template-customization.md#formatters) | Specify code formatters to apply to generated output. |
 | [`--no-treat-dot-as-module`](template-customization.md#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
+| [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports) | Keep generated model imports available at runtime when using Ruff fixes. |
 | [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](template-customization.md#use-exact-imports) | Import exact types instead of modules. |
+| [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) | Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. |
 | [`--validators`](template-customization.md#validators) | Add custom field validators to generated Pydantic v2 models. |
 | [`--wrap-string-literal`](template-customization.md#wrap-string-literal) | Wrap long string literals across multiple lines. |
 
@@ -292,6 +294,7 @@ All options sorted alphabetically:
 - [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict) - Disable PEP 728 TypedDict closed/extra_items generation.
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum) - Disable specialized Enum classes for Python 3.11+ code gener...
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections) - Use typing.Dict/List instead of built-in dict/list for conta...
+- [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports) - Keep generated model imports available at runtime when using...
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator) - Use Union[X, Y] / Optional[X] instead of X | Y union operato...
 - [`--openapi-include-paths`](openapi-only-options.md#openapi-include-paths) - Filter OpenAPI paths to include in model generation.
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes) - Specify OpenAPI scopes to generate (schemas, paths, paramete...
@@ -355,6 +358,7 @@ All options sorted alphabetically:
 - [`--use-title-as-name`](field-customization.md#use-title-as-name) - Use schema title as the generated class name.
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) - Generate tuple types for arrays with items array syntax.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
+- [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) - Allow Ruff to move typing-only imports into TYPE_CHECKING bl...
 - [`--use-union-operator`](typing-customization.md#use-union-operator) - Use | operator for Union types (PEP 604).
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...

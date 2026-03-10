@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import difflib
+import importlib
 import inspect
 import json
 import re
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -615,6 +617,34 @@ def assert_directory_content(
         _assert_with_external_file(result, expected_path)
 
 
+def assert_exact_directory_content(
+    output_dir: Path,
+    expected_dir: Path,
+    pattern: str = "*.py",
+    encoding: str = "utf-8",
+) -> None:
+    """Assert all files in output_dir match expected_dir exactly without snapshot indirection."""
+    __tracebackhide__ = True
+    output_files = {p.relative_to(output_dir) for p in output_dir.rglob(pattern)}
+    expected_files = {p.relative_to(expected_dir) for p in expected_dir.rglob(pattern)}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in output: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Output has files not in expected: {missing}"
+
+    for output_path in output_dir.rglob(pattern):
+        relative_path = output_path.relative_to(output_dir)
+        expected_path = expected_dir / relative_path
+        output = _normalize_line_endings(output_path.read_text(encoding=encoding))
+        expected = _normalize_line_endings(expected_path.read_text(encoding=encoding))
+        if output != expected:
+            diff = _format_diff(expected, output, expected_path)
+            msg = f"Content mismatch for {expected_path}\n{diff}"
+            raise AssertionError(msg)
+
+
 def _get_full_body(result: object) -> str:
     """Get full body from Result."""
     return getattr(result, "body", "")
@@ -661,6 +691,46 @@ def assert_parser_modules(
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)
+
+
+def write_generated_modules(output_dir: Path, modules: dict[tuple[str, ...], Any]) -> None:
+    """Write parser-generated module output to a package directory."""
+    for module_path, result in modules.items():
+        file_path = output_dir.joinpath(*module_path)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(result.body, encoding="utf-8")
+
+
+def assert_runtime_result_model(output_dir: Path) -> None:
+    """Assert generated modular output resolves cross-module Pydantic references at runtime."""
+    sys.path.insert(0, str(output_dir.parent))
+    importlib.invalidate_caches()
+    try:
+        from model._internal import Result
+
+        result = Result.model_validate({"event": {"id": "abc"}})
+        assert result.event is not None
+        assert result.event.__class__.__name__ == "Event"
+    finally:
+        sys.path.pop(0)
+        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
+            del sys.modules[name]
+
+
+def assert_runtime_import_package(output_dir: Path, expected_dir: Path) -> None:
+    """Assert generated modular package matches expected files and imports correctly at runtime."""
+    assert_exact_directory_content(output_dir, expected_dir)
+    assert_runtime_result_model(output_dir)
+
+
+def assert_generated_runtime_package(
+    output_dir: Path,
+    modules: dict[tuple[str, ...], Any],
+    expected_dir: Path,
+) -> None:
+    """Write parser-generated modules, compare the package tree, and verify runtime imports."""
+    write_generated_modules(output_dir, modules)
+    assert_runtime_import_package(output_dir, expected_dir)
 
 
 def assert_error_message(

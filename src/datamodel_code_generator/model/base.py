@@ -601,6 +601,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_VALIDATED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913

@@ -12,7 +12,7 @@ This documentation is auto-generated from test cases.
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
-| 🎨 [Template Customization](template-customization.md) | 19 | Output formatting and custom rendering |
+| 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
@@ -137,6 +137,7 @@ This documentation is auto-generated from test cases.
 - [`--no-use-closed-typed-dict`](typing-customization.md#no-use-closed-typed-dict)
 - [`--no-use-specialized-enum`](typing-customization.md#no-use-specialized-enum)
 - [`--no-use-standard-collections`](typing-customization.md#no-use-standard-collections)
+- [`--no-use-type-checking-imports`](template-customization.md#no-use-type-checking-imports)
 - [`--no-use-union-operator`](typing-customization.md#no-use-union-operator)
 
 ### O {#o}
@@ -218,6 +219,7 @@ This documentation is auto-generated from test cases.
 - [`--use-title-as-name`](field-customization.md#use-title-as-name)
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items)
 - [`--use-type-alias`](typing-customization.md#use-type-alias)
+- [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports)
 - [`--use-union-operator`](typing-customization.md#use-union-operator)
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set)
 
