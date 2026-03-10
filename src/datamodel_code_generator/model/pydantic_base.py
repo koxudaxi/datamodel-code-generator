@@ -158,7 +158,19 @@ class DataModelField(DataModelFieldBase):
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:
-                # TODO: Parse dict model for default
+                if len(data_type.data_types) == 1:
+                    data_type_value = data_type.data_types[0]
+                    if (
+                        data_type_value.reference
+                        and isinstance(data_type_value.reference.source, BaseModelBase)
+                        and isinstance(self.default, dict)
+                    ):
+                        if not self.default:
+                            return STANDARD_DICT
+                        return (
+                            f"lambda :{{k: {data_type_value.alias or data_type_value.reference.source.class_name}."
+                            f"{self._PARSE_METHOD}(v) for k, v in {self.default!r}.items()}}"
+                        )
                 continue
             if data_type.is_list and len(data_type.data_types) == 1:
                 data_type_child = data_type.data_types[0]
