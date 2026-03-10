@@ -412,6 +412,10 @@ def _unwrap_type_alias(data_type: DataType) -> DataType:
     return current
 
 
+def _supports_validated_default_model(source: object) -> bool:
+    return isinstance(source, DataModel) and source.SUPPORTS_VALIDATED_DEFAULT and not source.is_alias
+
+
 def _contains_model_reference(data_type: DataType) -> bool:
     stack = [data_type]
     seen: set[int] = set()
@@ -423,10 +427,7 @@ def _contains_model_reference(data_type: DataType) -> bool:
             continue
         seen.add(resolved_id)
 
-        if resolved.reference and isinstance(
-            resolved.reference.source,
-            (pydantic_model_v2.BaseModel, pydantic_model_v2.RootModel),
-        ):
+        if resolved.reference and _supports_validated_default_model(resolved.reference.source):
             return True
 
         if resolved.dict_key:
@@ -438,19 +439,13 @@ def _contains_model_reference(data_type: DataType) -> bool:
 
 def _uses_existing_model_factory_path(data_type: DataType) -> bool:
     for candidate in data_type.data_types or (data_type,):
-        if candidate.reference and isinstance(
-            candidate.reference.source,
-            (pydantic_model_v2.BaseModel, pydantic_model_v2.RootModel),
-        ):
+        if candidate.reference and _supports_validated_default_model(candidate.reference.source):
             return True
         if (
             candidate.is_list
             and len(candidate.data_types) == 1
             and candidate.data_types[0].reference
-            and isinstance(
-                candidate.data_types[0].reference.source,
-                (pydantic_model_v2.BaseModel, pydantic_model_v2.RootModel),
-            )
+            and _supports_validated_default_model(candidate.data_types[0].reference.source)
         ):
             return True
     return False
@@ -3286,7 +3281,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
         self.__set_default_enum_member(models)
         self.__wrap_root_model_default_values(models)
-        self.__wrap_validated_default_values(models)
         self.__sort_models(models, imports, use_deferred_annotations=config.use_deferred_annotations)
         self.__change_field_name(models)
         self.__apply_discriminator_type(models, imports)
@@ -3295,6 +3289,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         models = self.__remove_overridden_models(models)
         self.__apply_type_overrides(models)
         self.__update_type_aliases(models)
+        self.__wrap_validated_default_values(models)
 
         return ModuleContext(module, module_, models, is_init, imports, scoped_model_resolver)
 
