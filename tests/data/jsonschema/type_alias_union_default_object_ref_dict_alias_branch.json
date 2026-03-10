@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "A": {
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "AliasDict": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "U": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AliasDict"
+        },
+        {
+          "$ref": "#/$defs/A"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "x": {
+      "default": {
+        "type": "a"
+      },
+      "$ref": "#/$defs/U"
+    }
+  }
+}
