@@ -2245,7 +2245,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for model_field in model.fields:
                 if model_field.default is None:
                     continue
-                if isinstance(model_field.default, (Member, ValidatedDefault, WrappedDefault)):
+                if isinstance(model_field.default, (Member, WrappedDefault)):
+                    continue
+                if isinstance(model_field.default, ValidatedDefault):
+                    model_field.default.type_name = _get_validated_default_type_name(model_field.data_type)
                     continue
                 if not _needs_validated_default(model_field.default, model_field.data_type):
                     continue
@@ -3322,6 +3325,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         for ctx in contexts:
             self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver)
+            self.__wrap_validated_default_values(ctx.models)
 
     def _generate_module_output(  # noqa: PLR0913, PLR0917
         self,

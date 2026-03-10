@@ -5700,6 +5700,7 @@ def test_main_jsonschema_type_alias_recursive_default_list(output_file: Path) ->
         ],
     )
 
+
 @pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
