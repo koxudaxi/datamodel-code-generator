@@ -1949,14 +1949,15 @@ def test_main_generate_pydantic_v2_dataclass_enum(tmp_path: Path) -> None:
 )
 def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_file: str, output_file: Path) -> None:
     """Test pydantic_v2.BaseModel with dict defaults."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / input_file,
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file=expected_file,
-        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    input_ = (JSON_SCHEMA_DATA_PATH / input_file).relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
     )
+    assert_file_content(output_file, expected_file)
 
 
 def test_main_generate_from_directory(tmp_path: Path) -> None:
