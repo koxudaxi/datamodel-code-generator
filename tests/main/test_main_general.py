@@ -28,7 +28,7 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import assert_output, assert_runtime_result_model, create_assert_file_content, freeze_time
+from tests.conftest import assert_output, assert_runtime_import_package, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
@@ -1700,12 +1700,7 @@ def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_r
             "--disable-timestamp",
         ],
     )
-
-    internal_path = output_dir / "_internal.py"
-    content = internal_path.read_text()
-    assert "TYPE_CHECKING" not in content
-    assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
-    assert_runtime_result_model(output_dir)
+    assert_runtime_import_package(output_dir, EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports")
 
 
 @pytest.mark.cli_doc(
@@ -1755,12 +1750,7 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
             "--disable-timestamp",
         ],
     )
-
-    internal_path = output_dir / "_internal.py"
-    content = internal_path.read_text()
-    assert "TYPE_CHECKING" not in content
-    assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
-    assert_runtime_result_model(output_dir)
+    assert_runtime_import_package(output_dir, EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports")
 
 
 def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> None:

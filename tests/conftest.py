@@ -617,6 +617,34 @@ def assert_directory_content(
         _assert_with_external_file(result, expected_path)
 
 
+def assert_exact_directory_content(
+    output_dir: Path,
+    expected_dir: Path,
+    pattern: str = "*.py",
+    encoding: str = "utf-8",
+) -> None:
+    """Assert all files in output_dir match expected_dir exactly without snapshot indirection."""
+    __tracebackhide__ = True
+    output_files = {p.relative_to(output_dir) for p in output_dir.rglob(pattern)}
+    expected_files = {p.relative_to(expected_dir) for p in expected_dir.rglob(pattern)}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in output: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Output has files not in expected: {missing}"
+
+    for output_path in output_dir.rglob(pattern):
+        relative_path = output_path.relative_to(output_dir)
+        expected_path = expected_dir / relative_path
+        output = _normalize_line_endings(output_path.read_text(encoding=encoding))
+        expected = _normalize_line_endings(expected_path.read_text(encoding=encoding))
+        if output != expected:
+            diff = _format_diff(expected, output, expected_path)
+            msg = f"Content mismatch for {expected_path}\n{diff}"
+            raise AssertionError(msg)
+
+
 def _get_full_body(result: object) -> str:
     """Get full body from Result."""
     return getattr(result, "body", "")
@@ -687,6 +715,22 @@ def assert_runtime_result_model(output_dir: Path) -> None:
         sys.path.pop(0)
         for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
             del sys.modules[name]
+
+
+def assert_runtime_import_package(output_dir: Path, expected_dir: Path) -> None:
+    """Assert generated modular package matches expected files and imports correctly at runtime."""
+    assert_exact_directory_content(output_dir, expected_dir)
+    assert_runtime_result_model(output_dir)
+
+
+def assert_generated_runtime_package(
+    output_dir: Path,
+    modules: dict[tuple[str, ...], Any],
+    expected_dir: Path,
+) -> None:
+    """Write parser-generated modules, compare the package tree, and verify runtime imports."""
+    write_generated_modules(output_dir, modules)
+    assert_runtime_import_package(output_dir, expected_dir)
 
 
 def assert_error_message(

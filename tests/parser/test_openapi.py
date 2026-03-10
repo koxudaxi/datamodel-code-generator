@@ -26,11 +26,10 @@ from datamodel_code_generator.parser.openapi import (
     ResponseObject,
 )
 from tests.conftest import (
+    assert_generated_runtime_package,
     assert_output,
     assert_parser_modules,
     assert_parser_results,
-    assert_runtime_result_model,
-    write_generated_modules,
 )
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
@@ -496,15 +495,11 @@ def test_openapi_parser_parse_modular_pydantic_v2_ruff_keeps_runtime_imports(
     )
 
     modules = parser.parse(settings_path=DATA_PATH.parent)
-    assert isinstance(modules, dict)
-
-    internal = modules["_internal.py",].body
-    assert "TYPE_CHECKING" not in internal
-    assert "from . import models" in internal
-
-    package_dir = tmp_path / "model"
-    write_generated_modules(package_dir, modules)
-    assert_runtime_result_model(package_dir)
+    assert_generated_runtime_package(
+        tmp_path / "model",
+        modules,
+        EXPECTED_OPEN_API_PATH / "openapi_parser_parse_modular_pydantic_v2_ruff",
+    )
 
 
 @pytest.mark.parametrize(
