@@ -449,6 +449,13 @@ def _uses_existing_model_factory_path(data_type: DataType) -> bool:
             and _supports_validated_default_model(candidate.data_types[0].reference.source)
         ):
             return True
+        if (
+            candidate.is_dict
+            and len(candidate.data_types) == 1
+            and candidate.data_types[0].reference
+            and _supports_validated_default_model(candidate.data_types[0].reference.source)
+        ):
+            return True
     return False
 
 
