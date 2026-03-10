@@ -276,10 +276,8 @@ def run_generate_file_and_assert(
         assert frame.f_back is not None
         func_name = frame.f_back.f_code.co_name
         del frame
-        for prefix in ("test_main_", "test_"):  # pragma: no branch
-            if func_name.startswith(prefix):
-                func_name = func_name[len(prefix) :]
-                break
+        for prefix in ("test_main_", "test_"):
+            func_name = func_name.removeprefix(prefix)
         expected_file = f"{func_name}.py"
 
     assert_func(output_path, expected_file, transform=transform)

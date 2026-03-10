@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -1654,7 +1655,7 @@ def test_main_generate_non_pydantic_output(output_file: Path) -> None:
 def test_main_generate_relative_input_path(output_file: Path) -> None:
     """Test helper with a relative input path."""
     run_generate_file_and_assert(
-        input_path=(JSON_SCHEMA_DATA_PATH / "person.json").relative_to(Path.cwd()),
+        input_path=Path(os.path.relpath(JSON_SCHEMA_DATA_PATH / "person.json", Path.cwd())),
         output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
         assert_func=assert_file_content,
