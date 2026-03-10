@@ -916,6 +916,15 @@ template_options.add_argument(
     type=Path,
 )
 template_options.add_argument(
+    "--use-type-checking-imports",
+    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
+    "By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output "
+    "where referenced models stay imported at runtime. "
+    "Use --no-use-type-checking-imports to force runtime imports.",
+    action=BooleanOptionalAction,
+    default=None,
+)
+template_options.add_argument(
     "--use-double-quotes",
     action="store_true",
     default=None,

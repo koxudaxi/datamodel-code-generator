@@ -25,10 +25,10 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.config import GenerateConfig
-from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import assert_output, create_assert_file_content, freeze_time
+from tests.conftest import assert_output, assert_runtime_import_package, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
@@ -1683,6 +1683,133 @@ def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
     content = order_file.read_text()
     assert "from __future__ import annotations" in content
     assert "class Order" in content
+
+
+def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff(output_dir: Path) -> None:
+    """Test modular Pydantic output keeps runtime imports by default when Ruff formats a directory."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "ruff-check",
+            "ruff-format",
+            "--disable-timestamp",
+        ],
+    )
+    assert_runtime_import_package(output_dir, EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports")
+
+
+@pytest.mark.cli_doc(
+    options=["--no-use-type-checking-imports"],
+    option_description="""Keep generated model imports available at runtime when using Ruff fixes.
+
+The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
+into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
+models need to be importable at runtime without calling `model_rebuild()` manually.
+In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved by default.
+`--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
+require manual `model_rebuild()` calls for cross-module runtime references.""",
+    input_schema="openapi/modular.yaml",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--formatters",
+        "ruff-check",
+        "ruff-format",
+        "--no-use-type-checking-imports",
+        "--disable-timestamp",
+    ],
+    golden_output="openapi/no_use_type_checking_imports_internal.py",
+    related_options=["--use-type-checking-imports", "--formatters", "--use-exact-imports"],
+)
+def test_no_use_type_checking_imports(output_dir: Path) -> None:
+    """Keep generated model imports available at runtime when using Ruff fixes.
+
+    The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
+    into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
+    models need to be importable at runtime without calling `model_rebuild()` manually.
+    In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved by default.
+    `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
+    require manual `model_rebuild()` calls for cross-module runtime references.
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "ruff-check",
+            "ruff-format",
+            "--no-use-type-checking-imports",
+            "--disable-timestamp",
+        ],
+    )
+    assert_runtime_import_package(output_dir, EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports")
+
+
+def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> None:
+    """Test generate() keeps runtime imports for multi-module Pydantic Ruff output."""
+    result = generate(
+        OPEN_API_DATA_PATH / "modular.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=None,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, dict)
+    internal = result["_internal.py",]
+    assert "TYPE_CHECKING" not in internal
+    assert "from . import models" in internal
+    assert "Tea_1.model_rebuild()" in internal
+
+
+@pytest.mark.cli_doc(
+    options=["--use-type-checking-imports"],
+    option_description="""Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
+
+The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
+for multi-module Pydantic output where runtime imports might otherwise be preserved by default.""",
+    input_schema="openapi/modular.yaml",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--formatters",
+        "ruff-check",
+        "ruff-format",
+        "--use-type-checking-imports",
+        "--disable-timestamp",
+    ],
+    golden_output="openapi/use_type_checking_imports_internal.py",
+    related_options=["--no-use-type-checking-imports", "--formatters", "--use-exact-imports"],
+)
+def test_use_type_checking_imports_for_multi_module_pydantic_ruff() -> None:
+    """Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
+
+    The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
+    for multi-module Pydantic output where runtime imports might otherwise be preserved by default.
+    """
+    result = generate(
+        OPEN_API_DATA_PATH / "modular.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=None,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        use_type_checking_imports=True,
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, dict)
+    internal = result["_internal.py",]
+    assert "TYPE_CHECKING" in internal
+    assert internal == (EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_internal.py").read_text().rstrip()
 
 
 def test_generate_returns_string_when_output_none() -> None:
