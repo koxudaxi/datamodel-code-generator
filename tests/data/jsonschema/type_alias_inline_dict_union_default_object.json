@@ -1,0 +1,47 @@
+{
+  "$defs": {
+    "A": {
+      "title": "A",
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "B": {
+      "title": "B",
+      "properties": {
+        "type": {
+          "const": "b"
+        },
+        "value": {
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type"
+      ]
+    }
+  },
+  "properties": {
+    "x_value": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/A"
+          },
+          {
+            "$ref": "#/$defs/B"
+          }
+        ]
+      },
+      "default": {
+        "k": {
+          "type": "b",
+          "value": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "$defs": {
+    "A": {
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "B": {
+      "properties": {
+        "type": {
+          "const": "b"
+        }
+      }
+    },
+    "U": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/A"
+        },
+        {
+          "$ref": "#/$defs/B"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "x": {
+      "default": {
+        "type": "b"
+      },
+      "$ref": "#/$defs/U"
+    }
+  }
+}

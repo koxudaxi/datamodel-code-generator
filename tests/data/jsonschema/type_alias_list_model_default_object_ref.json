@@ -1,0 +1,27 @@
+{
+  "$defs": {
+    "A": {
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "Alias": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/A"
+      }
+    }
+  },
+  "properties": {
+    "x": {
+      "default": [
+        {
+          "type": "a"
+        }
+      ],
+      "$ref": "#/$defs/Alias"
+    }
+  }
+}
