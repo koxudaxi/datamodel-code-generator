@@ -1653,6 +1653,16 @@ def test_main_generate_non_pydantic_output(output_file: Path) -> None:
     )
 
 
+def test_main_generate_without_input_file_type(output_file: Path) -> None:
+    """Test helper preserves generate() input_file_type default behavior."""
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="general.py",
+    )
+
+
 def test_main_generate_relative_input_path(output_file: Path) -> None:
     """Test helper with a relative input path."""
     run_generate_file_and_assert(
