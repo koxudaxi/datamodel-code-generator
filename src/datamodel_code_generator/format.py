@@ -395,14 +395,14 @@ class CodeFormatter:
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format sequentially for reliable processing."""
+        ruff_path = self._find_ruff_path()
         check_result = subprocess.run(  # noqa: S603
-            self._ruff_check_command("-"),
+            self._ruff_check_command("-", ruff_path=ruff_path),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
             cwd=self.settings_path,
         )
-        ruff_path = self._find_ruff_path()
         format_result = subprocess.run(  # noqa: S603
             (ruff_path, "format", "-"),
             input=check_result.stdout,
@@ -412,9 +412,9 @@ class CodeFormatter:
         )
         return format_result.stdout.decode(self.encoding)
 
-    def _ruff_check_command(self, *paths: str) -> tuple[str, ...]:
+    def _ruff_check_command(self, *paths: str, ruff_path: str = "ruff") -> tuple[str, ...]:
         """Build the Ruff check command for the current formatter settings."""
-        command: tuple[str, ...] = ("ruff", "check", "--fix", "--unsafe-fixes")
+        command: tuple[str, ...] = (ruff_path, "check", "--fix", "--unsafe-fixes")
         if not self.use_type_checking_imports:
             command += ("--unfixable", "TC001,TC002,TC003")
         return (*command, *paths)

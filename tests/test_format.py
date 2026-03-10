@@ -218,6 +218,45 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
     )
 
 
+def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test combined Ruff formatting reuses the resolved Ruff executable."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+    )
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff") as mock_find_ruff_path,
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        mock_run.side_effect = [
+            mock.Mock(stdout=b"checked"),
+            mock.Mock(stdout=b"formatted"),
+        ]
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "formatted"
+    mock_find_ruff_path.assert_called_once_with()
+    assert mock_run.call_args_list == [
+        mock.call(
+            ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "-"),
+            input=b"input",
+            capture_output=True,
+            check=False,
+            cwd=str(tmp_path),
+        ),
+        mock.call(
+            ("/tmp/venv/bin/ruff", "format", "-"),
+            input=b"checked",
+            capture_output=True,
+            check=False,
+            cwd=str(tmp_path),
+        ),
+    ]
+
+
 def test_settings_path_with_existing_file(tmp_path: Path) -> None:
     """Test settings_path with existing file uses parent directory."""
     pyproject = tmp_path / "pyproject.toml"
