@@ -169,13 +169,20 @@ def test_format_code_ruff_format_formatter(tmp_path: Path, monkeypatch: pytest.M
         PythonVersionMin,
         formatters=[Formatter.RUFF_FORMAT],
     )
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("ruff", "format", "-"), input=b"input", capture_output=True, check=False, cwd=str(tmp_path)
+        ("/tmp/venv/bin/ruff", "format", "-"),
+        input=b"input",
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
     )
 
 
@@ -186,13 +193,16 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
         PythonVersionMin,
         formatters=[Formatter.RUFF_CHECK],
     )
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("ruff", "check", "--fix", "--unsafe-fixes", "-"),
+        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "-"),
         input=b"input",
         capture_output=True,
         check=False,
@@ -210,13 +220,16 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
         formatters=[Formatter.RUFF_CHECK],
         use_type_checking_imports=False,
     )
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         mock_run.return_value.stdout = b"output"
         formatted_code = formatter.format_code("input")
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("ruff", "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", "-"),
+        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", "-"),
         input=b"input",
         capture_output=True,
         check=False,

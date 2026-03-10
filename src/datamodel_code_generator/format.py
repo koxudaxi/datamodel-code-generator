@@ -399,8 +399,9 @@ class CodeFormatter:
 
     def apply_ruff_formatter(self, code: str) -> str:
         """Format code using ruff format."""
-        result = subprocess.run(
-            ("ruff", "format", "-"),
+        ruff_path = self._find_ruff_path()
+        result = subprocess.run(  # noqa: S603
+            (ruff_path, "format", "-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -427,8 +428,10 @@ class CodeFormatter:
         )
         return format_result.stdout.decode(self.encoding)
 
-    def _ruff_check_command(self, *paths: str, ruff_path: str = "ruff") -> tuple[str, ...]:
+    def _ruff_check_command(self, *paths: str, ruff_path: str | None = None) -> tuple[str, ...]:
         """Build the Ruff check command for the current formatter settings."""
+        if ruff_path is None:
+            ruff_path = self._find_ruff_path()
         command: tuple[str, ...] = (ruff_path, "check", "--fix", "--unsafe-fixes")
         if not self.use_type_checking_imports:
             command += ("--unfixable", "TC001,TC002,TC003")
