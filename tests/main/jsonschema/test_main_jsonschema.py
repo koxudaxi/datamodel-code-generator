@@ -1898,19 +1898,14 @@ def test_main_generate_custom_class_name_generator(tmp_path: Path) -> None:
         return f"Custom{title}"
 
     output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "person.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "person.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
-        custom_class_name_generator=custom_class_name_generator,
-    )
-
-    assert_file_content(
-        output_file,
-        "general.py",
+        assert_func=assert_file_content,
+        expected_file="general.py",
         transform=lambda s: s.replace("CustomPerson", "Person"),
+        custom_class_name_generator=custom_class_name_generator,
     )
 
 
@@ -1921,35 +1916,30 @@ def test_main_generate_custom_class_name_generator_additional_properties(tmp_pat
     def custom_class_name_generator(name: str) -> str:
         return f"Custom{name[0].upper() + name[1:]}"
 
-    input_ = (JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_model_with_additional_properties.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="root_model_with_additional_properties_custom_class_name.py",
         custom_class_name_generator=custom_class_name_generator,
     )
 
-    assert_file_content(output_file, "root_model_with_additional_properties_custom_class_name.py")
 
-
-def test_main_generate_custom_class_name_generator_keep_underscores(tmp_path: Path) -> None:
+def test_main_generate_custom_class_name_generator_keep_underscores(output_file: Path) -> None:
     """Test custom_class_name_generator preserves underscores in class names (Issue #1315)."""
-    output_file: Path = tmp_path / "output.py"
-    input_ = (JSON_SCHEMA_DATA_PATH / "underscore_title.json").relative_to(Path.cwd())
-    assert not input_.is_absolute()
 
     def keep_underscores(name: str) -> str:
         return name
 
-    generate(
-        input_=input_,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "underscore_title.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="underscore_title.py",
         custom_class_name_generator=keep_underscores,
     )
-
-    assert_file_content(output_file, "underscore_title.py")
 
 
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
@@ -4862,10 +4852,12 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
     """Test OpenAPI msgspec keyword-only with extra data."""
     extra_data = json.loads((JSON_SCHEMA_DATA_PATH / "extra_data_msgspec.json").read_text())
     output_file: Path = tmp_path / "output.py"
-    generate(
-        input_=JSON_SCHEMA_DATA_PATH / "discriminator_literals.json",
-        output=output_file,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_literals.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="discriminator_literals_msgspec_keyword_only_omit_defaults.py",
         output_model_type=DataModelType.MsgspecStruct,
         keyword_only=True,
         target_python_version=PythonVersionMin,
@@ -4874,7 +4866,6 @@ def test_main_jsonschema_openapi_keyword_only_msgspec_with_extra_data(tmp_path: 
         use_annotated=True,
         field_constraints=True,
     )
-    assert_file_content(output_file, "discriminator_literals_msgspec_keyword_only_omit_defaults.py")
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
@@ -4916,14 +4907,16 @@ def test_main_msgspec_discriminator_with_meta(output_file: Path) -> None:
 @MSGSPEC_LEGACY_BLACK_SKIP
 def test_main_msgspec_discriminator_without_annotated(output_file: Path) -> None:
     """Test msgspec Struct discriminator generates ClassVar even without use_annotated."""
-    generate(
-        JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
-        output=output_file,
+    run_generate_file_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "discriminator_with_type_string.json",
+        output_path=output_file,
+        input_file_type=InputFileType.JsonSchema,
+        assert_func=assert_file_content,
+        expected_file="discriminator_with_type_string_msgspec_no_annotated.py",
         output_model_type=DataModelType.MsgspecStruct,
         target_python_version=PythonVersion.PY_310,
         use_annotated=False,
     )
-    assert_file_content(output_file, "discriminator_with_type_string_msgspec_no_annotated.py")
 
 
 @MSGSPEC_LEGACY_BLACK_SKIP
