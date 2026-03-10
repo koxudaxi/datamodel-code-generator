@@ -676,6 +676,20 @@ def test_contains_model_reference_traverses_nested_data_types() -> None:
     assert _contains_model_reference(list_of_models) is True
 
 
+def test_contains_model_reference_traverses_dict_key() -> None:
+    """Test _contains_model_reference walks dict_key data types."""
+    model_reference = Reference(path="KeyModel", original_name="KeyModel", name="KeyModel")
+    BaseModel(fields=[], reference=model_reference)
+
+    dict_with_model_key = DataType(
+        is_dict=True,
+        dict_key=DataType(reference=model_reference),
+        use_union_operator=True,
+    )
+
+    assert _contains_model_reference(dict_with_model_key) is True
+
+
 def test_get_validated_default_type_name_strips_optional_none() -> None:
     """Test _get_validated_default_type_name removes None from optional types."""
     optional_string = DataType(type="str", is_optional=True, use_union_operator=True)
@@ -698,3 +712,16 @@ def test_needs_validated_default_for_union_type_alias() -> None:
     TypeStatement(fields=[DataModelField(data_type=union_data_type)], reference=alias_reference)
 
     assert _needs_validated_default({"type": "b"}, DataType(reference=alias_reference)) is True
+
+
+def test_needs_validated_default_skips_optional_single_model_union() -> None:
+    """Test _needs_validated_default keeps the existing factory path for A | None."""
+    model_reference = Reference(path="A", original_name="A", name="A")
+    BaseModel(fields=[], reference=model_reference)
+
+    optional_model_union = DataType(
+        data_types=[DataType(reference=model_reference), DataType(type="None")],
+        use_union_operator=True,
+    )
+
+    assert _needs_validated_default({"type": "a"}, optional_model_union) is False
