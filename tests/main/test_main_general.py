@@ -1730,8 +1730,9 @@ def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_r
 The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
 into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
 models need to be importable at runtime without calling `model_rebuild()` manually.
-By default, TYPE_CHECKING imports stay enabled; `--use-type-checking-imports` explicitly
-re-enables that default behavior when runtime imports were otherwise preserved.""",
+In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved by default.
+`--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
+require manual `model_rebuild()` calls for cross-module runtime references.""",
     input_schema="openapi/modular.yaml",
     cli_args=[
         "--output-model-type",
@@ -1751,8 +1752,9 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
     The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
     into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
     models need to be importable at runtime without calling `model_rebuild()` manually.
-    By default, TYPE_CHECKING imports stay enabled; `--use-type-checking-imports` explicitly
-    re-enables that default behavior when runtime imports were otherwise preserved.
+    In the multi-module Pydantic + `ruff-check` case, runtime imports are preserved by default.
+    `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
+    require manual `model_rebuild()` calls for cross-module runtime references.
     """
     import importlib
     import sys

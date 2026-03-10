@@ -276,6 +276,12 @@ def test_resolve_use_type_checking_imports_keeps_existing_default_outside_deferr
         formatters=[Formatter.RUFF_CHECK],
         preserve_runtime_imports_for_multi_module_ruff=False,
     )
+    assert resolve_use_type_checking_imports(
+        None,
+        is_multi_module_output=True,
+        formatters=[Formatter.RUFF_FORMAT],
+        preserve_runtime_imports_for_multi_module_ruff=True,
+    )
 
 
 def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(

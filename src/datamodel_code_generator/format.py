@@ -214,8 +214,8 @@ def resolve_use_type_checking_imports(
     if use_type_checking_imports is not None:
         return use_type_checking_imports
 
-    has_ruff = bool(formatters) and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters)
-    return not (is_multi_module_output and has_ruff and preserve_runtime_imports_for_multi_module_ruff)
+    has_ruff_check = bool(formatters) and Formatter.RUFF_CHECK in formatters
+    return not (is_multi_module_output and has_ruff_check and preserve_runtime_imports_for_multi_module_ruff)
 
 
 class CodeFormatter:
