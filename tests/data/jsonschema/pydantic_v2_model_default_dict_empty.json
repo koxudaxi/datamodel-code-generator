@@ -1,0 +1,34 @@
+{
+  "$defs": {
+    "ItemModel": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "title": "ItemModel",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "dict_with_defaults": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ItemModel"
+      },
+      "default": {},
+      "title": "Dict With Defaults",
+      "type": "object"
+    }
+  },
+  "title": "ParentModel",
+  "type": "object"
+}

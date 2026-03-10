@@ -1,0 +1,46 @@
+{
+  "$defs": {
+    "ItemModel": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "description"
+      ],
+      "title": "ItemModel",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "dict_with_defaults": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/ItemModel"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": {
+        "jedi": {
+          "description": "The wise old jedi",
+          "name": "Yoda"
+        }
+      },
+      "title": "Dict With Defaults"
+    }
+  },
+  "title": "ParentModel",
+  "type": "object"
+}

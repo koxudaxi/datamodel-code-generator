@@ -21,7 +21,7 @@ from datamodel_code_generator.model import (
 )
 from datamodel_code_generator.model._types import ValidatedDefault, WrappedDefault
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
-from datamodel_code_generator.types import STANDARD_LIST, UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.types import STANDARD_DICT, STANDARD_LIST, UnionIntFloat, chain_as_tuple
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
@@ -142,10 +142,36 @@ class DataModelField(DataModelFieldBase):
                     f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
                     f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
                 )
+        if self.data_type.is_dict and len(self.data_type.data_types) == 1:
+            data_type_value = self.data_type.data_types[0]
+            if (
+                data_type_value.reference
+                and isinstance(data_type_value.reference.source, BaseModelBase)
+                and isinstance(self.default, dict)
+            ):
+                if not self.default:
+                    return STANDARD_DICT
+                return (
+                    f"lambda :{{k: {data_type_value.alias or data_type_value.reference.source.class_name}."
+                    f"{self._PARSE_METHOD}(v) for k, v in {self.default!r}.items()}}"
+                )
+
         for data_type in self.data_type.data_types or (self.data_type,):
             # TODO: Check nested data_types
             if data_type.is_dict:
-                # TODO: Parse dict model for default
+                if len(data_type.data_types) == 1:
+                    data_type_value = data_type.data_types[0]
+                    if (
+                        data_type_value.reference
+                        and isinstance(data_type_value.reference.source, BaseModelBase)
+                        and isinstance(self.default, dict)
+                    ):
+                        if not self.default:
+                            return STANDARD_DICT
+                        return (
+                            f"lambda :{{k: {data_type_value.alias or data_type_value.reference.source.class_name}."
+                            f"{self._PARSE_METHOD}(v) for k, v in {self.default!r}.items()}}"
+                        )
                 continue
             if data_type.is_list and len(data_type.data_types) == 1:
                 data_type_child = data_type.data_types[0]
