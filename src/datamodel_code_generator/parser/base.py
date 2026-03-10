@@ -1781,6 +1781,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     duplicates.append(model)
                 else:
                     inherited_model = model.create_reuse_model(cached_model_reference)
+                    model.replace_children_in_models(models, inherited_model.reference)
                     if cached_model_reference.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, model, inherited_model)
@@ -1877,6 +1878,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
+                    duplicate_model.replace_children_in_models(models, inherited_model.reference)
                     if shared_ref.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, duplicate_model, inherited_model)
