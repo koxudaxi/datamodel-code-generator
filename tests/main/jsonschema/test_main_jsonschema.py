@@ -25,7 +25,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, freeze_time
+from tests.conftest import assert_directory_content, freeze_time, validate_generated_code
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
@@ -46,6 +46,27 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
+
+
+def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    package_dir = base_dir / "my_app"
+    package_dir.mkdir()
+    (package_dir / "__init__.py").write_text(
+        """from typing import Literal
+
+from pydantic import BaseModel
+
+
+class AliasA(BaseModel):
+    type: Literal["a"] = "a"
+
+
+class B(BaseModel):
+    type: Literal["b"] = "b"
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.syspath_prepend(str(base_dir))
 
 
 @pytest.mark.benchmark
@@ -5881,6 +5902,7 @@ def test_main_jsonschema_type_alias_inline_union_default_object_one_of_relevant_
 )
 def test_main_jsonschema_type_alias_inline_union_default_object_import_collision_relevant_flags(
     output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Keep TypeAdapter targets aligned after imported-name collision renames local models."""
     run_main_and_assert(
@@ -5901,7 +5923,10 @@ def test_main_jsonschema_type_alias_inline_union_default_object_import_collision
             "--type-overrides",
             '{"Other.a": "my_app.B"}',
         ],
+        skip_code_validation=True,
     )
+    _install_test_my_app(output_file.parent, monkeypatch)
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file), do_exec=True)
 
 
 @pytest.mark.skipif(
@@ -5910,6 +5935,7 @@ def test_main_jsonschema_type_alias_inline_union_default_object_import_collision
 )
 def test_main_jsonschema_type_alias_inline_union_default_object_type_override_relevant_flags(
     output_file: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Validate TypeAdapter targets after late type overrides change field types."""
     run_main_and_assert(
@@ -5930,7 +5956,10 @@ def test_main_jsonschema_type_alias_inline_union_default_object_type_override_re
             "--type-overrides",
             '{"A": "my_app.AliasA"}',
         ],
+        skip_code_validation=True,
     )
+    _install_test_my_app(output_file.parent, monkeypatch)
+    validate_generated_code(output_file.read_text(encoding="utf-8"), str(output_file), do_exec=True)
 
 
 @pytest.mark.skipif(
