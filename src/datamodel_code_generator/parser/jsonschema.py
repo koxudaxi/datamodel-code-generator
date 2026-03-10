@@ -1139,6 +1139,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         unique_name = self.model_resolver.get_class_name(variant_name, unique=True).name
         model_path = [*path[:-1], unique_name]
         reference = self.model_resolver.add(model_path, unique_name, class_name=True, unique=False, loaded=True)
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
         model = self._create_data_model(
             model_type=data_model_type_class,
@@ -1427,6 +1428,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.set_schema_id(path, obj)
         self.set_additional_properties(path, obj)
         self.set_unevaluated_properties(path, obj)
+        self.set_deprecated(path, obj)
+
+    def set_deprecated(self, path: str, obj: JsonSchemaObject) -> None:
+        """Set deprecated flag in extra template data."""
+        if obj.extras.get("deprecated") is True:
+            self.extra_template_data[path]["deprecated"] = True
 
     def set_schema_extensions(self, path: str, obj: JsonSchemaObject) -> None:
         """Set schema extensions (x-* fields) in extra template data."""
@@ -2492,9 +2499,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     )
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
-        self.set_additional_properties(reference.path, obj)
-        self.set_unevaluated_properties(reference.path, obj)
-        self.set_schema_id(reference.path, obj)
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, base_classes)
@@ -2657,6 +2662,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 existing_ref = self.model_resolver.references.get(full_path)
                 if existing_ref is not None and not existing_ref.loaded:
                     reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+                    self._set_schema_metadata(reference.path, obj)
                     self.set_schema_extensions(reference.path, obj)
                     field = self.data_model_field_type(
                         name=None,
@@ -2711,6 +2717,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 required=required,
             )
         reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
         all_of_data_type = self._parse_object_common_part(
             name,
@@ -2906,8 +2913,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
             data_model_type_class = self.data_model_root_type
 
-        self.set_additional_properties(reference.path, obj)
-        self.set_unevaluated_properties(reference.path, obj)
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, None)
@@ -3368,6 +3374,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Parse array schema into a root model with array type."""
         name = self._apply_title_as_name(name, obj)
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
@@ -3613,7 +3620,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return str(enum_part["const"])
         return f"value_{index}"
 
-    def parse_enum(
+    def parse_enum(  # noqa: PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -3690,6 +3697,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 loaded=True,
                 model_type="enum",
             )
+            self._set_schema_metadata(reference.path, obj)
             self.set_schema_extensions(reference.path, obj)
             data_model_root_type = self.data_model_root_type(
                 reference=reference,
@@ -3765,6 +3773,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not nullable:
             return create_enum(reference)
 
+        self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
         enum_reference = self.model_resolver.add(
             [*path, "Enum"],

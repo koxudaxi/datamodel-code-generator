@@ -3942,6 +3942,18 @@ def test_main_dataclass_field(output_file: Path) -> None:
     )
 
 
+def test_main_dataclass_deprecated_model(output_file: Path) -> None:
+    """Test dataclass generation with deprecated schema metadata."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass.py",
+        extra_args=["--output-model-type", "dataclasses.dataclass"],
+    )
+
+
 @pytest.mark.skipif(
     not is_supported_in_black(PythonVersion.PY_312),
     reason="Black does not support Python 3.12",

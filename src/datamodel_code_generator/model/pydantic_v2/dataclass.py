@@ -94,6 +94,7 @@ class DataClass(DataModel):
                 self.dataclass_arguments["frozen"] = True
             if keyword_only:
                 self.dataclass_arguments["kw_only"] = True
+        self._set_deprecated_decorator()
 
         config_parameters: dict[str, Any] = {}
 

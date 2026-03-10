@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
+
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass, DataModelField
 from datamodel_code_generator.model.pydantic_v2.types import DataTypeManager
@@ -129,6 +131,23 @@ def test_data_class_with_description() -> None:
     assert "class test_model:" in rendered
     assert '"""' in rendered
     assert "This is a test model." in rendered
+
+
+def test_data_class_with_deprecated_decorator() -> None:
+    """Test Pydantic v2 dataclass generation with schema-level deprecated metadata."""
+    field = DataModelFieldBase(name="a", data_type=DataType(type="str"), required=True)
+
+    data_class = DataClass(
+        fields=[field],
+        reference=Reference(name="test_model", path="test_model"),
+        extra_template_data=defaultdict(dict, {"test_model": {"deprecated": True}}),
+    )
+
+    rendered = data_class.render()
+    assert "@deprecated('test_model is deprecated.')" in rendered
+    assert any(
+        import_.from_ == "typing_extensions" and import_.import_ == "deprecated" for import_ in data_class.imports
+    )
 
 
 def test_data_model_field() -> None:
