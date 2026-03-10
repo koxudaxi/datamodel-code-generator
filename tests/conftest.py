@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import difflib
+import importlib
 import inspect
 import json
 import re
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -661,6 +663,30 @@ def assert_parser_modules(
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)
+
+
+def write_generated_modules(output_dir: Path, modules: dict[tuple[str, ...], Any]) -> None:
+    """Write parser-generated module output to a package directory."""
+    for module_path, result in modules.items():
+        file_path = output_dir.joinpath(*module_path)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(result.body, encoding="utf-8")
+
+
+def assert_runtime_result_model(output_dir: Path) -> None:
+    """Assert generated modular output resolves cross-module Pydantic references at runtime."""
+    sys.path.insert(0, str(output_dir.parent))
+    importlib.invalidate_caches()
+    try:
+        from model._internal import Result
+
+        result = Result.model_validate({"event": {"id": "abc"}})
+        assert result.event is not None
+        assert result.event.__class__.__name__ == "Event"
+    finally:
+        sys.path.pop(0)
+        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
+            del sys.modules[name]
 
 
 def assert_error_message(

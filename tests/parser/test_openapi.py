@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 import platform
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +25,13 @@ from datamodel_code_generator.parser.openapi import (
     RequestBodyObject,
     ResponseObject,
 )
-from tests.conftest import assert_output, assert_parser_modules, assert_parser_results
+from tests.conftest import (
+    assert_output,
+    assert_parser_modules,
+    assert_parser_results,
+    assert_runtime_result_model,
+    write_generated_modules,
+)
 
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
 
@@ -499,23 +503,8 @@ def test_openapi_parser_parse_modular_pydantic_v2_ruff_keeps_runtime_imports(
     assert "from . import models" in internal
 
     package_dir = tmp_path / "model"
-    for module_path, result in modules.items():
-        file_path = package_dir.joinpath(*module_path)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(result.body, encoding="utf-8")
-
-    sys.path.insert(0, str(tmp_path))
-    importlib.invalidate_caches()
-    try:
-        from model._internal import Result
-
-        result = Result.model_validate({"event": {"id": "abc"}})
-        assert result.event is not None
-        assert result.event.__class__.__name__ == "Event"
-    finally:
-        sys.path.pop(0)
-        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
-            del sys.modules[name]
+    write_generated_modules(package_dir, modules)
+    assert_runtime_result_model(package_dir)
 
 
 @pytest.mark.parametrize(

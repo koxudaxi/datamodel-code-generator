@@ -28,7 +28,7 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import assert_output, create_assert_file_content, freeze_time
+from tests.conftest import assert_output, assert_runtime_result_model, create_assert_file_content, freeze_time
 from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
@@ -1687,9 +1687,6 @@ def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
 
 def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff(output_dir: Path) -> None:
     """Test modular Pydantic output keeps runtime imports by default when Ruff formats a directory."""
-    import importlib
-    import sys
-
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
@@ -1708,19 +1705,7 @@ def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_r
     content = internal_path.read_text()
     assert "TYPE_CHECKING" not in content
     assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
-
-    sys.path.insert(0, str(output_dir.parent))
-    importlib.invalidate_caches()
-    try:
-        from model._internal import Result
-
-        result = Result.model_validate({"event": {"id": "abc"}})
-        assert result.event is not None
-        assert result.event.__class__.__name__ == "Event"
-    finally:
-        sys.path.pop(0)
-        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
-            del sys.modules[name]
+    assert_runtime_result_model(output_dir)
 
 
 @pytest.mark.cli_doc(
@@ -1756,9 +1741,6 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
     `--use-type-checking-imports` opts back into the old TYPE_CHECKING-only behavior, which can
     require manual `model_rebuild()` calls for cross-module runtime references.
     """
-    import importlib
-    import sys
-
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
@@ -1778,19 +1760,7 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
     content = internal_path.read_text()
     assert "TYPE_CHECKING" not in content
     assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
-
-    sys.path.insert(0, str(output_dir.parent))
-    importlib.invalidate_caches()
-    try:
-        from model._internal import Result
-
-        result = Result.model_validate({"event": {"id": "abc"}})
-        assert result.event is not None
-        assert result.event.__class__.__name__ == "Event"
-    finally:
-        sys.path.pop(0)
-        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
-            del sys.modules[name]
+    assert_runtime_result_model(output_dir)
 
 
 def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> None:
