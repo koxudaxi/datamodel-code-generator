@@ -1,0 +1,35 @@
+{
+  "$defs": {
+    "A": {
+      "title": "A",
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "B": {
+      "title": "B",
+      "properties": {
+        "type": {
+          "const": "b"
+        }
+      }
+    }
+  },
+  "properties": {
+    "x_value": {
+      "default": {
+        "type": "b"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/A"
+        },
+        {
+          "$ref": "#/$defs/B"
+        }
+      ]
+    }
+  }
+}
