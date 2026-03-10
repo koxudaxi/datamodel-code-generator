@@ -1,0 +1,34 @@
+{
+  "$defs": {
+    "A": {
+      "properties": {
+        "type": {
+          "const": "a"
+        }
+      }
+    },
+    "Alias": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/A"
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "x": {
+      "default": [
+        {
+          "type": "a"
+        }
+      ],
+      "$ref": "#/$defs/Alias"
+    }
+  }
+}

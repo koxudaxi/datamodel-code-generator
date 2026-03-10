@@ -5683,6 +5683,50 @@ def test_main_jsonschema_type_alias_list_model_default_object_ref(output_file: P
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
+def test_main_jsonschema_type_alias_nullable_model_default_object_ref(output_file: Path) -> None:
+    """Validate nullable model-backed type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_nullable_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_nullable_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
+def test_main_jsonschema_type_alias_nullable_list_model_default_object_ref(output_file: Path) -> None:
+    """Validate nullable list-of-model type alias defaults through the alias."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_nullable_list_model_default_object_ref.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="type_alias_nullable_list_model_default_object_ref.py",
+        extra_args=[
+            "--use-type-alias",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
 def test_main_jsonschema_type_alias_recursive_default_list(output_file: Path) -> None:
     """Avoid recursive alias traversal loops when checking structured defaults."""
     run_main_and_assert(

@@ -474,7 +474,9 @@ def _needs_validated_default(default: Any, data_type: DataType) -> bool:
 
     if resolved.is_union:
         non_none_branches = tuple(branch for branch in resolved.data_types if branch.type_hint != NONE)
-        if len(non_none_branches) == 1 and _uses_existing_model_factory_path(non_none_branches[0]):
+        # This must use the declared field type, not the unwrapped branch: alias-backed
+        # unions like `type Alias = A | None` only get the correct factory via `Alias`.
+        if len(non_none_branches) == 1 and _uses_existing_model_factory_path(data_type):
             return False
         return not any(_default_matches_plain_container_branch(default, branch) for branch in resolved.data_types)
 
