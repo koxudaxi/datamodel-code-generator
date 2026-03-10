@@ -744,10 +744,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
         """Add a class-level deprecated decorator when schema metadata requires it."""
         if not self.extra_template_data.get("deprecated"):
             return
-        if any(decorator.startswith("@deprecated") for decorator in self.decorators):
-            return
-        message = f"{self.class_name} is deprecated."
-        self.decorators = [*self.decorators, f"@deprecated({message!r})"]
+        if not any(decorator.startswith("@deprecated") for decorator in self.decorators):
+            message = f"{self.class_name} is deprecated."
+            self.decorators = [*self.decorators, f"@deprecated({message!r})"]
         self._additional_imports.append(Import.from_full_path("typing_extensions.deprecated"))
 
     def replace_children_in_models(self, models: list[DataModel], new_ref: Reference) -> None:

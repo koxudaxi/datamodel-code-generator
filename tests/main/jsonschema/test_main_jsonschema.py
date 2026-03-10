@@ -3976,7 +3976,7 @@ def test_main_dataclass_deprecated_model(output_file: Path) -> None:
 
 
 def test_main_dataclass_deprecated_model_preserves_existing_decorator(output_file: Path) -> None:
-    """Test deprecated dataclass generation does not duplicate existing decorators."""
+    """Test deprecated dataclass generation keeps the import with an existing decorator."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
         output_path=output_file,
@@ -3988,8 +3988,6 @@ def test_main_dataclass_deprecated_model_preserves_existing_decorator(output_fil
             "dataclasses.dataclass",
             "--class-decorators",
             "@deprecated('LegacyUser is deprecated.')",
-            "--additional-imports",
-            "typing_extensions.deprecated",
         ],
     )
 
