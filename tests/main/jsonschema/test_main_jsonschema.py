@@ -1914,6 +1914,36 @@ def test_main_generate_pydantic_v2_dataclass_enum(tmp_path: Path) -> None:
     assert_file_content(output_file, "pydantic_v2_dataclass_enum.py")
 
 
+def test_main_generate_pydantic_v2_model_default_dict_empty(tmp_path: Path) -> None:
+    """Test pydantic_v2.BaseModel with default: {}."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_model_default_dict_empty.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_model_default_dict_empty.py")
+
+
+def test_main_generate_pydantic_v2_model_default_dict_non_empty(tmp_path: Path) -> None:
+    """Test pydantic_v2.BaseModel with default: {<non-empty dict>}."""
+    output_file: Path = tmp_path / "output.py"
+    input_ = (JSON_SCHEMA_DATA_PATH / "pydantic_v2_model_default_dict_non_empty.json").relative_to(Path.cwd())
+    assert not input_.is_absolute()
+    generate(
+        input_=input_,
+        input_file_type=InputFileType.JsonSchema,
+        output=output_file,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+    )
+
+    assert_file_content(output_file, "pydantic_v2_model_default_dict_non_empty.py")
+
+
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
