@@ -61,6 +61,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    resolve_use_type_checking_imports,
 )
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 
@@ -690,6 +691,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         OpenAPIParserConfig,
     )
 
+    effective_use_type_checking_imports = resolve_use_type_checking_imports(
+        config.use_type_checking_imports,
+        defer_formatting=defer_formatting,
+        formatters=config.formatters,
+        is_pydantic_output=config.output_model_type
+        in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass},
+    )
+
     additional_options: ParserConfigDict = {
         "data_model_type": data_model_types.data_model,
         "data_model_root_type": data_model_types.root_model,
@@ -713,7 +722,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
-        "use_type_checking_imports": config.use_type_checking_imports,
+        "use_type_checking_imports": effective_use_type_checking_imports,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None
@@ -914,7 +923,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             custom_formatters_kwargs=config.custom_formatters_kwargs,
             encoding=config.encoding,
             formatters=config.formatters,
-            use_type_checking_imports=config.use_type_checking_imports,
+            use_type_checking_imports=effective_use_type_checking_imports,
         )
         code_formatter.format_directory(output)
 

@@ -519,7 +519,7 @@ class Config(BaseModel):  # noqa: PLR0904
     http_query_parameters: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     treat_dot_as_module: Optional[bool] = None  # noqa: UP045
     use_exact_imports: bool = False
-    use_type_checking_imports: bool = True
+    use_type_checking_imports: Optional[bool] = None  # noqa: UP045
     union_mode: Optional[UnionMode] = None  # noqa: UP045
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     output_date_class: Optional[DateClassType] = None  # noqa: UP045

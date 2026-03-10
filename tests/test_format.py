@@ -9,7 +9,13 @@ from unittest import mock
 
 import pytest
 
-from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion, PythonVersionMin
+from datamodel_code_generator.format import (
+    CodeFormatter,
+    Formatter,
+    PythonVersion,
+    PythonVersionMin,
+    resolve_use_type_checking_imports,
+)
 
 EXAMPLE_LICENSE_FILE = str(Path(__file__).parent / "data/python/custom_formatters/license_example.txt")
 
@@ -218,6 +224,46 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
     )
 
 
+@pytest.mark.parametrize("explicit_value", [True, False])
+def test_resolve_use_type_checking_imports_respects_explicit_value(explicit_value: bool) -> None:
+    """Test explicit TYPE_CHECKING import settings are preserved."""
+    assert (
+        resolve_use_type_checking_imports(
+            explicit_value,
+            defer_formatting=True,
+            formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+            is_pydantic_output=True,
+        )
+        is explicit_value
+    )
+
+
+def test_resolve_use_type_checking_imports_defaults_to_runtime_imports_for_deferred_pydantic_ruff() -> None:
+    """Test deferred Ruff formatting keeps runtime imports for modular Pydantic output by default."""
+    assert not resolve_use_type_checking_imports(
+        None,
+        defer_formatting=True,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        is_pydantic_output=True,
+    )
+
+
+def test_resolve_use_type_checking_imports_keeps_existing_default_outside_deferred_pydantic_ruff() -> None:
+    """Test non-modular or non-Pydantic output keeps TYPE_CHECKING imports enabled by default."""
+    assert resolve_use_type_checking_imports(
+        None,
+        defer_formatting=False,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        is_pydantic_output=True,
+    )
+    assert resolve_use_type_checking_imports(
+        None,
+        defer_formatting=True,
+        formatters=[Formatter.RUFF_CHECK],
+        is_pydantic_output=False,
+    )
+
+
 def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -307,11 +353,14 @@ def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
-        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -328,11 +377,14 @@ def test_format_directory_ruff_format(tmp_path: Path, monkeypatch: pytest.Monkey
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
-        ("ruff", "format", str(output_dir)),
+        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -349,18 +401,21 @@ def test_format_directory_both_ruff_formatters(tmp_path: Path, monkeypatch: pyte
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
-    with mock.patch("subprocess.run") as mock_run:
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("subprocess.run") as mock_run,
+    ):
         formatter.format_directory(output_dir)
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
     )
     mock_run.assert_any_call(
-        ("ruff", "format", str(output_dir)),
+        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -397,7 +452,10 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
     """
     output_dir = tmp_path / "output"
 
-    with mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run:
+    with (
+        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
+    ):
         generate(
             input_=schema,
             output=output_dir,
@@ -407,13 +465,62 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        (
+            "/tmp/venv/bin/ruff",
+            "check",
+            "--fix",
+            "--unsafe-fixes",
+            "--unfixable",
+            "TC001,TC002,TC003",
+            str(output_dir),
+        ),
         capture_output=True,
         check=False,
         cwd=mock.ANY,
     )
     mock_run.assert_any_call(
-        ("ruff", "format", str(output_dir)),
+        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
+        capture_output=True,
+        check=False,
+        cwd=mock.ANY,
+    )
+
+
+def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(tmp_path: Path) -> None:
+    """Test explicit TYPE_CHECKING imports override the modular Pydantic Ruff default."""
+    from datamodel_code_generator import ModuleSplitMode, generate
+
+    schema = """
+    {
+        "type": "object",
+        "properties": {
+            "name": {"type": "string"}
+        }
+    }
+    """
+    output_dir = tmp_path / "output"
+
+    with (
+        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
+    ):
+        generate(
+            input_=schema,
+            output=output_dir,
+            formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+            module_split_mode=ModuleSplitMode.Single,
+            use_type_checking_imports=True,
+        )
+
+    assert mock_run.call_count == 2
+    mock_run.assert_any_call(
+        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        capture_output=True,
+        check=False,
+        cwd=mock.ANY,
+    )
+    mock_run.assert_any_call(
+        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=mock.ANY,

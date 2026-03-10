@@ -420,8 +420,10 @@ model_options.add_argument(
 )
 model_options.add_argument(
     "--use-type-checking-imports",
-    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. Default: enabled. "
-    "Use --no-use-type-checking-imports to keep referenced models imported at runtime.",
+    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
+    "By default this stays enabled, except for deferred Ruff formatting of modular Pydantic output "
+    "where referenced models stay imported at runtime. "
+    "Use --no-use-type-checking-imports to force runtime imports.",
     action=BooleanOptionalAction,
     default=None,
 )

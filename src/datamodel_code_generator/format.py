@@ -203,6 +203,21 @@ class Formatter(Enum):
 DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 
 
+def resolve_use_type_checking_imports(
+    use_type_checking_imports: bool | None,  # noqa: FBT001
+    *,
+    defer_formatting: bool,
+    formatters: list[Formatter] | None,
+    is_pydantic_output: bool,
+) -> bool:
+    """Resolve the effective TYPE_CHECKING import behavior."""
+    if use_type_checking_imports is not None:
+        return use_type_checking_imports
+
+    has_ruff = bool(formatters) and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters)
+    return not (defer_formatting and has_ruff and is_pydantic_output)
+
+
 class CodeFormatter:
     """Formats generated code using black, isort, ruff, and custom formatters."""
 
@@ -442,16 +457,17 @@ class CodeFormatter:
 
     def format_directory(self, directory: Path) -> None:
         """Apply ruff formatting to all Python files in a directory."""
+        ruff_path = self._find_ruff_path()
         if Formatter.RUFF_CHECK in self.formatters:
             subprocess.run(  # noqa: S603
-                self._ruff_check_command(str(directory)),
+                self._ruff_check_command(str(directory), ruff_path=ruff_path),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,
             )
         if Formatter.RUFF_FORMAT in self.formatters:
             subprocess.run(  # noqa: S603
-                ("ruff", "format", str(directory)),
+                (ruff_path, "format", str(directory)),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,

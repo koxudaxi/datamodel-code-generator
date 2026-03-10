@@ -53,6 +53,7 @@ from datamodel_code_generator.format import (
     CodeFormatter,
     Formatter,
     PythonVersion,
+    resolve_use_type_checking_imports,
 )
 from datamodel_code_generator.imports import (
     IMPORT_ANNOTATIONS,
@@ -922,7 +923,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
-        self.use_type_checking_imports: bool = config.use_type_checking_imports
+        self.use_type_checking_imports: bool | None = config.use_type_checking_imports
         self._append_additional_imports(additional_imports=config.additional_imports)
         self.class_decorators: list[str] = config.class_decorators or []
 
@@ -3036,6 +3037,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         code_formatter: CodeFormatter | None = None
         if format_:
+            effective_use_type_checking_imports = resolve_use_type_checking_imports(
+                self.use_type_checking_imports,
+                defer_formatting=self.defer_formatting,
+                formatters=self.formatters,
+                is_pydantic_output=self.data_model_type.__module__.startswith(
+                    "datamodel_code_generator.model.pydantic_v2"
+                ),
+            )
             code_formatter = CodeFormatter(
                 self.target_python_version,
                 settings_path,
@@ -3046,7 +3055,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 custom_formatters_kwargs=self.custom_formatters_kwargs,
                 encoding=self.encoding,
                 formatters=self.formatters,
-                use_type_checking_imports=self.use_type_checking_imports,
+                use_type_checking_imports=effective_use_type_checking_imports,
                 defer_formatting=self.defer_formatting,
             )
 

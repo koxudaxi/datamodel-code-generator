@@ -170,7 +170,7 @@ class GenerateConfig(BaseModel):
     http_query_parameters: Sequence[tuple[str, str]] | None = None
     treat_dot_as_module: bool | None = None
     use_exact_imports: bool = False
-    use_type_checking_imports: bool = True
+    use_type_checking_imports: bool | None = None
     union_mode: UnionMode | None = None
     output_datetime_class: DatetimeClassType | None = None
     output_date_class: DateClassType | None = None
@@ -303,7 +303,7 @@ class ParserConfig(BaseModel):
     http_query_parameters: Sequence[tuple[str, str]] | None = None
     treat_dot_as_module: bool | None = None
     use_exact_imports: bool = False
-    use_type_checking_imports: bool = True
+    use_type_checking_imports: bool | None = None
     default_field_extras: dict[str, Any] | None = None
     target_datetime_class: DatetimeClassType | None = None
     target_date_class: DateClassType | None = None

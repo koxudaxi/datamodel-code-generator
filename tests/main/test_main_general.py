@@ -1685,6 +1685,37 @@ def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
     assert "class Order" in content
 
 
+def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff(output_dir: Path) -> None:
+    """Test modular Pydantic output keeps runtime imports by default when Ruff formats a directory."""
+    import importlib
+    import sys
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=["--formatters", "ruff-check", "ruff-format", "--disable-timestamp"],
+    )
+
+    internal_path = output_dir / "_internal.py"
+    content = internal_path.read_text()
+    assert "TYPE_CHECKING" not in content
+    assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
+
+    sys.path.insert(0, str(output_dir.parent))
+    importlib.invalidate_caches()
+    try:
+        from model._internal import Result
+
+        result = Result.model_validate({"event": {"id": "abc"}})
+        assert result.event is not None
+        assert result.event.__class__.__name__ == "Event"
+    finally:
+        sys.path.pop(0)
+        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
+            del sys.modules[name]
+
+
 @pytest.mark.cli_doc(
     options=["--no-use-type-checking-imports"],
     option_description="""Keep generated model imports available at runtime when using Ruff fixes.
