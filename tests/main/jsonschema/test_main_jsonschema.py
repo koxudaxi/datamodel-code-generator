@@ -5834,6 +5834,35 @@ def test_main_jsonschema_type_alias_inline_union_default_object_one_of_relevant_
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
+def test_main_jsonschema_type_alias_inline_union_default_object_import_collision_relevant_flags(
+    output_file: Path,
+) -> None:
+    """Keep TypeAdapter targets aligned after imported-name collision renames local models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_alias_inline_union_default_object_import_collision.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_alias_inline_union_default_object_import_collision.py",
+        extra_args=[
+            "--use-type-alias",
+            "--use-annotated",
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-pydantic-version",
+            "2.11",
+            "--type-overrides",
+            '{"Other.a": "my_app.B"}',
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    int(black.__version__.split(".")[0]) < 23,
+    reason="Installed black doesn't support the new 'type' statement",
+)
 def test_main_jsonschema_type_alias_inline_union_default_object_type_override_relevant_flags(
     output_file: Path,
 ) -> None:
