@@ -6271,6 +6271,25 @@ def test_main_jsonschema_reuse_scope_tree(output_dir: Path) -> None:
     )
 
 
+def test_main_jsonschema_reuse_scope_tree_exact_imports(output_dir: Path) -> None:
+    """Test --reuse-scope=tree with --use-exact-imports keeps local subclass references."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_scope_tree",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "reuse_scope_tree_exact_imports",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--reuse-model",
+            "--reuse-scope",
+            "tree",
+            "--use-exact-imports",
+            "--disable-timestamp",
+        ],
+    )
+
+
 def test_main_jsonschema_reuse_scope_tree_enum(output_dir: Path) -> None:
     """Test --reuse-scope=tree to deduplicate enum models across multiple files."""
     run_main_and_assert(
