@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -1665,16 +1666,18 @@ def test_main_generate_relative_input_path(output_file: Path) -> None:
 
 def test_main_generate_external_absolute_input_path(tmp_path: Path) -> None:
     """Test helper keeps absolute input paths that are outside the repository root."""
-    input_path = tmp_path / "person.json"
-    input_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        input_path = Path(temp_dir) / "person.json"
+        assert Path.cwd() not in input_path.resolve().parents
+        input_path.write_text((JSON_SCHEMA_DATA_PATH / "person.json").read_text(encoding="utf-8"), encoding="utf-8")
 
-    run_generate_file_and_assert(
-        input_path=input_path,
-        output_path=tmp_path / "output.py",
-        input_file_type=InputFileType.JsonSchema,
-        assert_func=assert_file_content,
-        expected_file="general.py",
-    )
+        run_generate_file_and_assert(
+            input_path=input_path,
+            output_path=tmp_path / "output.py",
+            input_file_type=InputFileType.JsonSchema,
+            assert_func=assert_file_content,
+            expected_file="general.py",
+        )
 
 
 def test_main_generate_pydantic_v2_dataclass(output_file: Path) -> None:

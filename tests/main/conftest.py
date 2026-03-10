@@ -263,11 +263,16 @@ def run_generate_file_and_assert(
         else:
             assert not input_.is_absolute()
 
+    generate_options: dict[str, Any] = {
+        "output": output_path,
+        **generate_kwargs,
+    }
+    if input_file_type is not None:
+        generate_options["input_file_type"] = input_file_type
+
     generate(
         input_=input_,
-        input_file_type=input_file_type,
-        output=output_path,
-        **generate_kwargs,
+        **generate_options,
     )
 
     if expected_file is None:
