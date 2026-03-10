@@ -116,6 +116,7 @@ EXCLUDED_CONFIG_OPTIONS: frozenset[str] = frozenset({
 })
 
 BOOLEAN_OPTIONAL_OPTIONS: frozenset[str] = frozenset({
+    "use_type_checking_imports",
     "use_specialized_enum",
     "use_standard_collections",
 })
@@ -518,6 +519,7 @@ class Config(BaseModel):  # noqa: PLR0904
     http_query_parameters: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     treat_dot_as_module: Optional[bool] = None  # noqa: UP045
     use_exact_imports: bool = False
+    use_type_checking_imports: bool = True
     union_mode: Optional[UnionMode] = None  # noqa: UP045
     output_datetime_class: Optional[DatetimeClassType] = None  # noqa: UP045
     output_date_class: Optional[DateClassType] = None  # noqa: UP045
@@ -961,6 +963,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         http_query_parameters=config.http_query_parameters,
         treat_dot_as_module=config.treat_dot_as_module,
         use_exact_imports=config.use_exact_imports,
+        use_type_checking_imports=config.use_type_checking_imports,
         union_mode=config.union_mode,
         output_datetime_class=config.output_datetime_class,
         output_date_class=config.output_date_class,

@@ -82,6 +82,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--no-use-closed-typed-dict": "Disable PEP 728 TypedDict closed/extra_items generation.",
     "--no-use-specialized-enum": "Disable specialized Enum classes for Python 3.11+ code generation.",
     "--no-use-standard-collections": "Use typing.Dict/List instead of built-in dict/list for container types.",
+    "--no-use-type-checking-imports": "Keep generated model imports available at runtime when using Ruff fixes.",
     "--no-use-union-operator": "Use Union[X, Y] / Optional[X] instead of X | Y union operator.",
     "--openapi-include-paths": "Filter OpenAPI paths to include in model generation.",
     "--openapi-scopes": "Specify OpenAPI scopes to generate (schemas, paths, parameters).",

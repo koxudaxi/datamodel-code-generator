@@ -419,6 +419,13 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
+    "--use-type-checking-imports",
+    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. Default: enabled. "
+    "Use --no-use-type-checking-imports to keep referenced models imported at runtime.",
+    action=BooleanOptionalAction,
+    default=None,
+)
+model_options.add_argument(
     "--output-datetime-class",
     help="Choose Datetime class between AwareDatetime, NaiveDatetime, PastDatetime, FutureDatetime or datetime. "
     "Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)",

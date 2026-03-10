@@ -922,6 +922,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         self.imports: Imports = Imports(config.use_exact_imports)
         self.use_exact_imports: bool = config.use_exact_imports
+        self.use_type_checking_imports: bool = config.use_type_checking_imports
         self._append_additional_imports(additional_imports=config.additional_imports)
         self.class_decorators: list[str] = config.class_decorators or []
 
@@ -3045,6 +3046,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 custom_formatters_kwargs=self.custom_formatters_kwargs,
                 encoding=self.encoding,
                 formatters=self.formatters,
+                use_type_checking_imports=self.use_type_checking_imports,
                 defer_formatting=self.defer_formatting,
             )
 

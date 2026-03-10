@@ -1685,6 +1685,60 @@ def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
     assert "class Order" in content
 
 
+@pytest.mark.cli_doc(
+    options=["--no-use-type-checking-imports"],
+    option_description="""Keep generated model imports available at runtime when using Ruff fixes.
+
+The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
+into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
+models need to be importable at runtime without calling `model_rebuild()` manually.""",
+    input_schema="openapi/modular.yaml",
+    cli_args=["--formatters", "ruff-check", "ruff-format", "--no-use-type-checking-imports", "--disable-timestamp"],
+    golden_output="openapi/no_use_type_checking_imports_internal.py",
+    related_options=["--use-type-checking-imports", "--formatters", "--use-exact-imports"],
+)
+def test_no_use_type_checking_imports(output_dir: Path) -> None:
+    """Keep generated model imports available at runtime when using Ruff fixes.
+
+    The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
+    into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
+    models need to be importable at runtime without calling `model_rebuild()` manually.
+    """
+    import importlib
+    import sys
+
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        extra_args=[
+            "--formatters",
+            "ruff-check",
+            "ruff-format",
+            "--no-use-type-checking-imports",
+            "--disable-timestamp",
+        ],
+    )
+
+    internal_path = output_dir / "_internal.py"
+    content = internal_path.read_text()
+    assert "TYPE_CHECKING" not in content
+    assert content == (EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports_internal.py").read_text()
+
+    sys.path.insert(0, str(output_dir.parent))
+    importlib.invalidate_caches()
+    try:
+        from model._internal import Result
+
+        result = Result.model_validate({"event": {"id": "abc"}})
+        assert result.event is not None
+        assert result.event.__class__.__name__ == "Event"
+    finally:
+        sys.path.pop(0)
+        for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
+            del sys.modules[name]
+
+
 def test_generate_returns_string_when_output_none() -> None:
     """Test that generate() returns str when output=None for single file."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'

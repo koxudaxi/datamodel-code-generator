@@ -194,6 +194,30 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
     )
 
 
+def test_format_code_ruff_check_formatter_without_type_checking_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test ruff check formatter keeps runtime imports when requested."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+        use_type_checking_imports=False,
+    )
+    with mock.patch("subprocess.run") as mock_run:
+        mock_run.return_value.stdout = b"output"
+        formatted_code = formatter.format_code("input")
+
+    assert formatted_code == "output"
+    mock_run.assert_called_once_with(
+        ("ruff", "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", "-"),
+        input=b"input",
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+
+
 def test_settings_path_with_existing_file(tmp_path: Path) -> None:
     """Test settings_path with existing file uses parent directory."""
     pyproject = tmp_path / "pyproject.toml"

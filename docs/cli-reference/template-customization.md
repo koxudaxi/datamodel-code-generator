@@ -18,6 +18,7 @@
 | [`--extra-template-data`](#extra-template-data) | Pass custom template variables from JSON file for code gener... |
 | [`--formatters`](#formatters) | Specify code formatters to apply to generated output. |
 | [`--no-treat-dot-as-module`](#no-treat-dot-as-module) | Keep dots in schema names as underscores for flat output. |
+| [`--no-use-type-checking-imports`](#no-use-type-checking-imports) | Keep generated model imports available at runtime when using... |
 | [`--treat-dot-as-module`](#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](#use-exact-imports) | Import exact types instead of modules. |
@@ -2335,6 +2336,387 @@ The `--no-treat-dot-as-module` flag prevents splitting dotted schema names.
     class User(BaseModel):
         name: str
         age: int | None = None
+    ```
+
+---
+
+## `--no-use-type-checking-imports` {#no-use-type-checking-imports}
+
+Keep generated model imports available at runtime when using Ruff fixes.
+
+The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
+into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
+models need to be importable at runtime without calling `model_rebuild()` manually.
+
+**Related:** [`--formatters`](template-customization.md#formatters), [`--use-exact-imports`](template-customization.md#use-exact-imports)
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --formatters ruff-check ruff-format --no-use-type-checking-imports --disable-timestamp # (1)!
+    ```
+
+    1. :material-arrow-left: `--no-use-type-checking-imports` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```yaml
+    openapi: "3.0.0"
+    info:
+      version: 1.0.0
+      title: Modular Swagger Petstore
+      license:
+        name: MIT
+    servers:
+      - url: http://petstore.swagger.io/v1
+    paths:
+      /pets:
+        get:
+          summary: List all pets
+          operationId: listPets
+          tags:
+            - pets
+          parameters:
+            - name: limit
+              in: query
+              description: How many items to return at one time (max 100)
+              required: false
+              schema:
+                type: integer
+                format: int32
+          responses:
+            '200':
+              description: A paged array of pets
+              headers:
+                x-next:
+                  description: A link to the next page of responses
+                  schema:
+                    type: string
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/collections.Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+        post:
+          summary: Create a pet
+          operationId: createPets
+          tags:
+            - pets
+          responses:
+            '201':
+              description: Null response
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+                    x-amazon-apigateway-integration:
+                      uri:
+                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+                      passthroughBehavior: when_no_templates
+                      httpMethod: POST
+                      type: aws_proxy
+      /pets/{petId}:
+        get:
+          summary: Info for a specific pet
+          operationId: showPetById
+          tags:
+            - pets
+          parameters:
+            - name: petId
+              in: path
+              required: true
+              description: The id of the pet to retrieve
+              schema:
+                type: string
+          responses:
+            '200':
+              description: Expected response to a valid request
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/collections.Pets"
+            default:
+              description: unexpected error
+              content:
+                application/json:
+                  schema:
+                    $ref: "#/components/schemas/Error"
+        x-amazon-apigateway-integration:
+          uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${PythonVersionFunction.Arn}/invocations
+          passthroughBehavior: when_no_templates
+          httpMethod: POST
+          type: aws_proxy
+    components:
+      schemas:
+        models.Species:
+          type: string
+          enum:
+            - dog
+            - cat
+            - snake
+        models.Pet:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            tag:
+              type: string
+            species:
+              $ref: '#/components/schemas/models.Species'
+        models.User:
+          required:
+            - id
+            - name
+          properties:
+            id:
+              type: integer
+              format: int64
+            name:
+              type: string
+            tag:
+              type: string
+        collections.Pets:
+          type: array
+          items:
+            $ref: "#/components/schemas/models.Pet"
+        collections.Users:
+          type: array
+          items:
+            $ref: "#/components/schemas/models.User"
+        optional:
+          type: string
+        Id:
+          type: string
+        collections.Rules:
+          type: array
+          items:
+            type: string
+        Error:
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: integer
+              format: int32
+            message:
+              type: string
+        collections.apis:
+          type: array
+          items:
+            type: object
+            properties:
+              apiKey:
+                type: string
+                description: To be used as a dataset parameter value
+              apiVersionNumber:
+                type: string
+                description: To be used as a version parameter value
+              apiUrl:
+                type: string
+                format: uri
+                description: "The URL describing the dataset's fields"
+              apiDocumentationUrl:
+                type: string
+                format: uri
+                description: A URL to the API console for each API
+              stage:
+                type: string
+                enum: [
+                  "test",
+                  "dev",
+                  "stg",
+                  "prod"
+                ]
+        models.Event:
+          type: object
+          properties:
+            name:
+              anyOf:
+                - type: string
+                - type: number
+                - type: integer
+                - type: boolean
+                - type: object
+                - type: array
+                  items:
+                    type: string
+        Result:
+          type: object
+          properties:
+            event:
+              $ref: '#/components/schemas/models.Event'
+        foo.bar.Thing:
+          properties:
+            attributes:
+              type: object
+        foo.bar.Thang:
+          properties:
+            attributes:
+              type: array
+              items:
+                type: object
+        foo.bar.Clone:
+          allOf:
+            - $ref: '#/components/schemas/foo.bar.Thing'
+            - type: object
+              properties:
+                others:
+                  type: object
+                  properties:
+                     name:
+                       type: string
+    
+        foo.Tea:
+          properties:
+            flavour:
+              type: string
+            id:
+              $ref: '#/components/schemas/Id'
+        Source:
+          properties:
+            country:
+              type: string
+        foo.Cocoa:
+          properties:
+            quality:
+              type: integer
+        bar.Field:
+          type: string
+          example: green
+        woo.boo.Chocolate:
+          properties:
+            flavour:
+              type: string
+            source:
+              $ref: '#/components/schemas/Source'
+            cocoa:
+              $ref: '#/components/schemas/foo.Cocoa'
+            field:
+              $ref: '#/components/schemas/bar.Field'
+        differentTea:
+          type: object
+          properties:
+            foo:
+              $ref: '#/components/schemas/foo.Tea'
+            nested:
+              $ref: '#/components/schemas/nested.foo.Tea'
+        nested.foo.Tea:
+          properties:
+            flavour:
+              type: string
+            id:
+              $ref: '#/components/schemas/Id'
+            self:
+              $ref: '#/components/schemas/nested.foo.Tea'
+            optional:
+              type: array
+              items:
+                $ref: '#/components/schemas/optional'
+        nested.foo.TeaClone:
+          properties:
+            flavour:
+              type: string
+            id:
+              $ref: '#/components/schemas/Id'
+            self:
+              $ref: '#/components/schemas/nested.foo.Tea'
+            optional:
+              type: array
+              items:
+                $ref: '#/components/schemas/optional'
+        nested.foo.List:
+          type: array
+          items:
+            $ref: '#/components/schemas/nested.foo.Tea'
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  _internal
+    
+    from __future__ import annotations
+    from pydantic import BaseModel, RootModel
+    from . import models
+    
+    
+    class Optional(RootModel[str]):
+        root: str
+    
+    
+    class Id(RootModel[str]):
+        root: str
+    
+    
+    class Error(BaseModel):
+        code: int
+        message: str
+    
+    
+    class Result(BaseModel):
+        event: models.Event | None = None
+    
+    
+    class Source(BaseModel):
+        country: str | None = None
+    
+    
+    class DifferentTea(BaseModel):
+        foo: Tea | None = None
+        nested: Tea_1 | None = None
+    
+    
+    class Tea(BaseModel):
+        flavour: str | None = None
+        id: Id | None = None
+    
+    
+    class Cocoa(BaseModel):
+        quality: int | None = None
+    
+    
+    class Tea_1(BaseModel):
+        flavour: str | None = None
+        id: Id | None = None
+        self: Tea_1 | None = None
+        optional: list[Optional] | None = None
+    
+    
+    class TeaClone(BaseModel):
+        flavour: str | None = None
+        id: Id | None = None
+        self: Tea_1 | None = None
+        optional: list[Optional] | None = None
+    
+    
+    class List(RootModel[list[Tea_1]]):
+        root: list[Tea_1]
+    
+    
+    Tea_1.model_rebuild()
     ```
 
 ---

@@ -713,6 +713,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
+        "use_type_checking_imports": config.use_type_checking_imports,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None
@@ -913,6 +914,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             custom_formatters_kwargs=config.custom_formatters_kwargs,
             encoding=config.encoding,
             formatters=config.formatters,
+            use_type_checking_imports=config.use_type_checking_imports,
         )
         code_formatter.format_directory(output)
 

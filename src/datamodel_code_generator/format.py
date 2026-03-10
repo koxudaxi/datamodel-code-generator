@@ -217,6 +217,7 @@ class CodeFormatter:
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
         formatters: list[Formatter] | None = None,
+        use_type_checking_imports: bool = True,  # noqa: FBT001, FBT002
         defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
@@ -247,6 +248,7 @@ class CodeFormatter:
         self.formatters = formatters
         self.defer_formatting = defer_formatting
         self.encoding = encoding
+        self.use_type_checking_imports = use_type_checking_imports
 
         use_black = Formatter.BLACK in formatters
         use_isort = Formatter.ISORT in formatters
@@ -371,8 +373,8 @@ class CodeFormatter:
 
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""
-        result = subprocess.run(
-            ("ruff", "check", "--fix", "--unsafe-fixes", "-"),
+        result = subprocess.run(  # noqa: S603
+            self._ruff_check_command("-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
@@ -393,14 +395,14 @@ class CodeFormatter:
 
     def apply_ruff_check_and_format(self, code: str) -> str:
         """Run ruff check and format sequentially for reliable processing."""
-        ruff_path = self._find_ruff_path()
         check_result = subprocess.run(  # noqa: S603
-            (ruff_path, "check", "--fix", "--unsafe-fixes", "-"),
+            self._ruff_check_command("-"),
             input=code.encode(self.encoding),
             capture_output=True,
             check=False,
             cwd=self.settings_path,
         )
+        ruff_path = self._find_ruff_path()
         format_result = subprocess.run(  # noqa: S603
             (ruff_path, "format", "-"),
             input=check_result.stdout,
@@ -409,6 +411,13 @@ class CodeFormatter:
             cwd=self.settings_path,
         )
         return format_result.stdout.decode(self.encoding)
+
+    def _ruff_check_command(self, *paths: str) -> tuple[str, ...]:
+        """Build the Ruff check command for the current formatter settings."""
+        command: tuple[str, ...] = ("ruff", "check", "--fix", "--unsafe-fixes")
+        if not self.use_type_checking_imports:
+            command += ("--unfixable", "TC001,TC002,TC003")
+        return (*command, *paths)
 
     @staticmethod
     def _find_ruff_path() -> str:
@@ -435,7 +444,7 @@ class CodeFormatter:
         """Apply ruff formatting to all Python files in a directory."""
         if Formatter.RUFF_CHECK in self.formatters:
             subprocess.run(  # noqa: S603
-                ("ruff", "check", "--fix", "--unsafe-fixes", str(directory)),
+                self._ruff_check_command(str(directory)),
                 capture_output=True,
                 check=False,
                 cwd=self.settings_path,
