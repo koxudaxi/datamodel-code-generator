@@ -156,6 +156,7 @@ datamodel-codegen [OPTIONS]
 | [`--treat-dot-as-module`](template-customization.md#treat-dot-as-module) | Treat dots in schema names as module separators. |
 | [`--use-double-quotes`](template-customization.md#use-double-quotes) | Use double quotes for string literals in generated code. |
 | [`--use-exact-imports`](template-customization.md#use-exact-imports) | Import exact types instead of modules. |
+| [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) | Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. |
 | [`--validators`](template-customization.md#validators) | Add custom field validators to generated Pydantic v2 models. |
 | [`--wrap-string-literal`](template-customization.md#wrap-string-literal) | Wrap long string literals across multiple lines. |
 
@@ -357,6 +358,7 @@ All options sorted alphabetically:
 - [`--use-title-as-name`](field-customization.md#use-title-as-name) - Use schema title as the generated class name.
 - [`--use-tuple-for-fixed-items`](typing-customization.md#use-tuple-for-fixed-items) - Generate tuple types for arrays with items array syntax.
 - [`--use-type-alias`](typing-customization.md#use-type-alias) - Use TypeAlias instead of root models for type definitions (e...
+- [`--use-type-checking-imports`](template-customization.md#use-type-checking-imports) - Allow Ruff to move typing-only imports into TYPE_CHECKING bl...
 - [`--use-union-operator`](typing-customization.md#use-union-operator) - Use | operator for Union types (PEP 604).
 - [`--use-unique-items-as-set`](typing-customization.md#use-unique-items-as-set) - Generate set types for arrays with uniqueItems constraint.
 - [`--validation`](openapi-only-options.md#validation) - Enable validation constraints (deprecated, use --field-const...

@@ -691,14 +691,6 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         OpenAPIParserConfig,
     )
 
-    effective_use_type_checking_imports = resolve_use_type_checking_imports(
-        config.use_type_checking_imports,
-        defer_formatting=defer_formatting,
-        formatters=config.formatters,
-        is_pydantic_output=config.output_model_type
-        in {DataModelType.PydanticV2BaseModel, DataModelType.PydanticV2Dataclass},
-    )
-
     additional_options: ParserConfigDict = {
         "data_model_type": data_model_types.data_model,
         "data_model_root_type": data_model_types.root_model,
@@ -722,7 +714,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "target_date_class": config.output_date_class,
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
-        "use_type_checking_imports": effective_use_type_checking_imports,
+        "use_type_checking_imports": config.use_type_checking_imports,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None
@@ -913,6 +905,14 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         and config.formatters
         and (Formatter.RUFF_CHECK in config.formatters or Formatter.RUFF_FORMAT in config.formatters)
     ):
+        effective_use_type_checking_imports = resolve_use_type_checking_imports(
+            config.use_type_checking_imports,
+            is_multi_module_output=True,
+            formatters=config.formatters,
+            preserve_runtime_imports_for_multi_module_ruff=(
+                data_model_types.data_model.PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF
+            ),
+        )
         code_formatter = CodeFormatter(
             config.target_python_version,
             config.settings_path,
@@ -924,6 +924,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             encoding=config.encoding,
             formatters=config.formatters,
             use_type_checking_imports=effective_use_type_checking_imports,
+            defer_formatting=True,
         )
         code_formatter.format_directory(output)
 

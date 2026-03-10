@@ -25,7 +25,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Config, Exit
 from datamodel_code_generator.arguments import _dataclass_arguments
 from datamodel_code_generator.config import GenerateConfig
-from datamodel_code_generator.format import CodeFormatter, PythonVersion
+from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import assert_output, create_assert_file_content, freeze_time
@@ -1694,7 +1694,14 @@ def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_r
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
         output_path=output_dir,
         input_file_type="openapi",
-        extra_args=["--formatters", "ruff-check", "ruff-format", "--disable-timestamp"],
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--formatters",
+            "ruff-check",
+            "ruff-format",
+            "--disable-timestamp",
+        ],
     )
 
     internal_path = output_dir / "_internal.py"
@@ -1722,9 +1729,19 @@ def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_r
 
 The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
 into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
-models need to be importable at runtime without calling `model_rebuild()` manually.""",
+models need to be importable at runtime without calling `model_rebuild()` manually.
+By default, TYPE_CHECKING imports stay enabled; `--use-type-checking-imports` explicitly
+re-enables that default behavior when runtime imports were otherwise preserved.""",
     input_schema="openapi/modular.yaml",
-    cli_args=["--formatters", "ruff-check", "ruff-format", "--no-use-type-checking-imports", "--disable-timestamp"],
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--formatters",
+        "ruff-check",
+        "ruff-format",
+        "--no-use-type-checking-imports",
+        "--disable-timestamp",
+    ],
     golden_output="openapi/no_use_type_checking_imports_internal.py",
     related_options=["--use-type-checking-imports", "--formatters", "--use-exact-imports"],
 )
@@ -1734,6 +1751,8 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
     The `--no-use-type-checking-imports` flag prevents Ruff from moving generated model imports
     into `TYPE_CHECKING` blocks. This is useful for modular Pydantic output where referenced
     models need to be importable at runtime without calling `model_rebuild()` manually.
+    By default, TYPE_CHECKING imports stay enabled; `--use-type-checking-imports` explicitly
+    re-enables that default behavior when runtime imports were otherwise preserved.
     """
     import importlib
     import sys
@@ -1743,6 +1762,8 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
             "--formatters",
             "ruff-check",
             "ruff-format",
@@ -1768,6 +1789,65 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
         sys.path.pop(0)
         for name in [module for module in sys.modules if module == "model" or module.startswith("model.")]:
             del sys.modules[name]
+
+
+def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> None:
+    """Test generate() keeps runtime imports for multi-module Pydantic Ruff output."""
+    result = generate(
+        OPEN_API_DATA_PATH / "modular.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=None,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, dict)
+    internal = result["_internal.py",]
+    assert "TYPE_CHECKING" not in internal
+    assert "from . import models" in internal
+    assert "Tea_1.model_rebuild()" in internal
+
+
+@pytest.mark.cli_doc(
+    options=["--use-type-checking-imports"],
+    option_description="""Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
+
+The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
+for multi-module Pydantic output where runtime imports might otherwise be preserved by default.""",
+    input_schema="openapi/modular.yaml",
+    cli_args=[
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        "--formatters",
+        "ruff-check",
+        "ruff-format",
+        "--use-type-checking-imports",
+        "--disable-timestamp",
+    ],
+    golden_output="openapi/use_type_checking_imports_internal.py",
+    related_options=["--no-use-type-checking-imports", "--formatters", "--use-exact-imports"],
+)
+def test_use_type_checking_imports_for_multi_module_pydantic_ruff() -> None:
+    """Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
+
+    The `--use-type-checking-imports` flag explicitly re-enables Ruff's TYPE_CHECKING import moves
+    for multi-module Pydantic output where runtime imports might otherwise be preserved by default.
+    """
+    result = generate(
+        OPEN_API_DATA_PATH / "modular.yaml",
+        input_file_type=InputFileType.OpenAPI,
+        output=None,
+        output_model_type=DataModelType.PydanticV2BaseModel,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        use_type_checking_imports=True,
+        disable_timestamp=True,
+    )
+
+    assert isinstance(result, dict)
+    internal = result["_internal.py",]
+    assert "TYPE_CHECKING" in internal
+    assert internal == (EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_internal.py").read_text().rstrip()
 
 
 def test_generate_returns_string_when_output_none() -> None:

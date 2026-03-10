@@ -145,6 +145,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-title-as-name": "Use schema title as the generated class name.",
     "--use-tuple-for-fixed-items": "Generate tuple types for arrays with items array syntax.",
     "--use-type-alias": "Use TypeAlias instead of root models for type definitions (experimental).",
+    "--use-type-checking-imports": "Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.",
     "--use-union-operator": "Use | operator for Union types (PEP 604).",
     "--use-unique-items-as-set": "Generate set types for arrays with uniqueItems constraint.",
     "--validation": "Enable validation constraints (deprecated, use --field-constraints).",

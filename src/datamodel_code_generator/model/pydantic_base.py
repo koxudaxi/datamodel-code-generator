@@ -304,6 +304,8 @@ class DataModelField(DataModelFieldBase):
 class BaseModelBase(DataModel, ABC):
     """Abstract base class for Pydantic BaseModel implementations."""
 
+    PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF: ClassVar[bool] = True
+
     def __init__(  # noqa: PLR0913
         self,
         *,

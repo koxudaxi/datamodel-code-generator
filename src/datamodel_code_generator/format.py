@@ -206,16 +206,16 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 def resolve_use_type_checking_imports(
     use_type_checking_imports: bool | None,  # noqa: FBT001
     *,
-    defer_formatting: bool,
+    is_multi_module_output: bool,
     formatters: list[Formatter] | None,
-    is_pydantic_output: bool,
+    preserve_runtime_imports_for_multi_module_ruff: bool,
 ) -> bool:
     """Resolve the effective TYPE_CHECKING import behavior."""
     if use_type_checking_imports is not None:
         return use_type_checking_imports
 
     has_ruff = bool(formatters) and (Formatter.RUFF_CHECK in formatters or Formatter.RUFF_FORMAT in formatters)
-    return not (defer_formatting and has_ruff and is_pydantic_output)
+    return not (is_multi_module_output and has_ruff and preserve_runtime_imports_for_multi_module_ruff)
 
 
 class CodeFormatter:

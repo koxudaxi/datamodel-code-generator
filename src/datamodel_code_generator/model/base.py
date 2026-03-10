@@ -600,6 +600,7 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
+    PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF: ClassVar[bool] = False
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913

@@ -3013,11 +3013,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             ),
         ]
 
-    def _prepare_parse_config(  # noqa: PLR0913, PLR0917
+    def _prepare_parse_config(
         self,
         with_import: bool | None,  # noqa: FBT001
-        format_: bool | None,  # noqa: FBT001
-        settings_path: Path | None,
         disable_future_imports: bool,  # noqa: FBT001
         all_exports_scope: AllExportsScope | None,
         all_exports_collision_strategy: AllExportsCollisionStrategy | None,
@@ -3035,37 +3033,41 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ):
             self.imports.append(IMPORT_ANNOTATIONS)
 
-        code_formatter: CodeFormatter | None = None
-        if format_:
-            effective_use_type_checking_imports = resolve_use_type_checking_imports(
-                self.use_type_checking_imports,
-                defer_formatting=self.defer_formatting,
-                formatters=self.formatters,
-                is_pydantic_output=self.data_model_type.__module__.startswith(
-                    "datamodel_code_generator.model.pydantic_v2"
-                ),
-            )
-            code_formatter = CodeFormatter(
-                self.target_python_version,
-                settings_path,
-                self.wrap_string_literal,
-                skip_string_normalization=not self.use_double_quotes,
-                known_third_party=self.known_third_party,
-                custom_formatters=self.custom_formatter,
-                custom_formatters_kwargs=self.custom_formatters_kwargs,
-                encoding=self.encoding,
-                formatters=self.formatters,
-                use_type_checking_imports=effective_use_type_checking_imports,
-                defer_formatting=self.defer_formatting,
-            )
-
         return ParseConfig(
             with_import=bool(with_import),
             use_deferred_annotations=use_deferred_annotations,
-            code_formatter=code_formatter,
+            code_formatter=None,
             module_split_mode=module_split_mode,
             all_exports_scope=all_exports_scope,
             all_exports_collision_strategy=all_exports_collision_strategy,
+        )
+
+    def _build_code_formatter(
+        self,
+        settings_path: Path | None,
+        *,
+        is_multi_module_output: bool,
+    ) -> CodeFormatter:
+        effective_use_type_checking_imports = resolve_use_type_checking_imports(
+            self.use_type_checking_imports,
+            is_multi_module_output=is_multi_module_output,
+            formatters=self.formatters,
+            preserve_runtime_imports_for_multi_module_ruff=(
+                self.data_model_type.PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF
+            ),
+        )
+        return CodeFormatter(
+            self.target_python_version,
+            settings_path,
+            self.wrap_string_literal,
+            skip_string_normalization=not self.use_double_quotes,
+            known_third_party=self.known_third_party,
+            custom_formatters=self.custom_formatter,
+            custom_formatters_kwargs=self.custom_formatters_kwargs,
+            encoding=self.encoding,
+            formatters=self.formatters,
+            use_type_checking_imports=effective_use_type_checking_imports,
+            defer_formatting=self.defer_formatting,
         )
 
     def _build_module_structure(
@@ -3352,8 +3354,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
         config = self._prepare_parse_config(
             with_import,
-            format_,
-            settings_path,
             disable_future_imports,
             all_exports_scope,
             all_exports_collision_strategy,
@@ -3371,6 +3371,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model_to_module_models,
             model_path_to_module_name,
         ) = self._build_module_structure(sorted_data_models, require_update_action_models, module_split_mode)
+
+        if format_:
+            config = config._replace(
+                code_formatter=self._build_code_formatter(
+                    settings_path,
+                    is_multi_module_output=self.defer_formatting or len(module_models) > 1,
+                )
+            )
 
         results: dict[ModulePath, Result] = {}
         unused_models: list[DataModel] = []

@@ -419,15 +419,6 @@ model_options.add_argument(
     default=None,
 )
 model_options.add_argument(
-    "--use-type-checking-imports",
-    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
-    "By default this stays enabled, except for deferred Ruff formatting of modular Pydantic output "
-    "where referenced models stay imported at runtime. "
-    "Use --no-use-type-checking-imports to force runtime imports.",
-    action=BooleanOptionalAction,
-    default=None,
-)
-model_options.add_argument(
     "--output-datetime-class",
     help="Choose Datetime class between AwareDatetime, NaiveDatetime, PastDatetime, FutureDatetime or datetime. "
     "Each output model has its default mapping (for example pydantic: datetime, dataclass: str, ...)",
@@ -923,6 +914,15 @@ template_options.add_argument(
     help="Validators configuration file (JSON). Defines field validators for Pydantic v2 models. "
     "Keys are model names, values contain validator definitions with field, function, and mode.",
     type=Path,
+)
+template_options.add_argument(
+    "--use-type-checking-imports",
+    help="Allow Ruff to move typing-only imports into TYPE_CHECKING blocks. "
+    "By default this stays enabled, except for multi-module Ruff formatting of modular Pydantic output "
+    "where referenced models stay imported at runtime. "
+    "Use --no-use-type-checking-imports to force runtime imports.",
+    action=BooleanOptionalAction,
+    default=None,
 )
 template_options.add_argument(
     "--use-double-quotes",

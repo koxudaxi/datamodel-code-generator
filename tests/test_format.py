@@ -24,6 +24,7 @@ WRONG_FORMATTER = "tests.data.python.custom_formatters.wrong"
 NOT_SUBCLASS_FORMATTER = "tests.data.python.custom_formatters.not_subclass"
 ADD_COMMENT_FORMATTER = "tests.data.python.custom_formatters.add_comment"
 ADD_LICENSE_FORMATTER = "tests.data.python.custom_formatters.add_license"
+FAKE_RUFF_PATH = "/opt/fake-ruff/bin/ruff"
 
 
 def test_python_version() -> None:
@@ -170,7 +171,7 @@ def test_format_code_ruff_format_formatter(tmp_path: Path, monkeypatch: pytest.M
         formatters=[Formatter.RUFF_FORMAT],
     )
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         mock_run.return_value.stdout = b"output"
@@ -178,7 +179,7 @@ def test_format_code_ruff_format_formatter(tmp_path: Path, monkeypatch: pytest.M
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("/tmp/venv/bin/ruff", "format", "-"),
+        (FAKE_RUFF_PATH, "format", "-"),
         input=b"input",
         capture_output=True,
         check=False,
@@ -194,7 +195,7 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
         formatters=[Formatter.RUFF_CHECK],
     )
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         mock_run.return_value.stdout = b"output"
@@ -202,7 +203,7 @@ def test_format_code_ruff_check_formatter(tmp_path: Path, monkeypatch: pytest.Mo
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "-"),
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", "-"),
         input=b"input",
         capture_output=True,
         check=False,
@@ -221,7 +222,7 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
         use_type_checking_imports=False,
     )
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         mock_run.return_value.stdout = b"output"
@@ -229,7 +230,7 @@ def test_format_code_ruff_check_formatter_without_type_checking_imports(
 
     assert formatted_code == "output"
     mock_run.assert_called_once_with(
-        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", "-"),
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", "-"),
         input=b"input",
         capture_output=True,
         check=False,
@@ -243,9 +244,9 @@ def test_resolve_use_type_checking_imports_respects_explicit_value(explicit_valu
     assert (
         resolve_use_type_checking_imports(
             explicit_value,
-            defer_formatting=True,
+            is_multi_module_output=True,
             formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-            is_pydantic_output=True,
+            preserve_runtime_imports_for_multi_module_ruff=True,
         )
         is explicit_value
     )
@@ -255,9 +256,9 @@ def test_resolve_use_type_checking_imports_defaults_to_runtime_imports_for_defer
     """Test deferred Ruff formatting keeps runtime imports for modular Pydantic output by default."""
     assert not resolve_use_type_checking_imports(
         None,
-        defer_formatting=True,
+        is_multi_module_output=True,
         formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-        is_pydantic_output=True,
+        preserve_runtime_imports_for_multi_module_ruff=True,
     )
 
 
@@ -265,15 +266,15 @@ def test_resolve_use_type_checking_imports_keeps_existing_default_outside_deferr
     """Test non-modular or non-Pydantic output keeps TYPE_CHECKING imports enabled by default."""
     assert resolve_use_type_checking_imports(
         None,
-        defer_formatting=False,
+        is_multi_module_output=False,
         formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
-        is_pydantic_output=True,
+        preserve_runtime_imports_for_multi_module_ruff=True,
     )
     assert resolve_use_type_checking_imports(
         None,
-        defer_formatting=True,
+        is_multi_module_output=True,
         formatters=[Formatter.RUFF_CHECK],
-        is_pydantic_output=False,
+        preserve_runtime_imports_for_multi_module_ruff=False,
     )
 
 
@@ -287,7 +288,7 @@ def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
         formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
     )
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff") as mock_find_ruff_path,
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH) as mock_find_ruff_path,
         mock.patch("subprocess.run") as mock_run,
     ):
         mock_run.side_effect = [
@@ -300,14 +301,14 @@ def test_format_code_ruff_check_and_format_uses_resolved_ruff_path(
     mock_find_ruff_path.assert_called_once_with()
     assert mock_run.call_args_list == [
         mock.call(
-            ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", "-"),
+            (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", "-"),
             input=b"input",
             capture_output=True,
             check=False,
             cwd=str(tmp_path),
         ),
         mock.call(
-            ("/tmp/venv/bin/ruff", "format", "-"),
+            (FAKE_RUFF_PATH, "format", "-"),
             input=b"checked",
             capture_output=True,
             check=False,
@@ -367,13 +368,13 @@ def test_format_directory_ruff_check(tmp_path: Path, monkeypatch: pytest.MonkeyP
     output_dir.mkdir()
 
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
-        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -391,13 +392,13 @@ def test_format_directory_ruff_format(tmp_path: Path, monkeypatch: pytest.Monkey
     output_dir.mkdir()
 
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         formatter.format_directory(output_dir)
 
     mock_run.assert_called_once_with(
-        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
+        (FAKE_RUFF_PATH, "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -415,20 +416,81 @@ def test_format_directory_both_ruff_formatters(tmp_path: Path, monkeypatch: pyte
     output_dir.mkdir()
 
     with (
-        mock.patch.object(formatter, "_find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("subprocess.run") as mock_run,
     ):
         formatter.format_directory(output_dir)
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
     )
     mock_run.assert_any_call(
-        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
+        (FAKE_RUFF_PATH, "format", str(output_dir)),
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+
+
+def test_format_directory_ruff_check_without_type_checking_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test format_directory keeps runtime imports when requested."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK],
+        use_type_checking_imports=False,
+    )
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        formatter.format_directory(output_dir)
+
+    mock_run.assert_called_once_with(
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", str(output_dir)),
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+
+
+def test_format_directory_both_ruff_formatters_without_type_checking_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test format_directory keeps runtime imports with both Ruff formatters."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.RUFF_CHECK, Formatter.RUFF_FORMAT],
+        use_type_checking_imports=False,
+    )
+    output_dir = tmp_path / "output"
+    output_dir.mkdir()
+
+    with (
+        mock.patch.object(formatter, "_find_ruff_path", return_value=FAKE_RUFF_PATH),
+        mock.patch("subprocess.run") as mock_run,
+    ):
+        formatter.format_directory(output_dir)
+
+    assert mock_run.call_count == 2
+    mock_run.assert_any_call(
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", "--unfixable", "TC001,TC002,TC003", str(output_dir)),
+        capture_output=True,
+        check=False,
+        cwd=str(tmp_path),
+    )
+    mock_run.assert_any_call(
+        (FAKE_RUFF_PATH, "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=str(tmp_path),
@@ -466,7 +528,7 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
     output_dir = tmp_path / "output"
 
     with (
-        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
         generate(
@@ -479,7 +541,7 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
         (
-            "/tmp/venv/bin/ruff",
+            FAKE_RUFF_PATH,
             "check",
             "--fix",
             "--unsafe-fixes",
@@ -492,7 +554,7 @@ def test_generate_with_ruff_batch_formatting(tmp_path: Path) -> None:
         cwd=mock.ANY,
     )
     mock_run.assert_any_call(
-        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
+        (FAKE_RUFF_PATH, "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=mock.ANY,
@@ -514,7 +576,7 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
     output_dir = tmp_path / "output"
 
     with (
-        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value="/tmp/venv/bin/ruff"),
+        mock.patch("datamodel_code_generator.format.CodeFormatter._find_ruff_path", return_value=FAKE_RUFF_PATH),
         mock.patch("datamodel_code_generator.format.subprocess.run") as mock_run,
     ):
         generate(
@@ -527,13 +589,13 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
 
     assert mock_run.call_count == 2
     mock_run.assert_any_call(
-        ("/tmp/venv/bin/ruff", "check", "--fix", "--unsafe-fixes", str(output_dir)),
+        (FAKE_RUFF_PATH, "check", "--fix", "--unsafe-fixes", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=mock.ANY,
     )
     mock_run.assert_any_call(
-        ("/tmp/venv/bin/ruff", "format", str(output_dir)),
+        (FAKE_RUFF_PATH, "format", str(output_dir)),
         capture_output=True,
         check=False,
         cwd=mock.ANY,

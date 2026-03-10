@@ -33,6 +33,7 @@ class DataClass(DataModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/dataclass.jinja2"
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_PYDANTIC_DATACLASS,)
+    PRESERVE_RUNTIME_IMPORTS_FOR_MULTI_MODULE_RUFF: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_KW_ONLY: ClassVar[bool] = True
     # frozen/allow_mutation are handled as dataclass decorator arguments, not ConfigDict
