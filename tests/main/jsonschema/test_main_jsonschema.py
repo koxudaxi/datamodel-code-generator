@@ -3992,6 +3992,25 @@ def test_main_dataclass_deprecated_model_preserves_existing_decorator(output_fil
     )
 
 
+def test_main_dataclass_deprecated_model_with_other_decorator(output_file: Path) -> None:
+    """Test deprecated dataclass generation adds deprecation alongside other decorators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_dataclass_with_other_decorator.py",
+        extra_args=[
+            "--output-model-type",
+            "dataclasses.dataclass",
+            "--class-decorators",
+            "@some_decorator",
+            "--additional-imports",
+            "some_module.some_decorator",
+        ],
+    )
+
+
 def test_main_pydantic_v2_dataclass_deprecated_model(output_file: Path) -> None:
     """Test pydantic v2 dataclass generation with deprecated schema metadata."""
     run_main_and_assert(
@@ -4001,6 +4020,25 @@ def test_main_pydantic_v2_dataclass_deprecated_model(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="deprecated_pydantic_v2_dataclass.py",
         extra_args=["--output-model-type", "pydantic_v2.dataclass"],
+    )
+
+
+def test_main_pydantic_v2_dataclass_deprecated_model_with_other_decorator(output_file: Path) -> None:
+    """Test pydantic v2 dataclass generation adds deprecation alongside other decorators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "deprecated_dataclass.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="deprecated_pydantic_v2_dataclass_with_other_decorator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.dataclass",
+            "--class-decorators",
+            "@some_decorator",
+            "--additional-imports",
+            "some_module.some_decorator",
+        ],
     )
 
 
