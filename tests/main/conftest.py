@@ -10,12 +10,13 @@ import time
 from argparse import Namespace
 from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import black
 import pytest
 from packaging import version
 
+from datamodel_code_generator import InputFileType, generate
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import (
@@ -238,6 +239,53 @@ def run_main_with_args(
         captured = capsys.readouterr()
         assert_output(captured.out, expected_stdout_path)
     return return_code
+
+
+def run_generate_file_and_assert(
+    *,
+    input_path: Path,
+    output_path: Path,
+    input_file_type: InputFileType | None = None,
+    assert_func: AssertFileContent,
+    expected_file: str | Path | None = None,
+    transform: Callable[[str], str] | None = None,
+    **generate_kwargs: Any,
+) -> None:
+    """Execute generate() for a file input and assert the generated output."""
+    __tracebackhide__ = True
+
+    input_: Path = input_path
+    if input_path.is_absolute():
+        try:
+            input_ = input_path.relative_to(Path.cwd())
+        except ValueError:
+            input_ = input_path
+        else:
+            assert not input_.is_absolute()
+
+    generate_options: dict[str, Any] = {
+        "output": output_path,
+        **generate_kwargs,
+    }
+    if input_file_type is not None:
+        generate_options["input_file_type"] = input_file_type
+
+    generate(
+        input_=input_,
+        **generate_options,
+    )
+
+    if expected_file is None:
+        frame = inspect.currentframe()
+        assert frame is not None
+        assert frame.f_back is not None
+        func_name = frame.f_back.f_code.co_name
+        del frame
+        for prefix in ("test_main_", "test_"):
+            func_name = func_name.removeprefix(prefix)
+        expected_file = f"{func_name}.py"
+
+    assert_func(output_path, expected_file, transform=transform)
 
 
 def run_main_and_assert(  # noqa: PLR0912

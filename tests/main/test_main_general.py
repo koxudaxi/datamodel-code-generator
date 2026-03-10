@@ -37,6 +37,7 @@ from tests.main.conftest import (
     OPEN_API_DATA_PATH,
     PYTHON_DATA_PATH,
     TIMESTAMP,
+    run_generate_file_and_assert,
     run_main_and_assert,
     run_main_with_args,
 )
@@ -137,23 +138,23 @@ def test_direct_input_dict(tmp_path: Path) -> None:
     ],
 )
 def test_frozen_dataclasses(
-    tmp_path: Path,
+    output_file: Path,
     keyword_only: bool,
     target_python_version: PythonVersion,
     expected_file: str,
 ) -> None:
     """Test --frozen-dataclasses flag functionality."""
-    output_file = tmp_path / "output.py"
-    generate(
-        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+    run_generate_file_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file=expected_file,
         output_model_type=DataModelType.DataclassesDataclass,
         frozen_dataclasses=True,
         keyword_only=keyword_only,
         target_python_version=target_python_version,
     )
-    assert_file_content(output_file, expected_file)
 
 
 @pytest.mark.cli_doc(
@@ -204,18 +205,18 @@ def test_frozen_dataclasses_command_line(output_file: Path, extra_args: list[str
 
 
 @freeze_time(TIMESTAMP)
-def test_class_decorators(tmp_path: Path) -> None:
+def test_class_decorators(output_file: Path) -> None:
     """Test --class-decorators flag functionality."""
-    output_file = tmp_path / "output.py"
-    generate(
-        DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+    run_generate_file_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "simple_frozen_test.json",
+        output_path=output_file,
         input_file_type=InputFileType.JsonSchema,
-        output=output_file,
+        assert_func=assert_file_content,
+        expected_file="class_decorators_dataclass.py",
         output_model_type=DataModelType.DataclassesDataclass,
         class_decorators=["@dataclass_json"],
         additional_imports=["dataclasses_json.dataclass_json"],
     )
-    assert_file_content(output_file, "class_decorators_dataclass.py")
 
 
 @pytest.mark.cli_doc(
