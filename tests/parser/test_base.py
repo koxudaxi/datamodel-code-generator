@@ -707,7 +707,7 @@ def test_needs_validate_default_for_union_type_alias() -> None:
 
 
 def test_needs_validate_default_for_optional_single_model_union() -> None:
-    """Test _needs_validate_default returns True for A | None with dict default."""
+    """Test _needs_validate_default returns True for A | None union."""
     model_reference = Reference(path="A", original_name="A", name="A")
     BaseModel(fields=[], reference=model_reference)
 
