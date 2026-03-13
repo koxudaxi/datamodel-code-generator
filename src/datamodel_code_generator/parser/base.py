@@ -436,10 +436,8 @@ def _contains_model_reference(data_type: DataType) -> bool:
     return False
 
 
-def _needs_validate_default(default: Any, data_type: DataType) -> bool:
+def _needs_validate_default(data_type: DataType) -> bool:
     """Check if a field needs validate_default=True to coerce defaults into model instances."""
-    if default is None:
-        return False
     resolved = _unwrap_type_alias(data_type)
     return _contains_model_reference(resolved)
 
@@ -2211,7 +2209,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 if isinstance(model_field.default, (Member, WrappedDefault)):
                     continue
-                if not _needs_validate_default(model_field.default, model_field.data_type):
+                if not _needs_validate_default(model_field.data_type):
                     continue
                 model_field.extras["validate_default"] = True
 

@@ -703,7 +703,7 @@ def test_needs_validate_default_for_union_type_alias() -> None:
     alias_reference = Reference(path="Alias", original_name="Alias", name="Alias")
     TypeStatement(fields=[DataModelField(data_type=union_data_type)], reference=alias_reference)
 
-    assert _needs_validate_default({"type": "b"}, DataType(reference=alias_reference)) is True
+    assert _needs_validate_default(DataType(reference=alias_reference)) is True
 
 
 def test_needs_validate_default_for_optional_single_model_union() -> None:
@@ -716,4 +716,4 @@ def test_needs_validate_default_for_optional_single_model_union() -> None:
         use_union_operator=True,
     )
 
-    assert _needs_validate_default({"type": "a"}, optional_model_union) is True
+    assert _needs_validate_default(optional_model_union) is True
