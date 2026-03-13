@@ -25,7 +25,6 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -37,8 +36,6 @@ from datamodel_code_generator.types import (
     chain_as_tuple,
     get_optional_type,
 )
-
-__all__ = ["WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -598,7 +595,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = True
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
-    SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     has_forward_reference: bool = False

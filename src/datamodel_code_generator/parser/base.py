@@ -75,7 +75,6 @@ from datamodel_code_generator.model.base import (
     ConstraintsBase,
     DataModel,
     DataModelFieldBase,
-    WrappedDefault,
 )
 from datamodel_code_generator.model.enum import Enum, Member
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
@@ -2169,33 +2168,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     else:
                         enum_member.alias = data_type.alias
 
-    def __wrap_root_model_default_values(
-        self,
-        models: list[DataModel],
-    ) -> None:
-        """Wrap RootModel reference default values with their type constructors."""
-        if not self.use_annotated or not self.data_model_type.SUPPORTS_WRAPPED_DEFAULT:
-            return
-        for model, model_field, data_type in iter_models_field_data_types(models):
-            if isinstance(model, (Enum, self.data_model_root_type)):
-                continue
-            if model_field.default is None:
-                continue
-            if isinstance(model_field.default, (WrappedDefault, Member)):
-                continue
-            if isinstance(model_field.default, list):
-                continue
-            if (
-                data_type.reference
-                and isinstance(data_type.reference.source, self.data_model_root_type)
-                and not isinstance(data_type.reference.source, TypeAliasBase)
-            ):
-                type_name = data_type.alias or data_type.reference.short_name
-                model_field.default = WrappedDefault(
-                    value=model_field.default,
-                    type_name=type_name,
-                )
-
     def __set_validate_default_on_fields(  # noqa: PLR6301
         self,
         models: list[DataModel],
@@ -2207,7 +2179,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             for model_field in model.fields:
                 if model_field.default is None or model_field.default is UNDEFINED:
                     continue
-                if isinstance(model_field.default, (Member, WrappedDefault)):
+                if isinstance(model_field.default, Member):
                     continue
                 if not _needs_validate_default(model_field.data_type):
                     continue
@@ -3248,7 +3220,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.__reuse_model(models, require_update_action_models)
         self.__collapse_root_models(models, unused_models, imports, scoped_model_resolver)
         self.__set_default_enum_member(models)
-        self.__wrap_root_model_default_values(models)
         self.__sort_models(models, imports, use_deferred_annotations=config.use_deferred_annotations)
         self.__change_field_name(models)
         self.__apply_discriminator_type(models, imports)

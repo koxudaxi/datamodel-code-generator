@@ -19,7 +19,6 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
 from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 
@@ -125,11 +124,6 @@ class DataModelField(DataModelFieldBase):
             return value
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> str | None:
-        if isinstance(self.default, WrappedDefault):
-            return f"lambda :{self.default!r}"
-        return None
-
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
         """Get default_factory for optional nested Pydantic model fields.
 
@@ -188,10 +182,10 @@ class DataModelField(DataModelFieldBase):
             elif isinstance(discriminator, dict):  # pragma: no cover
                 data["discriminator"] = discriminator["propertyName"]
 
-        if self.required and not self.has_default:
+        if (self.required and not self.has_default) or (
+            self.default is not UNDEFINED and self.default is not None and "default_factory" not in data
+        ):
             default_factory = None
-        elif self.default is not UNDEFINED and self.default is not None and "default_factory" not in data:
-            default_factory = self._get_default_as_pydantic_model()
         else:
             default_factory = data.pop("default_factory", None)
 
