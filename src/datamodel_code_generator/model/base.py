@@ -25,7 +25,7 @@ from datamodel_code_generator.imports import (
     IMPORT_UNION,
     Import,
 )
-from datamodel_code_generator.model._types import ValidatedDefault, WrappedDefault
+from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.reference import Reference, _BaseModel
 from datamodel_code_generator.types import (
     ANY,
@@ -38,7 +38,7 @@ from datamodel_code_generator.types import (
     get_optional_type,
 )
 
-__all__ = ["ValidatedDefault", "WrappedDefault"]
+__all__ = ["WrappedDefault"]
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -599,7 +599,6 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = False
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = False
-    SUPPORTS_VALIDATED_DEFAULT: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
     has_forward_reference: bool = False

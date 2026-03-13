@@ -14,11 +14,7 @@ class ItemModel(BaseModel):
 
 class ParentModel(BaseModel):
     dict_with_defaults: dict[str, ItemModel] | None = Field(
-        default_factory=lambda: {
-            k: ItemModel.model_validate(v)
-            for k, v in {
-                'jedi': {'description': 'The wise old jedi', 'name': 'Yoda'}
-            }.items()
-        },
+        {'jedi': {'description': 'The wise old jedi', 'name': 'Yoda'}},
         title='Dict With Defaults',
+        validate_default=True,
     )

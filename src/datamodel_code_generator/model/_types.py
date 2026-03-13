@@ -16,15 +16,3 @@ class WrappedDefault:
     def __repr__(self) -> str:
         """Return type constructor representation, e.g., 'CountType(10)'."""
         return f"{self.type_name}({self.value!r})"
-
-
-@dataclass(repr=False)
-class ValidatedDefault:
-    """Represents a structured default validated through the field type."""
-
-    value: Any
-    type_name: str
-
-    def __repr__(self) -> str:
-        """Return TypeAdapter validation representation for structured defaults."""
-        return f"TypeAdapter({self.type_name}).validate_python({self.value!r})"

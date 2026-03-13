@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Annotated, Literal
 
 from my_app import AliasA
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 
 class B(BaseModel):
@@ -15,11 +15,4 @@ class B(BaseModel):
 
 
 class Model(BaseModel):
-    x: Annotated[
-        AliasA | B | None,
-        Field(
-            default_factory=lambda: TypeAdapter(AliasA | B).validate_python(
-                {'type': 'b'}
-            )
-        ),
-    ]
+    x: Annotated[AliasA | B | None, Field(validate_default=True)] = {'type': 'b'}

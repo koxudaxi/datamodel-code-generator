@@ -4,9 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class A(BaseModel):
@@ -20,4 +20,4 @@ type U = AliasDict | A
 
 
 class Model(BaseModel):
-    x: U | None = {'type': 'a'}
+    x: Annotated[U | None, Field(validate_default=True)] = {'type': 'a'}

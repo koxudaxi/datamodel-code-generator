@@ -13,12 +13,8 @@ class Foo(BaseModel):
 
 
 class Bar(BaseModel):
-    foo: Foo | None = Field(
-        default_factory=lambda: Foo.model_validate({'text': 'abc', 'number': 123})
-    )
+    foo: Foo | None = Field({'text': 'abc', 'number': 123}, validate_default=True)
     baz: list[Foo] | None = Field(
-        default_factory=lambda: [
-            Foo.model_validate(v)
-            for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
-        ]
+        [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}],
+        validate_default=True,
     )

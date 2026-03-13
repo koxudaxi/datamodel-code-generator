@@ -14,5 +14,5 @@ class ItemModel(BaseModel):
 
 class ParentModel(BaseModel):
     dict_with_defaults: dict[str, ItemModel] | None = Field(
-        default_factory=dict, title='Dict With Defaults'
+        {}, title='Dict With Defaults', validate_default=True
     )

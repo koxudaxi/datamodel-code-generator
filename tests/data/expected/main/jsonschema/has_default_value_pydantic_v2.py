@@ -25,21 +25,17 @@ class Pet(BaseModel):
 
 
 class Family(RootModel[list[ID]]):
-    root: list[ID] = Field(
-        default_factory=lambda: [ID.model_validate(v) for v in ['abc', 'efg']]
-    )
+    root: list[ID] = Field(['abc', 'efg'], validate_default=True)
 
 
 class FamilyPets(RootModel[list[Pet]]):
     root: list[Pet] = Field(
-        default_factory=lambda: [
-            Pet.model_validate(v) for v in [{'name': 'taro'}, {'name': 'shiro'}]
-        ]
+        [{'name': 'taro'}, {'name': 'shiro'}], validate_default=True
     )
 
 
 class Person(BaseModel):
-    id: ID | None = Field(default_factory=lambda: ID('abc'))
+    id: ID | None = Field('abc', validate_default=True)
     user: Pet | None = None
     firstName: str | None = Field(None, description="The person's first name.")
     team: TeamType | None = 'Department'

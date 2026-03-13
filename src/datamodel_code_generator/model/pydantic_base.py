@@ -19,15 +19,14 @@ from datamodel_code_generator.model import (
     DataModel,
     DataModelFieldBase,
 )
-from datamodel_code_generator.model._types import ValidatedDefault, WrappedDefault
+from datamodel_code_generator.model._types import WrappedDefault
 from datamodel_code_generator.model.base import UNDEFINED, repr_set_sorted
-from datamodel_code_generator.types import STANDARD_DICT, STANDARD_LIST, UnionIntFloat, chain_as_tuple
+from datamodel_code_generator.types import UnionIntFloat, chain_as_tuple
 
 # Defined here instead of importing from pydantic_v2.imports to avoid circular import
 # (pydantic_base -> pydantic_v2.imports -> pydantic_v2/__init__ -> pydantic_v2.base_model -> pydantic_base)
 IMPORT_ANYURL = Import.from_full_path("pydantic.AnyUrl")
 IMPORT_FIELD = Import.from_full_path("pydantic.Field")
-IMPORT_TYPE_ADAPTER = Import.from_full_path("pydantic.TypeAdapter")
 
 if TYPE_CHECKING:
     from collections import defaultdict
@@ -126,79 +125,9 @@ class DataModelField(DataModelFieldBase):
             return value
         return int(value)
 
-    def _get_default_as_pydantic_model(self) -> str | None:  # noqa: PLR0911, PLR0912
-        if isinstance(self.default, (ValidatedDefault, WrappedDefault)):
+    def _get_default_as_pydantic_model(self) -> str | None:
+        if isinstance(self.default, WrappedDefault):
             return f"lambda :{self.default!r}"
-        if self.data_type.is_list and len(self.data_type.data_types) == 1:
-            data_type_child = self.data_type.data_types[0]
-            if (
-                data_type_child.reference
-                and isinstance(data_type_child.reference.source, BaseModelBase)
-                and isinstance(self.default, list)
-            ):
-                if not self.default:
-                    return STANDARD_LIST
-                return (  # pragma: no cover
-                    f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
-                    f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
-                )
-        if self.data_type.is_dict and len(self.data_type.data_types) == 1:
-            data_type_value = self.data_type.data_types[0]
-            if (
-                data_type_value.reference
-                and isinstance(data_type_value.reference.source, BaseModelBase)
-                and isinstance(self.default, dict)
-            ):
-                if not self.default:
-                    return STANDARD_DICT
-                return (
-                    f"lambda :{{k: {data_type_value.alias or data_type_value.reference.source.class_name}."
-                    f"{self._PARSE_METHOD}(v) for k, v in {self.default!r}.items()}}"
-                )
-
-        for data_type in self.data_type.data_types or (self.data_type,):
-            # TODO: Check nested data_types
-            if data_type.is_dict:
-                if len(data_type.data_types) == 1:
-                    data_type_value = data_type.data_types[0]
-                    if (
-                        data_type_value.reference
-                        and isinstance(data_type_value.reference.source, BaseModelBase)
-                        and isinstance(self.default, dict)
-                    ):
-                        if not self.default:
-                            return STANDARD_DICT
-                        return (
-                            f"lambda :{{k: {data_type_value.alias or data_type_value.reference.source.class_name}."
-                            f"{self._PARSE_METHOD}(v) for k, v in {self.default!r}.items()}}"
-                        )
-                continue
-            if data_type.is_list and len(data_type.data_types) == 1:
-                data_type_child = data_type.data_types[0]
-                if (
-                    data_type_child.reference
-                    and isinstance(data_type_child.reference.source, BaseModelBase)
-                    and isinstance(self.default, list)
-                ):  # pragma: no cover
-                    if not self.default:
-                        return STANDARD_LIST
-                    return (
-                        f"lambda :[{data_type_child.alias or data_type_child.reference.source.class_name}."
-                        f"{self._PARSE_METHOD}(v) for v in {self.default!r}]"
-                    )
-            elif data_type.reference and isinstance(data_type.reference.source, BaseModelBase):
-                source = data_type.reference.source
-                is_root_model = hasattr(source, "BASE_CLASS") and source.BASE_CLASS == "pydantic.RootModel"
-                if self.data_type.is_union:
-                    if not isinstance(self.default, (dict, list)):
-                        if not is_root_model:
-                            continue
-                    elif isinstance(self.default, dict) and any(dt.is_dict for dt in self.data_type.data_types):
-                        continue
-                class_name = data_type.alias or source.class_name
-                if is_root_model:
-                    return f"lambda :{class_name}({self.default!r})"
-                return f"lambda :{class_name}.{self._PARSE_METHOD}({self.default!r})"
         return None
 
     def _get_default_factory_for_optional_nested_model(self) -> str | None:
@@ -323,12 +252,8 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        field = self.field
-        if field:
-            extra_imports = [IMPORT_FIELD]
-            if isinstance(self.default, ValidatedDefault):
-                extra_imports.append(IMPORT_TYPE_ADAPTER)
-            return chain_as_tuple(super().imports, extra_imports)
+        if self.field:
+            return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 
 

@@ -14,13 +14,9 @@ class Foo(RootModel[str]):
 
 
 class Bar(BaseModel):
-    foo: Foo_1 | None = Field(
-        default_factory=lambda: Foo_1.model_validate({'text': 'abc', 'number': 123})
-    )
+    foo: Foo_1 | None = Field({'text': 'abc', 'number': 123}, validate_default=True)
     baz: list[Foo_1] | None = Field(
-        default_factory=lambda: [
-            Foo_1.model_validate(v)
-            for v in [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}]
-        ]
+        [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}],
+        validate_default=True,
     )
-    nested_foo: Foo | None = Field(default_factory=lambda: Foo('default foo'))
+    nested_foo: Foo | None = Field('default foo', validate_default=True)

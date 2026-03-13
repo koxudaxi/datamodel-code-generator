@@ -18,8 +18,7 @@ from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBa
 from datamodel_code_generator.parser.base import (
     Parser,
     _contains_model_reference,
-    _get_validated_default_type_name,
-    _needs_validated_default,
+    _needs_validate_default,
     _unwrap_type_alias,
     add_model_path_to_list,
     escape_characters,
@@ -690,15 +689,8 @@ def test_contains_model_reference_traverses_dict_key() -> None:
     assert _contains_model_reference(dict_with_model_key) is True
 
 
-def test_get_validated_default_type_name_strips_optional_none() -> None:
-    """Test _get_validated_default_type_name removes None from optional types."""
-    optional_string = DataType(type="str", is_optional=True, use_union_operator=True)
-
-    assert _get_validated_default_type_name(optional_string) == "str"
-
-
-def test_needs_validated_default_for_union_type_alias() -> None:
-    """Test _needs_validated_default resolves type aliases before checking union branches."""
+def test_needs_validate_default_for_union_type_alias() -> None:
+    """Test _needs_validate_default resolves type aliases before checking union branches."""
     a_reference = Reference(path="A", original_name="A", name="A")
     b_reference = Reference(path="B", original_name="B", name="B")
     BaseModel(fields=[], reference=a_reference)
@@ -711,11 +703,11 @@ def test_needs_validated_default_for_union_type_alias() -> None:
     alias_reference = Reference(path="Alias", original_name="Alias", name="Alias")
     TypeStatement(fields=[DataModelField(data_type=union_data_type)], reference=alias_reference)
 
-    assert _needs_validated_default({"type": "b"}, DataType(reference=alias_reference)) is True
+    assert _needs_validate_default({"type": "b"}, DataType(reference=alias_reference)) is True
 
 
-def test_needs_validated_default_skips_optional_single_model_union() -> None:
-    """Test _needs_validated_default keeps the existing factory path for A | None."""
+def test_needs_validate_default_for_optional_single_model_union() -> None:
+    """Test _needs_validate_default returns True for A | None with dict default."""
     model_reference = Reference(path="A", original_name="A", name="A")
     BaseModel(fields=[], reference=model_reference)
 
@@ -724,4 +716,4 @@ def test_needs_validated_default_skips_optional_single_model_union() -> None:
         use_union_operator=True,
     )
 
-    assert _needs_validated_default({"type": "a"}, optional_model_union) is False
+    assert _needs_validate_default({"type": "a"}, optional_model_union) is True

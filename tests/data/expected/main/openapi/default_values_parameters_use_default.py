@@ -13,7 +13,7 @@ class Filter(BaseModel):
 
 class UsersGetParametersQuery(BaseModel):
     status: str | None = 'active'
-    filter: Filter | None = Field(default_factory=lambda: Filter.model_validate({}))
+    filter: Filter | None = Field({}, validate_default=True)
 
 
 class User(BaseModel):

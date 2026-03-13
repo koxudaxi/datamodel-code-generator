@@ -12,4 +12,4 @@ class Timeout(RootModel[conint(le=14400, gt=0)]):
 
 
 class CrawlConfiguration(BaseModel):
-    timeout: Timeout | None = Field(default_factory=lambda: Timeout(3600))
+    timeout: Timeout | None = Field(3600, validate_default=True)

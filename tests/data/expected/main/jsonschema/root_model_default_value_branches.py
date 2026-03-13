@@ -19,6 +19,5 @@ class Model(BaseModel):
     ]
     count_no_default: CountType | None = None
     count_list_default: Annotated[
-        list[CountType] | None,
-        Field(default_factory=lambda: [CountType.model_validate(v) for v in [1, 2, 3]]),
-    ]
+        list[CountType] | None, Field(validate_default=True)
+    ] = [1, 2, 3]
