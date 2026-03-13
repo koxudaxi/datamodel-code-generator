@@ -211,7 +211,7 @@ class DataModelField(DataModelFieldBase):
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
-        elif self.required and not default_factory:
+        elif self.required and not default_factory and not self.extras.get("validate_default"):
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
             default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
