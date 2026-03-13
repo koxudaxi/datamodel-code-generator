@@ -3851,10 +3851,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Get reference body from a remote file path."""
         full_path = self.base_path / resolved_ref
 
-        return self.remote_object_cache.get_or_put(
-            str(full_path),
-            default_factory=lambda _: load_data_from_path(full_path, self.encoding),
-        )
+        try:
+            return self.remote_object_cache.get_or_put(
+                str(full_path),
+                default_factory=lambda _: load_data_from_path(full_path, self.encoding),
+            )
+        except FileNotFoundError:
+            msg = f"$ref file not found: {full_path}"
+            raise Error(msg) from None
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""

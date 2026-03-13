@@ -973,6 +973,32 @@ def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.Captu
     )
 
 
+def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that missing local $ref files produce a clear error message."""
+    import json
+
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "nonexistent.json#/definitions/Thing"},
+        },
+    }
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+    output_file = tmp_path / "output.py"
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="$ref file not found",
+    )
+
+
 @pytest.mark.benchmark
 def test_main_jsonschema_id(output_file: Path) -> None:
     """Test JSON Schema with ID field."""
