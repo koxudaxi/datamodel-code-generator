@@ -840,6 +840,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id.json", input_file)],
@@ -885,6 +886,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id.py",
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
@@ -915,6 +917,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id_absolute_url.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_absolute_url.json", input_file)],
@@ -939,6 +942,34 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="root_id_absolute_url.py",
+    )
+
+
+@pytest.mark.cli_doc(options=["--allow-remote-refs"])
+def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that remote $ref fetching is blocked when --allow-remote-refs is not set."""
+    schema = {
+        "$id": "https://example.com/schema/main.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
+        },
+    }
+    import json
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+    output_file = tmp_path / "output.py"
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--allow-remote-refs",
     )
 
 

@@ -30,6 +30,7 @@ from typing_extensions import Unpack
 from datamodel_code_generator import (
     AllOfClassHierarchy,
     AllOfMergeMode,
+    Error,
     InvalidClassNameError,
     JsonSchemaVersion,
     ReadOnlyWriteOnlyModelType,
@@ -3817,6 +3818,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
+            if not self.allow_remote_refs and not resolved_ref.startswith("file://"):
+                msg = (
+                    f"Fetching remote $ref is disabled by default: {resolved_ref}\n"
+                    "Use --allow-remote-refs to enable HTTP fetching of remote references."
+                )
+                raise Error(msg)
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
