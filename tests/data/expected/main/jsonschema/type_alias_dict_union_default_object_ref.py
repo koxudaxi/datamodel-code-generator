@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 
 class A(BaseModel):
@@ -22,11 +22,6 @@ type Alias = dict[str, A | B]
 
 
 class Model(BaseModel):
-    x_value: Annotated[
-        Alias | None,
-        Field(
-            default_factory=lambda: TypeAdapter(Alias).validate_python(
-                {'k': {'type': 'b', 'value': 1}}
-            )
-        ),
-    ]
+    x_value: Annotated[Alias | None, Field(validate_default=True)] = {
+        'k': {'type': 'b', 'value': 1}
+    }

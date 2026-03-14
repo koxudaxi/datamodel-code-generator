@@ -13,12 +13,13 @@ from datamodel_code_generator.imports import (
     IMPORT_TYPE_ALIAS_TYPE,
     Import,
 )
-from datamodel_code_generator.model import DataModel, DataModelFieldBase
 from datamodel_code_generator.model.base import UNDEFINED
+from datamodel_code_generator.model.type_alias import TypeAliasBase
 
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from datamodel_code_generator.model import DataModelFieldBase
     from datamodel_code_generator.reference import Reference
 
 _INT: str = "int"
@@ -38,7 +39,7 @@ DEFAULT_GRAPHQL_SCALAR_TYPES: dict[str, str] = {
 }
 
 
-class _DataTypeScalarBase(DataModel):
+class _DataTypeScalarBase(TypeAliasBase):
     """Base class for GraphQL scalar types with shared __init__ logic."""
 
     def __init__(  # noqa: PLR0913

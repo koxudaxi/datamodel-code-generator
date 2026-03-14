@@ -222,8 +222,6 @@ class BaseModel(BaseModelBase):
     BASE_CLASS_ALIAS: ClassVar[str] = "_BaseModel"
     SUPPORTS_DISCRIMINATOR: ClassVar[bool] = True
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = True
-    SUPPORTS_WRAPPED_DEFAULT: ClassVar[bool] = True
-    SUPPORTS_VALIDATED_DEFAULT: ClassVar[bool] = True
     # In Pydantic 2.11+, populate_by_name is deprecated in favor of validate_by_name + validate_by_alias
     # Default to V2 compatible (populate_by_name) unless target_pydantic_version is specified
     _CONFIG_ATTRIBUTES_V2: ClassVar[list[ConfigAttribute]] = [

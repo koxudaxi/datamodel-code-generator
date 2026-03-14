@@ -10,22 +10,22 @@ from pydantic import BaseModel, Field, RootModel
 
 
 class Zoo(BaseModel):
-    animals: list[Animals] | None = Field(default_factory=list, title='Animals')
+    animals: list[Animals] | None = Field([], title='Animals', validate_default=True)
 
 
 class Dog(BaseModel):
     name: Literal['dog'] = Field('dog', title='woof')
-    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field([], title='Friends', validate_default=True)
 
 
 class Cat(BaseModel):
     name: Literal['cat'] = Field('cat', title='meow')
-    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field([], title='Friends', validate_default=True)
 
 
 class Bird(BaseModel):
     name: Literal['bird'] = Field('bird', title='chirp')
-    friends: list[Friends] | None = Field(default_factory=list, title='Friends')
+    friends: list[Friends] | None = Field([], title='Friends', validate_default=True)
 
 
 class Animals(RootModel[Dog | Cat | Bird]):

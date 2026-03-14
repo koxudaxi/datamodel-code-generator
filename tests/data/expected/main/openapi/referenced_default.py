@@ -13,4 +13,4 @@ class ModelSettingB(RootModel[confloat(ge=0.0, le=10.0)]):
 
 class Model(BaseModel):
     settingA: confloat(ge=0.0, le=10.0) | None = 5
-    settingB: ModelSettingB | None = Field(default_factory=lambda: ModelSettingB(5))
+    settingB: ModelSettingB | None = Field(5, validate_default=True)

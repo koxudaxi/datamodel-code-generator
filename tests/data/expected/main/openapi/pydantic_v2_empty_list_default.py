@@ -12,4 +12,4 @@ class Container(BaseModel):
 
 
 class PodSpec(BaseModel):
-    containers: list[Container] | None = Field(default_factory=list)
+    containers: list[Container] | None = Field([], validate_default=True)

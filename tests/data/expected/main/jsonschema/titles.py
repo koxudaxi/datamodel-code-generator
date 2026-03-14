@@ -31,10 +31,7 @@ class ProcessingStatusUnion(BaseModel):
 class ProcessingTask(BaseModel):
     processing_status_union: (
         ProcessingStatusUnion | ExtendedProcessingTask | ProcessingStatus | None
-    ) = Field(
-        default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
-        title='Processing Status Union Title',
-    )
+    ) = Field('COMPLETED', title='Processing Status Union Title', validate_default=True)
     processing_status: ProcessingStatus | None = 'COMPLETED'
     name: str | None = None
     kind: Kind | None = None

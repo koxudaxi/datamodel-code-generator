@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, TypeAdapter
+from pydantic import BaseModel, Field
 
 
 class A(BaseModel):
@@ -21,6 +21,4 @@ type U = A | B
 
 
 class Model(BaseModel):
-    x: U | None = Field(
-        default_factory=lambda: TypeAdapter(U).validate_python({'type': 'b'})
-    )
+    x: U | None = Field({'type': 'b'}, validate_default=True)
