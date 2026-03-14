@@ -126,6 +126,14 @@ general_options = arg_parser.add_argument_group("General options")
 # Base options for input/output
 # ======================================================================================
 base_options.add_argument(
+    "--allow-remote-refs",
+    help="Allow fetching remote $ref references over HTTP/HTTPS. "
+    "By default, remote fetching is disabled and only local file references are resolved. "
+    "Enable this flag if your schema uses remote $ref targets or $id-based URL resolution.",
+    action="store_true",
+    default=None,
+)
+base_options.add_argument(
     "--http-headers",
     nargs="+",
     metavar="HTTP_HEADER",

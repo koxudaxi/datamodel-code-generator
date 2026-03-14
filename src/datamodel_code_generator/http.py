@@ -35,14 +35,25 @@ def get_body(
 ) -> str:
     """Fetch content from a URL with optional headers and query parameters."""
     httpx = _get_httpx()
-    return httpx.get(
+    response = httpx.get(
         url,
         headers=headers,
         verify=not ignore_tls,
         follow_redirects=True,
         params=query_parameters,  # ty: ignore
         timeout=timeout,
-    ).text
+    )
+    status_code = response.status_code
+    if isinstance(status_code, int) and status_code >= 400:  # noqa: PLR2004
+        msg = f"HTTP {status_code} error fetching {url}"
+        raise Exception(msg)  # noqa: TRY002
+    content_type = response.headers.get("content-type", "") if hasattr(response.headers, "get") else ""
+    if isinstance(content_type, str) and "text/html" in content_type:
+        msg = (
+            f"Unexpected HTML response from {url} (Content-Type: {content_type}). Expected JSON or YAML schema content."
+        )
+        raise Exception(msg)  # noqa: TRY002
+    return response.text
 
 
 def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912

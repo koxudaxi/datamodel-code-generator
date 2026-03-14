@@ -1830,7 +1830,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py",
-        extra_args=["--openapi-scopes", "paths", "schemas"],
+        extra_args=["--openapi-scopes", "paths", "schemas", "--allow-remote-refs"],
     )
     httpx_get_mock.assert_has_calls([
         call(
@@ -4384,6 +4384,7 @@ def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output
             "pydantic_v2.BaseModel",
             "--read-only-write-only-model-type",
             "all",
+            "--allow-remote-refs",
         ],
     )
 
@@ -4407,6 +4408,7 @@ def test_main_openapi_read_only_write_only_allof_url_ref(mocker: MockerFixture, 
             "pydantic_v2.BaseModel",
             "--read-only-write-only-model-type",
             "all",
+            "--allow-remote-refs",
         ],
     )
 

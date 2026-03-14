@@ -594,6 +594,7 @@ schemas:
         data_model_field_type=DataModelFieldBase,
         source=(DATA_PATH / "refs.yaml").read_text(),
         http_ignore_tls=bool(os.environ.get("HTTP_IGNORE_TLS")),
+        allow_remote_refs=True,
     )
     expected_file = get_expected_file("openapi_parser_parse_remote_ref", True, True)
 
