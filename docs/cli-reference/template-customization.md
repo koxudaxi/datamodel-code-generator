@@ -2892,7 +2892,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     class MapState2(BaseModel):
         latitude: Latitude
         longitude: Longitude
-        zoom: Zoom | None = Field(default_factory=lambda: Zoom(0))
+        zoom: Zoom | None = Field(0, validate_default=True)
         bearing: Bearing | None = None
         pitch: Pitch
         drag_rotate: DragRotate | None = Field(None, alias="dragRotate")

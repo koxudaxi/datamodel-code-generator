@@ -6014,9 +6014,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     
     class NestedNullableEnum(BaseModel):
         nested_version: NestedVersion | None = Field(
-            default_factory=lambda: NestedVersion('RC1'),
-            description='nullable enum',
-            examples=['RC2'],
+            'RC1', description='nullable enum', examples=['RC2'], validate_default=True
         )
     
     

@@ -3678,8 +3678,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     class ProcessingTaskTitle(BaseModel):
         processing_status_union: ProcessingStatusUnionTitle | None = Field(
-            default_factory=lambda: ProcessingStatusUnionTitle('COMPLETED'),
-            title='Processing Status Union Title',
+            'COMPLETED', title='Processing Status Union Title', validate_default=True
         )
         processing_status: ProcessingStatusTitle | None = 'COMPLETED'
         name: str | None = None
@@ -3706,10 +3705,7 @@ This is useful when schemas have descriptive titles that should be preserved.
         RootModel[ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle]
     ):
         root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
-            Field(
-                default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
-                title='Processing Status Union Title',
-            )
+            Field('COMPLETED', title='Processing Status Union Title', validate_default=True)
         )
     
     
