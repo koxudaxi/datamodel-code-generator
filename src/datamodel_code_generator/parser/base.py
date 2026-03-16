@@ -2177,6 +2177,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if isinstance(model, Enum):
                 continue
             for model_field in model.fields:
+                if model_field.required and not model_field.use_default_with_required:
+                    continue
                 if model_field.default is None or model_field.default is UNDEFINED:
                     continue
                 if isinstance(model_field.default, Member):
