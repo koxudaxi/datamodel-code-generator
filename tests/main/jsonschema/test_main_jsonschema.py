@@ -957,7 +957,6 @@ def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.Captu
             "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
         },
     }
-    import json
 
     input_file = tmp_path / "schema.json"
     input_file.write_text(json.dumps(schema))
@@ -975,8 +974,6 @@ def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.Captu
 
 def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that missing local $ref files produce a clear error message."""
-    import json
-
     schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Test",
