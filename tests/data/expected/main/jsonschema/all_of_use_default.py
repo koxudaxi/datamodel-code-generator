@@ -8,5 +8,5 @@ from pydantic import BaseModel, Field
 
 
 class Item(BaseModel):
-    test: str | None = 'test123'
-    testarray: list[str] | None = Field(['test123'], min_length=1, title='test array')
+    test: str = 'test123'
+    testarray: list[str] = Field(['test123'], min_length=1, title='test array')

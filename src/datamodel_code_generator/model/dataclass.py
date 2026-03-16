@@ -172,7 +172,7 @@ class DataModelField(DataModelFieldBase):
         if self.default != UNDEFINED and self.default is not None:
             data["default"] = self.default
 
-        if self.required:
+        if self.required and not self.use_default_with_required:
             data = {
                 k: v
                 for k, v in data.items()

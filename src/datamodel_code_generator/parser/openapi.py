@@ -551,20 +551,21 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
-                    effective_required = False
-                fields.append(
-                    self.get_object_field(
-                        field_name=field_name,
-                        field=param_schema,
-                        field_type=self.parse_item(field_name, param_schema, [*path, name, parameter_name]),
-                        original_field_name=parameter_name,
-                        required=effective_required,
-                        alias=alias,
-                        effective_default=effective_default,
-                        effective_has_default=effective_has_default,
-                    )
+                use_default_with_required = (
+                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
                 )
+                new_field = self.get_object_field(
+                    field_name=field_name,
+                    field=param_schema,
+                    field_type=self.parse_item(field_name, param_schema, [*path, name, parameter_name]),
+                    original_field_name=parameter_name,
+                    required=effective_required,
+                    alias=alias,
+                    effective_default=effective_default,
+                    effective_has_default=effective_has_default,
+                )
+                new_field.use_default_with_required = use_default_with_required
+                fields.append(new_field)
             else:
                 data_types: list[DataType] = []
                 object_schema: JsonSchemaObject | None = None
@@ -600,8 +601,9 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
-                    effective_required = False
+                use_default_with_required = (
+                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
+                )
                 # Handle multiple aliases (Pydantic v2 AliasChoices)
                 single_alias: str | None = None
                 validation_aliases: list[str] | None = None
@@ -609,38 +611,38 @@ class OpenAPIParser(JsonSchemaParser):
                     validation_aliases = alias
                 else:
                     single_alias = alias
-                fields.append(
-                    self.data_model_field_type(
-                        name=field_name,
-                        default=effective_default,
-                        data_type=data_type,
-                        required=effective_required,
-                        alias=single_alias,
-                        validation_aliases=validation_aliases,
-                        constraints=object_schema.model_dump(exclude_none=True)
-                        if object_schema and self.is_constraints_field(object_schema)
-                        else None,
-                        nullable=object_schema.nullable
-                        if object_schema and self.strict_nullable and object_schema.nullable is not None
-                        else (
-                            False
-                            if object_schema and self.strict_nullable and (effective_has_default or effective_required)
-                            else None
-                        ),
-                        strip_default_none=self.strip_default_none,
-                        extras=self.get_field_extras(object_schema) if object_schema else {},
-                        use_annotated=self.use_annotated,
-                        use_serialize_as_any=self.use_serialize_as_any,
-                        use_field_description=self.use_field_description,
-                        use_field_description_example=self.use_field_description_example,
-                        use_inline_field_description=self.use_inline_field_description,
-                        use_default_kwarg=self.use_default_kwarg,
-                        original_name=parameter_name,
-                        has_default=effective_has_default,
-                        type_has_null=object_schema.type_has_null if object_schema else None,
-                        use_serialization_alias=self.use_serialization_alias,
-                    )
+                new_field = self.data_model_field_type(
+                    name=field_name,
+                    default=effective_default,
+                    data_type=data_type,
+                    required=effective_required,
+                    alias=single_alias,
+                    validation_aliases=validation_aliases,
+                    constraints=object_schema.model_dump(exclude_none=True)
+                    if object_schema and self.is_constraints_field(object_schema)
+                    else None,
+                    nullable=object_schema.nullable
+                    if object_schema and self.strict_nullable and object_schema.nullable is not None
+                    else (
+                        False
+                        if object_schema and self.strict_nullable and (effective_has_default or effective_required)
+                        else None
+                    ),
+                    strip_default_none=self.strip_default_none,
+                    extras=self.get_field_extras(object_schema) if object_schema else {},
+                    use_annotated=self.use_annotated,
+                    use_serialize_as_any=self.use_serialize_as_any,
+                    use_field_description=self.use_field_description,
+                    use_field_description_example=self.use_field_description_example,
+                    use_inline_field_description=self.use_inline_field_description,
+                    use_default_kwarg=self.use_default_kwarg,
+                    original_name=parameter_name,
+                    has_default=effective_has_default,
+                    type_has_null=object_schema.type_has_null if object_schema else None,
+                    use_serialization_alias=self.use_serialization_alias,
                 )
+                new_field.use_default_with_required = use_default_with_required
+                fields.append(new_field)
 
         if OpenAPIScope.Parameters in self.open_api_scopes and fields:
             # Using _create_data_model from parent class JsonSchemaParser

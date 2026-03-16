@@ -2477,22 +2477,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if self.force_optional_for_required_fields or (  # pragma: no cover
-                    self.apply_default_values_for_required_fields and field.has_default
-                ):
+                if self.force_optional_for_required_fields:  # pragma: no cover
                     continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
+                    if self.apply_default_values_for_required_fields and field.has_default:
+                        field.use_default_with_required = True
         if obj.required:
             field_name_to_field = {f.original_name or f.name: f for f in fields}
             for required_ in obj.required:
                 if required_ in field_name_to_field:
                     field = field_name_to_field[required_]
-                    if self.force_optional_for_required_fields or (
-                        self.apply_default_values_for_required_fields and field.has_default
-                    ):
+                    if self.force_optional_for_required_fields:
                         continue
                     field.required = True
+                    if self.apply_default_values_for_required_fields and field.has_default:
+                        field.use_default_with_required = True
                 else:
                     fields.append(
                         self.data_model_field_type(required=True, original_name=required_, data_type=DataType())
@@ -2828,24 +2828,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 class_name=class_name,
             )
 
-            if self.force_optional_for_required_fields or (
-                self.apply_default_values_for_required_fields and effective_has_default
-            ):
+            if self.force_optional_for_required_fields:
                 required: bool = False
             else:
                 required = original_field_name in requires
-            fields.append(
-                self.get_object_field(
-                    field_name=field_name,
-                    field=field,
-                    required=required,
-                    field_type=field_type,
-                    alias=alias,
-                    original_field_name=original_field_name,
-                    effective_default=effective_default,
-                    effective_has_default=effective_has_default,
-                )
+            new_field = self.get_object_field(
+                field_name=field_name,
+                field=field,
+                required=required,
+                field_type=field_type,
+                alias=alias,
+                original_field_name=original_field_name,
+                effective_default=effective_default,
+                effective_has_default=effective_has_default,
             )
+            if required and self.apply_default_values_for_required_fields and effective_has_default:
+                new_field.use_default_with_required = True
+            fields.append(new_field)
         return fields
 
     def parse_object(

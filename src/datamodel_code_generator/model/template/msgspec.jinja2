@@ -29,7 +29,7 @@ class {{ class_name }}:
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
-    {%- if not field.field and (not field.required or field.data_type.is_optional or field.nullable)
+    {%- if not field.field and (not field.required or field.use_default_with_required or field.data_type.is_optional or field.nullable)
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}
