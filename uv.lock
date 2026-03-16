@@ -947,7 +947,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "ruff", marker = "extra == 'all'", specifier = ">=0.9.10" },
     { name = "ruff", marker = "extra == 'ruff'", specifier = ">=0.9.10" },
-    { name = "ryaml", marker = "extra == 'ryaml'", specifier = ">=0.4" },
+    { name = "ryaml", marker = "extra == 'ryaml'", specifier = ">=0.5.1" },
     { name = "tomli", marker = "python_full_version < '3.12'", specifier = ">=2.2.1,<3" },
     { name = "watchfiles", marker = "extra == 'all'", specifier = ">=1.1" },
     { name = "watchfiles", marker = "extra == 'watch'", specifier = ">=1.1" },
