@@ -1201,6 +1201,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         original_field_name: str | None,
         effective_default: Any = None,
         effective_has_default: bool | None = None,
+        use_default_with_required: bool = False,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
         default_value = effective_default if effective_has_default is not None else field.default
@@ -1251,6 +1252,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_frozen_field=self.use_frozen_field,
             use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
+            use_default_with_required=use_default_with_required,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -2832,19 +2834,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 required: bool = False
             else:
                 required = original_field_name in requires
-            new_field = self.get_object_field(
-                field_name=field_name,
-                field=field,
-                required=required,
-                field_type=field_type,
-                alias=alias,
-                original_field_name=original_field_name,
-                effective_default=effective_default,
-                effective_has_default=effective_has_default,
+            use_default_with_required = (
+                required and self.apply_default_values_for_required_fields and effective_has_default
             )
-            if required and self.apply_default_values_for_required_fields and effective_has_default:
-                new_field.use_default_with_required = True
-            fields.append(new_field)
+            fields.append(
+                self.get_object_field(
+                    field_name=field_name,
+                    field=field,
+                    required=required,
+                    field_type=field_type,
+                    alias=alias,
+                    original_field_name=original_field_name,
+                    effective_default=effective_default,
+                    effective_has_default=effective_has_default,
+                    use_default_with_required=use_default_with_required,
+                )
+            )
         return fields
 
     def parse_object(

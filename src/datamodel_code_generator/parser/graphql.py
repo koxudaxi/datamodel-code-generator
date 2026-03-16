@@ -386,7 +386,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             validation_aliases = alias
         else:
             single_alias = alias
-        new_field = self.data_model_field_type(
+        return self.data_model_field_type(
             name=field_name,
             default=effective_default,
             data_type=final_data_type,
@@ -404,9 +404,8 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             original_name=field_name,
             has_default=effective_has_default,
             use_serialization_alias=self.use_serialization_alias,
+            use_default_with_required=use_default_with_required,
         )
-        new_field.use_default_with_required = use_default_with_required
-        return new_field
 
     def parse_object_like(
         self,
