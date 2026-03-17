@@ -7,6 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from datamodel_code_generator import SchemaFetchError
 from datamodel_code_generator.http import get_body
 
 if TYPE_CHECKING:
@@ -20,7 +21,7 @@ def test_get_body_raises_on_http_error(mocker: MockerFixture) -> None:
     mock_response.headers = {"content-type": "text/html"}
     mocker.patch("httpx.get", return_value=mock_response)
 
-    with pytest.raises(Exception, match="HTTP 404 error fetching"):
+    with pytest.raises(SchemaFetchError, match="HTTP 404 error fetching"):
         get_body("https://example.com/missing.json")
 
 
@@ -31,7 +32,7 @@ def test_get_body_raises_on_html_response(mocker: MockerFixture) -> None:
     mock_response.headers = {"content-type": "text/html; charset=utf-8"}
     mocker.patch("httpx.get", return_value=mock_response)
 
-    with pytest.raises(Exception, match="Unexpected HTML response"):
+    with pytest.raises(SchemaFetchError, match="Unexpected HTML response"):
         get_body("https://example.com/schema.json")
 
 

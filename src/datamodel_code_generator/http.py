@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from datamodel_code_generator import SchemaFetchError
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -45,13 +47,13 @@ def get_body(
     )
     if response.status_code >= 400:  # noqa: PLR2004
         msg = f"HTTP {response.status_code} error fetching {url}"
-        raise Exception(msg)  # noqa: TRY002
+        raise SchemaFetchError(msg)
     content_type = response.headers.get("content-type", "")
     if "text/html" in content_type:
         msg = (
             f"Unexpected HTML response from {url} (Content-Type: {content_type}). Expected JSON or YAML schema content."
         )
-        raise Exception(msg)  # noqa: TRY002
+        raise SchemaFetchError(msg)
     return response.text
 
 
