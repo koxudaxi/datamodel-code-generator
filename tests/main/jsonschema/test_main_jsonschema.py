@@ -827,8 +827,28 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_f
     httpx_get_mock.assert_not_called()
 
 
+@pytest.mark.cli_doc(
+    options=["--allow-remote-refs"],
+    option_description="""Enable fetching of `$ref` targets over HTTP/HTTPS.
+
+When enabled, the generator will resolve `$ref` references that point to remote URLs,
+including relative refs resolved against a schema's `$id` base URL. This is required
+for schemas that reference definitions hosted on external servers.
+
+Automatically enabled when using `--url` input.""",
+    input_schema="jsonschema/root_id.json",
+    cli_args=["--allow-remote-refs"],
+    golden_output="main/jsonschema/root_id.py",
+)
 def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
-    """Test root ID JSON Schema with remote file reference."""
+    """Enable fetching of `$ref` targets over HTTP/HTTPS.
+
+    When enabled, the generator will resolve `$ref` references that point to remote URLs,
+    including relative refs resolved against a schema's `$id` base URL. This is required
+    for schemas that reference definitions hosted on external servers.
+
+    Automatically enabled when using `--url` input.
+    """
     root_id_response = mocker.Mock()
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
@@ -945,7 +965,6 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-@pytest.mark.cli_doc(options=["--allow-remote-refs"])
 def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that remote $ref fetching is blocked when --allow-remote-refs is not set."""
     schema = {
