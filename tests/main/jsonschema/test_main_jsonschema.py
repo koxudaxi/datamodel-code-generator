@@ -981,8 +981,11 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_remote_ref_blocked_by_default(
+    mocker: MockerFixture, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test that remote $ref fetching is blocked when --allow-remote-refs is not set."""
+    httpx_get_mock = mocker.patch("httpx.get")
     schema = {
         "$id": "https://example.com/schema/main.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1005,6 +1008,7 @@ def test_main_remote_ref_blocked_by_default(tmp_path: Path, capsys: pytest.Captu
         capsys=capsys,
         expected_stderr_contains="--allow-remote-refs",
     )
+    httpx_get_mock.assert_not_called()
 
 
 def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1027,7 +1031,7 @@ def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.Cap
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
         capsys=capsys,
-        expected_stderr_contains="$ref file not found",
+        expected_stderr_contains="$ref file not found: " + str(tmp_path / "nonexistent.json"),
     )
 
 
