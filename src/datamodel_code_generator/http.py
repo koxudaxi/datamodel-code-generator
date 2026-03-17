@@ -37,18 +37,22 @@ def get_body(
 ) -> str:
     """Fetch content from a URL with optional headers and query parameters."""
     httpx = _get_httpx()
-    response = httpx.get(
-        url,
-        headers=headers,
-        verify=not ignore_tls,
-        follow_redirects=True,
-        params=query_parameters,  # ty: ignore
-        timeout=timeout,
-    )
+    try:
+        response = httpx.get(
+            url,
+            headers=headers,
+            verify=not ignore_tls,
+            follow_redirects=True,
+            params=query_parameters,  # ty: ignore
+            timeout=timeout,
+        )
+    except Exception as e:
+        msg = f"Failed to fetch {url}: {e}"
+        raise SchemaFetchError(msg) from e
     if response.status_code >= 400:  # noqa: PLR2004
         msg = f"HTTP {response.status_code} error fetching {url}"
         raise SchemaFetchError(msg)
-    content_type = response.headers.get("content-type", "")
+    content_type = response.headers.get("content-type", "").lower()
     if "text/html" in content_type:
         msg = (
             f"Unexpected HTML response from {url} (Content-Type: {content_type}). Expected JSON or YAML schema content."

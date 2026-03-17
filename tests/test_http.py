@@ -58,3 +58,13 @@ def test_get_body_succeeds_without_content_type(mocker: MockerFixture) -> None:
 
     result = get_body("https://example.com/schema.json")
     assert result == '{"type": "object"}'
+
+
+def test_get_body_wraps_transport_error(mocker: MockerFixture) -> None:
+    """Test that transport failures (DNS, timeout, etc.) are wrapped in SchemaFetchError."""
+    import httpx
+
+    mocker.patch("httpx.get", side_effect=httpx.ConnectError("DNS resolution failed"))
+
+    with pytest.raises(SchemaFetchError, match="Failed to fetch"):
+        get_body("https://nonexistent.example.com/schema.json")
