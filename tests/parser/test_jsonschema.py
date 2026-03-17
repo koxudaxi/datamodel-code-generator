@@ -55,6 +55,8 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.com/person.schema.json#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = json.dumps(
         {
             "$id": "https://example.com/person.schema.json",
@@ -96,6 +98,8 @@ def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
     parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.org/schema.yaml#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, ["User"])
@@ -134,6 +138,8 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
         },
     )
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, [])
@@ -165,6 +171,8 @@ def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
         "properties": {"user": {"$ref": "https://example.org/schema.json#/definitions/User"}},
     }
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_raw_obj("Model", obj, ["Model"])

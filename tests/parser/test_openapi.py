@@ -587,6 +587,8 @@ schemas:
     type: object
 """
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = remote_schema
     mocker.patch("httpx.get", return_value=mock_response)
 

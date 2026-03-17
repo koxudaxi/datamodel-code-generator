@@ -43,12 +43,11 @@ def get_body(
         params=query_parameters,  # ty: ignore
         timeout=timeout,
     )
-    status_code = response.status_code
-    if isinstance(status_code, int) and status_code >= 400:  # noqa: PLR2004
-        msg = f"HTTP {status_code} error fetching {url}"
+    if response.status_code >= 400:  # noqa: PLR2004
+        msg = f"HTTP {response.status_code} error fetching {url}"
         raise Exception(msg)  # noqa: TRY002
-    content_type = response.headers.get("content-type", "") if hasattr(response.headers, "get") else ""
-    if isinstance(content_type, str) and "text/html" in content_type:
+    content_type = response.headers.get("content-type", "")
+    if "text/html" in content_type:
         msg = (
             f"Unexpected HTML response from {url} (Content-Type: {content_type}). Expected JSON or YAML schema content."
         )

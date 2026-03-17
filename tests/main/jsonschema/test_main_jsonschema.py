@@ -813,8 +813,12 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
 def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     run_main_and_assert(
@@ -850,8 +854,12 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
     Automatically enabled when using `--url` input.
     """
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id.json"
@@ -881,6 +889,8 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
 def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema self-references with local file."""
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     run_main_and_assert(
@@ -898,6 +908,8 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test root ID JSON Schema self-references with remote file."""
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id_self_ref.json"
@@ -927,8 +939,12 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
 def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id_absolute_url.json"
@@ -2097,6 +2113,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 
@@ -2239,6 +2257,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 
@@ -7176,6 +7196,8 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
 
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = schema_path.read_text()
 
     httpx_get_mock = mocker.patch(
@@ -8928,6 +8950,8 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 
