@@ -372,8 +372,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
 
-        if self.apply_default_values_for_required_fields and effective_has_default:
-            required = False
+        use_default_with_required = required and self.apply_default_values_for_required_fields and effective_has_default
 
         extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
 
@@ -405,6 +404,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             original_name=field_name,
             has_default=effective_has_default,
             use_serialization_alias=self.use_serialization_alias,
+            use_default_with_required=use_default_with_required,
         )
 
     def parse_object_like(

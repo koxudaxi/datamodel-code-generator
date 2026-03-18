@@ -4753,6 +4753,28 @@ def test_all_of_use_default(output_file: Path) -> None:
     )
 
 
+def test_allof_required_use_default(output_file: Path) -> None:
+    """Test allOf with required fields and --use-default renders defaults without nullable types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default"],
+    )
+
+
+def test_force_optional_required(output_file: Path) -> None:
+    """Test --force-optional makes required fields optional."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "force_optional_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--force-optional"],
+    )
+
+
 def test_main_root_one_of(output_dir: Path) -> None:
     """Test root-level oneOf schemas."""
     run_main_and_assert(
