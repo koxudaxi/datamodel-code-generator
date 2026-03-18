@@ -78,7 +78,7 @@ jobs:
             - Return empty string for breaking_changes_content if no breaking changes
 
           claude_args: |
-            --model claude-opus-4-5-20251101
+            --model claude-opus-4-6
             --max-turns 50
             --json-schema '{"type":"object","properties":{"has_breaking_changes":{"type":"boolean","description":"Whether this PR contains breaking changes"},"breaking_changes_content":{"type":"string","description":"Formatted breaking changes section content (without ## Breaking Changes header), or empty string if none"},"reasoning":{"type":"string","description":"Brief explanation of why this is or is not a breaking change"}},"required":["has_breaking_changes","breaking_changes_content","reasoning"]}'
 
@@ -183,6 +183,7 @@ jobs:
           DRAFT_TAG_RAW=$(gh release list --json tagName,isDraft --jq '[.[] | select(.isDraft == true)] | .[0].tagName // ""')
           DRAFT_TAG="${DRAFT_TAG_RAW#v}"
           DRAFT_TAG="${DRAFT_TAG#V}"
+          BC_SOURCE_TAG_RAW="$DRAFT_TAG_RAW"
 
           # Determine next version
           if [ -n "$DRAFT_TAG" ]; then
@@ -204,6 +205,7 @@ jobs:
             fi
           else
             OLD_DRAFT_TAG=""
+            BC_SOURCE_TAG_RAW=""
             # No draft exists, calculate new version
             if [ "$HAS_BC" = "true" ]; then
               NEW_MINOR=$((MINOR + 1))
@@ -238,8 +240,8 @@ jobs:
 
           # Get existing draft body if updating (only if DRAFT_TAG_RAW is set, meaning we're updating same version)
           EXISTING_BC=""
-          if [ -n "$DRAFT_TAG_RAW" ]; then
-            EXISTING_BODY=$(gh release view "$DRAFT_TAG_RAW" --json body --jq '.body // ""')
+          if [ -n "$BC_SOURCE_TAG_RAW" ]; then
+            EXISTING_BODY=$(gh release view "$BC_SOURCE_TAG_RAW" --json body --jq '.body // ""')
             # Extract existing Breaking Changes section content
             # Use awk for precise extraction - stops at any ## header that's not "## Breaking Changes"
             if echo "$EXISTING_BODY" | grep -q '^## Breaking Changes$'; then
