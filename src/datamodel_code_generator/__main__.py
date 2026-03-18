@@ -491,7 +491,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
-    allow_remote_refs: bool = False
+    allow_remote_refs: Optional[bool] = None  # noqa: UP045
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     http_timeout: Optional[float] = None  # noqa: UP045

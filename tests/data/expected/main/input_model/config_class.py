@@ -193,7 +193,7 @@ class GenerateConfig(TypedDict, closed=True):
     use_closed_typed_dict: NotRequired[bool]
     allof_merge_mode: NotRequired[AllOfMergeMode]
     allof_class_hierarchy: NotRequired[AllOfClassHierarchy]
-    allow_remote_refs: NotRequired[bool]
+    allow_remote_refs: NotRequired[bool | None]
     http_headers: NotRequired[Sequence[tuple[str, str]] | None]
     http_ignore_tls: NotRequired[bool]
     http_timeout: NotRequired[float | None]

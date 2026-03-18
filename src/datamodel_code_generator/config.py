@@ -141,7 +141,7 @@ class GenerateConfig(BaseModel):
     use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
-    allow_remote_refs: bool = False
+    allow_remote_refs: bool | None = None
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
@@ -274,7 +274,7 @@ class ParserConfig(BaseModel):
     use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
-    allow_remote_refs: bool = False
+    allow_remote_refs: bool | None = None
     http_headers: Sequence[tuple[str, str]] | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None

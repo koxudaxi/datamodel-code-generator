@@ -17,6 +17,7 @@ from packaging import version
 from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
+    Error,
     InputFileType,
     PythonVersion,
     PythonVersionMin,
@@ -981,11 +982,16 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-def test_main_remote_ref_blocked_by_default(
-    mocker: MockerFixture, tmp_path: Path, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Test that remote $ref fetching is blocked when --allow-remote-refs is not set."""
-    httpx_get_mock = mocker.patch("httpx.get")
+def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
+    person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
+    person_response.text = json.dumps({
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
+    })
+    mocker.patch("httpx.get", return_value=person_response)
     schema = {
         "$id": "https://example.com/schema/main.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1000,14 +1006,32 @@ def test_main_remote_ref_blocked_by_default(
     input_file.write_text(json.dumps(schema))
     output_file = tmp_path / "output.py"
 
-    run_main_and_assert(
-        input_path=input_file,
-        output_path=output_file,
-        input_file_type="jsonschema",
-        expected_exit=Exit.ERROR,
-        capsys=capsys,
-        expected_stderr_contains="--allow-remote-refs",
-    )
+    with pytest.warns(FutureWarning, match="--allow-remote-refs"):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
+
+
+def test_main_remote_ref_blocked_when_explicitly_disabled(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
+    httpx_get_mock = mocker.patch("httpx.get")
+    schema = {
+        "$id": "https://example.com/schema/main.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
+        },
+    }
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+
+    with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
+        generate(input_file, allow_remote_refs=False)
     httpx_get_mock.assert_not_called()
 
 
