@@ -52,9 +52,11 @@ def test_get_model_by_path(schema: dict, path: str, model: dict) -> None:
 
 def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with JSON URL."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.com/person.schema.json#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = json.dumps(
         {
             "$id": "https://example.com/person.schema.json",
@@ -93,9 +95,11 @@ def test_json_schema_object_ref_url_json(mocker: MockerFixture) -> None:
 
 def test_json_schema_object_ref_url_yaml(mocker: MockerFixture) -> None:
     """Test JSON schema object reference with YAML URL."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = JsonSchemaObject.model_validate({"$ref": "https://example.org/schema.yaml#/definitions/User"})
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, ["User"])
@@ -122,7 +126,7 @@ class Pet(BaseModel):
 
 def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
     """Test JSON schema object cached reference with YAML URL."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
 
     obj = JsonSchemaObject.model_validate(
         {
@@ -134,6 +138,8 @@ def test_json_schema_object_cached_ref_url_yaml(mocker: MockerFixture) -> None:
         },
     )
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = yaml.safe_dump(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_ref(obj, [])
@@ -159,12 +165,14 @@ class User(BaseModel):
 
 def test_json_schema_ref_url_json(mocker: MockerFixture) -> None:
     """Test JSON schema reference with JSON URL."""
-    parser = JsonSchemaParser("")
+    parser = JsonSchemaParser("", allow_remote_refs=True)
     obj = {
         "type": "object",
         "properties": {"user": {"$ref": "https://example.org/schema.json#/definitions/User"}},
     }
     mock_get = mocker.patch("httpx.get")
+    mock_get.return_value.status_code = 200
+    mock_get.return_value.headers = {}
     mock_get.return_value.text = json.dumps(json.load((DATA_PATH / "user.json").open()))
 
     parser.parse_raw_obj("Model", obj, ["Model"])

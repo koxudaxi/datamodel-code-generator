@@ -1532,6 +1532,8 @@ def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None
     Format: `HeaderName:HeaderValue`.
     """
     mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     mocker.patch("httpx.get", return_value=mock_response)
@@ -1726,6 +1728,8 @@ def test_http_ignore_tls(output_file: Path) -> None:
     environments with self-signed certificates. Not recommended for production.
     """
     mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
@@ -1767,6 +1771,8 @@ def test_http_query_parameters(output_file: Path) -> None:
     specified: `--http-query-parameters version=v2 format=json`.
     """
     mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
@@ -1812,6 +1818,8 @@ def test_http_timeout(output_file: Path) -> None:
     Default is 30 seconds.
     """
     mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:

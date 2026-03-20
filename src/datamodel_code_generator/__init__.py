@@ -371,6 +371,10 @@ class SchemaParseError(Error):
         return message
 
 
+class SchemaFetchError(Error):
+    """Raised when fetching a remote schema fails (HTTP error, unexpected content type)."""
+
+
 def get_first_file(path: Path) -> Path:  # pragma: no cover
     """Find and return the first file in a path (file or directory)."""
     if path.is_file():

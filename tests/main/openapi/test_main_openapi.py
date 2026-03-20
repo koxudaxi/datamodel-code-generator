@@ -1685,6 +1685,8 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
 
     def get_mock_response(path: str) -> Mock:
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (OPEN_API_DATA_PATH / path).read_text()
         return mock
 
@@ -1747,6 +1749,8 @@ components:
           type: string
 """
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = schema_content
 
     httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
@@ -1821,6 +1825,8 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
     """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = input_path.read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
 
@@ -1830,7 +1836,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py",
-        extra_args=["--openapi-scopes", "paths", "schemas"],
+        extra_args=["--openapi-scopes", "paths", "schemas", "--allow-remote-refs"],
     )
     httpx_get_mock.assert_has_calls([
         call(
@@ -4369,6 +4375,8 @@ def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output
     """Test readOnly/writeOnly with URL $ref to external schema."""
     remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml").read_text()
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = remote_schema
 
     mocker.patch("httpx.get", return_value=mock_response)
@@ -4384,6 +4392,7 @@ def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output
             "pydantic_v2.BaseModel",
             "--read-only-write-only-model-type",
             "all",
+            "--allow-remote-refs",
         ],
     )
 
@@ -4392,6 +4401,8 @@ def test_main_openapi_read_only_write_only_allof_url_ref(mocker: MockerFixture, 
     """Test readOnly/writeOnly with allOf that references external URL schema."""
     remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml").read_text()
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = remote_schema
 
     mocker.patch("httpx.get", return_value=mock_response)
@@ -4407,6 +4418,7 @@ def test_main_openapi_read_only_write_only_allof_url_ref(mocker: MockerFixture, 
             "pydantic_v2.BaseModel",
             "--read-only-write-only-model-type",
             "all",
+            "--allow-remote-refs",
         ],
     )
 

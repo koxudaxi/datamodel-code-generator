@@ -491,6 +491,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_closed_typed_dict: bool = True
     allof_merge_mode: AllOfMergeMode = AllOfMergeMode.Constraints
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
+    allow_remote_refs: Optional[bool] = None  # noqa: UP045
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     http_ignore_tls: bool = False
     http_timeout: Optional[float] = None  # noqa: UP045
@@ -934,6 +935,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_closed_typed_dict=config.use_closed_typed_dict,
         allof_merge_mode=config.allof_merge_mode,
         allof_class_hierarchy=config.allof_class_hierarchy,
+        allow_remote_refs=config.allow_remote_refs,
         http_headers=config.http_headers,
         http_ignore_tls=config.http_ignore_tls,
         http_timeout=config.http_timeout,
@@ -1079,6 +1081,10 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             file=sys.stderr,
         )
         return Exit.ERROR
+
+    # --url implies --allow-remote-refs since the user is explicitly fetching a remote schema
+    if config.url:
+        config.allow_remote_refs = True
 
     if config.check and config.output is None:
         print(  # noqa: T201

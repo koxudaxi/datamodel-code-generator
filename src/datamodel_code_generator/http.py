@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from datamodel_code_generator import SchemaFetchError
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
@@ -35,14 +37,28 @@ def get_body(
 ) -> str:
     """Fetch content from a URL with optional headers and query parameters."""
     httpx = _get_httpx()
-    return httpx.get(
-        url,
-        headers=headers,
-        verify=not ignore_tls,
-        follow_redirects=True,
-        params=query_parameters,  # ty: ignore
-        timeout=timeout,
-    ).text
+    try:
+        response = httpx.get(
+            url,
+            headers=headers,
+            verify=not ignore_tls,
+            follow_redirects=True,
+            params=query_parameters,  # ty: ignore
+            timeout=timeout,
+        )
+    except Exception as e:
+        msg = f"Failed to fetch {url}: {e}"
+        raise SchemaFetchError(msg) from e
+    if response.status_code >= 400:  # noqa: PLR2004
+        msg = f"HTTP {response.status_code} error fetching {url}"
+        raise SchemaFetchError(msg)
+    content_type = response.headers.get("content-type", "").lower()
+    if "text/html" in content_type:
+        msg = (
+            f"Unexpected HTML response from {url} (Content-Type: {content_type}). Expected JSON or YAML schema content."
+        )
+        raise SchemaFetchError(msg)
+    return response.text
 
 
 def join_url(url: str, ref: str = ".") -> str:  # noqa: PLR0912

@@ -168,6 +168,8 @@ def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
 
     def get_mock_response(path: str) -> mocker.Mock:
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (JSON_DATA_PATH / path).read_text()
         return mock
 
