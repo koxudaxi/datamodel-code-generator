@@ -129,9 +129,10 @@ base_options.add_argument(
     "--allow-remote-refs",
     help="Allow fetching remote $ref references over HTTP/HTTPS. "
     "Currently remote fetching is allowed by default but emits a deprecation warning. "
-    "Pass this flag explicitly to silence the warning. "
+    "Pass --allow-remote-refs to opt in without warning, "
+    "or --no-allow-remote-refs to block remote fetching. "
     "In a future version, remote fetching will be disabled by default.",
-    action="store_true",
+    action=BooleanOptionalAction,
     default=None,
 )
 base_options.add_argument(
