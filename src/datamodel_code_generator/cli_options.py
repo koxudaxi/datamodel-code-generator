@@ -266,6 +266,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     # ==========================================================================
     "--check": CLIOptionMeta(name="--check", category=OptionCategory.GENERAL),
     "--allow-remote-refs": CLIOptionMeta(name="--allow-remote-refs", category=OptionCategory.GENERAL),
+    "--no-allow-remote-refs": CLIOptionMeta(name="--no-allow-remote-refs", category=OptionCategory.GENERAL),
     "--http-headers": CLIOptionMeta(name="--http-headers", category=OptionCategory.GENERAL),
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
