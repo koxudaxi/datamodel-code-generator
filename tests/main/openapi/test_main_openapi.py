@@ -5212,3 +5212,25 @@ def test_ref_merge_parameters(output_file: Path) -> None:
             "parameters",
         ],
     )
+
+
+@BLACK_PY314_SKIP
+def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
+    """Test --reuse-model with --use-type-alias doesn't crash on empty fields.
+
+    Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3059
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "reuse_model_with_type_alias.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.14",
+            "--reuse-model",
+            "--use-type-alias",
+        ],
+    )
