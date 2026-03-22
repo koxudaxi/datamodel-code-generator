@@ -5214,6 +5214,7 @@ def test_ref_merge_parameters(output_file: Path) -> None:
     )
 
 
+@BLACK_PY314_SKIP
 def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
     """Test --reuse-model with --use-type-alias doesn't crash on empty fields.
 
