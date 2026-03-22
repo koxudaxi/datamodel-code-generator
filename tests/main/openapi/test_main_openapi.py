@@ -5221,7 +5221,7 @@ def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
     Regression test for https://github.com/koxudaxi/datamodel-code-generator/issues/3059
     """
     run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "reuse_model_type_alias.json",
+        input_path=OPEN_API_DATA_PATH / "reuse_model_with_type_alias.json",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
