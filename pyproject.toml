@@ -111,9 +111,9 @@ benchmark = [
   "pytest-benchmark",
   "pytest-codspeed>=2.2",
 ]
-black22 = [ "black==22.1" ]
-black23 = [ "black==23.12" ]
-black24 = [ "black==24.1" ]
+black22 = [ "black==26.3.1" ]
+black23 = [ "black==26.3.1" ]
+black24 = [ "black==26.3.1" ]
 isort5 = [ "isort>=5,<6" ]
 isort6 = [ "isort>=6,<7" ]
 isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
