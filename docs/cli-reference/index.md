@@ -15,7 +15,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 16 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
 
 ## All Options
@@ -33,6 +33,7 @@ This documentation is auto-generated from test cases.
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)
+- [`--allow-remote-refs`](general-options.md#allow-remote-refs)
 
 ### B {#b}
 

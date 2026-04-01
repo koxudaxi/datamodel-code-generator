@@ -184,6 +184,7 @@ datamodel-codegen [OPTIONS]
 |--------|-------------|
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Handle name collisions when exporting recursive module hierarchies. |
 | [`--all-exports-scope`](general-options.md#all-exports-scope) | Generate __all__ exports for child modules in __init__.py files. |
+| [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -223,6 +224,7 @@ All options sorted alphabetically:
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) - Allow Pydantic model population by field name (not just alia...
+- [`--allow-remote-refs`](general-options.md#allow-remote-refs) - Enable fetching of `$ref` targets over HTTP/HTTPS.
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
 - [`--base-class-map`](model-customization.md#base-class-map) - Specify different base classes for specific models via JSON ...
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.

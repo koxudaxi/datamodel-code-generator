@@ -15,6 +15,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--allof-merge-mode": "Merge constraints from root model references in allOf schemas.",
     "--allow-extra-fields": "Allow extra fields in generated Pydantic models (extra='allow').",
     "--allow-population-by-field-name": "Allow Pydantic model population by field name (not just alias).",
+    "--allow-remote-refs": "Enable fetching of `$ref` targets over HTTP/HTTPS.",
     "--base-class": "Specify a custom base class for generated models.",
     "--base-class-map": "Specify different base classes for specific models via JSON mapping.",
     "--capitalize-enum-members": "Capitalize enum member names to UPPER_CASE format.",
