@@ -587,6 +587,8 @@ schemas:
     type: object
 """
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = remote_schema
     mocker.patch("httpx.get", return_value=mock_response)
 
@@ -594,6 +596,7 @@ schemas:
         data_model_field_type=DataModelFieldBase,
         source=(DATA_PATH / "refs.yaml").read_text(),
         http_ignore_tls=bool(os.environ.get("HTTP_IGNORE_TLS")),
+        allow_remote_refs=True,
     )
     expected_file = get_expected_file("openapi_parser_parse_remote_ref", True, True)
 
