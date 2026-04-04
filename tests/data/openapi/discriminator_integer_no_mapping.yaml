@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Minimal Integer Discriminator
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Base:
+      oneOf:
+        - $ref: '#/components/schemas/Foo'
+        - $ref: '#/components/schemas/Bar'
+      discriminator:
+        propertyName: kind
+    Foo:
+      type: object
+      properties:
+        kind:
+          type: integer
+          enum:
+            - 1
+      required:
+        - kind
+    Bar:
+      type: object
+      properties:
+        kind:
+          type: integer
+          enum:
+            - 2
+      required:
+        - kind
