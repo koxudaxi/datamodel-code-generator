@@ -52,7 +52,7 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
-def _assert_run_main_with_args_error(
+def assert_run_main_with_args_error(
     args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str
 ) -> None:
     with pytest.raises(SystemExit) as exc_info:
@@ -3045,7 +3045,7 @@ def test_main_jsonschema_base_class_map_from_file_invalid_json(
     """Test invalid JSON file passed to --base-class-map."""
     mapping_path = tmp_path / "base_class_map.json"
     mapping_path.write_text("{invalid json}", encoding="utf-8")
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
@@ -3067,7 +3067,7 @@ def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
     """Test invalid-encoding JSON file passed to --base-class-map."""
     mapping_path = tmp_path / "base_class_map.json"
     mapping_path.write_bytes(b"\x80")
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
@@ -3087,7 +3087,7 @@ def test_main_jsonschema_base_class_map_inline_requires_json_object(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test non-object JSON passed to --base-class-map."""
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
@@ -4681,7 +4681,7 @@ def test_main_enum_field_as_literal_map_invalid_json_file(tmp_path: Path, capsys
     """Test invalid JSON file passed to --enum-field-as-literal-map."""
     mapping_path = tmp_path / "enum_field_as_literal_map.json"
     mapping_path.write_text("{invalid json}", encoding="utf-8")
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
@@ -4701,7 +4701,7 @@ def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
     """Test invalid-encoding JSON file passed to --enum-field-as-literal-map."""
     mapping_path = tmp_path / "enum_field_as_literal_map.json"
     mapping_path.write_bytes(b"\x80")
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
@@ -4719,7 +4719,7 @@ def test_main_enum_field_as_literal_map_inline_requires_json_object(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test non-object JSON passed to --enum-field-as-literal-map."""
-    _assert_run_main_with_args_error(
+    assert_run_main_with_args_error(
         [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
