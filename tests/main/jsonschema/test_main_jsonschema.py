@@ -4705,6 +4705,24 @@ def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
     assert "Unable to read JSON file" in captured.err
 
 
+def test_main_enum_field_as_literal_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --enum-field-as-literal-map."""
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            '["literal"]',
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Expected a JSON object" in captured.err
+
+
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:
     """Test x-enum-field-as-literal schema extension for per-field control."""
     run_main_and_assert(
