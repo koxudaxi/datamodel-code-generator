@@ -1541,11 +1541,9 @@ You can pass the mapping either inline as JSON or as a path to a JSON file.
 
     ```bash
     datamodel-codegen --input schema.json --enum-field-as-literal-map "{"status": "literal"}" # (1)!
-    datamodel-codegen --input schema.json --enum-field-as-literal-map ./enum-map.json # (2)!
     ```
 
     1. :material-arrow-left: `--enum-field-as-literal-map` - the option documented here
-    2. :material-arrow-left: JSON file path containing the mapping
 
 ??? example "Examples"
 
