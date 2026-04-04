@@ -3073,6 +3073,26 @@ def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
     assert "Unable to read JSON file" in captured.err
 
 
+def test_main_jsonschema_base_class_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --base-class-map."""
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            '["custom.bases.PersonBase"]',
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Expected a JSON object" in captured.err
+
+
 def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
     """Test customBasePath with list of base classes."""
     run_main_and_assert(
