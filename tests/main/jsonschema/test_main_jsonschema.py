@@ -52,9 +52,8 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
-def assert_run_main_with_args_error(
-    args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str
-) -> None:
+def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
+    """Assert that running the CLI exits with code 2 and emits the expected error."""
     with pytest.raises(SystemExit) as exc_info:
         run_main_with_args(args)
     assert exc_info.value.code == 2
