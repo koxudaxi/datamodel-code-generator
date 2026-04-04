@@ -3029,6 +3029,50 @@ def test_main_jsonschema_base_class_map_from_file(output_file: Path, tmp_path: P
     )
 
 
+def test_main_jsonschema_base_class_map_from_file_invalid_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_text("{invalid json}", encoding="utf-8")
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Invalid JSON:" in captured.err
+
+
+def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid-encoding JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_bytes(b"\x80")
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args([
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ])
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert "Unable to read JSON file" in captured.err
+
+
 def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
     """Test customBasePath with list of base classes."""
     run_main_and_assert(

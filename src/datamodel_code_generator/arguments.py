@@ -85,7 +85,7 @@ def _external_ref_mapping(value: str) -> str:
     return value
 
 
-def _json_value_or_file(value: str) -> object:
+def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
     path = Path(value).expanduser()
     if path.is_file():
@@ -97,10 +97,14 @@ def _json_value_or_file(value: str) -> object:
     else:
         json_input = value
     try:
-        return json.loads(json_input)
+        result = json.loads(json_input)
     except json.JSONDecodeError as e:
         msg = f"Invalid JSON: {e}"
         raise ArgumentTypeError(msg) from e
+    if not isinstance(result, dict):
+        msg = f"Expected a JSON object, got {type(result).__name__}"
+        raise ArgumentTypeError(msg)
+    return result
 
 
 class SortingHelpFormatter(RawDescriptionHelpFormatter):
