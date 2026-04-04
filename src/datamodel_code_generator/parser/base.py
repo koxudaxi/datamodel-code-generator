@@ -110,6 +110,7 @@ ModelName: TypeAlias = str
 ModelNames: TypeAlias = set[ModelName]
 ModelDeps: TypeAlias = dict[ModelName, set[ModelName]]
 OrderIndex: TypeAlias = dict[ModelName, int]
+DiscriminatorValue: TypeAlias = str | int | bool
 
 _BUILTIN_NAMES: frozenset[str] = frozenset(name for name in builtins.__dict__ if not name.startswith("_"))
 _BUILTIN_NAMES_INTRODUCED_IN: dict[PythonVersion, frozenset[str]] = {
@@ -1514,7 +1515,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
     def _create_discriminator_data_type(
         self,
         enum_source: Enum | None,
-        discriminator_values: list[Any],
+        discriminator_values: list[DiscriminatorValue],
         discriminator_model: DataModel,
         imports: Imports,
     ) -> DataType:
@@ -1527,7 +1528,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if member and member.field.name:
                     enum_member_literals.append((enum_class_name, member.field.name))
                 else:  # pragma: no cover
-                    enum_member_literals.append((enum_class_name, value))
+                    enum_member_literals.append((enum_class_name, str(value)))
             data_type = self.data_type(enum_member_literals=enum_member_literals)
             if enum_source.module_path != discriminator_model.module_path:  # pragma: no cover
                 imports.append(Import.from_full_path(enum_source.name))
@@ -1572,12 +1573,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     ):  # pragma: no cover
                         continue
 
-                    discriminator_values: list[Any] = []
+                    discriminator_values: list[DiscriminatorValue] = []
 
                     def check_paths(
                         model: pydantic_model_v2.BaseModel | Reference,
                         mapping: dict[str, str],
-                        discriminator_values: list[Any] = discriminator_values,
+                        discriminator_values: list[DiscriminatorValue] = discriminator_values,
                     ) -> None:
                         """Validate discriminator mapping paths for a model."""
                         for name, path in mapping.items():
@@ -1591,7 +1592,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     continue
                             discriminator_values.append(name)
 
-                    def get_discriminator_field_value(discriminator_field: DataModelFieldBase) -> Any | None:
+                    def get_discriminator_field_value(
+                        discriminator_field: DataModelFieldBase,
+                    ) -> DiscriminatorValue | None:
                         const_value = discriminator_field.extras.get("const")
                         if const_value is not None:
                             return const_value
