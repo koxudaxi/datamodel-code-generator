@@ -211,12 +211,12 @@ These projects use datamodel-code-generator. See the linked examples for real-wo
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte) - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
 - [apache/iceberg](https://github.com/apache/iceberg) - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata) - *[datamodel_generation.py](https://github.com/open-metadata/OpenMetadata/blob/main/scripts/datamodel_generation.py)*
-- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python) - *[Recommended for advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases)*
+- [openai/codex](https://github.com/openai/codex) - *[Python SDK dev dependency](https://github.com/openai/codex/blob/cca36c5681d16c7dac6e3f385589b8cd4d3e78cd/sdk/python/pyproject.toml#L32-L33)*
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for model tests](https://github.com/vllm-project/vllm/blob/main/requirements/test.in)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 - [topoteretes/cognee](https://github.com/topoteretes/cognee) - *[Runtime generation of graph data models from JSON Schema](https://github.com/topoteretes/cognee/blob/main/cognee/shared/graph_model_utils.py)*
 - [e2b-dev/E2B](https://github.com/e2b-dev/E2B) - *[Generate MCP server TypedDict models via Makefile](https://github.com/e2b-dev/E2B/blob/main/packages/python-sdk/Makefile)*
-- [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) - *[Generate Python client dataclasses from OpenAPI via Makefile](https://github.com/Arize-ai/phoenix/blob/main/Makefile)*
+- [apache/airflow](https://github.com/apache/airflow) - *[Generate OpenAPI datamodels for airflow-ctl and task-sdk via pyproject codegen config](https://github.com/apache/airflow/blob/f1ac27af8b53e7d3ca7ff710c4f4413599bd1535/airflow-ctl/pyproject.toml#L148-L172)*
 - [firebase/genkit](https://github.com/firebase/genkit) - *[Generate core typing models from JSON Schema](https://github.com/firebase/genkit/blob/main/py/bin/generate_schema_typing)*
 - [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) - *[Generate SDK configuration dataclasses from JSON Schema](https://github.com/open-telemetry/opentelemetry-python/blob/main/tox.ini)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core) - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
