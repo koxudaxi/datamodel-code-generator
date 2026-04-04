@@ -52,6 +52,16 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
+def _assert_run_main_with_args_error(
+    args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args(args)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert expected_error in captured.err
+
+
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package_dir = base_dir / "my_app"
     package_dir.mkdir()
@@ -3035,8 +3045,8 @@ def test_main_jsonschema_base_class_map_from_file_invalid_json(
     """Test invalid JSON file passed to --base-class-map."""
     mapping_path = tmp_path / "base_class_map.json"
     mapping_path.write_text("{invalid json}", encoding="utf-8")
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
             "--output",
@@ -3045,10 +3055,10 @@ def test_main_jsonschema_base_class_map_from_file_invalid_json(
             "jsonschema",
             "--base-class-map",
             str(mapping_path),
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Invalid JSON:" in captured.err
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
 
 
 def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
@@ -3057,8 +3067,8 @@ def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
     """Test invalid-encoding JSON file passed to --base-class-map."""
     mapping_path = tmp_path / "base_class_map.json"
     mapping_path.write_bytes(b"\x80")
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
             "--output",
@@ -3067,18 +3077,18 @@ def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
             "jsonschema",
             "--base-class-map",
             str(mapping_path),
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Unable to read JSON file" in captured.err
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
 
 
 def test_main_jsonschema_base_class_map_inline_requires_json_object(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test non-object JSON passed to --base-class-map."""
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
             "--output",
@@ -3087,10 +3097,10 @@ def test_main_jsonschema_base_class_map_inline_requires_json_object(
             "jsonschema",
             "--base-class-map",
             '["custom.bases.PersonBase"]',
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Expected a JSON object" in captured.err
+        ],
+        capsys,
+        "Expected a JSON object",
+    )
 
 
 def test_main_jsonschema_custom_base_paths_list(output_file: Path) -> None:
@@ -4671,18 +4681,18 @@ def test_main_enum_field_as_literal_map_invalid_json_file(tmp_path: Path, capsys
     """Test invalid JSON file passed to --enum-field-as-literal-map."""
     mapping_path = tmp_path / "enum_field_as_literal_map.json"
     mapping_path.write_text("{invalid json}", encoding="utf-8")
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
             "--output",
             str(tmp_path / "output.py"),
             "--enum-field-as-literal-map",
             str(mapping_path),
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Invalid JSON:" in captured.err
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
 
 
 def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
@@ -4691,36 +4701,36 @@ def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
     """Test invalid-encoding JSON file passed to --enum-field-as-literal-map."""
     mapping_path = tmp_path / "enum_field_as_literal_map.json"
     mapping_path.write_bytes(b"\x80")
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
             "--output",
             str(tmp_path / "output.py"),
             "--enum-field-as-literal-map",
             str(mapping_path),
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Unable to read JSON file" in captured.err
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
 
 
 def test_main_enum_field_as_literal_map_inline_requires_json_object(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Test non-object JSON passed to --enum-field-as-literal-map."""
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    _assert_run_main_with_args_error(
+        [
             "--input",
             str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
             "--output",
             str(tmp_path / "output.py"),
             "--enum-field-as-literal-map",
             '["literal"]',
-        ])
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert "Expected a JSON object" in captured.err
+        ],
+        capsys,
+        "Expected a JSON object",
+    )
 
 
 def test_main_x_enum_field_as_literal(output_file: Path) -> None:
