@@ -6,5 +6,6 @@ type {{ class_name }} = Union[
 {%- for field in fields %}
     '{{ field.name }}',
 {%- endfor %}
-]{% else %}
-type {{ class_name }} = {{ fields[0].name }}{% endif %}
+]{% elif fields %}
+type {{ class_name }} = {{ fields[0].name }}{% else %}
+type {{ class_name }} = {{ base_class }}{% endif %}

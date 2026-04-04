@@ -8,13 +8,22 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 {%- endif -%}
 {%- endmacro -%}
 
+{%- if fields %}
 {{ class_name }} = TypeAliasType("{{ class_name }}", {{ get_type_annotation(fields[0]) }}){% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
 """
 {{ description | escape_docstring | indent(0) }}
 """
-{%- elif fields and fields[0].docstring %}
+{%- elif fields[0].docstring %}
 """
 {{ fields[0].docstring | escape_docstring | indent(0) }}
 """
+{%- endif %}
+{%- else %}
+{{ class_name }} = TypeAliasType("{{ class_name }}", {{ base_class }}){% if comment is defined %}  # {{ comment }}{% endif %}
+{%- if description %}
+"""
+{{ description | escape_docstring | indent(0) }}
+"""
+{%- endif %}
 {%- endif %}
