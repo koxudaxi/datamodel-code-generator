@@ -2156,6 +2156,8 @@ You can specify either a single base class as a string, or multiple base classes
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
 
+You can pass the mapping either inline as JSON or as a path to a JSON file.
+
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
@@ -12716,6 +12718,8 @@ Override enum/literal generation per-field via JSON mapping.
 
 The `--enum-field-as-literal-map` option allows per-field control over whether
 to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.
 
 !!! tip "Usage"
 
