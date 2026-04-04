@@ -311,7 +311,7 @@ class DataModelField(DataModelFieldBase):
         elif self._not_required and "default_factory" not in data:
             data["default"] = None if self.nullable else UNSET
 
-        if self.required:
+        if self.required and not self.use_default_with_required:
             data = {
                 k: v
                 for k, v in data.items()

@@ -29,6 +29,6 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class User(BaseModel):
     id: ID
-    name: String | None = 'default_user'
-    status: String | None = 'active'
+    name: String = 'default_user'
+    status: String = 'active'
     typename__: Literal['User'] | None = Field('User', alias='__typename')

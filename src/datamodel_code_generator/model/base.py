@@ -173,6 +173,7 @@ class DataModelFieldBase(_BaseModel):
     use_frozen_field: bool = False
     use_serialization_alias: bool = False
     use_default_factory_for_optional_nested_models: bool = False
+    use_default_with_required: bool = False
 
     if not TYPE_CHECKING:  # pragma: no branch
 

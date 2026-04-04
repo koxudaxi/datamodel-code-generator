@@ -26,8 +26,8 @@ class Container(BaseModel):
 
 
 class PodSpec(BaseModel):
-    container_list: list[Container] = Field([], validate_default=True)
-    container_list_or_none: list[Container | None] = Field([], validate_default=True)
+    container_list: list[Container]
+    container_list_or_none: list[Container | None]
     container_or_none_list_or_none: list[Container | None] | None = Field(
         [], validate_default=True
     )
