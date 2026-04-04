@@ -52,6 +52,15 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
+def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
+    """Assert that running the CLI exits with code 2 and emits the expected error."""
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args(args)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert expected_error in captured.err
+
+
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package_dir = base_dir / "my_app"
     package_dir.mkdir()
@@ -2981,6 +2990,8 @@ You can specify either a single base class as a string, or multiple base classes
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
 
+You can pass the mapping either inline as JSON or as a path to a JSON file.
+
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.""",
     input_schema="jsonschema/base_class_map.json",
@@ -3007,6 +3018,87 @@ def test_main_jsonschema_base_class_map(output_file: Path) -> None:
             "--base-class-map",
             '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
         ],
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test base_class_map loaded from a JSON file."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_text(
+        json.dumps({"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map.py",
+        extra_args=["--base-class-map", str(mapping_path)],
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file_invalid_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_text("{invalid json}", encoding="utf-8")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid-encoding JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_bytes(b"\x80")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
+
+
+def test_main_jsonschema_base_class_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --base-class-map."""
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            '["custom.bases.PersonBase"]',
+        ],
+        capsys,
+        "Expected a JSON object",
     )
 
 
@@ -4527,7 +4619,9 @@ def test_main_typed_dict_no_closed(output_file: Path) -> None:
     option_description="""Override enum/literal generation per-field via JSON mapping.
 
 The `--enum-field-as-literal-map` option allows per-field control over whether
-to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.""",
+to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.""",
     input_schema="jsonschema/enum_field_as_literal_map.json",
     cli_args=["--enum-field-as-literal-map", '{"status": "literal"}'],
     golden_output="jsonschema/enum_field_as_literal_map.py",
@@ -4551,6 +4645,20 @@ def test_main_enum_field_as_literal_map(output_file: Path) -> None:
     )
 
 
+def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test enum_field_as_literal_map loaded from a JSON file."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_text(json.dumps({"status": "literal"}), encoding="utf-8")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=["--enum-field-as-literal-map", str(mapping_path)],
+    )
+
+
 def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> None:
     """Test --enum-field-as-literal-map overrides global --enum-field-as-literal."""
     run_main_and_assert(
@@ -4565,6 +4673,62 @@ def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> No
             "--enum-field-as-literal-map",
             '{"priority": "enum"}',
         ],
+    )
+
+
+def test_main_enum_field_as_literal_map_invalid_json_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test invalid JSON file passed to --enum-field-as-literal-map."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_text("{invalid json}", encoding="utf-8")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
+
+
+def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid-encoding JSON file passed to --enum-field-as-literal-map."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_bytes(b"\x80")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
+
+
+def test_main_enum_field_as_literal_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --enum-field-as-literal-map."""
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            '["literal"]',
+        ],
+        capsys,
+        "Expected a JSON object",
     )
 
 

@@ -927,6 +927,8 @@ You can specify either a single base class as a string, or multiple base classes
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
 
+You can pass the mapping either inline as JSON or as a path to a JSON file.
+
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
 
