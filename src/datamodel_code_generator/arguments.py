@@ -89,10 +89,10 @@ def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
     path = Path(value).expanduser()
 
-    # We need to suppress `path.is_file() OSError exception to align pathlib logic between Python<3.13 and Python>=3.14.
-    # Briefly:
-    #   - Python <= 3.13 raises OSError.
-    #   - Python >= 3.14 catches OSError and returns `false` instead.
+    # In Python<=3.13, long json values would cause `path.is_file()` to raise an OSError exception
+    # because the string is too long to be interpreted as a filename.
+    # This changed in Python>=3.14 since now `path.is_file()` catches OSError and returns `false` instead.
+    # Therefore we are going to catch OSError exception raised in Python<=3.13 to replicate Python>=3.14 behavior.
     is_file: bool
     try:
         is_file = path.is_file()
