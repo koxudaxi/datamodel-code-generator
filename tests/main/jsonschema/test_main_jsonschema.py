@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import tempfile
@@ -3139,6 +3140,21 @@ def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
         extra_args=[
             "--base-class-map",
             '{"User": ["", ""]}',
+        ],
+    )
+
+
+def test_main_jsonschema_base_class_map_long_json(output_file: Path) -> None:
+    """Test base_class_map with very long json string."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": [' + ",".join(itertools.repeat('""', 100)) + "]}",
         ],
     )
 
