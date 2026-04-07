@@ -88,7 +88,18 @@ def _external_ref_mapping(value: str) -> str:
 def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
     path = Path(value).expanduser()
-    if path.is_file():
+
+    # We need to suppress `path.is_file() OSError exception to align pathlib logic between Python<3.13 and Python>=3.14.
+    # Briefly:
+    #   - Python <= 3.13 raises OSError.
+    #   - Python >= 3.14 catches OSError and returns `false` instead.
+    is_file: bool
+    try:
+        is_file = path.is_file()
+    except OSError:
+        is_file = False
+
+    if is_file:
         try:
             json_input = path.read_text(encoding=DEFAULT_ENCODING)
         except (OSError, UnicodeDecodeError) as e:
@@ -96,6 +107,7 @@ def _json_value_or_file(value: str) -> dict[str, object]:
             raise ArgumentTypeError(msg) from e
     else:
         json_input = value
+
     try:
         result = json.loads(json_input)
     except json.JSONDecodeError as e:
