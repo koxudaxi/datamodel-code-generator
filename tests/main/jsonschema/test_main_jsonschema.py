@@ -4677,11 +4677,7 @@ def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: P
 
 def test_main_enum_field_as_literal_map_long_json(output_file: Path) -> None:
     """Test enum_field_as_literal_map with very long json string."""
-    long_inline_mapping = (
-        '{"status": "literal",'
-        + ",".join(f'"unused_field_{i}": "enum"' for i in range(100))
-        + "}"
-    )
+    long_inline_mapping = '{"status": "literal",' + ",".join(f'"unused_field_{i}": "enum"' for i in range(100)) + "}"
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
         output_path=output_file,
