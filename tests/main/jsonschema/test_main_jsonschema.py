@@ -4675,6 +4675,26 @@ def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: P
     )
 
 
+def test_main_enum_field_as_literal_map_long_json(output_file: Path) -> None:
+    """Test enum_field_as_literal_map with very long json string."""
+    long_inline_mapping = (
+        '{"status": "literal",'
+        + ",".join(f'"unused_field_{i}": "enum"' for i in range(100))
+        + "}"
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            long_inline_mapping,
+        ],
+    )
+
+
 def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> None:
     """Test --enum-field-as-literal-map overrides global --enum-field-as-literal."""
     run_main_and_assert(
