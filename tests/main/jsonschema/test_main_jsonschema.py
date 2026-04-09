@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import tempfile
@@ -3143,6 +3144,21 @@ def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_base_class_map_long_json(output_file: Path) -> None:
+    """Test base_class_map with very long json string."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": [' + ",".join(itertools.repeat('""', 100)) + "]}",
+        ],
+    )
+
+
 def test_long_description(output_file: Path) -> None:
     """Test long description handling."""
     run_main_and_assert(
@@ -4656,6 +4672,22 @@ def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: P
         assert_func=assert_file_content,
         expected_file="enum_field_as_literal_map.py",
         extra_args=["--enum-field-as-literal-map", str(mapping_path)],
+    )
+
+
+def test_main_enum_field_as_literal_map_long_json(output_file: Path) -> None:
+    """Test enum_field_as_literal_map with very long json string."""
+    long_inline_mapping = '{"status": "literal",' + ",".join(f'"unused_field_{i}": "enum"' for i in range(100)) + "}"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            long_inline_mapping,
+        ],
     )
 
 

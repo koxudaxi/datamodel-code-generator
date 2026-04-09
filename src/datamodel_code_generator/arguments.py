@@ -88,7 +88,18 @@ def _external_ref_mapping(value: str) -> str:
 def _json_value_or_file(value: str) -> dict[str, object]:
     """Parse a JSON value or load it from a JSON file path."""
     path = Path(value).expanduser()
-    if path.is_file():
+
+    # In Python<=3.13, long json values would cause `path.is_file()` to raise an OSError exception
+    # because the string is too long to be interpreted as a filename.
+    # This changed in Python>=3.14 since now `path.is_file()` catches OSError and returns `false` instead.
+    # Therefore we are going to catch OSError exception raised in Python<=3.13 to replicate Python>=3.14 behavior.
+    is_file: bool
+    try:
+        is_file = path.is_file()
+    except OSError:
+        is_file = False
+
+    if is_file:
         try:
             json_input = path.read_text(encoding=DEFAULT_ENCODING)
         except (OSError, UnicodeDecodeError) as e:
@@ -96,6 +107,7 @@ def _json_value_or_file(value: str) -> dict[str, object]:
             raise ArgumentTypeError(msg) from e
     else:
         json_input = value
+
     try:
         result = json.loads(json_input)
     except json.JSONDecodeError as e:
