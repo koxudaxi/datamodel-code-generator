@@ -300,7 +300,20 @@ def test_apply_discriminator_type_skips_base_class_without_reference() -> None:
         base_class="BaseModel",
         source="",
     )
+    union_variant_types = tuple(union_inner.data_types)
+    assert len(union_variant_types) == 2
+    assert {dt.reference.path for dt in union_variant_types} == {ref_pet.path, ref_other.path}
+    assert {id(dt.reference) for dt in union_variant_types} == {id(ref_pet), id(ref_other)}
+    pet_base_classes = pet_model.base_classes
+    bare_base_slot = pet_model.base_classes[-1]
+
     parser._Parser__apply_discriminator_type([root], Imports())
+
+    assert tuple(union_inner.data_types) == union_variant_types
+    assert {dt.reference.path for dt in union_inner.data_types} == {ref_pet.path, ref_other.path}
+    assert {id(dt.reference) for dt in union_inner.data_types} == {id(ref_pet), id(ref_other)}
+    assert pet_model.base_classes is pet_base_classes
+    assert pet_model.base_classes[-1] is bare_base_slot
 
 
 @pytest.mark.parametrize(
