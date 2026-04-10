@@ -493,7 +493,7 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
