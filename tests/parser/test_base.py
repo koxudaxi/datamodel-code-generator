@@ -300,7 +300,7 @@ def test_apply_discriminator_type_skips_base_class_without_reference() -> None:
         base_class="BaseModel",
         source="",
     )
-    parser._Parser__apply_discriminator_type([root], Imports())  # noqa: SLF001
+    parser._Parser__apply_discriminator_type([root], Imports())
 
 
 @pytest.mark.parametrize(
