@@ -926,4 +926,5 @@ def test_main_cyclic_mutual_types(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="graphql",
         assert_func=assert_file_content,
+        expected_file="cyclic_mutual_types.py",
     )
