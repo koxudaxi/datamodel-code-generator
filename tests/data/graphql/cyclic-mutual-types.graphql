@@ -1,0 +1,15 @@
+type Query {
+  entry: A
+}
+
+type A {
+  id: ID!
+  name: String
+  link: B
+}
+
+type B {
+  id: ID!
+  name: String
+  link: A
+}

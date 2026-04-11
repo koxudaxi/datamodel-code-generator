@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Root",
+  "$ref": "#/definitions/A",
+  "definitions": {
+    "A": {
+      "title": "A",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "b": { "$ref": "#/definitions/B" }
+      }
+    },
+    "B": {
+      "title": "B",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "a": { "$ref": "#/definitions/A" }
+      }
+    }
+  }
+}

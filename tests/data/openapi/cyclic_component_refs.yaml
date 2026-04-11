@@ -1,0 +1,21 @@
+openapi: 3.0.0
+info:
+  title: Cyclic component $ref
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    Team:
+      type: object
+      properties:
+        name:
+          type: string
+        lead:
+          $ref: "#/components/schemas/Person"
+    Person:
+      type: object
+      properties:
+        name:
+          type: string
+        team:
+          $ref: "#/components/schemas/Team"

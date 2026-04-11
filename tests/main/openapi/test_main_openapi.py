@@ -4751,6 +4751,16 @@ def test_main_openapi_circular_imports_acyclic(output_dir: Path) -> None:
         )
 
 
+def test_main_cyclic_component_refs(output_file: Path) -> None:
+    """Mutual $ref cycle in components/schemas (single-file OpenAPI)."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "cyclic_component_refs.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+    )
+
+
 def test_main_openapi_circular_imports_class_conflict(output_dir: Path) -> None:
     """Test that class name conflicts in merged _internal.py are resolved with sequential renaming."""
     with freeze_time(TIMESTAMP):
