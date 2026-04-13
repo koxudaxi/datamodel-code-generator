@@ -4,21 +4,16 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel
 
 
-class A(BaseModel):
+class Model(BaseModel):
+    pass
+
+
+class Person(Team, Model):
     name: str | None = None
-    b: B | None = None
 
 
-class B(BaseModel):
+class Team(Person, Model):
     name: str | None = None
-    a: A | None = None
-
-
-class Root(RootModel[A]):
-    root: A = Field(..., title='Root')
-
-
-A.model_rebuild()

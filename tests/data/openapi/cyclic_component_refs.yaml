@@ -5,17 +5,21 @@ info:
 paths: {}
 components:
   schemas:
+    Model:
+      type: object
     Team:
+      allOf:
+        - $ref: "#/components/schemas/Model"
+        - $ref: "#/components/schemas/Person"
       type: object
       properties:
         name:
           type: string
-        lead:
-          $ref: "#/components/schemas/Person"
     Person:
+      allOf:
+        - $ref: "#/components/schemas/Model"
+        - $ref: "#/components/schemas/Team"
       type: object
       properties:
         name:
           type: string
-        team:
-          $ref: "#/components/schemas/Team"

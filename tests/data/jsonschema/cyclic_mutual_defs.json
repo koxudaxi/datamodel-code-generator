@@ -1,22 +1,32 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Root",
-  "$ref": "#/definitions/A",
+  "type": "object",
+  "properties": {},
   "definitions": {
-    "A": {
-      "title": "A",
+    "Model": {
+      "title": "Model",
+      "type": "object"
+    },
+    "Team": {
+      "title": "Team",
+      "allOf": [
+        { "$ref": "#/definitions/Model" },
+        { "$ref": "#/definitions/Person" }
+      ],
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "b": { "$ref": "#/definitions/B" }
+        "name": { "type": "string" }
       }
     },
-    "B": {
-      "title": "B",
+    "Person": {
+      "title": "Person",
+      "allOf": [
+        { "$ref": "#/definitions/Model" },
+        { "$ref": "#/definitions/Team" }
+      ],
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "a": { "$ref": "#/definitions/A" }
+        "name": { "type": "string" }
       }
     }
   }

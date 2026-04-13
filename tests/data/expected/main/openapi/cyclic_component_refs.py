@@ -7,14 +7,13 @@ from __future__ import annotations
 from pydantic import BaseModel
 
 
-class Team(BaseModel):
+class Model(BaseModel):
+    pass
+
+
+class Person(Team, Model):
     name: str | None = None
-    lead: Person | None = None
 
 
-class Person(BaseModel):
+class Team(Person, Model):
     name: str | None = None
-    team: Team | None = None
-
-
-Team.model_rebuild()

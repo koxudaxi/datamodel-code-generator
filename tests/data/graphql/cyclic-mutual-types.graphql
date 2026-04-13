@@ -1,15 +1,19 @@
 type Query {
-  entry: A
+  entry: Team
 }
 
-type A {
-  id: ID!
+# GraphQL interfaces must declare fields; OpenAPI `Model` is an empty object, so `name`
+# is the shared optional field carried by Team/Person (mirrors OpenAPI `name` on each).
+interface Model {
   name: String
-  link: B
 }
 
-type B {
-  id: ID!
+# Mirrors allOf [Model, Person] + properties { name }.
+interface Team implements Model & Person {
   name: String
-  link: A
+}
+
+# Mirrors allOf [Model, Team] + properties { name }.
+interface Person implements Model & Team {
+  name: String
 }
