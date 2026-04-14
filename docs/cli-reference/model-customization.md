@@ -5552,7 +5552,7 @@ for optional nested model fields instead of None default:
 When using default, keep required field non nullable/optional.
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
-as non-nullale/optional:
+as non-nullable/optional:
 - Dataclasses: `field: Model = field(Model)`
 - Pydantic: `field: Model = Field(Model)`
 - msgspec: `field: Model = field(Model)`

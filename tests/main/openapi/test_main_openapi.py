@@ -5347,7 +5347,7 @@ def test_use_default_keep_required_non_nullable(output_file: Path) -> None:
     option_description="""When using default, keep required field non nullable/optional.
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
-as non-nullale/optional:
+as non-nullable/optional:
 - Dataclasses: `field: Model = field(Model)`
 - Pydantic: `field: Model = Field(Model)`
 - msgspec: `field: Model = field(Model)`""",
@@ -5365,7 +5365,7 @@ def test_main_use_default_keep_required_non_nullable(output_model: str, expected
     """When using default, keep required field non nullable/optional.
 
     The `--use-default-keep-required-non-nullable` flag keeps a required field
-    as non-nullale/optional:
+    as non-nullable/optional:
     - Dataclasses: `field: Model = field(Model)`
     - Pydantic: `field: Model = Field(Model)`
     - msgspec: `field: Model = field(Model)`
