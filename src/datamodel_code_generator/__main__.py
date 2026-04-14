@@ -531,6 +531,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
+    use_default_keep_required_non_nullable: bool = False
     formatters: list[Formatter] | None = None
     parent_scoped_naming: bool = False
     naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
@@ -982,6 +983,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_serialization_alias=config.use_serialization_alias,
         use_frozen_field=config.use_frozen_field,
         use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
+        use_default_keep_required_non_nullable=config.use_default_keep_required_non_nullable,
         formatters=config.formatters,
         settings_path=settings_path,
         parent_scoped_naming=config.parent_scoped_naming,

@@ -551,7 +551,11 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
+                if (
+                    self.apply_default_values_for_required_fields
+                    and effective_has_default
+                    and not self.use_default_keep_required_non_nullable
+                ):
                     effective_required = False
                 fields.append(
                     self.get_object_field(
@@ -600,7 +604,11 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
+                if (
+                    self.apply_default_values_for_required_fields
+                    and effective_has_default
+                    and not self.use_default_keep_required_non_nullable
+                ):
                     effective_required = False
                 # Handle multiple aliases (Pydantic v2 AliasChoices)
                 single_alias: str | None = None

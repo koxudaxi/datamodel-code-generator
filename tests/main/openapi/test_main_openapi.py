@@ -743,7 +743,8 @@ def test_pyproject(tmp_path: Path) -> None:
     output_file: Path = tmp_path / "output.py"
     pyproject_toml_path = Path(DATA_PATH) / "project" / "pyproject.toml"
     pyproject_toml = (
-        pyproject_toml_path.read_text()
+        pyproject_toml_path
+        .read_text()
         .replace("INPUT_PATH", get_path(OPEN_API_DATA_PATH / "api.yaml"))
         .replace("OUTPUT_PATH", get_path(output_file))
         .replace("ALIASES_PATH", get_path(OPEN_API_DATA_PATH / "empty_aliases.json"))
@@ -5314,5 +5315,71 @@ def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
             "3.14",
             "--reuse-model",
             "--use-type-alias",
+        ],
+    )
+
+
+@pytest.mark.benchmark
+def test_use_default_keep_required_non_nullable(output_file: Path) -> None:
+    """Test OpenAPI generation with use default option."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        extra_args=[
+            "--use-default",
+            "--use-default-keep-required-non-nullable",
+        ],
+    )
+
+
+@pytest.mark.parametrize(
+    ("output_model", "expected_file"),
+    [
+        ("dataclasses.dataclass", "default_keep_required_non_nullable_dataclass.py"),
+        ("pydantic_v2.BaseModel", "default_keep_required_non_nullable_pydantic_v2.py"),
+        ("msgspec.Struct", "default_keep_required_non_nullable_msgspec.py"),
+    ],
+)
+@pytest.mark.cli_doc(
+    options=["--use-default", "--use-default-keep-required-non-nullable"],
+    option_description="""When using default, keep required field non nullable/optional.
+
+The `--use-default-keep-required-non-nullable` flag keeps a required field
+as non-nullale/optional:
+- Dataclasses: `field: Model = field(Model)`
+- Pydantic: `field: Model = Field(Model)`
+- msgspec: `field: Model = field(Model)`""",
+    input_schema="openapi/default_factory_keep_required_non_nullable.json",
+    cli_args=["--use-default", "--use-default-keep-required-non-nullable"],
+    model_outputs={
+        "dataclass": "main/jsonschema/default_keep_required_non_nullable_dataclass.py",
+        "pydantic_v2": "main/jsonschema/default_keep_required_non_nullable_pydantic_v2.py",
+        "msgspec": "main/jsonschema/default_keep_required_non_nullable_msgspec.py",
+    },
+)
+@pytest.mark.benchmark
+@LEGACY_BLACK_SKIP
+def test_main_use_default_keep_required_non_nullable(output_model: str, expected_file: str, output_file: Path) -> None:
+    """When using default, keep required field non nullable/optional.
+
+    The `--use-default-keep-required-non-nullable` flag keeps a required field
+    as non-nullale/optional:
+    - Dataclasses: `field: Model = field(Model)`
+    - Pydantic: `field: Model = Field(Model)`
+    - msgspec: `field: Model = field(Model)`
+    """
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "default_factory_keep_required_non_nullable.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            output_model,
+            "--use-default",
+            "--use-default-keep-required-non-nullable",
         ],
     )

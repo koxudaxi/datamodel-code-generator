@@ -1144,6 +1144,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_default_factory_for_optional_nested_models: bool = (
             config.use_default_factory_for_optional_nested_models
         )
+        self.use_default_keep_required_non_nullable: bool = config.use_default_keep_required_non_nullable
         self.field_type_collision_strategy: FieldTypeCollisionStrategy | None = config.field_type_collision_strategy
 
     @property

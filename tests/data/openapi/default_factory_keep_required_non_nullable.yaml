@@ -1,0 +1,26 @@
+openapi: 3.1.0
+info:
+  title: Data test
+  description: Data test
+components:
+  schemas:
+    data:
+      type: object
+      required:
+      - number
+      properties:
+        number:
+          description: Number
+          default: 1
+          type: integer
+          format: int32
+          minimum: 0
+    block:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/data'
+        dataOptional:
+          $ref: '#/components/schemas/data'

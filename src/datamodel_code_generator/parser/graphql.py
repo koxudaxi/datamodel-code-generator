@@ -372,7 +372,11 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
 
-        if self.apply_default_values_for_required_fields and effective_has_default:
+        if (
+            self.apply_default_values_for_required_fields
+            and effective_has_default
+            and not self.use_default_keep_required_non_nullable
+        ):
             required = False
 
         extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
