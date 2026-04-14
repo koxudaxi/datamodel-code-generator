@@ -5348,9 +5348,9 @@ def test_use_default_keep_required_non_nullable(output_file: Path) -> None:
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
 as non-nullable/optional:
-- Dataclasses: `field: Model = field(Model)`
-- Pydantic: `field: Model = Field(Model)`
-- msgspec: `field: Model = field(Model)`""",
+- Dataclasses: `field: int = 1`
+- Pydantic: `field: int = 1`
+- msgspec: `field: int = 1`""",
     input_schema="openapi/default_factory_keep_required_non_nullable.json",
     cli_args=["--use-default", "--use-default-keep-required-non-nullable"],
     model_outputs={
@@ -5366,9 +5366,9 @@ def test_main_use_default_keep_required_non_nullable(output_model: str, expected
 
     The `--use-default-keep-required-non-nullable` flag keeps a required field
     as non-nullable/optional:
-    - Dataclasses: `field: Model = field(Model)`
-    - Pydantic: `field: Model = Field(Model)`
-    - msgspec: `field: Model = field(Model)`
+    - Dataclasses: `field: int = 1`
+    - Pydantic: `field: int = 1`
+    - msgspec: `field: int = 1`
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "default_factory_keep_required_non_nullable.yaml",

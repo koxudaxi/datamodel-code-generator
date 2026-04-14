@@ -6785,9 +6785,9 @@ When using default, keep required field non nullable/optional.
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
 as non-nullable/optional:
-- Dataclasses: `field: Model = field(Model)`
-- Pydantic: `field: Model = Field(Model)`
-- msgspec: `field: Model = field(Model)`
+- Dataclasses: `field: int = 1`
+- Pydantic: `field: int = 1`
+- msgspec: `field: int = 1`
 
 !!! tip "Usage"
 
