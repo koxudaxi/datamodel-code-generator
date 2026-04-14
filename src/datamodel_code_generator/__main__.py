@@ -553,6 +553,13 @@ class Config(BaseModel):  # noqa: PLR0904
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
         set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
+        explicit_input_sources = {
+            field_name for field_name in ("input", "url", "input_model") if field_name in set_args
+        }
+
+        if explicit_input_sources:
+            for field_name in {"input", "url", "input_model"} - explicit_input_sources:
+                setattr(self, field_name, None)
 
         if set_args.get("output_model_type") == DataModelType.MsgspecStruct.value:
             set_args["use_annotated"] = True
