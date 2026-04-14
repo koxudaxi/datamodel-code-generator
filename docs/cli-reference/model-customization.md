@@ -5297,7 +5297,34 @@ with their defaults, making them optional to provide when instantiating the mode
 
         **Input Schema:**
 
-        > **Error:** File not found: openapi/default_factory_keep_required_non_nullable.json
+        ```yaml
+        openapi: 3.1.0
+        info:
+          title: Data test
+          description: Data test
+        components:
+          schemas:
+            data:
+              type: object
+              required:
+              - number
+              properties:
+                number:
+                  description: Number
+                  default: 1
+                  type: integer
+                  format: int32
+                  minimum: 0
+            block:
+              type: object
+              required:
+              - data
+              properties:
+                data:
+                  $ref: '#/components/schemas/data'
+                dataOptional:
+                  $ref: '#/components/schemas/data'
+        ```
 
         **Output:**
 
@@ -5571,7 +5598,34 @@ as non-nullable/optional:
 
     **Input Schema:**
 
-    > **Error:** File not found: openapi/default_factory_keep_required_non_nullable.json
+    ```yaml
+    openapi: 3.1.0
+    info:
+      title: Data test
+      description: Data test
+    components:
+      schemas:
+        data:
+          type: object
+          required:
+          - number
+          properties:
+            number:
+              description: Number
+              default: 1
+              type: integer
+              format: int32
+              minimum: 0
+        block:
+          type: object
+          required:
+          - data
+          properties:
+            data:
+              $ref: '#/components/schemas/data'
+            dataOptional:
+              $ref: '#/components/schemas/data'
+    ```
 
     **Output:**
 
