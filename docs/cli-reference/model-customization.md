@@ -37,7 +37,7 @@
 | [`--union-mode`](#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_... |
 | [`--use-default`](#use-default) | Use default values from schema in generated models. |
 | [`--use-default-factory-for-optional-nested-models`](#use-default-factory-for-optional-nested-models) | Generate default_factory for optional nested model fields. |
-| [`--use-default-keep-required-non-nullable`](#use-default-keep-required-non-nullable) | When using default, keep required field non nullable/optiona... |
+| [`--use-default-keep-required-non-nullable`](#use-default-keep-required-non-nullable) | When using default, keep required field non nullable/non-opt... |
 | [`--use-default-kwarg`](#use-default-kwarg) | Use default= keyword argument instead of positional argument... |
 | [`--use-frozen-field`](#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly p... |
 | [`--use-generic-base-class`](#use-generic-base-class) | Generate a shared base class with model configuration to avo... |
@@ -5576,7 +5576,7 @@ for optional nested model fields instead of None default:
 
 ## `--use-default-keep-required-non-nullable` {#use-default-keep-required-non-nullable}
 
-When using default, keep required field non nullable/optional.
+When using default, keep required field non nullable/non-optionaloptional.
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
 as non-nullable/optional:

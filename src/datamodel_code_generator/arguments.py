@@ -888,7 +888,7 @@ field_options.add_argument(
 )
 field_options.add_argument(
     "--use-default-keep-required-non-nullable",
-    help="When using default, keep required field non nullable/optional."
+    help="When using default, keep required field non nullable/non-optionaloptional."
     "E.g., `field: int = 1` instead of `field: Model | None = Field(...)`",
     action="store_true",
     default=None,

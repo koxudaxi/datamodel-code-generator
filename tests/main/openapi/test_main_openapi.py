@@ -5344,7 +5344,7 @@ def test_use_default_keep_required_non_nullable(output_file: Path) -> None:
 )
 @pytest.mark.cli_doc(
     options=["--use-default", "--use-default-keep-required-non-nullable"],
-    option_description="""When using default, keep required field non nullable/optional.
+    option_description="""When using default, keep required field non nullable/non-optionaloptional.
 
 The `--use-default-keep-required-non-nullable` flag keeps a required field
 as non-nullable/optional:
@@ -5366,7 +5366,7 @@ as non-nullable/optional:
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
 def test_main_use_default_keep_required_non_nullable(output_model: str, expected_file: str, output_file: Path) -> None:
-    """When using default, keep required field non nullable/optional.
+    """When using default, keep required field non nullable/non-optionaloptional.
 
     The `--use-default-keep-required-non-nullable` flag keeps a required field
     as non-nullable/optional:

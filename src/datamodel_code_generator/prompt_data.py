@@ -120,7 +120,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-decimal-for-multiple-of": "Generate Decimal types for fields with multipleOf constraint.",
     "--use-default": "Use default values from schema in generated models.",
     "--use-default-factory-for-optional-nested-models": "Generate default_factory for optional nested model fields.",
-    "--use-default-keep-required-non-nullable": "When using default, keep required field non nullable/optional.",
+    "--use-default-keep-required-non-nullable": "When using default, keep required field non nullable/non-optionaloptional.",
     "--use-default-kwarg": "Use default= keyword argument instead of positional argument for fields with defaults.",
     "--use-double-quotes": "Use double quotes for string literals in generated code.",
     "--use-enum-values-in-discriminator": "Use enum values in discriminator mappings for union types.",
