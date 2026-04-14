@@ -213,6 +213,16 @@ def test_resolve_ref_with_root_id_differs_from_base_url() -> None:
     assert result == "https://example.com/common/types.json#"
 
 
+def test_resolve_ref_with_relative_root_id_and_base_url() -> None:
+    """Relative root $id should be resolved against the retrieval URL before $ref resolution."""
+    resolver = ModelResolver(base_url="http://localhost:8888/schemas/v1/main.schema.json")
+    resolver.set_root_id("/schemas/v1/main.schema.json")
+
+    result = resolver.resolve_ref("sub.schema.json")
+
+    assert result == "http://localhost:8888/schemas/v1/sub.schema.json#"
+
+
 @pytest.mark.parametrize(
     ("base_url", "ref", "expected"),
     [

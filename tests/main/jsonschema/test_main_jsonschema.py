@@ -992,6 +992,73 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
+def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
+    main_response = mocker.Mock()
+    main_response.status_code = 200
+    main_response.headers = {}
+    main_response.text = json.dumps({
+        "$id": "/schemas/v1/main.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Main",
+        "type": "object",
+        "properties": {
+            "sub": {
+                "$ref": "sub.schema.json",
+            }
+        },
+        "required": ["sub"],
+    })
+    sub_response = mocker.Mock()
+    sub_response.status_code = 200
+    sub_response.headers = {}
+    sub_response.text = json.dumps({
+        "$id": "/schemas/v1/sub.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Sub",
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}$",
+    })
+    httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
+    output_dir = tmp_path / "output"
+
+    result = run_main_with_args([
+        "--url",
+        "http://localhost:8888/schemas/v1/main.schema.json",
+        "--output",
+        str(output_dir),
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+
+    assert result == Exit.OK
+    main_content = (output_dir / "__init__.py").read_text(encoding="utf-8")
+    sub_content = (output_dir / "sub.py").read_text(encoding="utf-8")
+    assert "class Main(BaseModel):" in main_content
+    assert "sub: sub_1.Schema" in main_content
+    assert "class Schema(RootModel[constr(pattern=r'^[0-9a-f]{8}$')]):" in sub_content
+    httpx_get_mock.assert_has_calls([
+        call(
+            "http://localhost:8888/schemas/v1/main.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+        call(
+            "http://localhost:8888/schemas/v1/sub.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+    ])
+
+
 def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
     person_response = mocker.Mock()
