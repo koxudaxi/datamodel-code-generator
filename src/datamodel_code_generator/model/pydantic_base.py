@@ -253,7 +253,7 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        if self.field:
+        if self.field and self.field.startswith("Field("):
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 
