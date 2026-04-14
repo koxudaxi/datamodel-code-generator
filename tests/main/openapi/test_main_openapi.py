@@ -5352,11 +5352,15 @@ as non-nullable/optional:
 - Pydantic: `field: int = 1`
 - msgspec: `field: int = 1`""",
     input_schema="openapi/default_factory_keep_required_non_nullable.json",
-    cli_args=["--use-default", "--use-default-keep-required-non-nullable"],
+    cli_args=[
+        "--use-default",
+        "--use-default-keep-required-non-nullable",
+    ],
+    related_options=["--use-default"],
     model_outputs={
-        "dataclass": "main/jsonschema/default_keep_required_non_nullable_dataclass.py",
-        "pydantic_v2": "main/jsonschema/default_keep_required_non_nullable_pydantic_v2.py",
-        "msgspec": "main/jsonschema/default_keep_required_non_nullable_msgspec.py",
+        "dataclass": "main/openapi/default_keep_required_non_nullable_dataclass.py",
+        "pydantic_v2": "main/openapi/default_keep_required_non_nullable_pydantic_v2.py",
+        "msgspec": "main/openapi/default_keep_required_non_nullable_msgspec.py",
     },
 )
 @pytest.mark.benchmark

@@ -5557,6 +5557,8 @@ as non-nullable/optional:
 - Pydantic: `field: int = 1`
 - msgspec: `field: int = 1`
 
+**Related:** [`--use-default`](model-customization.md#use-default)
+
 !!! tip "Usage"
 
     ```bash
