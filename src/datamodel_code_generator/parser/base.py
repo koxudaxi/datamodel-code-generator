@@ -1823,6 +1823,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         model_cache: dict[tuple[HashableComparable, ...], Reference] = {}
         duplicates = []
         for model in models.copy():
+            if self.collapse_root_models and isinstance(model, self.data_model_root_type):
+                continue
             model_key = model.get_dedup_key()
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:
