@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ReproBugs",
+  "description": "Minimal schema to reproduce reuse_model + collapse_root_models bugs in datamodel-code-generator 0.55.0",
+  "$defs": {
+    "Shared": {
+      "type": "object",
+      "title": "Shared",
+      "properties": {
+        "shortCode": {
+          "title": "ShortCode",
+          "type": "string",
+          "maxLength": 8,
+          "minLength": 0
+        }
+      },
+      "required": [
+        "shortCode"
+      ]
+    },
+    "RecordA": {
+      "type": "object",
+      "title": "RecordA",
+      "allOf": [
+        {
+          "$ref": "#/$defs/Shared"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "title": "Timestamp",
+              "type": "string"
+            }
+          },
+          "required": [
+            "timestamp"
+          ]
+        }
+      ]
+    },
+    "RecordB": {
+      "type": "object",
+      "title": "RecordB",
+      "allOf": [
+        {
+          "$ref": "#/$defs/Shared"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "created": {
+              "title": "Timestamp",
+              "type": "string"
+            },
+            "label": {
+              "title": "LongText",
+              "type": "string"
+            }
+          },
+          "required": [
+            "created",
+            "label"
+          ]
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/RecordA"
+    },
+    {
+      "$ref": "#/$defs/RecordB"
+    }
+  ]
+}
