@@ -1338,9 +1338,12 @@ def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
     )
 
 
-@pytest.mark.parametrize("collapse_reuse_models", [False, True])
+@pytest.mark.parametrize(
+    "collapse_reuse_model_args",
+    [[], ["--collapse-reuse-models"]],
+)
 def test_main_reuse_model_collapse_root_models_preserves_constraints(
-    output_file: Path, collapse_reuse_models: bool
+    output_file: Path, collapse_reuse_model_args: list[str]
 ) -> None:
     """Test root-model collapse keeps distinct field constraints when titles collide."""
     extra_args = [
@@ -1350,12 +1353,11 @@ def test_main_reuse_model_collapse_root_models_preserves_constraints(
         "--field-constraints",
         "--snake-case-field",
         "--target-python-version",
-        "3.13",
+        "3.10",
         "--output-model-type",
         "pydantic_v2.BaseModel",
+        *collapse_reuse_model_args,
     ]
-    if collapse_reuse_models:
-        extra_args.append("--collapse-reuse-models")
 
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_root_models_constraints.json",
