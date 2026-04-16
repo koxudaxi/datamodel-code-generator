@@ -1348,6 +1348,37 @@ def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "collapse_reuse_model_args",
+    [[], ["--collapse-reuse-models"]],
+)
+def test_main_reuse_model_collapse_root_models_preserves_constraints(
+    output_file: Path, collapse_reuse_model_args: list[str]
+) -> None:
+    """Test root-model collapse keeps distinct field constraints when titles collide."""
+    extra_args = [
+        "--reuse-model",
+        "--collapse-root-models",
+        "--use-title-as-name",
+        "--field-constraints",
+        "--snake-case-field",
+        "--target-python-version",
+        "3.10",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        *collapse_reuse_model_args,
+    ]
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_root_models_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reuse_model_collapse_root_models_constraints.py",
+        extra_args=extra_args,
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--capitalize-enum-members"],
     option_description="""Capitalize enum member names to UPPER_CASE format.
