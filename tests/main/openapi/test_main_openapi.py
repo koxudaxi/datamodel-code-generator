@@ -5316,3 +5316,11 @@ def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
             "--use-type-alias",
         ],
     )
+
+def test_main_to_be_renamed_later(output_file: Path) -> None:
+     run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "to_be_renamed_later.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+    )
