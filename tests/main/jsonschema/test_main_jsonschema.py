@@ -1224,16 +1224,6 @@ def test_main_circular_reference(output_file: Path) -> None:
     )
 
 
-def test_main_cyclic_mutual_defs(output_file: Path) -> None:
-    """Minimal mutual cycle between two JSON Schema definitions (A <-> B)."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "cyclic_mutual_defs.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-    )
-
-
 def test_main_invalid_enum_name(output_file: Path) -> None:
     """Test invalid enum name handling."""
     run_main_and_assert(

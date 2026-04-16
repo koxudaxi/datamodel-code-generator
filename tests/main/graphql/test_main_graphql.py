@@ -917,14 +917,3 @@ def test_main_graphql_no_typename(output_file: Path) -> None:
         expected_file="no_typename.py",
         extra_args=["--graphql-no-typename"],
     )
-
-
-def test_main_cyclic_mutual_types(output_file: Path) -> None:
-    """Mutual object-type cycle (A <-> B) in GraphQL."""
-    run_main_and_assert(
-        input_path=GRAPHQL_DATA_PATH / "cyclic-mutual-types.graphql",
-        output_path=output_file,
-        input_file_type="graphql",
-        assert_func=assert_file_content,
-        expected_file="cyclic_mutual_types.py",
-    )

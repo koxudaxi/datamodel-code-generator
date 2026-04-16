@@ -493,7 +493,7 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
@@ -534,7 +534,6 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
                 pass
 
         # sort on base_class dependency
-        seen_orders: set[tuple[str, ...]] = set()
         while True:
             ordered_models: list[tuple[int, DataModel]] = []
             # Build lookup dict for O(1) index access instead of O(n) list.index()
@@ -566,11 +565,6 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
             sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=operator.itemgetter(0))]
             if sorted_unresolved_models == unresolved_references:
                 break
-            new_order = tuple(m.path for m in sorted_unresolved_models)
-            if new_order in seen_orders:
-                unresolved_references = sorted_unresolved_models
-                break
-            seen_orders.add(new_order)
             unresolved_references = sorted_unresolved_models
 
         # circular reference
@@ -1630,9 +1624,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
-                                if not base_class.reference:
-                                    continue
-                                check_paths(base_class.reference, mapping)
+                                check_paths(base_class.reference, mapping)  # ty: ignore
 
                         if not discriminator_values:
                             discriminator_values = [discriminator_model.path.split("/")[-1]]
