@@ -502,8 +502,10 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
+
     if require_update_action_models is None:
         require_update_action_models = []
+
     sorted_model_count: int = len(sorted_data_models)
 
     unresolved_references: list[DataModel] = []
@@ -521,6 +523,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 add_model_path_to_list(require_update_action_models, model)
         else:
             unresolved_references.append(model)
+
     if unresolved_references:
         if sorted_model_count != len(sorted_data_models) and recursion_count:
             try:
@@ -552,6 +555,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         for b in model.base_classes
                         if b.reference and b.reference.path in path_to_index
                     ]
+
                 if indexes:
                     ordered_models.append((
                         max(indexes),
@@ -562,9 +566,11 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         -1,
                         model,
                     ))
+
             sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=operator.itemgetter(0))]
             if sorted_unresolved_models == unresolved_references:
                 break
+
             unresolved_references = sorted_unresolved_models
 
         # circular reference
@@ -578,16 +584,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 if update_action_parent:
                     add_model_path_to_list(require_update_action_models, model)
                 continue
+
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
                 add_model_path_to_list(require_update_action_models, model)
                 continue
+
             # unresolved
             unresolved_classes = ", ".join(
                 f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
             )
             msg = f"A Parser can not resolve classes: {unresolved_classes}."
             raise Exception(msg)  # noqa: TRY002
+
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
