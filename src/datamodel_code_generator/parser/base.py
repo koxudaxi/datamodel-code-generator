@@ -493,7 +493,7 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
@@ -537,6 +537,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 pass
 
         # sort on base_class dependency
+        seen_orderings: set[tuple[str, ...]] = set()
         while True:
             ordered_models: list[tuple[int, DataModel]] = []
             # Build lookup dict for O(1) index access instead of O(n) list.index()
@@ -571,6 +572,14 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
             if sorted_unresolved_models == unresolved_references:
                 break
 
+            sig = tuple(m.path for m in sorted_unresolved_models)
+            if sig in seen_orderings:
+                # Base-class dependency order has no fixed point (e.g. cyclic inheritance with
+                # discriminators). Further iterations only permute the list; use stable order.
+                unresolved_references.sort(key=lambda m: m.path)
+                break
+
+            seen_orderings.add(sig)
             unresolved_references = sorted_unresolved_models
 
         # circular reference

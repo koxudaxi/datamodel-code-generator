@@ -223,7 +223,7 @@ class DataModelFieldBase(_BaseModel):
         """Build Union[] type hint from data_type.data_types if forward reference requires it."""
         if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
             return None
-        parts = [dt.type_hint for dt in self.data_type.data_types if dt.type_hint]
+        parts = dict.fromkeys(dt.type_hint for dt in self.data_type.data_types if dt.type_hint).keys()
         if len(parts) > 1:
             return f"Union[{', '.join(parts)}]"
         return None  # pragma: no cover
@@ -232,7 +232,7 @@ class DataModelFieldBase(_BaseModel):
         """Build Union[] base type hint from data_type.data_types if forward reference requires it."""
         if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
             return None
-        parts = [dt.base_type_hint for dt in self.data_type.data_types if dt.base_type_hint]
+        parts = dict.fromkeys(dt.base_type_hint for dt in self.data_type.data_types if dt.base_type_hint).keys()
         if len(parts) > 1:
             return f"Union[{', '.join(parts)}]"
         return None
