@@ -5319,10 +5319,14 @@ def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
 
 
 @pytest.mark.timeout(30)
-def test_main_to_be_renamed_later(output_file: Path) -> None:
-    """To be updated later."""
+def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None:
+    """Discriminated oneOf with variants that allOf the parent (circular graph).
+
+    Covers sort_data_models ordering for cyclic base dependencies and discriminator
+    handling (mapping + RootModel) on a minimal OpenAPI spec.
+    """
     run_main_and_assert(
-        input_path=OPEN_API_DATA_PATH / "to_be_renamed_later.json",
+        input_path=OPEN_API_DATA_PATH / "openapi_discriminated_oneof_allof_cycle.json",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
