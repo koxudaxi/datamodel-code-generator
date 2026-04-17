@@ -5330,5 +5330,4 @@ def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        extra_args=["--disable-timestamp"],
     )
