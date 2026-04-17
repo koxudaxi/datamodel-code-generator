@@ -1,17 +1,28 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "sort_data_models infinite loop reproducer",
-    "version": "1.0",
-    "description": "Discriminated oneOf (X) with variants that allOf-reference X causes circular inheritance among generated models. sort_data_models then never converges (while-loop oscillation). See parser/base.py sort_data_models."
+    "title": "",
+    "version": ""
   },
   "paths": {},
   "components": {
     "schemas": {
+      "ASchema": {
+        "type": "object",
+        "description": "Schema referenced by discriminator mapping."
+      },
+      "BSchema": {
+        "type": "object",
+        "description": "Schema referenced by discriminator mapping."
+      },
       "X": {
         "type": "object",
         "discriminator": {
-          "propertyName": "kind"
+          "propertyName": "kind",
+          "mapping": {
+            "a": "#/components/schemas/ASchema",
+            "b": "#/components/schemas/BSchema"
+          }
         },
         "oneOf": [
           {

@@ -1594,11 +1594,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     discriminator_values: list[DiscriminatorValue] = []
 
                     def check_paths(
-                        model: pydantic_model_v2.BaseModel | Reference,
+                        model: pydantic_model_v2.BaseModel | Reference | None,
                         mapping: dict[str, str],
                         discriminator_values: list[DiscriminatorValue] = discriminator_values,
                     ) -> None:
                         """Validate discriminator mapping paths for a model."""
+                        if model is None:
+                            return
+
                         for name, path in mapping.items():
                             if (model.path.split("#/")[-1] != path.split("#/")[-1]) and (
                                 path.startswith("#/") or model.path[:-1] != path.split("/")[-1]
@@ -1642,6 +1645,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
+                                if not base_class.reference:
+                                    continue
+
                                 check_paths(base_class.reference, mapping)  # ty: ignore
 
                         if not discriminator_values:

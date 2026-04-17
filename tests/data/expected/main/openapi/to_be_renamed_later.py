@@ -8,6 +8,14 @@ from typing import Literal, Union
 from pydantic import BaseModel, Field, RootModel
 
 
+class ASchema(BaseModel):
+    pass
+
+
+class BSchema(BaseModel):
+    pass
+
+
 class A1(BaseModel):
     kind: Literal['a']
 
