@@ -98,22 +98,32 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
-    option_description="""Keep model definition order as specified in schema.
+    option_description="""Keep generated model order deterministic while respecting dependency constraints.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.""",
+The `--keep-model-order` flag produces a stable, deterministic output order. The
+generator starts from class-name order and only moves models when required to
+satisfy dependency or runtime constraints (for example, a base class must appear
+before its subclass, and cyclic groups must stay together).
+
+This option is not equivalent to preserving the raw definition order from the
+input schema, and it does not guarantee a strict unconditional alphabetical
+order either. Inheritance and other runtime ordering requirements can force a
+non-alphabetical arrangement. The value of the flag is that repeated runs on the
+same schema produce the same ordering, which keeps diffs stable.""",
     input_schema="jsonschema/inheritance_forward_ref.json",
     cli_args=["--keep-model-order"],
     golden_output="jsonschema/inheritance_forward_ref_keep_model_order.py",
     related_options=["--collapse-root-models"],
 )
 def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_path: Path) -> None:
-    """Keep model definition order as specified in schema.
+    """Keep generated model order deterministic while respecting dependency constraints.
 
-    The `--keep-model-order` flag preserves the original definition order from the schema
-    instead of reordering models based on dependencies. This is useful when the order
-    of model definitions matters for documentation or readability.
+    The `--keep-model-order` flag produces a stable, deterministic output order.
+    The generator starts from class-name order and only moves models when required
+    to satisfy dependency or runtime constraints. It is not equivalent to
+    preserving the raw schema/spec definition order, and it does not guarantee a
+    strict unconditional alphabetical order either — inheritance and other
+    runtime ordering requirements can force a non-alphabetical arrangement.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "inheritance_forward_ref.json",
