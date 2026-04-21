@@ -8,17 +8,17 @@ on:
 jobs:
   notify:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_repository.full_name == github.repository }}
     permissions:
       contents: read
       issues: write
-      pull-requests: write
+      pull-requests: read
     env:
       TARGET_OWNER: koxudaxi
       TARGET_REPO: datamodel-code-generator
     steps:
       - name: Post release notifications
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

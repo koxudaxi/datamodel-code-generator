@@ -8,12 +8,12 @@ jobs:
   update-changelog:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
           ref: main
-          token: ${{ secrets.PAT }}
+          persist-credentials: false
 
       - name: Get release info and update CHANGELOG
         env:
@@ -61,9 +61,11 @@ jobs:
           rm -f header.md new_entry.md old_entries.md
 
       - name: Commit and push
+        env:
+          PUSH_TOKEN: ${{ secrets.PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
           git diff --cached --quiet || git commit -m "docs: update CHANGELOG.md for ${{ github.event.release.tag_name }}"
-          git push
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
