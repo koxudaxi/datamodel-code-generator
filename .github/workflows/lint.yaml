@@ -3,33 +3,28 @@ on:
   push:
     branches: [main]
   pull_request:
-  pull_request_target:
-    types: [labeled]
+
+permissions:
+  contents: write
 
 jobs:
   lint:
-    if: |
-      github.event_name == 'push' ||
-      github.event_name == 'pull_request' ||
-      (github.event_name == 'pull_request_target' && github.event.label.name == 'safe-to-fix' &&
-       (github.event.sender.login == 'koxudaxi' ||
-        github.event.sender.login == 'gaborbernat' ||
-        github.event.sender.login == 'ilovelinux'))
     runs-on: ubuntu-latest
     steps:
-      # Checkout for forks (no PAT available, auto-commit won't run anyway)
+      # Fork PRs run read-only without repository credentials.
       - uses: actions/checkout@v4
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
-      # Checkout for same-repo PRs, pushes, and pull_request_target (PAT for auto-commit and workflow retrigger)
+          persist-credentials: false
+      # Same-repo branches can keep credentials for autofix pushes.
       - uses: actions/checkout@v4
-        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          token: ${{ secrets.PAT }}
+          token: ${{ github.token }}
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
@@ -37,14 +32,7 @@ jobs:
       - run: SKIP=readme,config-types,schema-docs uvx prek run --all-files --show-diff-on-failure
       - if: |
           github.event_name == 'push' ||
-          github.event.pull_request.head.repo.full_name == github.repository ||
-          github.actor == 'koxudaxi' ||
-          github.actor == 'gaborbernat' ||
-          github.actor == 'ilovelinux' ||
-          (github.event_name == 'pull_request_target' && github.event.label.name == 'safe-to-fix' &&
-           (github.event.sender.login == 'koxudaxi' ||
-            github.event.sender.login == 'gaborbernat' ||
-            github.event.sender.login == 'ilovelinux'))
+          github.event.pull_request.head.repo.full_name == github.repository
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "style: auto-fix by prek"

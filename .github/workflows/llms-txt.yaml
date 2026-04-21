@@ -13,43 +13,30 @@ on:
       - 'docs/**/*.md'
       - 'zensical.toml'
       - 'scripts/build_llms_txt.py'
-  pull_request_target:
-    types: [labeled]
-    paths:
-      - 'docs/**/*.md'
-      - 'zensical.toml'
-      - 'scripts/build_llms_txt.py'
 
 permissions:
   contents: write
 
 jobs:
   update-llms-txt:
-    if: |
-      github.event_name == 'push' ||
-      !github.event.pull_request.head.repo.fork ||
-      github.actor == 'koxudaxi' ||
-      github.actor == 'gaborbernat' ||
-      github.actor == 'ilovelinux' ||
-      (github.event_name == 'pull_request_target' && github.event.label.name == 'safe-to-fix' &&
-       (github.event.sender.login == 'koxudaxi' ||
-        github.event.sender.login == 'gaborbernat' ||
-        github.event.sender.login == 'ilovelinux'))
     runs-on: ubuntu-latest
     steps:
+      # Fork PRs run read-only without repository credentials.
       - uses: actions/checkout@v4
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+          persist-credentials: false
+      # Same-repo branches can keep credentials for generated-file pushes.
       - uses: actions/checkout@v4
-        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          token: ${{ secrets.PAT }}
+          token: ${{ github.token }}
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
       - name: Install tox
@@ -61,7 +48,7 @@ jobs:
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
       - name: Commit and push if changed
-        if: github.event_name == 'push' || github.event_name == 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
