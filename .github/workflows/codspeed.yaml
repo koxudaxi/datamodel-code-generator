@@ -13,11 +13,16 @@ concurrency:
   group: codespeed-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   benchmarks:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       # uv standalone build is not compatible with CodSpeedHQ
       # https://github.com/astral-sh/uv/issues/11006
       - uses: actions/setup-python@v6

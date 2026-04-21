@@ -1,0 +1,101 @@
+name: Apply Fork Auto-Fix
+
+on:
+  workflow_run:
+    workflows:
+      - Lint
+      - Update README
+      - Update CLI Docs
+      - Update Schema Docs
+      - Update llms.txt
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  apply:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.head_repository.full_name != github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download approved patch artifact
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER=$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}" --jq '.pull_requests[0].number // empty')
+          if [ -z "${PR_NUMBER}" ]; then
+            echo "should_apply=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          export PR_NUMBER
+          if ! gh pr view "${PR_NUMBER}" --repo "${{ github.repository }}" --json labels --jq '.labels[].name' | grep -Fxq "safe-to-fix"; then
+            echo "should_apply=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          ARTIFACT_ID=$(gh api "repos/${{ github.repository }}/actions/runs/${RUN_ID}/artifacts" --jq '.artifacts[] | select(.name == "autofix-patch" and .expired == false) | .id' | head -n 1)
+          if [ -z "${ARTIFACT_ID}" ]; then
+            echo "should_apply=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          gh api "repos/${{ github.repository }}/actions/artifacts/${ARTIFACT_ID}/zip" > autofix.zip
+          unzip -o autofix.zip
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path("metadata.json").read_text(encoding="utf-8"))
+          workflow_name = os.environ["WORKFLOW_NAME"]
+          if data["workflow"] != workflow_name:
+              raise SystemExit(f"artifact workflow mismatch: {data['workflow']} != {workflow_name}")
+          output = Path(os.environ["GITHUB_OUTPUT"])
+          with output.open("a", encoding="utf-8") as fh:
+              fh.write("should_apply=true\n")
+              fh.write(f"pr_number={os.environ['PR_NUMBER']}\n")
+              fh.write(f"head_repo={data['head_repo']}\n")
+              fh.write(f"head_ref={data['head_ref']}\n")
+              fh.write(f"head_sha={data['head_sha']}\n")
+              fh.write("commit_message<<EOF\n")
+              fh.write(data["commit_message"])
+              fh.write("\nEOF\n")
+          PY
+      - name: Check out PR head branch
+        if: steps.artifact.outputs.should_apply == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.artifact.outputs.head_ref }}
+          repository: ${{ steps.artifact.outputs.head_repo }}
+          persist-credentials: false
+      - name: Skip stale patch
+        id: current_head
+        if: steps.artifact.outputs.should_apply == 'true'
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${{ steps.artifact.outputs.head_sha }}" ]; then
+            echo "is_current=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "is_current=true" >> "$GITHUB_OUTPUT"
+      - name: Apply patch and push
+        if: steps.current_head.outputs.is_current == 'true'
+        env:
+          PUSH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          set -euo pipefail
+          git apply --index --whitespace=nowarn autofix.patch
+          if git diff --staged --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -m "${{ steps.artifact.outputs.commit_message }}"
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${{ steps.artifact.outputs.head_repo }}.git" "HEAD:${{ steps.artifact.outputs.head_ref }}"

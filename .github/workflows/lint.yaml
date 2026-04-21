@@ -18,21 +18,79 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           persist-credentials: false
-      # Same-repo branches can keep credentials for autofix pushes.
+      # Same-repo branches can be fixed in place without persisting credentials.
       - uses: actions/checkout@v4
         if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
         with:
           ref: ${{ github.event.pull_request.head.ref || github.ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          token: ${{ github.token }}
+          persist-credentials: false
       - uses: astral-sh/setup-uv@v5
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
       - run: SKIP=readme,config-types,schema-docs uvx prek run --all-files --show-diff-on-failure
-      - if: |
-          github.event_name == 'push' ||
-          github.event.pull_request.head.repo.full_name == github.repository
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create fork auto-fix patch
+        id: fork_patch
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        env:
+          COMMIT_MESSAGE: "style: auto-fix by prek"
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --binary -- . > autofix.patch
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          Path("metadata.json").write_text(
+              json.dumps(
+                  {
+                      "commit_message": os.environ["COMMIT_MESSAGE"],
+                      "head_ref": os.environ["HEAD_REF"],
+                      "head_repo": os.environ["HEAD_REPO"],
+                      "head_sha": os.environ["HEAD_SHA"],
+                      "workflow": os.environ["WORKFLOW_NAME"],
+                  },
+                  sort_keys=True,
+              ),
+              encoding="utf-8",
+          )
+          PY
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+      - name: Upload fork auto-fix patch
+        if: steps.fork_patch.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          commit_message: "style: auto-fix by prek"
+          name: autofix-patch
+          path: |
+            autofix.patch
+            metadata.json
+          retention-days: 1
+      - name: Commit and push auto-fixes
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          PUSH_TOKEN: ${{ secrets.PAT }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            exit 0
+          fi
+          git commit -m "style: auto-fix by prek"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TARGET_REPO="${{ github.repository }}"
+            TARGET_REF="${{ github.ref_name }}"
+          else
+            TARGET_REPO="${{ github.event.pull_request.head.repo.full_name }}"
+            TARGET_REF="${{ github.event.pull_request.head.ref }}"
+          fi
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${TARGET_REPO}.git" "HEAD:${TARGET_REF}"

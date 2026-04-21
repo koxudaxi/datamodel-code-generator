@@ -14,11 +14,16 @@ on:
       - 'pyproject.toml'
       - '.github/workflows/config-types.yaml'
 
+permissions:
+  contents: read
+
 jobs:
   config-types:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v5
         with:
