@@ -181,3 +181,26 @@ jobs:
         run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+
+  test-gate:
+    name: test-gate
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - coverage
+      - check
+    steps:
+      - name: Fail if any test workflow job failed
+        run: |
+          test_result='${{ needs.test.result }}'
+          coverage_result='${{ needs.coverage.result }}'
+          check_result='${{ needs.check.result }}'
+
+          echo "test: ${test_result}"
+          echo "coverage: ${coverage_result}"
+          echo "check: ${check_result}"
+
+          [ "${test_result}" = "success" ] || exit 1
+          [ "${coverage_result}" = "success" ] || exit 1
+          [ "${check_result}" = "success" ] || exit 1
