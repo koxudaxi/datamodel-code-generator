@@ -1,7 +1,7 @@
-name: Update llms.txt
+name: Sync Generated Docs
 
 on:
-  pull_request:
+  push:
     branches: [main]
     paths:
       - 'src/datamodel_code_generator/**'
@@ -9,25 +9,31 @@ on:
       - 'tests/test_main_kr.py'
       - 'scripts/build_cli_docs.py'
       - 'scripts/build_prompt_data.py'
-      - 'src/datamodel_code_generator/parser/schema_version.py'
       - 'scripts/build_schema_docs.py'
+      - 'scripts/build_llms_txt.py'
+      - 'scripts/update_docs_version.py'
       - 'docs/**/*.md'
+      - 'CHANGELOG.md'
       - 'README.md'
       - 'zensical.toml'
-      - 'scripts/build_llms_txt.py'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: generated-docs-main
+  cancel-in-progress: false
 
 jobs:
-  update-llms-txt:
+  sync:
     runs-on: ubuntu-latest
+    outputs:
+      final_sha: ${{ steps.record_sha.outputs.final_sha }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v5
@@ -61,3 +67,26 @@ jobs:
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
+      - name: Commit generated docs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py
+          if git diff --staged --quiet; then
+            exit 0
+          fi
+          git commit -m "docs: sync generated docs"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ github.ref_name }}"
+      - name: Record final revision
+        id: record_sha
+        run: echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy-docs:
+    needs: sync
+    uses: ./.github/workflows/docs-deploy.yaml
+    with:
+      checkout_ref: ${{ needs.sync.outputs.final_sha }}
+      deploy_branch: dev
+    secrets: inherit
