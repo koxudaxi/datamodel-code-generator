@@ -14,6 +14,7 @@ components:
         mapping:
           '1': '#/components/schemas/Foo'
           '2': '#/components/schemas/Bar'
+          '3': '#/components/schemas/Bar'
     Foo:
       type: object
       properties:
@@ -30,5 +31,6 @@ components:
           type: integer
           enum:
             - 2
+            - 3
       required:
         - kind
