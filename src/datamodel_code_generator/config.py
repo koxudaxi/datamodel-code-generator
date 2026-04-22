@@ -181,6 +181,7 @@ class GenerateConfig(BaseModel):
     use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
+    use_default_keep_required_non_nullable: bool = False
     formatters: list[Formatter] | None = None
     settings_path: Path | None = None
     parent_scoped_naming: bool = False
@@ -315,6 +316,7 @@ class ParserConfig(BaseModel):
     use_serialization_alias: bool = False
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
+    use_default_keep_required_non_nullable: bool = False
     formatters: list[Formatter] | None = None
     defer_formatting: bool = False
     parent_scoped_naming: bool = False

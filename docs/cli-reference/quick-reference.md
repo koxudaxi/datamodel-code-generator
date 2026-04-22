@@ -127,6 +127,7 @@ datamodel-codegen [OPTIONS]
 | [`--union-mode`](model-customization.md#union-mode) | Union mode for combining anyOf/oneOf schemas (smart or left_to_right). |
 | [`--use-default`](model-customization.md#use-default) | Use default values from schema in generated models. |
 | [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) | Generate default_factory for optional nested model fields. |
+| [`--use-default-keep-required-non-nullable`](model-customization.md#use-default-keep-required-non-nullable) | When using default, keep required field non nullable/non-optionaloptional. |
 | [`--use-default-kwarg`](model-customization.md#use-default-kwarg) | Use default= keyword argument instead of positional argument for fields with def... |
 | [`--use-frozen-field`](model-customization.md#use-frozen-field) | Generate frozen (immutable) field definitions for readOnly properties. |
 | [`--use-generic-base-class`](model-customization.md#use-generic-base-class) | Generate a shared base class with model configuration to avoid repetition (DRY). |
@@ -334,6 +335,7 @@ All options sorted alphabetically:
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of) - Generate Decimal types for fields with multipleOf constraint...
 - [`--use-default`](model-customization.md#use-default) - Use default values from schema in generated models.
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models) - Generate default_factory for optional nested model fields.
+- [`--use-default-keep-required-non-nullable`](model-customization.md#use-default-keep-required-non-nullable) - When using default, keep required field non nullable/non-opt...
 - [`--use-default-kwarg`](model-customization.md#use-default-kwarg) - Use default= keyword argument instead of positional argument...
 - [`--use-double-quotes`](template-customization.md#use-double-quotes) - Use double quotes for string literals in generated code.
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator) - Use enum values in discriminator mappings for union types.

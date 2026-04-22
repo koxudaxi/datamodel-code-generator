@@ -111,6 +111,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-default-factory-for-optional-nested-models": CLIOptionMeta(
         name="--use-default-factory-for-optional-nested-models", category=OptionCategory.MODEL
     ),
+    "--use-default-keep-required-non-nullable": CLIOptionMeta(
+        name="--use-default-keep-required-non-nullable", category=OptionCategory.MODEL
+    ),
     "--union-mode": CLIOptionMeta(name="--union-mode", category=OptionCategory.MODEL),
     "--parent-scoped-naming": CLIOptionMeta(
         name="--parent-scoped-naming",

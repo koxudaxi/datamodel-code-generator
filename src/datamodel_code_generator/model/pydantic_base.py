@@ -204,6 +204,8 @@ class DataModelField(DataModelFieldBase):
         if not field_arguments and not default_factory:
             if self.nullable and self.required:
                 return "Field(...)"  # Field() is for mypy
+            if self.required and self.has_default and self.use_default_keep_required_non_nullable:
+                return repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
             return ""
 
         if default_factory:
@@ -211,7 +213,12 @@ class DataModelField(DataModelFieldBase):
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
-        elif self.required and not default_factory and not self.extras.get("validate_default"):
+        elif (
+            self.required
+            and not default_factory
+            and not self.extras.get("validate_default")
+            and not (self.has_default and self.use_default_keep_required_non_nullable)
+        ):
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
             default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
@@ -246,7 +253,7 @@ class DataModelField(DataModelFieldBase):
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        if self.field:
+        if self.field and self.field.startswith("Field("):
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 

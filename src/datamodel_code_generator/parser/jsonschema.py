@@ -694,10 +694,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._circular_ref_cache: dict[str, bool] = {}
 
         if self.data_model_field_type.can_have_extra_keys:
-            self.get_field_extra_key: Callable[[str], str] = (
-                lambda key: self.model_resolver.get_valid_field_name_and_alias(
-                    key, model_type=self.field_name_model_type
-                )[0]
+            self.get_field_extra_key: Callable[[str], str] = lambda key: (
+                self.model_resolver.get_valid_field_name_and_alias(key, model_type=self.field_name_model_type)[0]
             )
 
         else:
@@ -1252,6 +1250,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_frozen_field=self.use_frozen_field,
             use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
+            use_default_keep_required_non_nullable=self.use_default_keep_required_non_nullable,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -2830,11 +2829,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
 
             if self.force_optional_for_required_fields or (
-                self.apply_default_values_for_required_fields and effective_has_default
+                self.apply_default_values_for_required_fields
+                and effective_has_default
+                and not self.use_default_keep_required_non_nullable
             ):
                 required: bool = False
             else:
                 required = original_field_name in requires
+
             fields.append(
                 self.get_object_field(
                     field_name=field_name,

@@ -887,6 +887,13 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-default-keep-required-non-nullable",
+    help="When using default, keep required field non nullable/non-optionaloptional."
+    "E.g., `field: int = 1` instead of `field: Model | None = Field(...)`",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--field-type-collision-strategy",
     help="Strategy for handling field name and type name collisions (Pydantic v2 only). "
     "'rename-field': rename field with suffix and add alias (default). "

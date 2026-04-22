@@ -11,7 +11,7 @@ This documentation is auto-generated from test cases.
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
 | 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
-| 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
+| 🏗️ [Model Customization](model-customization.md) | 40 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
@@ -194,6 +194,7 @@ This documentation is auto-generated from test cases.
 - [`--use-decimal-for-multiple-of`](typing-customization.md#use-decimal-for-multiple-of)
 - [`--use-default`](model-customization.md#use-default)
 - [`--use-default-factory-for-optional-nested-models`](model-customization.md#use-default-factory-for-optional-nested-models)
+- [`--use-default-keep-required-non-nullable`](model-customization.md#use-default-keep-required-non-nullable)
 - [`--use-default-kwarg`](model-customization.md#use-default-kwarg)
 - [`--use-double-quotes`](template-customization.md#use-double-quotes)
 - [`--use-enum-values-in-discriminator`](field-customization.md#use-enum-values-in-discriminator)
