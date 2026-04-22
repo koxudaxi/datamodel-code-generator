@@ -1,0 +1,61 @@
+name: Docs Deploy
+
+on:
+  workflow_call:
+    inputs:
+      checkout_ref:
+        required: true
+        type: string
+      deploy_branch:
+        required: false
+        type: string
+        default: ''
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: false
+      CLOUDFLARE_ACCOUNT_ID:
+        required: false
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: docs-deploy-${{ inputs.deploy_branch || inputs.checkout_ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: ${{ inputs.checkout_ref }}
+          persist-credentials: false
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
+        with:
+          python-version: 3.13
+      - name: Install dependencies
+        run: uv sync
+      - name: Copy CHANGELOG to docs
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            cp CHANGELOG.md docs/changelog.md
+          else
+            echo "# Changelog" > docs/changelog.md
+            echo "" >> docs/changelog.md
+            echo "Changelog will be available after the first release." >> docs/changelog.md
+          fi
+      - name: Update GitHub Action version in docs
+        run: python scripts/update_docs_version.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Build site
+        run: zensical build --clean
+      - name: Deploy
+        if: inputs.deploy_branch != ''
+        env:
+          DEPLOY_BRANCH: ${{ inputs.deploy_branch }}
+        uses: cloudflare/wrangler-action@9acf94ace14e7dc412b076f2c5c20b8ce93c79cd # v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site --project-name=datamodel-code-generator --branch="$DEPLOY_BRANCH"

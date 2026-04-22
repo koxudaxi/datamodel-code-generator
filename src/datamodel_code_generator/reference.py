@@ -627,7 +627,7 @@ class ModelResolver:  # noqa: PLR0904
         """Register an identifier mapping to a resolved reference path."""
         self.ids["/".join(self.current_root)][id_] = self.resolve_ref(path)
 
-    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914
+    def resolve_ref(self, path: Sequence[str] | str) -> str:  # noqa: PLR0911, PLR0912, PLR0914, PLR0915
         """Resolve a reference path to its canonical form."""
         joined_path = path if isinstance(path, str) else self.join_path(tuple(path))
         if joined_path == "#":
@@ -679,7 +679,9 @@ class ModelResolver:  # noqa: PLR0904
         if self.base_url:
             from .http import join_url  # noqa: PLC0415
 
-            effective_base = self.root_id or self.base_url
+            effective_base = self.base_url
+            if self.root_id:
+                effective_base = self.root_id if is_url(self.root_id) else join_url(self.base_url, self.root_id)
             joined_url = join_url(effective_base, ref)
             if "#" in joined_url:
                 return joined_url

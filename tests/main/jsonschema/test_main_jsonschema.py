@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import tempfile
@@ -97,22 +98,32 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
-    option_description="""Keep model definition order as specified in schema.
+    option_description="""Keep generated model order deterministic while respecting dependency constraints.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.""",
+The `--keep-model-order` flag produces a stable, deterministic output order. The
+generator starts from class-name order and only moves models when required to
+satisfy dependency or runtime constraints (for example, a base class must appear
+before its subclass, and cyclic groups must stay together).
+
+This option is not equivalent to preserving the raw definition order from the
+input schema, and it does not guarantee a strict unconditional alphabetical
+order either. Inheritance and other runtime ordering requirements can force a
+non-alphabetical arrangement. The value of the flag is that repeated runs on the
+same schema produce the same ordering, which keeps diffs stable.""",
     input_schema="jsonschema/inheritance_forward_ref.json",
     cli_args=["--keep-model-order"],
     golden_output="jsonschema/inheritance_forward_ref_keep_model_order.py",
     related_options=["--collapse-root-models"],
 )
 def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_path: Path) -> None:
-    """Keep model definition order as specified in schema.
+    """Keep generated model order deterministic while respecting dependency constraints.
 
-    The `--keep-model-order` flag preserves the original definition order from the schema
-    instead of reordering models based on dependencies. This is useful when the order
-    of model definitions matters for documentation or readability.
+    The `--keep-model-order` flag produces a stable, deterministic output order.
+    The generator starts from class-name order and only moves models when required
+    to satisfy dependency or runtime constraints. It is not equivalent to
+    preserving the raw schema/spec definition order, and it does not guarantee a
+    strict unconditional alphabetical order either — inheritance and other
+    runtime ordering requirements can force a non-alphabetical arrangement.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "inheritance_forward_ref.json",
@@ -991,6 +1002,73 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
+def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
+    main_response = mocker.Mock()
+    main_response.status_code = 200
+    main_response.headers = {}
+    main_response.text = json.dumps({
+        "$id": "/schemas/v1/main.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Main",
+        "type": "object",
+        "properties": {
+            "sub": {
+                "$ref": "sub.schema.json",
+            }
+        },
+        "required": ["sub"],
+    })
+    sub_response = mocker.Mock()
+    sub_response.status_code = 200
+    sub_response.headers = {}
+    sub_response.text = json.dumps({
+        "$id": "/schemas/v1/sub.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Sub",
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}$",
+    })
+    httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
+    output_dir = tmp_path / "output"
+
+    result = run_main_with_args([
+        "--url",
+        "http://localhost:8888/schemas/v1/main.schema.json",
+        "--output",
+        str(output_dir),
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+
+    assert result == Exit.OK
+    main_content = (output_dir / "__init__.py").read_text(encoding="utf-8")
+    sub_content = (output_dir / "sub.py").read_text(encoding="utf-8")
+    assert "class Main(BaseModel):" in main_content
+    assert "sub: sub_1.Schema" in main_content
+    assert "class Schema(RootModel[constr(pattern=r'^[0-9a-f]{8}$')]):" in sub_content
+    httpx_get_mock.assert_has_calls([
+        call(
+            "http://localhost:8888/schemas/v1/main.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+        call(
+            "http://localhost:8888/schemas/v1/sub.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+    ])
+
+
 def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
     person_response = mocker.Mock()
@@ -1267,6 +1345,37 @@ def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+@pytest.mark.parametrize(
+    "collapse_reuse_model_args",
+    [[], ["--collapse-reuse-models"]],
+)
+def test_main_reuse_model_collapse_root_models_preserves_constraints(
+    output_file: Path, collapse_reuse_model_args: list[str]
+) -> None:
+    """Test root-model collapse keeps distinct field constraints when titles collide."""
+    extra_args = [
+        "--reuse-model",
+        "--collapse-root-models",
+        "--use-title-as-name",
+        "--field-constraints",
+        "--snake-case-field",
+        "--target-python-version",
+        "3.10",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        *collapse_reuse_model_args,
+    ]
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_root_models_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reuse_model_collapse_root_models_constraints.py",
+        extra_args=extra_args,
     )
 
 
@@ -3143,6 +3252,21 @@ def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_base_class_map_long_json(output_file: Path) -> None:
+    """Test base_class_map with very long json string."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": [' + ",".join(itertools.repeat('""', 100)) + "]}",
+        ],
+    )
+
+
 def test_long_description(output_file: Path) -> None:
     """Test long description handling."""
     run_main_and_assert(
@@ -4656,6 +4780,22 @@ def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: P
         assert_func=assert_file_content,
         expected_file="enum_field_as_literal_map.py",
         extra_args=["--enum-field-as-literal-map", str(mapping_path)],
+    )
+
+
+def test_main_enum_field_as_literal_map_long_json(output_file: Path) -> None:
+    """Test enum_field_as_literal_map with very long json string."""
+    long_inline_mapping = '{"status": "literal",' + ",".join(f'"unused_field_{i}": "enum"' for i in range(100)) + "}"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            long_inline_mapping,
+        ],
     )
 
 

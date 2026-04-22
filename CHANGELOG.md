@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.56.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.56.1) - 2026-04-16
+
+## What's Changed
+* Fix `--base-class-map` and `--enum-field-as-literal-map` long inline json support by @ilovelinux in https://github.com/koxudaxi/datamodel-code-generator/pull/3075
+* Prefer CLI input over pyproject url by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3083
+* Fix relative URL refs with path-only root ids by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3085
+* tomli was merged under the name tomllib into std library *3.11* by @a-detiste in https://github.com/koxudaxi/datamodel-code-generator/pull/3088
+* Fix root model reuse collapse by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3089
+* Docs: describe --keep-model-order as deterministic dependency-aware ordering by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3090
+
+## New Contributors
+* @a-detiste made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3088
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.56.0...0.56.1
+
+---
+
 ## [0.56.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.56.0) - 2026-04-04
 
 ## Breaking Changes
