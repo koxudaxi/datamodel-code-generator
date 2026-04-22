@@ -100,7 +100,7 @@ type = [
   "ty>=0.0.8",
   "types-jinja2",
   "types-pyyaml",
-  "types-setuptools>=67.6.0.5,<70",
+  "types-setuptools>=67.6.0.5,<83",
   "types-toml",
   { include-group = "test" },
 ]
