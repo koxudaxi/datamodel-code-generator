@@ -67,9 +67,13 @@ jobs:
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
+      # Use GITHUB_TOKEN intentionally so this sync commit does not fan out into
+      # another push-triggered workflow run. Docs deployment is chained below.
       - name: Commit generated docs
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_REF: ${{ github.ref_name }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -78,7 +82,9 @@ jobs:
             exit 0
           fi
           git commit -m "docs: sync generated docs"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" "HEAD:${{ github.ref_name }}"
+          git fetch origin "${TARGET_REF}"
+          git rebase "origin/${TARGET_REF}"
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git" "HEAD:${TARGET_REF}"
       - name: Record final revision
         id: record_sha
         run: echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
