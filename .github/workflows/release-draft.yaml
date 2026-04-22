@@ -13,17 +13,16 @@ concurrency:
   group: release-draft
   cancel-in-progress: false
 
-permissions:
-  contents: write
-  pull-requests: write
-
 jobs:
-  analyze-and-draft:
+  analyze:
     # Only run on merged PRs that haven't been analyzed yet
     if: |
       github.event.pull_request.merged == true &&
       !contains(github.event.pull_request.labels.*.name, 'breaking-change-analyzed')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -31,14 +30,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           ref: refs/heads/main
-
-      - name: Ensure labels exist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Create labels if they don't exist (ignore errors if already exist)
-          gh label create "breaking-change-analyzed" --color "0E8A16" --description "PR has been analyzed for breaking changes" 2>/dev/null || true
-          gh label create "breaking-change" --color "D93F0B" --description "PR contains breaking changes" 2>/dev/null || true
 
       - name: Run Claude Code Analysis
         id: claude
@@ -88,29 +79,69 @@ jobs:
         id: parse
         env:
           CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
+          ANALYSIS_PATH: ${{ runner.temp }}/release-draft-analysis.json
         run: |
+          set -euo pipefail
           # Parse structured output from Claude using env var to avoid shell injection
           HAS_BC=$(echo "$CLAUDE_OUTPUT" | jq -r '.has_breaking_changes // false')
           BC_CONTENT=$(echo "$CLAUDE_OUTPUT" | jq -r '.breaking_changes_content // ""')
           REASONING=$(echo "$CLAUDE_OUTPUT" | jq -r '.reasoning // ""')
 
-          echo "has_breaking_changes=$HAS_BC" >> $GITHUB_OUTPUT
+          jq -n \
+            --argjson has_breaking_changes "$HAS_BC" \
+            --arg breaking_changes_content "$BC_CONTENT" \
+            --arg reasoning "$REASONING" \
+            '{has_breaking_changes: $has_breaking_changes, breaking_changes_content: $breaking_changes_content, reasoning: $reasoning}' \
+            > "$ANALYSIS_PATH"
 
-          # Use unique delimiter to avoid collision with content
+      - name: Upload analysis artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-draft-analysis
+          path: ${{ runner.temp }}/release-draft-analysis.json
+          if-no-files-found: error
+
+  update-draft:
+    needs: analyze
+    if: |
+      github.event.pull_request.merged == true &&
+      !contains(github.event.pull_request.labels.*.name, 'breaking-change-analyzed')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Download analysis artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-draft-analysis
+          path: ${{ runner.temp }}
+
+      - name: Load analysis result
+        id: analysis
+        env:
+          ANALYSIS_PATH: ${{ runner.temp }}/release-draft-analysis.json
+        run: |
+          set -euo pipefail
+          HAS_BC=$(jq -r '.has_breaking_changes' "$ANALYSIS_PATH")
+          BC_CONTENT=$(jq -r '.breaking_changes_content // ""' "$ANALYSIS_PATH")
+          REASONING=$(jq -r '.reasoning // ""' "$ANALYSIS_PATH")
+
+          echo "has_breaking_changes=$HAS_BC" >> "$GITHUB_OUTPUT"
+
           DELIMITER="EOF_$(date +%s%N)"
-
-          # Use heredoc for multiline content with unique delimiter
           {
             echo "breaking_changes_content<<$DELIMITER"
             printf '%s\n' "$BC_CONTENT"
             echo "$DELIMITER"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
           {
             echo "reasoning<<$DELIMITER"
             printf '%s\n' "$REASONING"
             echo "$DELIMITER"
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
       - name: Add breaking-change-analyzed label
         env:
@@ -119,7 +150,7 @@ jobs:
           gh pr edit ${{ github.event.pull_request.number }} --add-label "breaking-change-analyzed"
 
       - name: Add breaking-change label if applicable
-        if: steps.parse.outputs.has_breaking_changes == 'true'
+        if: steps.analysis.outputs.has_breaking_changes == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -128,9 +159,9 @@ jobs:
       - name: Post analysis result to PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAS_BC: ${{ steps.parse.outputs.has_breaking_changes }}
-          BC_CONTENT: ${{ steps.parse.outputs.breaking_changes_content }}
-          REASONING: ${{ steps.parse.outputs.reasoning }}
+          HAS_BC: ${{ steps.analysis.outputs.has_breaking_changes }}
+          BC_CONTENT: ${{ steps.analysis.outputs.breaking_changes_content }}
+          REASONING: ${{ steps.analysis.outputs.reasoning }}
         run: |
           # Use temp file to avoid shell escaping issues with special characters
           TMPFILE=$(mktemp)
@@ -156,8 +187,8 @@ jobs:
       - name: Calculate version and update draft release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HAS_BC: ${{ steps.parse.outputs.has_breaking_changes }}
-          BC_CONTENT: ${{ steps.parse.outputs.breaking_changes_content }}
+          HAS_BC: ${{ steps.analysis.outputs.has_breaking_changes }}
+          BC_CONTENT: ${{ steps.analysis.outputs.breaking_changes_content }}
         run: |
           set -euo pipefail
 
