@@ -1,0 +1,12 @@
+# Protect automation that can affect CI/CD behavior or main-only trusted jobs.
+/.github/workflows/** @koxudaxi
+/.github/CODEOWNERS @koxudaxi
+/.pre-commit-config.yaml @koxudaxi
+/tox.ini @koxudaxi
+/zensical.toml @koxudaxi
+/scripts/update_command_help_on_markdown.py @koxudaxi
+/scripts/build_cli_docs.py @koxudaxi
+/scripts/build_prompt_data.py @koxudaxi
+/scripts/build_schema_docs.py @koxudaxi
+/scripts/build_llms_txt.py @koxudaxi
+/scripts/update_docs_version.py @koxudaxi

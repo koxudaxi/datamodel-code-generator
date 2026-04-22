@@ -1,3 +1,7 @@
+ci:
+  autofix_commit_msg: "style: auto-fix by pre-commit.ci"
+  skip: [readme, config-types, schema-docs]
+
 repos:
 - repo: https://github.com/python-jsonschema/check-jsonschema
   rev: 0.35.0
