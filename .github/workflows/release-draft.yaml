@@ -38,7 +38,7 @@ jobs:
         with:
           # OAuth authentication for Max plan subscribers
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ github.token }}
           show_full_output: true
           prompt: |
             Analyze PR #${{ github.event.pull_request.number }} for breaking changes.
@@ -110,7 +110,7 @@ jobs:
     permissions:
       contents: write
       issues: write
-      pull-requests: write
+      pull-requests: read
     steps:
       - name: Download analysis artifact
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -124,7 +124,7 @@ jobs:
           ANALYSIS_PATH: ${{ runner.temp }}/release-draft-analysis.json
         run: |
           set -euo pipefail
-          HAS_BC=$(jq -r '.has_breaking_changes' "$ANALYSIS_PATH")
+          HAS_BC=$(jq -r '.has_breaking_changes // false' "$ANALYSIS_PATH")
           BC_CONTENT=$(jq -r '.breaking_changes_content // ""' "$ANALYSIS_PATH")
           REASONING=$(jq -r '.reasoning // ""' "$ANALYSIS_PATH")
 
@@ -145,20 +145,20 @@ jobs:
 
       - name: Add breaking-change-analyzed label
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --add-label "breaking-change-analyzed"
 
       - name: Add breaking-change label if applicable
         if: steps.analysis.outputs.has_breaking_changes == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           gh pr edit ${{ github.event.pull_request.number }} --add-label "breaking-change"
 
       - name: Post analysis result to PR
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           HAS_BC: ${{ steps.analysis.outputs.has_breaking_changes }}
           BC_CONTENT: ${{ steps.analysis.outputs.breaking_changes_content }}
           REASONING: ${{ steps.analysis.outputs.reasoning }}
@@ -186,7 +186,7 @@ jobs:
 
       - name: Calculate version and update draft release
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           HAS_BC: ${{ steps.analysis.outputs.has_breaking_changes }}
           BC_CONTENT: ${{ steps.analysis.outputs.breaking_changes_content }}
         run: |
