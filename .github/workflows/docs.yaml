@@ -17,14 +17,15 @@ jobs:
     with:
       checkout_ref: ${{ github.event.pull_request.head.sha }}
       deploy_branch: pr-${{ github.event.pull_request.number }}
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   build-pr:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
     uses: ./.github/workflows/docs-deploy.yaml
     with:
       checkout_ref: ${{ github.event.pull_request.head.sha }}
-    secrets: inherit
 
   build-production:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
@@ -32,7 +33,9 @@ jobs:
     with:
       checkout_ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
       deploy_branch: main
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   comment-preview:
     runs-on: ubuntu-24.04
@@ -43,7 +46,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Comment Preview URL on PR
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
             const previewUrl = 'https://pr-${{ github.event.pull_request.number }}.datamodel-code-generator.pages.dev';

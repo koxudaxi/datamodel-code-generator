@@ -18,25 +18,24 @@ on:
       - 'zensical.toml'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: generated-docs-main
   cancel-in-progress: false
 
 jobs:
-  sync:
+  generate:
     runs-on: ubuntu-latest
     outputs:
-      final_sha: ${{ steps.record_sha.outputs.final_sha }}
+      has_changes: ${{ steps.patch.outputs.has_changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
-          fetch-depth: 0
           ref: ${{ github.sha }}
           persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup README environment
@@ -67,32 +66,83 @@ jobs:
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build llms.txt
         run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
+      - name: Create generated docs patch
+        id: patch
+        env:
+          PATCH_PATH: ${{ runner.temp }}/generated-docs.patch
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --binary -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py > "$PATCH_PATH"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+      - name: Upload generated docs patch
+        if: steps.patch.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: generated-docs-patch
+          path: ${{ runner.temp }}/generated-docs.patch
+          if-no-files-found: error
+
+  push:
+    needs: generate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      final_sha: ${{ steps.record_sha.outputs.final_sha }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Download generated docs patch
+        if: needs.generate.outputs.has_changes == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: generated-docs-patch
+          path: ${{ runner.temp }}
       # Use GITHUB_TOKEN intentionally so this sync commit does not fan out into
       # another push-triggered workflow run. Docs deployment is chained below.
       - name: Commit generated docs
+        if: needs.generate.outputs.has_changes == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_REF: ${{ github.ref_name }}
+          PATCH_PATH: ${{ runner.temp }}/generated-docs.patch
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py
+          set -euo pipefail
+          git apply --index --whitespace=nowarn "$PATCH_PATH"
           if git diff --staged --quiet; then
             exit 0
           fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "docs: sync generated docs"
           git fetch origin "${TARGET_REF}"
           git rebase "origin/${TARGET_REF}"
           git push "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git" "HEAD:${TARGET_REF}"
       - name: Record final revision
         id: record_sha
-        run: echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+        env:
+          DEFAULT_SHA: ${{ github.sha }}
+        run: |
+          if [ "${{ needs.generate.outputs.has_changes }}" = "true" ]; then
+            echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          else
+            echo "final_sha=${DEFAULT_SHA}" >> "$GITHUB_OUTPUT"
+          fi
 
   deploy-docs:
-    needs: sync
+    needs: push
     uses: ./.github/workflows/docs-deploy.yaml
     with:
-      checkout_ref: ${{ needs.sync.outputs.final_sha }}
+      checkout_ref: ${{ needs.push.outputs.final_sha }}
       deploy_branch: dev
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
