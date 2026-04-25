@@ -202,7 +202,7 @@ class DataModelField(DataModelFieldBase):
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
-            if self.nullable and self.required:
+            if self.nullable and self.required and not self.use_default_with_required:
                 return "Field(...)"  # Field() is for mypy
             return ""
 

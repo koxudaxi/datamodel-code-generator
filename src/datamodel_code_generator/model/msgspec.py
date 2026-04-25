@@ -70,7 +70,11 @@ if TYPE_CHECKING:
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return not (field.required or (field.represented_default == "None" and field.strip_default_none))
+    return (
+        bool(field.field)
+        or field.use_default_with_required
+        or not (field.required or (field.represented_default == "None" and field.strip_default_none))
+    )
 
 
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
