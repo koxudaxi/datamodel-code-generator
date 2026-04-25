@@ -97,7 +97,15 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
-    """Load YAML content from a string or file-like object."""
+    """Load YAML content using ryaml (if available) or PyYAML."""
+    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
+
+    if get_yaml_backend() == "ryaml":
+        import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
+
+        text = stream if isinstance(stream, str) else stream.read()
+        return ryaml.loads(text)
+
     import yaml  # noqa: PLC0415
 
     from datamodel_code_generator.util import SafeLoader  # noqa: PLC0415
@@ -361,6 +369,10 @@ class SchemaParseError(Error):
             path_str = "/".join(self.path)
             return f"Error at schema path '{path_str}': {message}"
         return message
+
+
+class SchemaFetchError(Error):
+    """Raised when fetching a remote schema fails (HTTP error, unexpected content type)."""
 
 
 def get_first_file(path: Path) -> Path:  # pragma: no cover
@@ -933,11 +945,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
 def infer_input_type(text: str) -> InputFileType:
     """Automatically detect the input file type from text content."""
-    import yaml.parser  # noqa: PLC0415
+    from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
     try:
         data = load_yaml(text)
-    except yaml.parser.ParserError:
+    except get_yaml_parse_errors():
         return InputFileType.CSV
     if isinstance(data, dict):
         if is_openapi(data):

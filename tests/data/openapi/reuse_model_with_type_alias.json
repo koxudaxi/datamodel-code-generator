@@ -1,0 +1,11 @@
+{
+  "openapi": "3.0.0",
+  "info": {"title": "Test", "version": "1.0.0"},
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Foo": {"type": "string"},
+      "Bar": {"type": "string"}
+    }
+  }
+}

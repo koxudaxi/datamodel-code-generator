@@ -30,6 +30,7 @@ from typing_extensions import Unpack
 from datamodel_code_generator import (
     AllOfClassHierarchy,
     AllOfMergeMode,
+    Error,
     InvalidClassNameError,
     JsonSchemaVersion,
     ReadOnlyWriteOnlyModelType,
@@ -3821,6 +3822,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
+            if not resolved_ref.startswith("file://"):
+                if self.allow_remote_refs is False:
+                    msg = (
+                        f"Fetching remote $ref is disabled: {resolved_ref}\n"
+                        "Use --allow-remote-refs to enable HTTP fetching of remote references."
+                    )
+                    raise Error(msg)
+                if self.allow_remote_refs is None:
+                    import warnings  # noqa: PLC0415
+
+                    warnings.warn(
+                        f"Fetching remote $ref without --allow-remote-refs: {resolved_ref}\n"
+                        "In a future version, remote $ref fetching will be disabled by default. "
+                        "Pass --allow-remote-refs explicitly to silence this warning.",
+                        FutureWarning,
+                        stacklevel=2,
+                    )
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
@@ -3848,10 +3866,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Get reference body from a remote file path."""
         full_path = self.base_path / resolved_ref
 
-        return self.remote_object_cache.get_or_put(
-            str(full_path),
-            default_factory=lambda _: load_data_from_path(full_path, self.encoding),
-        )
+        try:
+            return self.remote_object_cache.get_or_put(
+                str(full_path),
+                default_factory=lambda _: load_data_from_path(full_path, self.encoding),
+            )
+        except FileNotFoundError:
+            msg = f"$ref file not found: {full_path}"
+            raise Error(msg) from None
 
     def resolve_ref(self, object_ref: str) -> Reference:
         """Resolve a reference by loading and parsing the referenced schema."""

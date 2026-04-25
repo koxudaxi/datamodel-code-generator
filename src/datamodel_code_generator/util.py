@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 import warnings
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -81,6 +81,35 @@ def get_safe_loader() -> type:
         ))
 
     return CustomSafeLoader
+
+
+YamlBackend = Literal["ryaml", "pyyaml"]
+
+
+@lru_cache(maxsize=1)
+def get_yaml_backend() -> YamlBackend:
+    """Detect the available YAML backend ('ryaml' or 'pyyaml')."""
+    try:
+        import ryaml  # noqa: PLC0415, F401  # ty: ignore[unresolved-import]
+    except ImportError:
+        return "pyyaml"
+    else:
+        return "ryaml"
+
+
+@lru_cache(maxsize=1)
+def get_yaml_parse_errors() -> tuple[type[Exception], ...]:
+    """Return YAML parse error types for both backends."""
+    import yaml  # noqa: PLC0415
+
+    errors: list[type[Exception]] = [yaml.YAMLError]
+    try:
+        import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
+
+        errors.append(ryaml.InvalidYamlError)
+    except ImportError:
+        pass
+    return tuple(errors)
 
 
 @lru_cache(maxsize=1)

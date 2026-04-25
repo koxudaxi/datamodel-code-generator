@@ -20,7 +20,7 @@
 | [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](#force-optional) | Force all fields to be Optional regardless of required statu... |
 | [`--frozen-dataclasses`](#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only field... |
-| [`--keep-model-order`](#keep-model-order) | Keep model definition order as specified in schema. |
+| [`--keep-model-order`](#keep-model-order) | Keep generated model order deterministic while respecting de... |
 | [`--keyword-only`](#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+)... |
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
@@ -926,6 +926,8 @@ You can specify either a single base class as a string, or multiple base classes
 
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.
 
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
@@ -2689,11 +2691,18 @@ keyword-only arguments.
 
 ## `--keep-model-order` {#keep-model-order}
 
-Keep model definition order as specified in schema.
+Keep generated model order deterministic while respecting dependency constraints.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.
+The `--keep-model-order` flag produces a stable, deterministic output order. The
+generator starts from class-name order and only moves models when required to
+satisfy dependency or runtime constraints (for example, a base class must appear
+before its subclass, and cyclic groups must stay together).
+
+This option is not equivalent to preserving the raw definition order from the
+input schema, and it does not guarantee a strict unconditional alphabetical
+order either. Inheritance and other runtime ordering requirements can force a
+non-alphabetical arrangement. The value of the flag is that repeated runs on the
+same schema produce the same ordering, which keeps diffs stable.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
@@ -6014,9 +6023,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     
     class NestedNullableEnum(BaseModel):
         nested_version: NestedVersion | None = Field(
-            default_factory=lambda: NestedVersion('RC1'),
-            description='nullable enum',
-            examples=['RC2'],
+            'RC1', description='nullable enum', examples=['RC2'], validate_default=True
         )
     
     

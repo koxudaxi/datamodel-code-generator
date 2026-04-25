@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import tempfile
@@ -17,6 +18,7 @@ from packaging import version
 from datamodel_code_generator import (
     MIN_VERSION,
     DataModelType,
+    Error,
     InputFileType,
     PythonVersion,
     PythonVersionMin,
@@ -49,6 +51,15 @@ if TYPE_CHECKING:
     from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
+
+
+def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
+    """Assert that running the CLI exits with code 2 and emits the expected error."""
+    with pytest.raises(SystemExit) as exc_info:
+        run_main_with_args(args)
+    assert exc_info.value.code == 2
+    captured = capsys.readouterr()
+    assert expected_error in captured.err
 
 
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -87,22 +98,32 @@ def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None
 @pytest.mark.benchmark
 @pytest.mark.cli_doc(
     options=["--keep-model-order"],
-    option_description="""Keep model definition order as specified in schema.
+    option_description="""Keep generated model order deterministic while respecting dependency constraints.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.""",
+The `--keep-model-order` flag produces a stable, deterministic output order. The
+generator starts from class-name order and only moves models when required to
+satisfy dependency or runtime constraints (for example, a base class must appear
+before its subclass, and cyclic groups must stay together).
+
+This option is not equivalent to preserving the raw definition order from the
+input schema, and it does not guarantee a strict unconditional alphabetical
+order either. Inheritance and other runtime ordering requirements can force a
+non-alphabetical arrangement. The value of the flag is that repeated runs on the
+same schema produce the same ordering, which keeps diffs stable.""",
     input_schema="jsonschema/inheritance_forward_ref.json",
     cli_args=["--keep-model-order"],
     golden_output="jsonschema/inheritance_forward_ref_keep_model_order.py",
     related_options=["--collapse-root-models"],
 )
 def test_main_inheritance_forward_ref_keep_model_order(output_file: Path, tmp_path: Path) -> None:
-    """Keep model definition order as specified in schema.
+    """Keep generated model order deterministic while respecting dependency constraints.
 
-    The `--keep-model-order` flag preserves the original definition order from the schema
-    instead of reordering models based on dependencies. This is useful when the order
-    of model definitions matters for documentation or readability.
+    The `--keep-model-order` flag produces a stable, deterministic output order.
+    The generator starts from class-name order and only moves models when required
+    to satisfy dependency or runtime constraints. It is not equivalent to
+    preserving the raw schema/spec definition order, and it does not guarantee a
+    strict unconditional alphabetical order either — inheritance and other
+    runtime ordering requirements can force a non-alphabetical arrangement.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "inheritance_forward_ref.json",
@@ -813,8 +834,12 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
 def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     run_main_and_assert(
@@ -827,11 +852,35 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_f
     httpx_get_mock.assert_not_called()
 
 
+@pytest.mark.cli_doc(
+    options=["--allow-remote-refs"],
+    option_description="""Enable fetching of `$ref` targets over HTTP/HTTPS.
+
+When enabled, the generator will resolve `$ref` references that point to remote URLs,
+including relative refs resolved against a schema's `$id` base URL. This is required
+for schemas that reference definitions hosted on external servers.
+
+Automatically enabled when using `--url` input.""",
+    input_schema="jsonschema/root_id.json",
+    cli_args=["--allow-remote-refs"],
+    golden_output="main/jsonschema/root_id.py",
+)
 def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
-    """Test root ID JSON Schema with remote file reference."""
+    """Enable fetching of `$ref` targets over HTTP/HTTPS.
+
+    When enabled, the generator will resolve `$ref` references that point to remote URLs,
+    including relative refs resolved against a schema's `$id` base URL. This is required
+    for schemas that reference definitions hosted on external servers.
+
+    Automatically enabled when using `--url` input.
+    """
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id.json"
@@ -840,6 +889,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id.json", input_file)],
@@ -860,6 +910,8 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
 def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
     """Test root ID JSON Schema self-references with local file."""
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     run_main_and_assert(
@@ -877,6 +929,8 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test root ID JSON Schema self-references with remote file."""
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id_self_ref.json"
@@ -885,6 +939,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id.py",
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
@@ -905,8 +960,12 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
 def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
     root_id_response = mocker.Mock()
+    root_id_response.status_code = 200
+    root_id_response.headers = {}
     root_id_response.text = "dummy"
     person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
     person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
     input_file = tmp_path / "root_id_absolute_url.json"
@@ -915,6 +974,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
         input_path=input_file,
         output_path=output_file,
         input_file_type="jsonschema",
+        extra_args=["--allow-remote-refs"],
         assert_func=assert_file_content,
         expected_file="root_id_absolute_url.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_absolute_url.json", input_file)],
@@ -939,6 +999,150 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="root_id_absolute_url.py",
+    )
+
+
+def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
+    main_response = mocker.Mock()
+    main_response.status_code = 200
+    main_response.headers = {}
+    main_response.text = json.dumps({
+        "$id": "/schemas/v1/main.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Main",
+        "type": "object",
+        "properties": {
+            "sub": {
+                "$ref": "sub.schema.json",
+            }
+        },
+        "required": ["sub"],
+    })
+    sub_response = mocker.Mock()
+    sub_response.status_code = 200
+    sub_response.headers = {}
+    sub_response.text = json.dumps({
+        "$id": "/schemas/v1/sub.schema.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Sub",
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}$",
+    })
+    httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
+    output_dir = tmp_path / "output"
+
+    result = run_main_with_args([
+        "--url",
+        "http://localhost:8888/schemas/v1/main.schema.json",
+        "--output",
+        str(output_dir),
+        "--input-file-type",
+        "jsonschema",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ])
+
+    assert result == Exit.OK
+    main_content = (output_dir / "__init__.py").read_text(encoding="utf-8")
+    sub_content = (output_dir / "sub.py").read_text(encoding="utf-8")
+    assert "class Main(BaseModel):" in main_content
+    assert "sub: sub_1.Schema" in main_content
+    assert "class Schema(RootModel[constr(pattern=r'^[0-9a-f]{8}$')]):" in sub_content
+    httpx_get_mock.assert_has_calls([
+        call(
+            "http://localhost:8888/schemas/v1/main.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+        call(
+            "http://localhost:8888/schemas/v1/sub.schema.json",
+            headers=None,
+            verify=True,
+            follow_redirects=True,
+            params=None,
+            timeout=30.0,
+        ),
+    ])
+
+
+def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
+    person_response = mocker.Mock()
+    person_response.status_code = 200
+    person_response.headers = {}
+    person_response.text = json.dumps({
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
+    })
+    mocker.patch("httpx.get", return_value=person_response)
+    schema = {
+        "$id": "https://example.com/schema/main.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
+        },
+    }
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+    output_file = tmp_path / "output.py"
+
+    with pytest.warns(FutureWarning, match="--allow-remote-refs"):
+        run_main_and_assert(
+            input_path=input_file,
+            output_path=output_file,
+            input_file_type="jsonschema",
+        )
+
+
+def test_main_remote_ref_blocked_when_explicitly_disabled(mocker: MockerFixture, tmp_path: Path) -> None:
+    """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
+    httpx_get_mock = mocker.patch("httpx.get")
+    schema = {
+        "$id": "https://example.com/schema/main.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
+        },
+    }
+
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+
+    with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
+        generate(input_file, allow_remote_refs=False)
+    httpx_get_mock.assert_not_called()
+
+
+def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test that missing local $ref files produce a clear error message."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Test",
+        "type": "object",
+        "properties": {
+            "ref_field": {"$ref": "nonexistent.json#/definitions/Thing"},
+        },
+    }
+    input_file = tmp_path / "schema.json"
+    input_file.write_text(json.dumps(schema))
+    output_file = tmp_path / "output.py"
+
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="$ref file not found: " + str(tmp_path / "nonexistent.json"),
     )
 
 
@@ -1141,6 +1345,37 @@ def test_main_reuse_model_collapse_nested(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+@pytest.mark.parametrize(
+    "collapse_reuse_model_args",
+    [[], ["--collapse-reuse-models"]],
+)
+def test_main_reuse_model_collapse_root_models_preserves_constraints(
+    output_file: Path, collapse_reuse_model_args: list[str]
+) -> None:
+    """Test root-model collapse keeps distinct field constraints when titles collide."""
+    extra_args = [
+        "--reuse-model",
+        "--collapse-root-models",
+        "--use-title-as-name",
+        "--field-constraints",
+        "--snake-case-field",
+        "--target-python-version",
+        "3.10",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+        *collapse_reuse_model_args,
+    ]
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_collapse_root_models_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="reuse_model_collapse_root_models_constraints.py",
+        extra_args=extra_args,
     )
 
 
@@ -2024,6 +2259,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 
@@ -2166,6 +2403,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 
@@ -2860,6 +3099,8 @@ You can specify either a single base class as a string, or multiple base classes
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
 
+You can pass the mapping either inline as JSON or as a path to a JSON file.
+
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.""",
     input_schema="jsonschema/base_class_map.json",
@@ -2886,6 +3127,87 @@ def test_main_jsonschema_base_class_map(output_file: Path) -> None:
             "--base-class-map",
             '{"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}',
         ],
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test base_class_map loaded from a JSON file."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_text(
+        json.dumps({"Person": "custom.bases.PersonBase", "Animal": "custom.bases.AnimalBase"}),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map.py",
+        extra_args=["--base-class-map", str(mapping_path)],
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file_invalid_json(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_text("{invalid json}", encoding="utf-8")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
+
+
+def test_main_jsonschema_base_class_map_from_file_invalid_encoding(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid-encoding JSON file passed to --base-class-map."""
+    mapping_path = tmp_path / "base_class_map.json"
+    mapping_path.write_bytes(b"\x80")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
+
+
+def test_main_jsonschema_base_class_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --base-class-map."""
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "base_class_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--input-file-type",
+            "jsonschema",
+            "--base-class-map",
+            '["custom.bases.PersonBase"]',
+        ],
+        capsys,
+        "Expected a JSON object",
     )
 
 
@@ -2926,6 +3248,21 @@ def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
         extra_args=[
             "--base-class-map",
             '{"User": ["", ""]}',
+        ],
+    )
+
+
+def test_main_jsonschema_base_class_map_long_json(output_file: Path) -> None:
+    """Test base_class_map with very long json string."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": [' + ",".join(itertools.repeat('""', 100)) + "]}",
         ],
     )
 
@@ -4406,7 +4743,9 @@ def test_main_typed_dict_no_closed(output_file: Path) -> None:
     option_description="""Override enum/literal generation per-field via JSON mapping.
 
 The `--enum-field-as-literal-map` option allows per-field control over whether
-to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.""",
+to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.""",
     input_schema="jsonschema/enum_field_as_literal_map.json",
     cli_args=["--enum-field-as-literal-map", '{"status": "literal"}'],
     golden_output="jsonschema/enum_field_as_literal_map.py",
@@ -4430,6 +4769,36 @@ def test_main_enum_field_as_literal_map(output_file: Path) -> None:
     )
 
 
+def test_main_enum_field_as_literal_map_from_file(output_file: Path, tmp_path: Path) -> None:
+    """Test enum_field_as_literal_map loaded from a JSON file."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_text(json.dumps({"status": "literal"}), encoding="utf-8")
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=["--enum-field-as-literal-map", str(mapping_path)],
+    )
+
+
+def test_main_enum_field_as_literal_map_long_json(output_file: Path) -> None:
+    """Test enum_field_as_literal_map with very long json string."""
+    long_inline_mapping = '{"status": "literal",' + ",".join(f'"unused_field_{i}": "enum"' for i in range(100)) + "}"
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="enum_field_as_literal_map.py",
+        extra_args=[
+            "--enum-field-as-literal-map",
+            long_inline_mapping,
+        ],
+    )
+
+
 def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> None:
     """Test --enum-field-as-literal-map overrides global --enum-field-as-literal."""
     run_main_and_assert(
@@ -4444,6 +4813,62 @@ def test_main_enum_field_as_literal_map_override_global(output_file: Path) -> No
             "--enum-field-as-literal-map",
             '{"priority": "enum"}',
         ],
+    )
+
+
+def test_main_enum_field_as_literal_map_invalid_json_file(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    """Test invalid JSON file passed to --enum-field-as-literal-map."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_text("{invalid json}", encoding="utf-8")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Invalid JSON:",
+    )
+
+
+def test_main_enum_field_as_literal_map_invalid_encoding_json_file(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test invalid-encoding JSON file passed to --enum-field-as-literal-map."""
+    mapping_path = tmp_path / "enum_field_as_literal_map.json"
+    mapping_path.write_bytes(b"\x80")
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            str(mapping_path),
+        ],
+        capsys,
+        "Unable to read JSON file",
+    )
+
+
+def test_main_enum_field_as_literal_map_inline_requires_json_object(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Test non-object JSON passed to --enum-field-as-literal-map."""
+    assert_run_main_with_args_error(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "enum_field_as_literal_map.json"),
+            "--output",
+            str(tmp_path / "output.py"),
+            "--enum-field-as-literal-map",
+            '["literal"]',
+        ],
+        capsys,
+        "Expected a JSON object",
     )
 
 
@@ -7125,6 +7550,8 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
 
     mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.headers = {}
     mock_response.text = schema_path.read_text()
 
     httpx_get_mock = mocker.patch(
@@ -8877,6 +9304,8 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
     def get_mock_response(url: str, **_: object) -> mocker.Mock:
         path = url_to_path.get(url)
         mock = mocker.Mock()
+        mock.status_code = 200
+        mock.headers = {}
         mock.text = (external_directory / path).read_text()
         return mock
 

@@ -5,15 +5,17 @@ on:
     types: [published]
 
 jobs:
-  update-changelog:
+  build-changelog:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      has_changes: ${{ steps.patch.outputs.has_changes }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           ref: main
-          token: ${{ secrets.PAT }}
+          persist-credentials: false
 
       - name: Get release info and update CHANGELOG
         env:
@@ -60,10 +62,56 @@ jobs:
           cat header.md new_entry.md old_entries.md > CHANGELOG.md
           rm -f header.md new_entry.md old_entries.md
 
-      - name: Commit and push
+      - name: Create changelog patch
+        id: patch
+        env:
+          PATCH_PATH: ${{ runner.temp }}/changelog.patch
         run: |
+          set -euo pipefail
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --binary -- CHANGELOG.md > "$PATCH_PATH"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+      - name: Upload changelog patch
+        if: steps.patch.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: changelog-patch
+          path: ${{ runner.temp }}/changelog.patch
+          if-no-files-found: error
+
+  commit-changelog:
+    needs: build-changelog
+    if: needs.build-changelog.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Download changelog patch
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: changelog-patch
+          path: ${{ runner.temp }}
+      - name: Commit and push
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PATCH_PATH: ${{ runner.temp }}/changelog.patch
+        run: |
+          set -euo pipefail
+          git apply --index --whitespace=nowarn "$PATCH_PATH"
+          if git diff --staged --quiet; then
+            exit 0
+          fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --cached --quiet || git commit -m "docs: update CHANGELOG.md for ${{ github.event.release.tag_name }}"
-          git push
+          git commit -m "docs: update CHANGELOG.md for ${{ github.event.release.tag_name }}"
+          git fetch origin main
+          git rebase origin/main
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main

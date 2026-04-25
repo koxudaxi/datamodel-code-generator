@@ -1350,9 +1350,7 @@ of Enum classes for all enumerations.
         
         class NestedNullableEnum(BaseModel):
             nested_version: NestedVersion | None = Field(
-                default_factory=lambda: NestedVersion('RC1'),
-                description='nullable enum',
-                examples=['RC2'],
+                'RC1', description='nullable enum', examples=['RC2'], validate_default=True
             )
         
         
@@ -1536,6 +1534,8 @@ Override enum/literal generation per-field via JSON mapping.
 
 The `--enum-field-as-literal-map` option allows per-field control over whether
 to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.
 
 !!! tip "Usage"
 

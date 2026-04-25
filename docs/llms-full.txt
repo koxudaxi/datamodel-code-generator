@@ -213,16 +213,18 @@ These projects use datamodel-code-generator. See the linked examples for real-wo
 - [airbytehq/airbyte](https://github.com/airbytehq/airbyte) - *[Generate Python, Java/Kotlin, and Typescript protocol models](https://github.com/airbytehq/airbyte-protocol/tree/main/protocol-models/bin)*
 - [apache/iceberg](https://github.com/apache/iceberg) - *[Generate Python code](https://github.com/apache/iceberg/blob/d2e1094ee0cc6239d43f63ba5114272f59d605d2/open-api/README.md?plain=1#L39)*
 - [open-metadata/OpenMetadata](https://github.com/open-metadata/OpenMetadata) - *[datamodel_generation.py](https://github.com/open-metadata/OpenMetadata/blob/main/scripts/datamodel_generation.py)*
-- [awslabs/aws-lambda-powertools-python](https://github.com/awslabs/aws-lambda-powertools-python) - *[Recommended for advanced-use-cases](https://awslabs.github.io/aws-lambda-powertools-python/2.6.0/utilities/parser/#advanced-use-cases)*
+- [openai/codex](https://github.com/openai/codex) - *[Python SDK dev dependency](https://github.com/openai/codex/blob/cca36c5681d16c7dac6e3f385589b8cd4d3e78cd/sdk/python/pyproject.toml#L32-L33)*
 - [vllm-project/vllm](https://github.com/vllm-project/vllm) - *[Test dependency for model tests](https://github.com/vllm-project/vllm/blob/main/requirements/test.in)*
 - [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) - *[Generate Pydantic models from JSON Schema for reliability tests](https://github.com/stanfordnlp/dspy/blob/main/tests/reliability/generate/utils.py)*
 - [topoteretes/cognee](https://github.com/topoteretes/cognee) - *[Runtime generation of graph data models from JSON Schema](https://github.com/topoteretes/cognee/blob/main/cognee/shared/graph_model_utils.py)*
 - [e2b-dev/E2B](https://github.com/e2b-dev/E2B) - *[Generate MCP server TypedDict models via Makefile](https://github.com/e2b-dev/E2B/blob/main/packages/python-sdk/Makefile)*
-- [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix) - *[Generate Python client dataclasses from OpenAPI via Makefile](https://github.com/Arize-ai/phoenix/blob/main/Makefile)*
+- [apache/airflow](https://github.com/apache/airflow) - *[Generate OpenAPI datamodels for airflow-ctl and task-sdk via pyproject codegen config](https://github.com/apache/airflow/blob/f1ac27af8b53e7d3ca7ff710c4f4413599bd1535/airflow-ctl/pyproject.toml#L148-L172)*
+- [browser-use/browser-use](https://github.com/browser-use/browser-use) - *[Eval dependency](https://github.com/browser-use/browser-use/blob/de14b9aa31d167696a7ea7185d71876dbd7e6c94/pyproject.toml#L74-L79)*
 - [firebase/genkit](https://github.com/firebase/genkit) - *[Generate core typing models from JSON Schema](https://github.com/firebase/genkit/blob/main/py/bin/generate_schema_typing)*
 - [open-telemetry/opentelemetry-python](https://github.com/open-telemetry/opentelemetry-python) - *[Generate SDK configuration dataclasses from JSON Schema](https://github.com/open-telemetry/opentelemetry-python/blob/main/tox.ini)*
 - [DataDog/integrations-core](https://github.com/DataDog/integrations-core) - *[Config models](https://github.com/DataDog/integrations-core/blob/master/docs/developer/meta/config-models.md)*
 - [argoproj-labs/hera](https://github.com/argoproj-labs/hera) - *[Makefile](https://github.com/argoproj-labs/hera/blob/c8cbf0c7a676de57469ca3d6aeacde7a5e84f8b7/Makefile#L53-L62)*
+- [tensorzero/tensorzero](https://github.com/tensorzero/tensorzero) - *[Generate Python dataclasses from JSON Schema in the schema generation pipeline](https://github.com/tensorzero/tensorzero/blob/26a51c8808f64cc0beaf8db4dfeea646cffbdaaa/crates/tensorzero-python/generate_schema_types.py#L1-L26)*
 - [IBM/compliance-trestle](https://github.com/IBM/compliance-trestle) - *[Building models from OSCAL schemas](https://github.com/IBM/compliance-trestle/blob/develop/docs/contributing/website.md#building-the-models-from-the-oscal-schemas)*
 
 [See all dependents →](https://github.com/koxudaxi/datamodel-code-generator/network/dependents)
@@ -248,7 +250,7 @@ This documentation is auto-generated from test cases.
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 15 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 16 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
 
 ## All Options
@@ -266,6 +268,7 @@ This documentation is auto-generated from test cases.
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode)
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields)
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name)
+- [`--allow-remote-refs`](general-options.md#allow-remote-refs)
 
 ### B {#b}
 
@@ -1248,7 +1251,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/model-custom
 | [`--enable-faux-immutability`](#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](#force-optional) | Force all fields to be Optional regardless of required statu... |
 | [`--frozen-dataclasses`](#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only field... |
-| [`--keep-model-order`](#keep-model-order) | Keep model definition order as specified in schema. |
+| [`--keep-model-order`](#keep-model-order) | Keep generated model order deterministic while respecting de... |
 | [`--keyword-only`](#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+)... |
 | [`--model-extra-keys`](#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_... |
 | [`--model-extra-keys-without-x-prefix`](#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add t... |
@@ -2154,6 +2157,8 @@ You can specify either a single base class as a string, or multiple base classes
 
 - Single: `{"Person": "custom.bases.PersonBase"}`
 - Multiple: `{"User": ["mixins.AuditMixin", "mixins.TimestampMixin"]}`
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.
 
 When using multiple base classes, the specified classes are used directly without
 adding `BaseModel`. Ensure your mixins inherit from `BaseModel` if needed.
@@ -3917,11 +3922,18 @@ keyword-only arguments.
 
 ## `--keep-model-order` {#keep-model-order}
 
-Keep model definition order as specified in schema.
+Keep generated model order deterministic while respecting dependency constraints.
 
-The `--keep-model-order` flag preserves the original definition order from the schema
-instead of reordering models based on dependencies. This is useful when the order
-of model definitions matters for documentation or readability.
+The `--keep-model-order` flag produces a stable, deterministic output order. The
+generator starts from class-name order and only moves models when required to
+satisfy dependency or runtime constraints (for example, a base class must appear
+before its subclass, and cyclic groups must stay together).
+
+This option is not equivalent to preserving the raw definition order from the
+input schema, and it does not guarantee a strict unconditional alphabetical
+order either. Inheritance and other runtime ordering requirements can force a
+non-alphabetical arrangement. The value of the flag is that repeated runs on the
+same schema produce the same ordering, which keeps diffs stable.
 
 **Related:** [`--collapse-root-models`](model-customization.md#collapse-root-models)
 
@@ -7242,9 +7254,7 @@ The `--use-one-literal-as-default` flag configures the code generation behavior.
     
     class NestedNullableEnum(BaseModel):
         nested_version: NestedVersion | None = Field(
-            default_factory=lambda: NestedVersion('RC1'),
-            description='nullable enum',
-            examples=['RC2'],
+            'RC1', description='nullable enum', examples=['RC2'], validate_default=True
         )
     
     
@@ -11141,8 +11151,7 @@ This is useful when schemas have descriptive titles that should be preserved.
     
     class ProcessingTaskTitle(BaseModel):
         processing_status_union: ProcessingStatusUnionTitle | None = Field(
-            default_factory=lambda: ProcessingStatusUnionTitle('COMPLETED'),
-            title='Processing Status Union Title',
+            'COMPLETED', title='Processing Status Union Title', validate_default=True
         )
         processing_status: ProcessingStatusTitle | None = 'COMPLETED'
         name: str | None = None
@@ -11169,10 +11178,7 @@ This is useful when schemas have descriptive titles that should be preserved.
         RootModel[ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle]
     ):
         root: ProcessingStatusDetail | ExtendedProcessingTask | ProcessingStatusTitle = (
-            Field(
-                default_factory=lambda: ExtendedProcessingTask('COMPLETED'),
-                title='Processing Status Union Title',
-            )
+            Field('COMPLETED', title='Processing Status Union Title', validate_default=True)
         )
     
     
@@ -12537,9 +12543,7 @@ of Enum classes for all enumerations.
         
         class NestedNullableEnum(BaseModel):
             nested_version: NestedVersion | None = Field(
-                default_factory=lambda: NestedVersion('RC1'),
-                description='nullable enum',
-                examples=['RC2'],
+                'RC1', description='nullable enum', examples=['RC2'], validate_default=True
             )
         
         
@@ -12723,6 +12727,8 @@ Override enum/literal generation per-field via JSON mapping.
 
 The `--enum-field-as-literal-map` option allows per-field control over whether
 to generate Literal types or Enum classes. Overrides `--enum-field-as-literal`.
+
+You can pass the mapping either inline as JSON or as a path to a JSON file.
 
 !!! tip "Usage"
 
@@ -19083,7 +19089,7 @@ helps maintain consistency with codebases that prefer double-quote formatting.
     class MapState2(BaseModel):
         latitude: Latitude
         longitude: Longitude
-        zoom: Zoom | None = Field(default_factory=lambda: Zoom(0))
+        zoom: Zoom | None = Field(0, validate_default=True)
         bearing: Bearing | None = None
         pitch: Pitch
         drag_rotate: DragRotate | None = Field(None, alias="dragRotate")
@@ -21572,6 +21578,7 @@ Source: https://datamodel-code-generator.koxudaxi.dev/cli-reference/general-opti
 |--------|-------------|
 | [`--all-exports-collision-strategy`](#all-exports-collision-strategy) | Handle name collisions when exporting recursive module hiera... |
 | [`--all-exports-scope`](#all-exports-scope) | Generate __all__ exports for child modules in __init__.py fi... |
+| [`--allow-remote-refs`](#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](#check) | Verify generated code matches existing output without modify... |
 | [`--disable-warnings`](#disable-warnings) | Suppress warning messages during code generation. |
 | [`--generate-cli-command`](#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -22723,6 +22730,94 @@ Use 'recursive' to include all descendant exports with collision handling.
         source: Source | None = None
         cocoa: Cocoa | None = None
         field: bar.FieldModel | None = None
+    ```
+
+---
+
+## `--allow-remote-refs` {#allow-remote-refs}
+
+Enable fetching of `$ref` targets over HTTP/HTTPS.
+
+When enabled, the generator will resolve `$ref` references that point to remote URLs,
+including relative refs resolved against a schema's `$id` base URL. This is required
+for schemas that reference definitions hosted on external servers.
+
+Automatically enabled when using `--url` input.
+
+!!! tip "Usage"
+
+    ```bash
+    datamodel-codegen --input schema.json --allow-remote-refs # (1)!
+    ```
+
+    1. :material-arrow-left: `--allow-remote-refs` - the option documented here
+
+??? example "Examples"
+
+    **Input Schema:**
+
+    ```json
+    {
+      "$id": "https://example.com/root_id.json",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "definitions": {
+        "Person": {
+          "$ref": "person.json"
+        },
+        "OriginalPerson": {
+          "$ref": "person.json"
+        },
+        "Pet": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "examples": ["dog", "cat"]
+            },
+            "owner": {
+               "$ref": "person.json"
+            }
+          }
+        }
+      }
+    }
+    ```
+
+    **Output:**
+
+    ```python
+    # generated by datamodel-codegen:
+    #   filename:  root_id.json
+    #   timestamp: 2019-07-26T00:00:00+00:00
+    
+    from __future__ import annotations
+    
+    from typing import Any
+    
+    from pydantic import BaseModel, Field, RootModel, conint
+    
+    
+    class Model(RootModel[Any]):
+        root: Any
+    
+    
+    class Person(BaseModel):
+        firstName: str | None = Field(None, description="The person's first name.")
+        lastName: str | None = Field(None, description="The person's last name.")
+        age: conint(ge=0) | None = Field(
+            None, description='Age in years which must be equal to or greater than zero.'
+        )
+        friends: list[Any] | None = None
+        comment: None = None
+    
+    
+    class OriginalPerson(RootModel[Person]):
+        root: Person
+    
+    
+    class Pet(BaseModel):
+        name: str | None = Field(None, examples=['dog', 'cat'])
+        owner: Person | None = None
     ```
 
 ---
@@ -23927,7 +24022,7 @@ datamodel-codegen [OPTIONS]
 | [`--enable-faux-immutability`](model-customization.md#enable-faux-immutability) | Enable faux immutability in Pydantic models (frozen=True). |
 | [`--force-optional`](model-customization.md#force-optional) | Force all fields to be Optional regardless of required status. |
 | [`--frozen-dataclasses`](model-customization.md#frozen-dataclasses) | Generate frozen dataclasses with optional keyword-only fields. |
-| [`--keep-model-order`](model-customization.md#keep-model-order) | Keep model definition order as specified in schema. |
+| [`--keep-model-order`](model-customization.md#keep-model-order) | Keep generated model order deterministic while respecting dependency constraints... |
 | [`--keyword-only`](model-customization.md#keyword-only) | Generate dataclasses with keyword-only fields (Python 3.10+). |
 | [`--model-extra-keys`](model-customization.md#model-extra-keys) | Add model-level schema extensions to ConfigDict json_schema_extra. |
 | [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) | Strip x- prefix from model-level schema extensions and add to ConfigDict json_sc... |
@@ -24001,6 +24096,7 @@ datamodel-codegen [OPTIONS]
 |--------|-------------|
 | [`--all-exports-collision-strategy`](general-options.md#all-exports-collision-strategy) | Handle name collisions when exporting recursive module hierarchies. |
 | [`--all-exports-scope`](general-options.md#all-exports-scope) | Generate __all__ exports for child modules in __init__.py files. |
+| [`--allow-remote-refs`](general-options.md#allow-remote-refs) | Enable fetching of `$ref` targets over HTTP/HTTPS. |
 | [`--check`](general-options.md#check) | Verify generated code matches existing output without modifying files. |
 | [`--disable-warnings`](general-options.md#disable-warnings) | Suppress warning messages during code generation. |
 | [`--generate-cli-command`](general-options.md#generate-cli-command) | Generate CLI command from pyproject.toml configuration. |
@@ -24040,6 +24136,7 @@ All options sorted alphabetically:
 - [`--allof-merge-mode`](typing-customization.md#allof-merge-mode) - Merge constraints from root model references in allOf schema...
 - [`--allow-extra-fields`](model-customization.md#allow-extra-fields) - Allow extra fields in generated Pydantic models (extra='allo...
 - [`--allow-population-by-field-name`](model-customization.md#allow-population-by-field-name) - Allow Pydantic model population by field name (not just alia...
+- [`--allow-remote-refs`](general-options.md#allow-remote-refs) - Enable fetching of `$ref` targets over HTTP/HTTPS.
 - [`--base-class`](model-customization.md#base-class) - Specify a custom base class for generated models.
 - [`--base-class-map`](model-customization.md#base-class-map) - Specify different base classes for specific models via JSON ...
 - [`--capitalize-enum-members`](field-customization.md#capitalize-enum-members) - Capitalize enum member names to UPPER_CASE format.
@@ -24099,7 +24196,7 @@ All options sorted alphabetically:
 - [`--input-file-type`](base-options.md#input-file-type) - Specify the input file type for code generation.
 - [`--input-model`](base-options.md#input-model) - Import a Python type or dict schema from a module.
 - [`--input-model-ref-strategy`](base-options.md#input-model-ref-strategy) - Strategy for referenced types when using --input-model.
-- [`--keep-model-order`](model-customization.md#keep-model-order) - Keep model definition order as specified in schema.
+- [`--keep-model-order`](model-customization.md#keep-model-order) - Keep generated model order deterministic while respecting de...
 - [`--keyword-only`](model-customization.md#keyword-only) - Generate dataclasses with keyword-only fields (Python 3.10+)...
 - [`--model-extra-keys`](model-customization.md#model-extra-keys) - Add model-level schema extensions to ConfigDict json_schema_...
 - [`--model-extra-keys-without-x-prefix`](model-customization.md#model-extra-keys-without-x-prefix) - Strip x- prefix from model-level schema extensions and add t...
