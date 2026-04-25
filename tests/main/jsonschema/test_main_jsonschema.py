@@ -5178,6 +5178,61 @@ def test_all_of_use_default(output_file: Path) -> None:
     )
 
 
+def test_allof_required_use_default(output_file: Path) -> None:
+    """Test allOf with required fields and --use-default renders defaults without nullable types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default"],
+    )
+
+
+def test_force_optional_required(output_file: Path) -> None:
+    """Test --force-optional makes required fields optional."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "force_optional_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--force-optional"],
+    )
+
+
+def test_use_default_msgspec_field_ordering(output_file: Path) -> None:
+    """Required fields with defaults must sort after required fields without for msgspec.Struct."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--output-model-type", "msgspec.Struct"],
+    )
+
+
+def test_use_default_required_null_default(output_file: Path) -> None:
+    """Required nullable field with default null must not break dataclass field ordering."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_default_required_null_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_use_default_strict_nullable_required(output_file: Path) -> None:
+    """Required nullable field with default must render the default, not Field(...), under --strict-nullable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_default_strict_nullable_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--strict-nullable", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 def test_main_root_one_of(output_dir: Path) -> None:
     """Test root-level oneOf schemas."""
     run_main_and_assert(

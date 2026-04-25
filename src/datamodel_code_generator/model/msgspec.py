@@ -70,7 +70,11 @@ if TYPE_CHECKING:
 
 
 def _has_field_assignment(field: DataModelFieldBase) -> bool:
-    return not (field.required or (field.represented_default == "None" and field.strip_default_none))
+    return (
+        bool(field.field)
+        or field.use_default_with_required
+        or not (field.required or (field.represented_default == "None" and field.strip_default_none))
+    )
 
 
 DataModelFieldBaseT = TypeVar("DataModelFieldBaseT", bound=DataModelFieldBase)
@@ -311,7 +315,7 @@ class DataModelField(DataModelFieldBase):
         elif self._not_required and "default_factory" not in data:
             data["default"] = None if self.nullable else UNSET
 
-        if self.required:
+        if self.required and not self.use_default_with_required:
             data = {
                 k: v
                 for k, v in data.items()

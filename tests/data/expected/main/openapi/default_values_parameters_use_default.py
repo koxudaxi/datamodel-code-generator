@@ -12,8 +12,8 @@ class Filter(BaseModel):
 
 
 class UsersGetParametersQuery(BaseModel):
-    status: str | None = 'active'
-    filter: Filter | None = Field({}, validate_default=True)
+    status: str = 'active'
+    filter: Filter = Field({}, validate_default=True)
 
 
 class User(BaseModel):

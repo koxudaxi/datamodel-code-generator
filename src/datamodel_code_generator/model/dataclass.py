@@ -39,7 +39,8 @@ if TYPE_CHECKING:
 def has_field_assignment(field: DataModelFieldBase) -> bool:
     """Check if a dataclass field has a default value or field() assignment."""
     return bool(field.field) or not (
-        field.required or (field.represented_default == "None" and field.strip_default_none)
+        (field.required and not field.use_default_with_required)
+        or (field.represented_default == "None" and field.strip_default_none)
     )
 
 
@@ -172,7 +173,7 @@ class DataModelField(DataModelFieldBase):
         if self.default != UNDEFINED and self.default is not None:
             data["default"] = self.default
 
-        if self.required:
+        if self.required and not self.use_default_with_required:
             data = {
                 k: v
                 for k, v in data.items()

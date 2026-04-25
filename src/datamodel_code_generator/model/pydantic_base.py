@@ -202,7 +202,7 @@ class DataModelField(DataModelFieldBase):
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
-            if self.nullable and self.required:
+            if self.nullable and self.required and not self.use_default_with_required:
                 return "Field(...)"  # Field() is for mypy
             return ""
 
@@ -211,7 +211,12 @@ class DataModelField(DataModelFieldBase):
 
         if self.use_annotated:
             field_arguments = self._process_annotated_field_arguments(field_arguments)
-        elif self.required and not default_factory and not self.extras.get("validate_default"):
+        elif (
+            self.required
+            and not self.use_default_with_required
+            and not default_factory
+            and not self.extras.get("validate_default")
+        ):
             field_arguments = ["...", *field_arguments]
         elif not default_factory:
             default_repr = repr_set_sorted(self.default) if isinstance(self.default, set) else repr(self.default)
