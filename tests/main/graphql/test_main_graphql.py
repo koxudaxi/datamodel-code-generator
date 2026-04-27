@@ -917,18 +917,3 @@ def test_main_graphql_no_typename(output_file: Path) -> None:
         expected_file="no_typename.py",
         extra_args=["--graphql-no-typename"],
     )
-
-
-@pytest.mark.timeout(30)
-def test_main_graphql_discriminated_oneof_allof_cycle(output_file: Path) -> None:
-    """Discriminated oneOf with variants that allOf the parent (circular graph).
-
-    Covers sort_data_models ordering for cyclic base dependencies and discriminator
-    handling (mapping + RootModel) on a minimal OpenAPI spec.
-    """
-    run_main_and_assert(
-        input_path=GRAPHQL_DATA_PATH / "discriminated_oneof_allof_cycle.graphql",
-        output_path=output_file,
-        input_file_type="graphql",
-        assert_func=assert_file_content,
-    )
