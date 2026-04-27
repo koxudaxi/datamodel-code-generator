@@ -13,6 +13,9 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: >-
@@ -43,11 +46,12 @@ jobs:
     env:
       OS: ${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os}}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       with:
         fetch-depth: 0
+        persist-credentials: false
     - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v5
+      uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       with:
         enable-cache: true
         cache-suffix: "${{ matrix.py || matrix.tox_env }}"
@@ -90,7 +94,7 @@ jobs:
         os.rename(f".tox/.coverage.{env_name}", f".tox/.coverage.{base_name}-${{ matrix.os }}")
       shell: python
     - name: Upload coverage data
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         include-hidden-files: true
         name: .coverage.${{ matrix.py || matrix.tox_env }}-${{ matrix.os == '' && 'ubuntu-24.04' || matrix.os }}
@@ -102,11 +106,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup coverage tool
@@ -114,7 +119,7 @@ jobs:
         env:
           UV_PYTHON_PREFERENCE: only-managed
       - name: Download coverage data
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: .tox
           pattern: .coverage.*
@@ -132,13 +137,13 @@ jobs:
           COVERAGE_FILE=.tox/.coverage .tox/coverage/bin/coverage report --show-missing --fail-under=0 | grep -v "100%"
       - name: Upload HTML report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: html-report
           path: .tox/htmlcov
       - name: Upload coverage to Codecov
         if: always()
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
           flags: unittests
           files: .tox/coverage.xml
@@ -160,11 +165,12 @@ jobs:
           - docs
           - pkg_meta
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
       - name: Setup check suite
@@ -175,3 +181,26 @@ jobs:
         run: tox run --skip-uv-sync --skip-pkg-install -e ${{ matrix.tox_env }}
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
+
+  test-gate:
+    name: test-gate
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - coverage
+      - check
+    steps:
+      - name: Fail if any test workflow job failed
+        run: |
+          test_result='${{ needs.test.result }}'
+          coverage_result='${{ needs.coverage.result }}'
+          check_result='${{ needs.check.result }}'
+
+          echo "test: ${test_result}"
+          echo "coverage: ${coverage_result}"
+          echo "check: ${check_result}"
+
+          [ "${test_result}" = "success" ] || exit 1
+          [ "${coverage_result}" = "success" ] || exit 1
+          [ "${check_result}" = "success" ] || exit 1
