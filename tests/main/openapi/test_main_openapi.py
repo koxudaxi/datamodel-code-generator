@@ -5322,8 +5322,10 @@ def test_main_reuse_model_with_type_alias(output_file: Path) -> None:
 def test_main_openapi_discriminated_oneof_allof_cycle(output_file: Path) -> None:
     """Discriminated oneOf with variants that allOf the parent (circular graph).
 
-    Covers sort_data_models ordering for cyclic base dependencies and discriminator
-    handling (mapping + RootModel) on a minimal OpenAPI spec.
+    Covers `sort_data_models` ordering for cyclic base dependencies and discriminator
+    handling (mapping + RootModel) on a minimal OpenAPI spec. See the
+    [Pull Request](https://github.com/koxudaxi/datamodel-code-generator/pull/3078) for
+    more details.
     """
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "openapi_discriminated_oneof_allof_cycle.json",
