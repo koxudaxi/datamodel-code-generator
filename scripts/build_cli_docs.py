@@ -949,9 +949,7 @@ def build_docs(*, check: bool = False) -> int:
         with Path(COLLECTION_PATH).open(encoding="utf-8") as f:
             collection = json.load(f)
 
-        schema_version = collection.get("schema_version", 0)
-        if schema_version != 1:
-            pass
+        collection.get("schema_version", 0)
 
         items = collection.get("items", [])
 

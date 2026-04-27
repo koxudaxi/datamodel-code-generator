@@ -114,17 +114,17 @@ benchmark = [
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
-isort5 = [ "isort>=5,<6" ]
-isort6 = [ "isort>=6,<7" ]
-isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
-isort8 = [ "isort>=8,<9; python_version>='3.10'" ]
-fix = [ "prek>=0.2.22" ]
-pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 coverage = [
   "covdefaults>=2.3",
   "coverage[toml]>=7.6.1",
   "diff-cover>=9.7.2",
 ]
+fix = [ "prek>=0.2.22" ]
+isort5 = [ "isort>=5,<6" ]
+isort6 = [ "isort>=6,<7" ]
+isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
+isort8 = [ "isort>=8,<9; python_version>='3.10'" ]
+pkg-meta = [ "check-wheel-contents>=0.6.1", "twine>=6.1", "uv>=0.5.22" ]
 
 [tool.hatch]
 build.dev-mode-dirs = [ "src" ]
@@ -203,15 +203,19 @@ lint.isort = { known-first-party = [
 ], required-imports = [
   "from __future__ import annotations",
 ] }
-
 lint.pydocstyle.convention = "pep257"
 lint.preview = true
 
 [tool.codespell]
-skip = '.git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs/llms.txt,docs/llms-full.txt'
+skip = ".git,*.lock,tests,docs/cli-reference,CHANGELOG.md,docs/changelog.md,docs/llms.txt,docs/llms-full.txt"
 
-[tool.pytest.ini_options]
-filterwarnings = [
+[tool.ty]
+environment.python-version = "3.10"
+rules.deprecated = "ignore"
+src.include = [ "src" ]
+
+[tool.pytest]
+ini_options.filterwarnings = [
   "error",
   "ignore:^.*Pydantic v2 with --use-annotated is recommended.*:DeprecationWarning",
   "ignore:^.*`--validation` option is deprecated.*",
@@ -220,23 +224,35 @@ filterwarnings = [
   "ignore:^.*format of 'unknown-type' not understood for 'string' - using default.*",
   "ignore:^.*unclosed file.*",
   "ignore:^.*black doesn't support `experimental-string-processing` option for wrapping string literal in .*",
-  "ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*",
+  """\
+  ignore:^.*jsonschema.exceptions.RefResolutionError is deprecated as of version 4.18.0. If you wish to catch \
+  potential reference resolution errors, directly catch referencing.exceptions.Unresolvable..*\
+  """,
   "ignore:^.*`experimental string processing` has been included in `preview` and deprecated. Use `preview` instead..*",
   "ignore:^.*No schemas found in components/schemas.*",
   "ignore:^.*Dataclass .* has a field ordering conflict due to inheritance.*:UserWarning",
   "ignore:^.*is empty or not a dict. Skipping this file.*:UserWarning",
   "ignore:^.*The default formatters.*:FutureWarning",
 ]
-norecursedirs = [ "tests/data/*", ".tox" ]
-verbosity_assertions = 2
-markers = [
+ini_options.norecursedirs = [ "tests/data/*", ".tox" ]
+ini_options.verbosity_assertions = 2
+ini_options.markers = [
   "perf: marks tests as performance tests (excluded from CI benchmarks)",
   "benchmark: marks tests as benchmark tests",
 ]
 
 [tool.coverage]
-html.skip_covered = false
-html.show_contexts = false
+run.dynamic_context = "none"
+run.omit = [ "*/_types/*", "tests/cli_doc/*", "tests/data/*", "tests/main/test_performance.py" ]
+run.parallel = true
+run.plugins = [
+  "covdefaults",
+]
+paths.other = [
+  ".",
+  "*/datamodel-code-generator",
+  "*\\datamodel-code-generator",
+]
 paths.source = [
   "src",
   ".tox*/*/lib/python*/site-packages",
@@ -244,61 +260,37 @@ paths.source = [
   "*/src",
   "*\\src",
 ]
-paths.other = [
-  ".",
-  "*/datamodel-code-generator",
-  "*\\datamodel-code-generator",
-]
-run.dynamic_context = "none"
-run.omit = [ "tests/data/*", "tests/main/test_performance.py", "*/_types/*", "tests/cli_doc/*" ]
 report.fail_under = 0
-run.parallel = true
-run.plugins = [
-  "covdefaults",
-]
+html.show_contexts = false
+html.skip_covered = false
 covdefaults.subtract_omit = "*/__main__.py"
-
-[tool.ty.src]
-include = [ "src" ]
-
-[tool.ty.environment]
-python-version = "3.10"
-
-[tool.ty.rules]
-deprecated = "ignore"
 
 [tool.pydantic-pycharm-plugin]
 ignore-init-method-arguments = true
 parsable-types.str = [ "int", "float" ]
 
-[tool.datamodel-codegen.profiles.config-types-base]
-enum-field-as-literal = "none"
-use-standard-primitive-types = true
-disable-warnings = true
-disable-timestamp = true
-output-model-type = "typing.TypedDict"
-formatters = [ "ruff-format", "ruff-check" ]
-input-model-ref-strategy = "reuse-foreign"
-
-[tool.datamodel-codegen.profiles.generate-config-dict]
-extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
-output = "src/datamodel_code_generator/_types/generate_config_dict.py"
-class-name = "GenerateConfigDict"
-
-[tool.datamodel-codegen.profiles.parser-config-dicts]
-extends = "config-types-base"
-input-model = [
+[tool.datamodel-codegen]
+profiles.config-types-base.enum-field-as-literal = "none"
+profiles.config-types-base.use-standard-primitive-types = true
+profiles.config-types-base.disable-warnings = true
+profiles.config-types-base.disable-timestamp = true
+profiles.config-types-base.output-model-type = "typing.TypedDict"
+profiles.config-types-base.formatters = [ "ruff-format", "ruff-check" ]
+profiles.config-types-base.input-model-ref-strategy = "reuse-foreign"
+profiles.generate-config-dict.extends = "config-types-base"
+profiles.generate-config-dict.input-model = "src/datamodel_code_generator/config.py:GenerateConfig"
+profiles.generate-config-dict.output = "src/datamodel_code_generator/_types/generate_config_dict.py"
+profiles.generate-config-dict.class-name = "GenerateConfigDict"
+profiles.parse-config-dict.extends = "config-types-base"
+profiles.parse-config-dict.input-model = "src/datamodel_code_generator/config.py:ParseConfig"
+profiles.parse-config-dict.output = "src/datamodel_code_generator/_types/parse_config_dict.py"
+profiles.parse-config-dict.class-name = "ParseConfigDict"
+profiles.parser-config-dicts.extends = "config-types-base"
+profiles.parser-config-dicts.input-model = [
   "src/datamodel_code_generator/config.py:ParserConfig",
   "src/datamodel_code_generator/config.py:GraphQLParserConfig",
   "src/datamodel_code_generator/config.py:JSONSchemaParserConfig",
   "src/datamodel_code_generator/config.py:OpenAPIParserConfig",
 ]
-output = "src/datamodel_code_generator/_types/parser_config_dicts.py"
-class-name-suffix = "Dict"
-
-[tool.datamodel-codegen.profiles.parse-config-dict]
-extends = "config-types-base"
-input-model = "src/datamodel_code_generator/config.py:ParseConfig"
-output = "src/datamodel_code_generator/_types/parse_config_dict.py"
-class-name = "ParseConfigDict"
+profiles.parser-config-dicts.output = "src/datamodel_code_generator/_types/parser_config_dicts.py"
+profiles.parser-config-dicts.class-name-suffix = "Dict"

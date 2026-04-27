@@ -4,7 +4,7 @@ ci:
 
 repos:
 - repo: https://github.com/python-jsonschema/check-jsonschema
-  rev: 0.35.0
+  rev: 0.37.1
   hooks:
     - id: check-github-workflows
       args: [ "--verbose" ]
@@ -14,12 +14,12 @@ repos:
     - id: tox-ini-fmt
       args: ["-p", "fix"]
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: v2.11.1
+  rev: v2.21.1
   hooks:
     - id: pyproject-fmt
       args: ["--max-supported-python=3.14"]
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: 'v0.14.9'
+  rev: 'v0.15.12'
   hooks:
   - id: ruff-format
     exclude: "^tests/data|^src/datamodel_code_generator/_types/"
@@ -27,7 +27,7 @@ repos:
     exclude: "^tests/data|^src/datamodel_code_generator/_types/"
     args: ["--fix", "--unsafe-fixes", "--exit-non-zero-on-fix"]
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.4.1
+  rev: v2.4.2
   hooks:
   - id: codespell
     additional_dependencies:
