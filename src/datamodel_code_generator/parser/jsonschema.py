@@ -694,10 +694,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self._circular_ref_cache: dict[str, bool] = {}
 
         if self.data_model_field_type.can_have_extra_keys:
-            self.get_field_extra_key: Callable[[str], str] = (
-                lambda key: self.model_resolver.get_valid_field_name_and_alias(
-                    key, model_type=self.field_name_model_type
-                )[0]
+            self.get_field_extra_key: Callable[[str], str] = lambda key: (
+                self.model_resolver.get_valid_field_name_and_alias(key, model_type=self.field_name_model_type)[0]
             )
 
         else:
