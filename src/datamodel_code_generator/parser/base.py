@@ -493,7 +493,7 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
@@ -502,8 +502,10 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
+
     if require_update_action_models is None:
         require_update_action_models = []
+
     sorted_model_count: int = len(sorted_data_models)
 
     unresolved_references: list[DataModel] = []
@@ -521,6 +523,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 add_model_path_to_list(require_update_action_models, model)
         else:
             unresolved_references.append(model)
+
     if unresolved_references:
         if sorted_model_count != len(sorted_data_models) and recursion_count:
             try:
@@ -534,6 +537,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 pass
 
         # sort on base_class dependency
+        seen_orderings: set[tuple[str, ...]] = set()
         while True:
             ordered_models: list[tuple[int, DataModel]] = []
             # Build lookup dict for O(1) index access instead of O(n) list.index()
@@ -552,6 +556,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         for b in model.base_classes
                         if b.reference and b.reference.path in path_to_index
                     ]
+
                 if indexes:
                     ordered_models.append((
                         max(indexes),
@@ -562,9 +567,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         -1,
                         model,
                     ))
+
             sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=operator.itemgetter(0))]
             if sorted_unresolved_models == unresolved_references:
                 break
+
+            sig = tuple(m.path for m in sorted_unresolved_models)
+            if sig in seen_orderings:
+                # Base-class dependency order has no fixed point (e.g. cyclic inheritance with
+                # discriminators). Further iterations only permute the list; use stable order.
+                unresolved_references.sort(key=lambda m: m.path)
+                break
+
+            seen_orderings.add(sig)
             unresolved_references = sorted_unresolved_models
 
         # circular reference
@@ -578,16 +593,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 if update_action_parent:
                     add_model_path_to_list(require_update_action_models, model)
                 continue
+
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
                 add_model_path_to_list(require_update_action_models, model)
                 continue
+
             # unresolved
             unresolved_classes = ", ".join(
                 f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
             )
             msg = f"A Parser can not resolve classes: {unresolved_classes}."
             raise Exception(msg)  # noqa: TRY002
+
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
@@ -1624,6 +1642,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
+                                if not base_class.reference:
+                                    continue
+
                                 check_paths(base_class.reference, mapping)  # ty: ignore
 
                         if not discriminator_values:

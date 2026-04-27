@@ -1,0 +1,74 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "",
+    "version": ""
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ASchema": {
+        "type": "object",
+        "description": "Schema referenced by discriminator mapping."
+      },
+      "BSchema": {
+        "type": "object",
+        "description": "Schema referenced by discriminator mapping."
+      },
+      "X": {
+        "type": "object",
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "a": "#/components/schemas/ASchema",
+            "b": "#/components/schemas/BSchema"
+          }
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/A"
+          },
+          {
+            "$ref": "#/components/schemas/B"
+          }
+        ]
+      },
+      "A": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/X"
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "a"
+              }
+            }
+          }
+        ]
+      },
+      "B": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/X"
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "b"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

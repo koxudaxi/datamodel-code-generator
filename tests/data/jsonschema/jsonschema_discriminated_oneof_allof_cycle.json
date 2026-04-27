@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "discriminator": {
+    "propertyName": "kind",
+    "mapping": {
+      "a": "#/$defs/ASchema",
+      "b": "#/$defs/BSchema"
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/A" },
+    { "$ref": "#/$defs/B" }
+  ],
+  "$defs": {
+    "ASchema": {
+      "type": "object",
+      "description": "Schema referenced by discriminator mapping."
+    },
+    "BSchema": {
+      "type": "object",
+      "description": "Schema referenced by discriminator mapping."
+    },
+    "A": {
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "const": "a" }
+          }
+        }
+      ]
+    },
+    "B": {
+      "allOf": [
+        { "$ref": "#" },
+        {
+          "type": "object",
+          "required": ["kind"],
+          "properties": {
+            "kind": { "const": "b" }
+          }
+        }
+      ]
+    }
+  }
+}
