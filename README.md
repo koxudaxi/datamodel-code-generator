@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/koxudaxi-datamodel-code-generator-badge.png)](https://mseep.ai/app/koxudaxi-datamodel-code-generator)
+
 # datamodel-code-generator
 
 🚀 Generate Python data models from schema definitions in seconds.
