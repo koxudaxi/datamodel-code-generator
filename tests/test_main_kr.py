@@ -16,7 +16,7 @@ from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit, main
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import assert_error_message, create_assert_file_content, freeze_time
-from tests.main.conftest import run_main_and_assert, run_main_with_args
+from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -101,6 +101,7 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
     """Test main function on modular file with no output name outputs to stdout."""
     run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.OK)
@@ -1008,14 +1009,12 @@ target-python-version = "3.10"
     output_file = tmp_path / "output.py"
 
     with chdir(tmp_path):
-        return_code = run_main_with_args(
+        run_main_with_args(
             ["--input", str(input_file), "--output", str(output_file), "--profile", "nonexistent"],
             expected_exit=Exit.ERROR,
             capsys=capsys,
         )
-        assert return_code == Exit.ERROR
-        captured = capsys.readouterr()
-        assert "Profile 'nonexistent' not found in pyproject.toml" in captured.err
+        assert_error_message(capsys, "Profile 'nonexistent' not found in pyproject.toml")
 
 
 @freeze_time("2019-07-26")
@@ -1104,16 +1103,11 @@ target-python-version = "3.11"
         run_main_with_args(
             ["--profile", "api", "--generate-cli-command"],
             capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "with_profile.txt",
         )
-        captured = capsys.readouterr()
-        # Profile value should override base
-        assert "--target-python-version 3.11" in captured.out
-        # Base value should be inherited
-        assert "--snake-case-field" in captured.out
-        # Profile-specific value (no quotes when no spaces in value)
-        assert "--input api.yaml" in captured.out
 
 
+@pytest.mark.allow_direct_assert
 def test_help_shows_new_options() -> None:
     """Test that --profile and --ignore-pyproject appear in help."""
     help_text = arg_parser.format_help()
@@ -1243,9 +1237,7 @@ target-python-version = "3.11"
                 "--disable-timestamp",
             ],
         )
-        output_content = output_file.read_text()
-        assert "firstName" in output_content
-        assert "first_name" not in output_content
+        assert_file_content(output_file, EXPECTED_PYPROJECT_PROFILE_PATH / "ignore_pyproject_with_profile.py")
 
 
 def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1255,14 +1247,12 @@ def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.Capture
     output_file = tmp_path / "output.py"
 
     with chdir(tmp_path):
-        return_code = run_main_with_args(
+        run_main_with_args(
             ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
             expected_exit=Exit.ERROR,
             capsys=capsys,
         )
-        assert return_code == Exit.ERROR
-        captured = capsys.readouterr()
-        assert "no [tool.datamodel-codegen] section found" in captured.err.lower()
+        assert_error_message(capsys, "no [tool.datamodel-codegen] section found")
 
 
 @freeze_time("2019-07-26")
@@ -1538,18 +1528,14 @@ def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None
 
     mocker.patch("httpx.get", return_value=mock_response)
 
-    return_code = main([
-        "--url",
-        "https://api.example.com/schema.json",
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--http-headers",
-        "Authorization:Bearer token",
-    ])
-    assert return_code == 0
-    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py")
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=["--http-headers", "Authorization:Bearer token"],
+    )
 
 
 @pytest.mark.cli_doc(
@@ -1708,6 +1694,7 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-ignore-tls"],
     option_description="""Disable TLS certificate verification for HTTPS requests.
@@ -1749,6 +1736,7 @@ def test_http_ignore_tls(output_file: Path) -> None:
         assert call_kwargs.get("verify") is False
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-query-parameters"],
     option_description="""Add query parameters to HTTP requests for remote schemas.
@@ -1798,6 +1786,7 @@ def test_http_query_parameters(output_file: Path) -> None:
         assert ("format", "json") in params
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-timeout"],
     option_description="""Set timeout for HTTP requests to remote hosts.
@@ -2051,6 +2040,7 @@ def test_target_pydantic_version(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     """Generate a prompt for consulting LLMs about CLI options.
 
@@ -2075,6 +2065,7 @@ def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     assert "(No options specified)" in captured.out
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with a question argument."""
     question = "How do I convert enums to Literal types?"
@@ -2086,6 +2077,7 @@ def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> No
     assert question in captured.out
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with other CLI options set."""
     return_code = main([
@@ -2107,6 +2099,7 @@ def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> Non
     assert "What other options should I use?" in captured.out
 
 
+@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with list options (e.g., --strict-types)."""
     return_code = main([

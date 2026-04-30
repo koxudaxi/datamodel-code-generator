@@ -1727,6 +1727,7 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
@@ -1795,6 +1796,7 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
     ])
 
 
+@pytest.mark.allow_direct_assert
 def test_main_http_openapi_with_custom_port(mocker: MockerFixture, output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     schema_content = """\
@@ -2534,6 +2536,7 @@ def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path
     )
 
 
+@pytest.mark.allow_direct_assert
 @LEGACY_BLACK_SKIP
 def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) -> None:
     """Test OpenAPI generation with allOf coverage for edge case branches."""
@@ -3977,6 +3980,7 @@ def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) 
     )
 
 
+@pytest.mark.allow_direct_assert
 def _assert_external_ref_mapping_cli_parse_error(
     capsys: pytest.CaptureFixture[str],
     mapping: str,
@@ -4073,9 +4077,7 @@ def test_main_openapi_external_ref_mapping_normalizes_imported_class_name(tmp_pa
         output=output_file,
         external_ref_mapping={"common_normalized.yaml": "mypackage.shared.models"},
     )
-    content = output_file.read_text()
-    assert "from mypackage.shared.models import UserName" in content
-    assert "class UserName(" not in content
+    assert_file_content(output_file, "external_ref_mapping_normalized.py")
 
 
 def test_main_openapi_external_ref_mapping_file_uri(tmp_path: Path) -> None:
@@ -4094,9 +4096,7 @@ def test_main_openapi_external_ref_mapping_file_uri(tmp_path: Path) -> None:
         output=output_file,
         external_ref_mapping={common_uri: "mypackage.shared.models"},
     )
-    content = output_file.read_text()
-    assert "from mypackage.shared.models import User" in content
-    assert "class User(" not in content
+    assert_file_content(output_file, "external_ref_mapping_file_uri.py")
 
 
 def test_main_openapi_external_ref_mapping_absolute_path_ref(tmp_path: Path) -> None:
@@ -4115,9 +4115,7 @@ def test_main_openapi_external_ref_mapping_absolute_path_ref(tmp_path: Path) -> 
         output=output_file,
         external_ref_mapping={common_path: "mypackage.shared.models"},
     )
-    content = output_file.read_text()
-    assert "from mypackage.shared.models import User" in content
-    assert "class User(" not in content
+    assert_file_content(output_file, "external_ref_mapping_absolute_path.py")
 
 
 def test_main_openapi_external_ref_mapping_local_ref_unchanged(tmp_path: Path) -> None:
@@ -4129,10 +4127,7 @@ def test_main_openapi_external_ref_mapping_local_ref_unchanged(tmp_path: Path) -
         output=output_file,
         external_ref_mapping={"common.yaml": "mypackage.shared.models"},
     )
-    content = output_file.read_text()
-    assert "class User(" in content
-    assert "class UserResponse(" in content
-    assert "from mypackage.shared.models import" not in content
+    assert_file_content(output_file, "external_ref_mapping_local_ref_unchanged.py")
 
 
 def test_main_openapi_external_ref_mapping_ref_without_fragment_errors(tmp_path: Path) -> None:
@@ -4156,10 +4151,7 @@ def test_main_openapi_external_ref_mapping_no_duplicate_classes(tmp_path: Path) 
         output=output_file,
         external_ref_mapping={"common.yaml": "mypackage.shared.models"},
     )
-    content = output_file.read_text()
-    assert "class User(" not in content
-    assert "class Error(" not in content
-    assert "from mypackage.shared.models import" in content
+    assert_file_content(output_file, "external_ref_mapping.py")
 
 
 def test_main_openapi_external_ref_mapping_without_flag_generates_classes(tmp_path: Path) -> None:
@@ -4170,9 +4162,7 @@ def test_main_openapi_external_ref_mapping_without_flag_generates_classes(tmp_pa
         input_file_type=InputFileType.OpenAPI,
         output=output_file,
     )
-    content = output_file.read_text()
-    assert "class User(" in content
-    assert "class Error(" in content
+    assert_file_content(output_file, "external_ref_mapping_without_flag.py")
 
 
 def test_main_openapi_external_ref_mapping_invalid_format(capsys: pytest.CaptureFixture[str]) -> None:
@@ -4237,9 +4227,7 @@ def test_main_openapi_external_ref_mapping_programmatic_api(tmp_path: Path) -> N
         input_=EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml",
         config=config,
     )
-    content = output_file.read_text()
-    assert "class User(" not in content
-    assert "from mypackage.shared.models import" in content
+    assert_file_content(output_file, "external_ref_mapping.py")
 
 
 def test_main_openapi_namespace_subns_ref(output_dir: Path) -> None:
@@ -5194,6 +5182,7 @@ def test_main_openapi_include_paths_without_leading_slash(output_file: Path) -> 
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_openapi_include_paths_warning_without_paths_scope() -> None:
     """Warn when --openapi-include-paths used without paths scope."""
     import warnings

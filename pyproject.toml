@@ -232,6 +232,7 @@ verbosity_assertions = 2
 markers = [
   "perf: marks tests as performance tests (excluded from CI benchmarks)",
   "benchmark: marks tests as benchmark tests",
+  "allow_direct_assert: marks e2e tests where direct assert statements are intentionally allowed",
 ]
 
 [tool.coverage]

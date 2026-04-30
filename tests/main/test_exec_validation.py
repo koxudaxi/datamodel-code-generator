@@ -129,12 +129,14 @@ def test_force_exec_with_different_target_version(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_get_current_version_args_basic() -> None:
     """Test that get_current_version_args returns correct args."""
     args = get_current_version_args()
     assert args == ["--target-python-version", CURRENT_PYTHON_VERSION]
 
 
+@pytest.mark.allow_direct_assert
 def test_get_current_version_args_with_extra() -> None:
     """Test that get_current_version_args includes extra args."""
     args = get_current_version_args("--use-field-description", "--strict")
@@ -146,6 +148,7 @@ def test_get_current_version_args_with_extra() -> None:
     ]
 
 
+@pytest.mark.allow_direct_assert
 def test_current_python_version_format() -> None:
     """Test that CURRENT_PYTHON_VERSION matches expected format."""
     expected = f"{sys.version_info[0]}.{sys.version_info[1]}"

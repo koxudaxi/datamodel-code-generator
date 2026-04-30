@@ -26,7 +26,7 @@ from datamodel_code_generator import (
     chdir,
     generate,
 )
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from tests.conftest import assert_directory_content, freeze_time, validate_generated_code
@@ -53,6 +53,7 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
+@pytest.mark.allow_direct_assert
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
     """Assert that running the CLI exits with code 2 and emits the expected error."""
     with pytest.raises(SystemExit) as exc_info:
@@ -212,6 +213,7 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("target_python_version", "keep_model_order", "disable_future_imports"),
     [
@@ -452,6 +454,7 @@ def test_main_jsonschema_multiple_files(output_dir: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.benchmark
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
     """Test no empty files with collapsed external models."""
@@ -773,28 +776,32 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
 
 def test_main_class_name_prefix_invalid(output_file: Path) -> None:
     """Test that invalid --class-name-prefix is rejected."""
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
-        "--output",
-        str(output_file),
-        "--class-name-prefix",
-        "123Invalid",
-    ])
-    assert return_code == Exit.ERROR
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+            "--output",
+            str(output_file),
+            "--class-name-prefix",
+            "123Invalid",
+        ],
+        expected_exit=Exit.ERROR,
+    )
 
 
 def test_main_class_name_suffix_invalid(output_file: Path) -> None:
     """Test that invalid --class-name-suffix is rejected."""
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
-        "--output",
-        str(output_file),
-        "--class-name-suffix",
-        "Schema!",
-    ])
-    assert return_code == Exit.ERROR
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+            "--output",
+            str(output_file),
+            "--class-name-suffix",
+            "Schema!",
+        ],
+        expected_exit=Exit.ERROR,
+    )
 
 
 def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
@@ -1002,6 +1009,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
     main_response = mocker.Mock()
@@ -1909,6 +1917,7 @@ def test_main_generate_relative_input_path(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_generate_external_absolute_input_path(tmp_path: Path) -> None:
     """Test helper keeps absolute input paths that are outside the repository root."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -2149,6 +2158,7 @@ def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("input_file", "expected_file"),
     [
@@ -2174,6 +2184,7 @@ def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_
     assert_file_content(output_file, expected_file)
 
 
+@pytest.mark.allow_direct_assert
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
@@ -2240,6 +2251,7 @@ def test_main_generate_custom_class_name_generator_keep_underscores(output_file:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
@@ -2351,6 +2363,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     assert httpx_get_mock.call_count == 8
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     (
         "headers_arguments",
@@ -3304,6 +3317,7 @@ def test_long_description_wrap_string_literal(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_version(capsys: pytest.CaptureFixture) -> None:
     """Test version output."""
     with pytest.raises(SystemExit) as e:
@@ -9006,6 +9020,7 @@ def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that validators without fields are skipped gracefully."""
     config_file = tmp_path / "no_field_validators_config.json"
@@ -9070,6 +9085,7 @@ def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that when all validators have no fields, output has no validators."""
     config_file = tmp_path / "all_skipped_config.json"
@@ -9267,6 +9283,7 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
     )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.benchmark
 def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_file: Path) -> None:
     """Test circular external refs with relative paths and schema keywords via URL input."""

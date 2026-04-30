@@ -42,7 +42,7 @@ def test_watch_with_check_error(output_file: Path) -> None:
     It cannot be combined with `--check` since check mode requires a single
     comparison, not continuous watching.
     """
-    return_code = run_main_with_args(
+    run_main_with_args(
         [
             "--watch",
             "--check",
@@ -53,7 +53,6 @@ def test_watch_with_check_error(output_file: Path) -> None:
         ],
         expected_exit=Exit.ERROR,
     )
-    assert return_code == Exit.ERROR
 
 
 @pytest.mark.cli_doc(
@@ -72,7 +71,7 @@ def test_watch_with_url_error() -> None:
     The `--watch` flag monitors local files for changes. It cannot be used
     with `--url` since remote URLs cannot be watched for changes.
     """
-    return_code = run_main_with_args(
+    run_main_with_args(
         [
             "--watch",
             "--url",
@@ -80,18 +79,16 @@ def test_watch_with_url_error() -> None:
         ],
         expected_exit=Exit.ERROR,
     )
-    assert return_code == Exit.ERROR
 
 
 def test_watch_without_input_error(mocker: pytest.MockerFixture) -> None:
     """Watch mode requires --input file path."""
     mocker.patch("sys.stdin.isatty", return_value=False)
     mocker.patch("sys.stdin.read", return_value='{"type": "object"}')
-    return_code = run_main_with_args(
+    run_main_with_args(
         ["--watch"],
         expected_exit=Exit.ERROR,
     )
-    assert return_code == Exit.ERROR
 
 
 def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.MockerFixture) -> None:
@@ -101,7 +98,7 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
         "datamodel_code_generator.watch._get_watchfiles",
         side_effect=Exception("Please run `pip install 'datamodel-code-generator[watch]'` to use watch mode"),
     )
-    return_code = run_main_with_args(
+    run_main_with_args(
         [
             "--watch",
             "--input",
@@ -111,7 +108,6 @@ def test_watch_without_watchfiles_installed(output_file: Path, mocker: pytest.Mo
         ],
         expected_exit=Exit.ERROR,
     )
-    assert return_code == Exit.ERROR
 
 
 def test_get_watchfiles_import_error() -> None:
@@ -122,6 +118,7 @@ def test_get_watchfiles_import_error() -> None:
         _get_watchfiles()
 
 
+@pytest.mark.allow_direct_assert
 def test_get_watchfiles_success() -> None:
     """Test _get_watchfiles returns watchfiles module when installed."""
     from datamodel_code_generator.watch import _get_watchfiles
@@ -131,6 +128,7 @@ def test_get_watchfiles_success() -> None:
     assert hasattr(result, "watch")
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--watch", "--watch-delay"],
     option_description="""Set debounce delay in seconds for watch mode.
@@ -172,6 +170,7 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
         assert call_kwargs.get("recursive") is False
 
 
+@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_without_input() -> None:
     """Test watch_and_regenerate returns error when input is None."""
     from datamodel_code_generator.__main__ import Config
@@ -188,6 +187,7 @@ def test_watch_and_regenerate_without_input() -> None:
         assert result == Exit.ERROR
 
 
+@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_with_directory() -> None:
     """Test that watch_and_regenerate handles directory input with recursive watching."""
     from datamodel_code_generator.__main__ import Config
@@ -207,6 +207,7 @@ def test_watch_and_regenerate_with_directory() -> None:
         assert call_kwargs.get("recursive") is True
 
 
+@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
     """Test that watch_and_regenerate handles KeyboardInterrupt gracefully."""
     from datamodel_code_generator.__main__ import Config
@@ -224,6 +225,7 @@ def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
         assert result == Exit.OK
 
 
+@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
     """Test that watch_and_regenerate calls generate on file change."""
     from datamodel_code_generator.__main__ import Config
@@ -255,6 +257,7 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
         mock_generate.assert_called_once()
 
 
+@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that watch_and_regenerate continues after generation error."""
     from datamodel_code_generator.__main__ import Config
