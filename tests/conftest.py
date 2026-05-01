@@ -114,23 +114,23 @@ class HttpxGetMock(Protocol):
         timeout: float = 30.0,
     ) -> Any:
         """Record an httpx.get-style call."""
-        ...
+        raise NotImplementedError
 
     def assert_called(self) -> None:
         """Assert that the mock was called."""
-        ...
+        raise NotImplementedError
 
     def assert_not_called(self) -> None:
         """Assert that the mock was not called."""
-        ...
+        raise NotImplementedError
 
     def assert_called_once_with(self, *args: Any, **kwargs: Any) -> None:
         """Assert that the mock was called once with the expected arguments."""
-        ...
+        raise NotImplementedError
 
     def assert_has_calls(self, calls: Sequence[Any], any_order: bool = False) -> None:
         """Assert that the mock has the expected recorded calls."""
-        ...
+        raise NotImplementedError
 
 
 class HttpxGetMockFactory(Protocol):
@@ -138,7 +138,7 @@ class HttpxGetMockFactory(Protocol):
 
     def __call__(self, *responses: MockHttpxResponse) -> HttpxGetMock:
         """Patch httpx.get with URL-bound responses."""
-        ...
+        raise NotImplementedError
 
 
 def create_httpx_get_mock(mocker: Any) -> HttpxGetMock:
