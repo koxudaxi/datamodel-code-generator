@@ -458,18 +458,16 @@ def test_main_jsonschema_multiple_files(output_dir: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.benchmark
 def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> None:
     """Test no empty files with collapsed external models."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_collapse",
         output_path=tmp_path,
-        file_should_not_exist=tmp_path / "child.py",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "no_empty_collapsed_external_model",
         input_file_type="jsonschema",
         extra_args=["--collapse-root-models"],
     )
-    assert (tmp_path / "__init__.py").exists()
 
 
 @pytest.mark.cli_doc(
