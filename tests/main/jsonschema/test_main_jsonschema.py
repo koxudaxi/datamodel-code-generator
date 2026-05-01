@@ -894,7 +894,7 @@ def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: HttpxGetMockFa
         expected_file="root_id.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id.json", input_file)],
     )
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
 @pytest.mark.benchmark
@@ -934,7 +934,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json", input_file)],
     )
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
 def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: HttpxGetMockFactory, tmp_path: Path) -> None:
@@ -953,7 +953,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: Httpx
         expected_file="root_id_absolute_url.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_absolute_url.json", input_file)],
     )
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
 def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> None:
@@ -1005,6 +1005,7 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
             "http://localhost:8888/schemas/v1/main.schema.json",
             "http://localhost:8888/schemas/v1/sub.schema.json",
         ],
+        call_count=2,
     )
 
 
@@ -1023,7 +1024,11 @@ def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: HttpxGetMockF
             output_path=output_file,
             input_file_type="jsonschema",
         )
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema/../other/schema.json")
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_url="https://example.com/schema/../other/schema.json",
+        call_count=1,
+    )
 
 
 def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: HttpxGetMockFactory) -> None:
@@ -7311,7 +7316,11 @@ def test_main_bundled_schema_with_id_url(mock_httpx_get: HttpxGetMockFactory, ou
         ),
     )
 
-    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://cdn.example.com/schemas/bundled_schema_with_id.json")
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_url="https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        call_count=1,
+    )
 
 
 @pytest.mark.parametrize(

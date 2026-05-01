@@ -1962,7 +1962,7 @@ def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
         output=output,
         disable_timestamp=True,
     )
-    assert_generated_file_matches_output(f"{return_result}\n", output)
+    assert_generated_file_matches_output(return_result, output)
 
 
 def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:

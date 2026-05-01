@@ -443,6 +443,12 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+def _normalize_generated_text(text: str) -> str:
+    """Normalize generated text for file comparisons."""
+    text = _normalize_line_endings(text)
+    return text if text.endswith("\n") else f"{text}\n"
+
+
 def _get_tox_env() -> str:  # pragma: no cover
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
@@ -793,7 +799,7 @@ def write_generated_modules(output_dir: Path, modules: dict[tuple[str, ...], Any
     for module_path, result in modules.items():
         file_path = output_dir.joinpath(*module_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(result.body, encoding="utf-8")
+        file_path.write_text(_get_full_body(result), encoding="utf-8")
 
 
 def assert_runtime_result_model(output_dir: Path) -> None:
@@ -1002,9 +1008,8 @@ def assert_generated_file_matches_output(result: object, output_file: Path) -> N
     """Assert generate(output=None) text matches the same generation written to a file."""
     __tracebackhide__ = True
     assert isinstance(result, str)
-    actual = output_file.read_text(encoding="utf-8")
-    expected = _normalize_line_endings(result)
-    actual = _normalize_line_endings(actual)
+    actual = _normalize_generated_text(output_file.read_text(encoding="utf-8"))
+    expected = _normalize_generated_text(result)
     if expected != actual:  # pragma: no cover
         diff = _format_diff(expected, actual, output_file)
         msg = f"Generated output differs from {output_file}\n{diff}"
