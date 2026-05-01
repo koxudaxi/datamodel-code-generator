@@ -28,7 +28,19 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import assert_output, assert_runtime_import_package, create_assert_file_content, freeze_time
+from tests.conftest import (
+    assert_directory_content,
+    assert_generate_wrote_file,
+    assert_generated_file_matches_output,
+    assert_generated_modules_output,
+    assert_no_uncommented_generated_code,
+    assert_output,
+    assert_runtime_import_package,
+    assert_warnings_contain,
+    assert_warnings_do_not_contain,
+    create_assert_file_content,
+    freeze_time,
+)
 from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
@@ -85,15 +97,13 @@ def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
     assert ("\x1b" not in output) == no_color
 
 
-@pytest.mark.allow_direct_assert
 def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     """Test help display when no input is provided."""
     print_help_mock = mocker.patch("datamodel_code_generator.__main__.arg_parser.print_help")
     isatty_mock = mocker.patch("sys.stdin.isatty", return_value=True)
-    return_code: Exit = run_main_with_args([], expected_exit=Exit.ERROR)
-    assert return_code == Exit.ERROR
-    assert isatty_mock.called
-    assert print_help_mock.called
+    run_main_with_args([], expected_exit=Exit.ERROR)
+    isatty_mock.assert_called()
+    print_help_mock.assert_called()
 
 
 @pytest.mark.allow_direct_assert
@@ -430,16 +440,15 @@ os.system('echo INJECTED')
         "Filename not properly sanitized"
     )
 
-    assert not any(
-        line.strip().startswith("import os") and not line.strip().startswith("#")
-        for line in generated_content.split("\n")
+    assert_no_uncommented_generated_code(
+        generated_content,
+        forbidden_starts=("import os",),
+        forbidden_contains=("os.system",),
     )
-    assert not any("os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n"))
 
     compile(generated_content, str(output_path), "exec")
 
 
-@pytest.mark.allow_direct_assert
 def test_filename_with_various_control_characters(tmp_path: Path) -> None:
     """Test that various control characters in filenames are properly sanitized."""
     schema_content = """{"type": "object", "properties": {"test": {"type": "string"}}}"""
@@ -457,7 +466,7 @@ def test_filename_with_various_control_characters(tmp_path: Path) -> None:
         ("mixed_characters", "schema.json\n\r\t\nimport os; os.system('echo MIXED')"),
     ]
 
-    for test_name, malicious_filename in test_cases:
+    for _test_name, malicious_filename in test_cases:
         output_path = tmp_path / "output.py"
 
         generate(
@@ -469,14 +478,11 @@ def test_filename_with_various_control_characters(tmp_path: Path) -> None:
 
         generated_content = output_path.read_text()
 
-        assert not any(
-            line.strip().startswith("import ") and not line.strip().startswith("#")
-            for line in generated_content.split("\n")
-        ), f"Injection found for {test_name}"
-
-        assert not any(
-            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
-        ), f"System call found for {test_name}"
+        assert_no_uncommented_generated_code(
+            generated_content,
+            forbidden_starts=("import ",),
+            forbidden_contains=("os.system",),
+        )
 
         compile(generated_content, str(output_path), "exec")
 
@@ -1146,7 +1152,6 @@ def test_all_exports_scope_children_with_docstring_header(output_dir: Path) -> N
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: Path) -> None:
     """Test --all-exports-scope=recursive avoids collision through automatic class renaming.
 
@@ -1158,12 +1163,8 @@ def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: P
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_scope_recursive_collision_avoided_by_renaming",
     )
-
-    # Verify both Tea and Tea_1 exist in _internal.py (collision avoided through renaming)
-    internal_content = (output_dir / "_internal.py").read_text()
-    assert "class Tea(BaseModel):" in internal_content, "Tea class should exist in _internal.py"
-    assert "class Tea_1(BaseModel):" in internal_content, "Tea_1 class should exist in _internal.py"
 
 
 def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
@@ -1508,7 +1509,6 @@ class Model(BaseModel):
     httpx_get_mock.assert_not_called()
 
 
-@pytest.mark.allow_direct_assert
 def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mocker: MockerFixture) -> None:
     """Test --url takes precedence over pyproject.toml input setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
@@ -1538,20 +1538,7 @@ def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mo
             "--disable-timestamp",
         ])
 
-    assert output_file.read_text(encoding="utf-8") == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  http://127.0.0.1:8123/schema.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    from_url: int | None = None
-"""
-    )
+    assert_file_content(output_file, "cli_url_overrides_pyproject_input.py")
     httpx_get_mock.assert_called_once_with(
         "http://127.0.0.1:8123/schema.json",
         headers=None,
@@ -1636,7 +1623,6 @@ def test_use_standard_primitive_types(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_format_code_fallback_on_error(tmp_path: Path, mocker: MockerFixture) -> None:
     """Test that code generation continues with unformatted output when formatting fails."""
     schema = tmp_path / "schema.json"
@@ -1654,14 +1640,12 @@ def test_format_code_fallback_on_error(tmp_path: Path, mocker: MockerFixture) ->
             input_=schema,
             input_file_type=InputFileType.JsonSchema,
             output=output,
+            disable_timestamp=True,
         )
 
-    content = output.read_text()
-    assert "class Model" in content
-    assert "name:" in content
+    assert_file_content(output, "format_code_fallback_on_error.py")
 
 
-@pytest.mark.allow_direct_assert
 def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: MockerFixture) -> None:
     """Test that __init__.py generation continues with unformatted output when formatting fails."""
     output_dir = tmp_path / "output"
@@ -1677,14 +1661,13 @@ def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: Mock
             input_=OPEN_API_DATA_PATH / "modular.yaml",
             input_file_type=InputFileType.OpenAPI,
             output=output_dir,
+            disable_timestamp=True,
             all_exports_scope=AllExportsScope.Children,
         )
 
-    init_content = (output_dir / "__init__.py").read_text()
-    assert "__all__" in init_content or "from ." in init_content
+    assert_directory_content(output_dir, EXPECTED_MAIN_PATH / "openapi" / "format_code_fallback_on_error_init_exports")
 
 
-@pytest.mark.allow_direct_assert
 def test_init_exports_without_formatting(tmp_path: Path) -> None:
     """Test that __init__.py exports work correctly when formatting is disabled."""
     output_dir = tmp_path / "output"
@@ -1696,14 +1679,9 @@ def test_init_exports_without_formatting(tmp_path: Path) -> None:
         all_exports_scope=AllExportsScope.Children,
     )
 
-    assert isinstance(results, dict)
-    init_key = ("__init__.py",)
-    assert init_key in results
-    init_content = results[init_key].body
-    assert "__all__" in init_content or "from ." in init_content
+    assert_generated_modules_output(results, EXPECTED_MAIN_PATH / "openapi" / "init_exports_without_formatting")
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_parent_scoped_naming_backward_compat(tmp_path: Path) -> None:
     """Test generate() with parent_scoped_naming=True triggers ModelResolver backward compat."""
     output_file = tmp_path / "output.py"
@@ -1712,11 +1690,10 @@ def test_generate_parent_scoped_naming_backward_compat(tmp_path: Path) -> None:
         input_file_type=InputFileType.JsonSchema,
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
         parent_scoped_naming=True,
     )
-    content = output_file.read_text()
-    assert "class ModelOrderItem" in content
-    assert "class ModelCartItem" in content
+    assert_file_content(output_file, "generate_parent_scoped_naming_backward_compat.py")
 
 
 def test_ruff_check_and_format_combined(output_file: Path) -> None:
@@ -1779,20 +1756,15 @@ class Model(BaseModel):
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
     """Test ruff batch formatting for directory output (multiple files)."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
         output_path=output_dir,
         extra_args=["--formatters", "ruff-check", "ruff-format", "--disable-timestamp"],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file_ruff",
         skip_code_validation=True,
     )
-    order_file = output_dir / "order.py"
-    assert order_file.exists()
-    content = order_file.read_text()
-    assert "from __future__ import annotations" in content
-    assert "class Order" in content
 
 
 def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff(output_dir: Path) -> None:
@@ -1863,7 +1835,6 @@ def test_no_use_type_checking_imports(output_dir: Path) -> None:
     assert_runtime_import_package(output_dir, EXPECTED_MAIN_PATH / "openapi" / "no_use_type_checking_imports")
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> None:
     """Test generate() keeps runtime imports for multi-module Pydantic Ruff output."""
     result = generate(
@@ -1875,14 +1846,12 @@ def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> No
         disable_timestamp=True,
     )
 
-    assert isinstance(result, dict)
-    internal = result["_internal.py",]
-    assert "TYPE_CHECKING" not in internal
-    assert "from . import models" in internal
-    assert "Tea_1.model_rebuild()" in internal
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "openapi" / "generate_multi_module_pydantic_ruff_defaults_to_runtime_imports",
+    )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--use-type-checking-imports"],
     option_description="""Allow Ruff to move typing-only imports into TYPE_CHECKING blocks.
@@ -1918,13 +1887,12 @@ def test_use_type_checking_imports_for_multi_module_pydantic_ruff() -> None:
         disable_timestamp=True,
     )
 
-    assert isinstance(result, dict)
-    internal = result["_internal.py",]
-    assert "TYPE_CHECKING" in internal
-    assert internal == (EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_internal.py").read_text().rstrip()
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_for_multi_module_pydantic_ruff",
+    )
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_when_output_none() -> None:
     """Test that generate() returns str when output=None for single file."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
@@ -1934,23 +1902,9 @@ def test_generate_returns_string_when_output_none() -> None:
         input_filename="test.json",
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  test.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_when_output_none.py")
 
 
-class Model(BaseModel):
-    name: str | None = None\
-"""
-    )
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_with_pydantic_v2() -> None:
     """Test that generate() returns str for Pydantic v2 models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "number"}}}'
@@ -1961,22 +1915,9 @@ def test_generate_returns_string_with_pydantic_v2() -> None:
         output_model_type=DataModelType.PydanticV2BaseModel,
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  schema.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_pydantic_v2.py")
 
 
-class Model(BaseModel):
-    value: float | None = None"""
-    )
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_with_dataclass() -> None:
     """Test that generate() returns str for dataclass models."""
     json_schema = '{"type": "object", "properties": {"value": {"type": "string"}}}'
@@ -1987,23 +1928,9 @@ def test_generate_returns_string_with_dataclass() -> None:
         output_model_type=DataModelType.DataclassesDataclass,
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  data.json
-
-from __future__ import annotations
-
-from dataclasses import dataclass
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py")
 
 
-@dataclass
-class Model:
-    value: str | None = None"""
-    )
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_returns_none_when_output_path_provided(tmp_path: Path) -> None:
     """Test that generate() returns None when output path is provided."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
@@ -2014,11 +1941,9 @@ def test_generate_returns_none_when_output_path_provided(tmp_path: Path) -> None
         output=output,
         disable_timestamp=True,
     )
-    assert result is None
-    assert output.exists()
+    assert_generate_wrote_file(result, output)
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
     """Test that file content matches what would be returned with output=None."""
     json_schema = '{"type": "object", "properties": {"id": {"type": "integer"}}}'
@@ -2038,13 +1963,9 @@ def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
         output=output,
         disable_timestamp=True,
     )
-    file_content = output.read_text()
-
-    assert isinstance(return_result, str)
-    assert return_result.strip() == file_content.strip()
+    assert_generated_file_matches_output(return_result, output)
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
     """Test that generate() returns GeneratedModules dict for multiple modules."""
     main_schema = tmp_path / "main.json"
@@ -2085,52 +2006,11 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
         disable_timestamp=True,
     )
 
-    assert result == snapshot({
-        ("__init__.py",): """\
-# generated by datamodel-codegen:
-#   filename:  test_generate_returns_dict_for0\
-""",
-        ("address.py",): """\
-# generated by datamodel-codegen:
-#   filename:  address.json
-
-from __future__ import annotations
-
-from typing import Any
-
-from pydantic import BaseModel, RootModel
-
-
-class Model(RootModel[Any]):
-    root: Any
-
-
-class Address(BaseModel):
-    street: str | None = None
-    city: str | None = None\
-""",
-        ("main.py",): """\
-# generated by datamodel-codegen:
-#   filename:  main.json
-
-from __future__ import annotations
-
-from typing import Any
-
-from pydantic import BaseModel, RootModel
-
-from . import address as address_1
-
-
-class Model(RootModel[Any]):
-    root: Any
-
-
-class User(BaseModel):
-    id: int | None = None
-    address: address_1.Address | None = None\
-""",
-    })
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "generate_returns_dict_for_multiple_modules",
+        transform=lambda output: output.replace(f"#   filename:  {tmp_path.name}", "#   filename:  <tmpdir>"),
+    )
 
 
 @pytest.mark.allow_direct_assert
@@ -2139,7 +2019,6 @@ def test_generated_modules_type_alias_is_exported() -> None:
     assert GeneratedModules is not None
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_with_custom_file_header() -> None:
     """Test generate() with custom_file_header when output=None."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'
@@ -2149,22 +2028,9 @@ def test_generate_returns_string_with_custom_file_header() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
     )
-    assert result == snapshot(
-        """\
-# Custom header
-# More comments
-
-from __future__ import annotations
-
-from pydantic import BaseModel
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py")
 
 
-class Model(BaseModel):
-    name: str | None = None"""
-    )
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_with_custom_file_header_and_code() -> None:
     """Test generate() with custom_file_header containing code after docstring."""
     json_schema = '{"type": "object", "properties": {"id": {"type": "integer"}}}'
@@ -2174,23 +2040,9 @@ def test_generate_returns_string_with_custom_file_header_and_code() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
     )
-    assert result == snapshot(
-        '''\
-"""Module docstring."""
-from __future__ import annotations
-
-import sys
-
-from pydantic import BaseModel
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py")
 
 
-class Model(BaseModel):
-    id: int | None = None\
-'''
-    )
-
-
-@pytest.mark.allow_direct_assert
 def test_generate_returns_string_with_custom_file_header_no_future() -> None:
     """Test generate() with custom_file_header when body has no future imports."""
     json_schema = '{"type": "object", "properties": {"id": {"type": "integer"}}}'
@@ -2201,15 +2053,7 @@ def test_generate_returns_string_with_custom_file_header_no_future() -> None:
         custom_file_header=custom_header,
         disable_future_imports=True,
     )
-    assert result == snapshot("""\
-# Custom header for legacy code
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    id: int | None = None\
-""")
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_no_future.py")
 
 
 def test_generate_with_dict_jsonschema() -> None:
@@ -2254,7 +2098,6 @@ def test_generate_with_dict_graphql_raises_error() -> None:
         generate(graphql_error_dict, input_file_type=InputFileType.GraphQL)
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_with_dict_openapi_validation_warns() -> None:
     """Test generate() with dict input + validation skips validation with warning."""
     import warnings
@@ -2271,9 +2114,7 @@ def test_generate_with_dict_openapi_validation_warns() -> None:
         )
         assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
         # Check that both deprecated warning and dict input warning were raised
-        warning_messages = [str(warning.message) for warning in w]
-        assert any("deprecated" in msg.lower() for msg in warning_messages)
-        assert any("dict input" in msg.lower() for msg in warning_messages)
+        assert_warnings_contain(w, "deprecated", "dict input")
 
 
 @pytest.mark.parametrize(
@@ -2289,7 +2130,6 @@ def test_generate_with_dict_raw_data_types_raises_error(input_file_type: InputFi
         generate(auto_error_dict, input_file_type=input_file_type)
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_with_config_object(output_file: Path) -> None:
     """Test generate() with GenerateConfig object."""
     from datamodel_code_generator.model.pydantic_v2 import UnionMode
@@ -2300,6 +2140,7 @@ def test_generate_with_config_object(output_file: Path) -> None:
         input_filename="test.json",
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
         use_schema_description=True,
         snake_case_field=True,
         field_constraints=True,
@@ -2309,9 +2150,7 @@ def test_generate_with_config_object(output_file: Path) -> None:
         input_='{"type": "object", "properties": {"userName": {"type": "string"}}}',
         config=config,
     )
-    content = output_file.read_text(encoding="utf-8")
-    assert "class Model" in content
-    assert "user_name" in content
+    assert_file_content(output_file, "generate_with_config_object.py")
 
 
 def test_generate_config_with_union_mode() -> None:
@@ -2521,7 +2360,6 @@ def test_use_annotated_deprecation_warning_pydantic_v2(output_file: Path) -> Non
         )
 
 
-@pytest.mark.allow_direct_assert
 def test_use_annotated_no_warning_with_flag(output_file: Path) -> None:
     """Test that no warning is emitted when --use-annotated is explicitly set."""
     with warnings.catch_warnings(record=True) as w:
@@ -2532,10 +2370,9 @@ def test_use_annotated_no_warning_with_flag(output_file: Path) -> None:
             input_file_type="jsonschema",
             extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
         )
-    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+    assert_warnings_do_not_contain(w, "--use-annotated will be enabled")
 
 
-@pytest.mark.allow_direct_assert
 def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
     """Test that no warning is emitted when --no-use-annotated is explicitly set."""
     with warnings.catch_warnings(record=True) as w:
@@ -2546,7 +2383,7 @@ def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
             input_file_type="jsonschema",
             extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--no-use-annotated"],
         )
-    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+    assert_warnings_do_not_contain(w, "--use-annotated will be enabled")
 
 
 @pytest.mark.allow_direct_assert
@@ -2558,13 +2395,11 @@ def test_import_generate_config_from_top_level() -> None:
     assert TopLevelGenerateConfig is GenerateConfig
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_with_imported_config_from_top_level() -> None:
     """Test generate() with GenerateConfig imported from top-level."""
-    config = datamodel_code_generator.GenerateConfig(class_name="TestModel")
+    config = datamodel_code_generator.GenerateConfig(class_name="TestModel", disable_timestamp=True)
     result = generate('{"type": "object"}', config=config)
-    assert result is not None
-    assert "class TestModel" in result
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_with_imported_config_from_top_level.py")
 
 
 @pytest.mark.allow_direct_assert

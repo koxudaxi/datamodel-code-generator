@@ -13,9 +13,9 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.arguments import arg_parser
-from tests.conftest import assert_error_message, create_assert_file_content, freeze_time
+from tests.conftest import assert_error_message, assert_httpx_get_kwargs, create_assert_file_content, freeze_time
 from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
@@ -101,13 +101,15 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
-@pytest.mark.allow_direct_assert
+@freeze_time(TIMESTAMP)
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
     """Test main function on modular file with no output name outputs to stdout."""
-    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.OK)
-    captured = capsys.readouterr()
-    assert "class Chocolate" in captured.out
-    assert "class Source" in captured.out
+    run_main_with_args(
+        ["--input", str(OPEN_API_DATA_PATH / "modular.yaml")],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "output.py",
+    )
 
 
 def test_main_modular_filename(output_file: Path) -> None:
@@ -1694,7 +1696,6 @@ def test_custom_formatters_kwargs_option(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-ignore-tls"],
     option_description="""Disable TLS certificate verification for HTTPS requests.
@@ -1720,23 +1721,17 @@ def test_http_ignore_tls(output_file: Path) -> None:
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-ignore-tls",
-        ])
-        assert return_code == 0
-        # Verify that verify=False was passed to httpx.get
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert call_kwargs.get("verify") is False
+        run_main_url_and_assert(
+            url="https://api.example.com/schema.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="url_with_headers/output.py",
+            extra_args=["--http-ignore-tls"],
+        )
+        assert_httpx_get_kwargs(mock_get, verify=False)
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-query-parameters"],
     option_description="""Add query parameters to HTTP requests for remote schemas.
@@ -1764,29 +1759,17 @@ def test_http_query_parameters(output_file: Path) -> None:
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-query-parameters",
-            "version=v2",
-            "format=json",
-        ])
-        assert return_code == 0
-        # Verify query parameters were passed as list of tuples
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert "params" in call_kwargs
-        # params is a list of tuples: [("version", "v2"), ("format", "json")]
-        params = call_kwargs["params"]
-        assert ("version", "v2") in params
-        assert ("format", "json") in params
+        run_main_url_and_assert(
+            url="https://api.example.com/schema.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="url_with_headers/output.py",
+            extra_args=["--http-query-parameters", "version=v2", "format=json"],
+        )
+        assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2", "format": "json"})
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--http-timeout"],
     option_description="""Set timeout for HTTP requests to remote hosts.
@@ -1812,21 +1795,15 @@ def test_http_timeout(output_file: Path) -> None:
     mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
 
     with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-timeout",
-            "60",
-        ])
-        assert return_code == 0
-        # Verify that timeout=60 was passed to httpx.get
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert call_kwargs.get("timeout") == 60.0
+        run_main_url_and_assert(
+            url="https://api.example.com/schema.json",
+            output_path=output_file,
+            input_file_type="jsonschema",
+            assert_func=assert_file_content,
+            expected_file="url_with_headers/output.py",
+            extra_args=["--http-timeout", "60"],
+        )
+        assert_httpx_get_kwargs(mock_get, timeout=60.0)
 
 
 @pytest.mark.cli_doc(
@@ -2040,7 +2017,6 @@ def test_target_pydantic_version(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     """Generate a prompt for consulting LLMs about CLI options.
 
@@ -2052,67 +2028,56 @@ def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     This prompt can be copied to ChatGPT, Claude, or other LLMs to get
     recommendations for appropriate CLI options.
     """
-    return_code = main(["--generate-prompt"])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify structure
-    assert "# datamodel-code-generator CLI Options Consultation" in captured.out
-    assert "## Current CLI Options" in captured.out
-    assert "## Options by Category" in captured.out
-    assert "## All Available Options (Full Help)" in captured.out
-    assert "## Instructions" in captured.out
-    assert "(No options specified)" in captured.out
+    run_main_with_args(
+        ["--generate-prompt"],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "basic.txt",
+    )
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with a question argument."""
     question = "How do I convert enums to Literal types?"
-    return_code = main(["--generate-prompt", question])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
+    run_main_with_args(
+        ["--generate-prompt", question],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_question.txt",
+    )
 
-    assert "## Your Question" in captured.out
-    assert question in captured.out
 
-
-@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with other CLI options set."""
-    return_code = main([
-        "--input",
-        "schema.json",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--snake-case-field",
-        "--generate-prompt",
-        "What other options should I use?",
-    ])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify options are shown
-    assert "--input schema.json" in captured.out
-    assert "--output-model-type pydantic_v2.BaseModel" in captured.out
-    assert "--snake-case-field" in captured.out
-    assert "What other options should I use?" in captured.out
+    run_main_with_args(
+        [
+            "--input",
+            "schema.json",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+            "--generate-prompt",
+            "What other options should I use?",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_options.txt",
+    )
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with list options (e.g., --strict-types)."""
-    return_code = main([
-        "--strict-types",
-        "str",
-        "int",
-        "--generate-prompt",
-    ])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify list options are formatted correctly
-    assert "--strict-types str int" in captured.out
+    run_main_with_args(
+        [
+            "--strict-types",
+            "str",
+            "int",
+            "--generate-prompt",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_list_options.txt",
+    )
 
 
 @freeze_time("2019-07-26")

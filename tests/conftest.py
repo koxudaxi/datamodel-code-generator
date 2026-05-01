@@ -10,6 +10,7 @@ import re
 import sys
 import time
 from datetime import datetime, timezone
+from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
@@ -21,7 +22,8 @@ from typing_extensions import Required
 from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    import warnings
+    from collections.abc import Callable, Mapping
 
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
@@ -647,6 +649,8 @@ def assert_exact_directory_content(
 
 def _get_full_body(result: object) -> str:
     """Get full body from Result."""
+    if isinstance(result, str):
+        return result
     return getattr(result, "body", "")
 
 
@@ -691,6 +695,30 @@ def assert_parser_modules(
     for paths, result in modules.items():
         expected_path = expected_dir.joinpath(*paths)
         _assert_with_external_file(_get_full_body(result), expected_path)
+
+
+def assert_generated_modules_output(
+    modules: Mapping[tuple[str, ...], Any],
+    expected_dir: Path,
+    transform: Callable[[str], str] | None = None,
+) -> None:
+    """Assert generate(output=None) module output matches expected files exactly."""
+    __tracebackhide__ = True
+    output_files = set(starmap(Path, modules))
+    expected_files = {path.relative_to(expected_dir) for path in expected_dir.rglob("*.py")}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in generated modules: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Generated modules not in expected files: {missing}"
+
+    for paths, result in modules.items():
+        expected_path = expected_dir.joinpath(*paths)
+        content = _get_full_body(result)
+        if transform is not None:
+            content = transform(content)
+        _assert_with_external_file(content, expected_path)
 
 
 def write_generated_modules(output_dir: Path, modules: dict[tuple[str, ...], Any]) -> None:
@@ -750,6 +778,82 @@ def assert_error_message(
     __tracebackhide__ = True
     captured = capsys.readouterr()
     assert expected in captured.err, f"Expected '{expected}' in stderr, got: {captured.err}"
+
+
+def assert_httpx_get_kwargs(
+    mock_get: Any,
+    *,
+    call_count: int | None = None,
+    verify: bool | None = None,
+    timeout: float | None = None,
+    params_contains: Mapping[str, str] | None = None,
+) -> None:
+    """Assert common httpx.get call options used by URL e2e tests."""
+    __tracebackhide__ = True
+    if call_count is not None:
+        assert mock_get.call_count == call_count
+    if verify is not None or timeout is not None or params_contains is not None:
+        mock_get.assert_called()
+        call_kwargs = mock_get.call_args.kwargs
+        if verify is not None:
+            assert call_kwargs.get("verify") is verify
+        if timeout is not None:
+            assert call_kwargs.get("timeout") == timeout
+        if params_contains is not None:
+            params = dict(call_kwargs.get("params") or [])
+            missing = {key: value for key, value in params_contains.items() if params.get(key) != value}
+            assert not missing, f"Expected query parameters not found: {missing}; actual params: {params}"
+
+
+def assert_warnings_contain(recorded_warnings: list[warnings.WarningMessage], *expected_messages: str) -> None:
+    """Assert recorded warnings include each expected message fragment."""
+    __tracebackhide__ = True
+    messages = [str(warning.message) for warning in recorded_warnings]
+    missing = [expected for expected in expected_messages if not any(expected in message for message in messages)]
+    assert not missing, f"Expected warning messages not found: {missing}; actual warnings: {messages}"
+
+
+def assert_warnings_do_not_contain(recorded_warnings: list[warnings.WarningMessage], *unexpected_messages: str) -> None:
+    """Assert recorded warnings do not include any unexpected message fragment."""
+    __tracebackhide__ = True
+    messages = [str(warning.message) for warning in recorded_warnings]
+    found = [unexpected for unexpected in unexpected_messages if any(unexpected in message for message in messages)]
+    assert not found, f"Unexpected warning messages found: {found}; actual warnings: {messages}"
+
+
+def assert_no_uncommented_generated_code(
+    generated_content: str,
+    *,
+    forbidden_starts: tuple[str, ...] = (),
+    forbidden_contains: tuple[str, ...] = (),
+) -> None:
+    """Assert generated Python does not contain forbidden uncommented code fragments."""
+    __tracebackhide__ = True
+    uncommented_lines = [line.strip() for line in generated_content.split("\n") if not line.strip().startswith("#")]
+    for forbidden_start in forbidden_starts:
+        matches = [line for line in uncommented_lines if line.startswith(forbidden_start)]
+        assert not matches, f"Generated code contains forbidden line prefix {forbidden_start!r}: {matches}"
+    for forbidden_fragment in forbidden_contains:
+        matches = [line for line in uncommented_lines if forbidden_fragment in line]
+        assert not matches, f"Generated code contains forbidden fragment {forbidden_fragment!r}: {matches}"
+
+
+def assert_generate_wrote_file(result: object, output_file: Path) -> None:
+    """Assert generate(..., output=path) wrote a file and returned None."""
+    __tracebackhide__ = True
+    assert result is None
+    assert output_file.exists()
+
+
+def assert_generated_file_matches_output(result: object, output_file: Path) -> None:
+    """Assert generate(output=None) text matches the same generation written to a file."""
+    __tracebackhide__ = True
+    assert isinstance(result, str)
+    actual = output_file.read_text(encoding="utf-8")
+    if result.strip() != actual.strip():  # pragma: no cover
+        diff = _format_diff(result.strip(), actual.strip(), output_file)
+        msg = f"Generated output differs from {output_file}\n{diff}"
+        raise AssertionError(msg)
 
 
 @pytest.fixture(autouse=True)

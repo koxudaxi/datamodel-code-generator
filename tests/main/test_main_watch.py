@@ -8,7 +8,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from datamodel_code_generator.__main__ import Exit
-from tests.main.conftest import JSON_SCHEMA_DATA_PATH, run_main_with_args
+from tests.conftest import assert_error_message
+from tests.main.conftest import (
+    JSON_SCHEMA_DATA_PATH,
+    assert_exit_code,
+    assert_watch_called,
+    assert_watchfiles_module,
+    run_main_with_args,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -118,17 +125,14 @@ def test_get_watchfiles_import_error() -> None:
         _get_watchfiles()
 
 
-@pytest.mark.allow_direct_assert
 def test_get_watchfiles_success() -> None:
     """Test _get_watchfiles returns watchfiles module when installed."""
     from datamodel_code_generator.watch import _get_watchfiles
 
     result = _get_watchfiles()
-    assert result is not None
-    assert hasattr(result, "watch")
+    assert_watchfiles_module(result)
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.cli_doc(
     options=["--watch", "--watch-delay"],
     option_description="""Set debounce delay in seconds for watch mode.
@@ -163,14 +167,10 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
         return_value=mock_watchfiles,
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.OK
-        mock_watchfiles.watch.assert_called_once()
-        call_kwargs = mock_watchfiles.watch.call_args.kwargs
-        assert call_kwargs.get("debounce") == 500
-        assert call_kwargs.get("recursive") is False
+        assert_exit_code(result, Exit.OK)
+        assert_watch_called(mock_watchfiles, debounce=500, recursive=False)
 
 
-@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_without_input() -> None:
     """Test watch_and_regenerate returns error when input is None."""
     from datamodel_code_generator.__main__ import Config
@@ -184,10 +184,9 @@ def test_watch_and_regenerate_without_input() -> None:
         return_value=mock_watchfiles,
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.ERROR
+        assert_exit_code(result, Exit.ERROR)
 
 
-@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_with_directory() -> None:
     """Test that watch_and_regenerate handles directory input with recursive watching."""
     from datamodel_code_generator.__main__ import Config
@@ -202,12 +201,10 @@ def test_watch_and_regenerate_with_directory() -> None:
         return_value=mock_watchfiles,
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.OK
-        call_kwargs = mock_watchfiles.watch.call_args.kwargs
-        assert call_kwargs.get("recursive") is True
+        assert_exit_code(result, Exit.OK)
+        assert_watch_called(mock_watchfiles, recursive=True)
 
 
-@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
     """Test that watch_and_regenerate handles KeyboardInterrupt gracefully."""
     from datamodel_code_generator.__main__ import Config
@@ -222,10 +219,9 @@ def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
         return_value=mock_watchfiles,
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.OK
+        assert_exit_code(result, Exit.OK)
 
 
-@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
     """Test that watch_and_regenerate calls generate on file change."""
     from datamodel_code_generator.__main__ import Config
@@ -253,11 +249,10 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
         ),
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.OK
+        assert_exit_code(result, Exit.OK)
         mock_generate.assert_called_once()
 
 
-@pytest.mark.allow_direct_assert
 def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that watch_and_regenerate continues after generation error."""
     from datamodel_code_generator.__main__ import Config
@@ -280,6 +275,5 @@ def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFix
         ),
     ):
         result = watch_and_regenerate(config, None, None, None)
-        assert result == Exit.OK
-        captured = capsys.readouterr()
-        assert "Generation failed" in captured.err
+        assert_exit_code(result, Exit.OK)
+        assert_error_message(capsys, "Generation failed")

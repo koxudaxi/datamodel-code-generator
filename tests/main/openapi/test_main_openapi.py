@@ -31,7 +31,12 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, assert_error_message, freeze_time
+from tests.conftest import (
+    assert_directory_content,
+    assert_error_message,
+    assert_warnings_contain,
+    freeze_time,
+)
 from tests.main.conftest import (
     BLACK_PY313_SKIP,
     BLACK_PY314_SKIP,
@@ -44,6 +49,7 @@ from tests.main.conftest import (
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
+    run_main_with_system_exit,
 )
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
@@ -1727,7 +1733,6 @@ def test_main_openapi_pattern_with_lookaround_pydantic_v2(
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_main_generate_custom_class_name_generator_modular(
     tmp_path: Path,
 ) -> None:
@@ -1740,7 +1745,6 @@ def test_main_generate_custom_class_name_generator_modular(
 
     with freeze_time(TIMESTAMP):
         input_ = (OPEN_API_DATA_PATH / "modular.yaml").relative_to(Path.cwd())
-        assert not input_.is_absolute()
         generate(
             input_=input_,
             input_file_type=InputFileType.OpenAPI,
@@ -1796,7 +1800,6 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
     ])
 
 
-@pytest.mark.allow_direct_assert
 def test_main_http_openapi_with_custom_port(mocker: MockerFixture, output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     schema_content = """\
@@ -1827,14 +1830,14 @@ components:
 
     httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
 
-    from datamodel_code_generator.__main__ import main
-
-    return_code = main(["--url", "http://127.0.0.1:8123/openapi.json", "--output", str(output_file)])
-    assert return_code == Exit.OK
-
-    result = output_file.read_text(encoding="utf-8")
-    assert "class Item" in result
-    assert "class User" in result
+    run_main_url_and_assert(
+        url="http://127.0.0.1:8123/openapi.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="http_openapi_with_custom_port.py",
+        extra_args=["--disable-timestamp"],
+    )
 
     httpx_get_mock.assert_called_once_with(
         "http://127.0.0.1:8123/openapi.json",
@@ -2536,7 +2539,6 @@ def test_main_openapi_allof_with_required_inherited_edge_cases(output_file: Path
     )
 
 
-@pytest.mark.allow_direct_assert
 @LEGACY_BLACK_SKIP
 def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) -> None:
     """Test OpenAPI generation with allOf coverage for edge case branches."""
@@ -2550,7 +2552,7 @@ def test_main_openapi_allof_with_required_inherited_coverage(output_file: Path) 
             expected_file="allof_with_required_inherited_coverage.py",
         )
         # Verify the warning was raised for $ref combined with constraints
-        assert any("allOf combines $ref" in str(warning.message) for warning in w)
+        assert_warnings_contain(w, "allOf combines $ref")
 
 
 def test_main_use_default_kwarg(output_file: Path) -> None:
@@ -3980,23 +3982,24 @@ def test_main_openapi_external_ref_with_transitive_local_ref(output_file: Path) 
     )
 
 
-@pytest.mark.allow_direct_assert
 def _assert_external_ref_mapping_cli_parse_error(
     capsys: pytest.CaptureFixture[str],
     mapping: str,
     expected_message: str,
 ) -> None:
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args([
+    run_main_with_system_exit(
+        [
             "--input",
             str(EXTERNAL_REF_MAPPING_DATA_PATH / "api.yaml"),
             "--input-file-type",
             "openapi",
             "--external-ref-mapping",
             mapping,
-        ])
-    assert exc_info.value.code == 2
-    assert_error_message(capsys, expected_message)
+        ],
+        expected_code=2,
+        capsys=capsys,
+        expected_stderr_contains=expected_message,
+    )
 
 
 def _assert_external_ref_mapping_pyproject_error(
@@ -5182,7 +5185,6 @@ def test_main_openapi_include_paths_without_leading_slash(output_file: Path) -> 
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_main_openapi_include_paths_warning_without_paths_scope() -> None:
     """Warn when --openapi-include-paths used without paths scope."""
     import warnings
@@ -5201,10 +5203,7 @@ def test_main_openapi_include_paths_warning_without_paths_scope() -> None:
             "--openapi-include-paths",
             "/pets*",
         ])
-        warning_messages = [str(warning.message) for warning in w]
-        assert any(
-            "--openapi-include-paths has no effect without --openapi-scopes paths" in msg for msg in warning_messages
-        )
+        assert_warnings_contain(w, "--openapi-include-paths has no effect without --openapi-scopes paths")
 
 
 def test_main_openapi_deprecated_field(output_file: Path) -> None:

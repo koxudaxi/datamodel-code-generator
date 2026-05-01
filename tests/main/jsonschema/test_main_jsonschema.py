@@ -29,7 +29,7 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, freeze_time, validate_generated_code
+from tests.conftest import assert_directory_content, assert_httpx_get_kwargs, freeze_time, validate_generated_code
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
@@ -44,6 +44,7 @@ from tests.main.conftest import (
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
+    run_main_with_system_exit,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
@@ -53,14 +54,9 @@ if TYPE_CHECKING:
 FixtureRequest = pytest.FixtureRequest
 
 
-@pytest.mark.allow_direct_assert
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
     """Assert that running the CLI exits with code 2 and emits the expected error."""
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args(args)
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert expected_error in captured.err
+    run_main_with_system_exit(args, expected_code=2, capsys=capsys, expected_stderr_contains=expected_error)
 
 
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1009,7 +1005,6 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
     main_response = mocker.Mock()
@@ -1040,7 +1035,7 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFix
     httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
     output_dir = tmp_path / "output"
 
-    result = run_main_with_args([
+    run_main_with_args([
         "--url",
         "http://localhost:8888/schemas/v1/main.schema.json",
         "--output",
@@ -1049,14 +1044,13 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFix
         "jsonschema",
         "--output-model-type",
         "pydantic_v2.BaseModel",
+        "--disable-timestamp",
     ])
 
-    assert result == Exit.OK
-    main_content = (output_dir / "__init__.py").read_text(encoding="utf-8")
-    sub_content = (output_dir / "sub.py").read_text(encoding="utf-8")
-    assert "class Main(BaseModel):" in main_content
-    assert "sub: sub_1.Schema" in main_content
-    assert "class Schema(RootModel[constr(pattern=r'^[0-9a-f]{8}$')]):" in sub_content
+    assert_directory_content(
+        output_dir,
+        EXPECTED_MAIN_PATH / "jsonschema" / "url_relative_root_id_resolves_relative_refs",
+    )
     httpx_get_mock.assert_has_calls([
         call(
             "http://localhost:8888/schemas/v1/main.schema.json",
@@ -2158,7 +2152,6 @@ def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("input_file", "expected_file"),
     [
@@ -2174,7 +2167,6 @@ def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
 def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_file: str, output_file: Path) -> None:
     """Test pydantic_v2.BaseModel with dict defaults."""
     input_ = (JSON_SCHEMA_DATA_PATH / input_file).relative_to(Path.cwd())
-    assert not input_.is_absolute()
     generate(
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
@@ -2184,12 +2176,9 @@ def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_
     assert_file_content(output_file, expected_file)
 
 
-@pytest.mark.allow_direct_assert
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    assert input_.is_dir()
     generate(
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
@@ -2251,7 +2240,6 @@ def test_main_generate_custom_class_name_generator_keep_underscores(output_file:
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
@@ -2360,10 +2348,9 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
         ],
         any_order=True,
     )
-    assert httpx_get_mock.call_count == 8
+    assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     (
         "headers_arguments",
@@ -2516,7 +2503,7 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         ],
         any_order=True,
     )
-    assert httpx_get_mock.call_count == 8
+    assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
 
 
 def test_main_self_reference(output_file: Path) -> None:
@@ -9020,7 +9007,6 @@ def test_field_validators_wrap_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that validators without fields are skipped gracefully."""
     config_file = tmp_path / "no_field_validators_config.json"
@@ -9035,24 +9021,21 @@ def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Pat
     }"""
     )
 
-    result = run_main_with_args([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--validators",
-        str(config_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-    ])
-
-    assert result == Exit.OK
-    content = output_file.read_text(encoding="utf-8")
-    assert "validate_name_validator" in content
-    assert "validate_something" not in content
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_with_no_field_skipped.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
 
 
 def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
@@ -9085,7 +9068,6 @@ def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None:
     """Test that when all validators have no fields, output has no validators."""
     config_file = tmp_path / "all_skipped_config.json"
@@ -9099,24 +9081,21 @@ def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None
     }"""
     )
 
-    result = run_main_with_args([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--validators",
-        str(config_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-    ])
-
-    assert result == Exit.OK
-    content = output_file.read_text(encoding="utf-8")
-    assert "@field_validator" not in content
-    assert "validate_something" not in content
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_all_skipped.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
 
 
 def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -9283,7 +9262,6 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
     )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.benchmark
 def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_file: Path) -> None:
     """Test circular external refs with relative paths and schema keywords via URL input."""
@@ -9350,7 +9328,7 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         ],
         any_order=True,
     )
-    assert httpx_get_mock.call_count == 3
+    assert_httpx_get_kwargs(httpx_get_mock, call_count=3)
 
 
 @pytest.mark.benchmark
