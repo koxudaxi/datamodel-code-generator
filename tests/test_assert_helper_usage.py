@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import assert_httpx_get_kwargs
+
 TESTS_ROOT = Path(__file__).parent
 E2E_TEST_PATHS = (
     Path("main/graphql/test_annotated.py"),
@@ -102,3 +104,30 @@ def test_e2e_modules_use_shared_assertion_helpers_reports_unmarked_assert(
 
     with pytest.raises(pytest.fail.Exception, match="Direct assert statements"):
         test_e2e_modules_use_shared_assertion_helpers()
+
+
+def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: pytest.MockerFixture) -> None:
+    """Explicit call_count works with multi-URL httpx.get assertions."""
+    mock_get = mocker.Mock()
+    mock_get(
+        "https://example.com/person.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+    mock_get(
+        "https://example.com/address.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+
+    assert_httpx_get_kwargs(
+        mock_get,
+        expected_urls=["https://example.com/person.json", "https://example.com/address.json"],
+        call_count=2,
+    )
