@@ -25,7 +25,7 @@ from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
     import warnings
-    from collections.abc import Callable, Mapping
+    from collections.abc import Callable, Mapping, Sequence
 
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
@@ -802,6 +802,29 @@ def _assert_httpx_params_contain(mock_get: Any, params_contains: Mapping[str, st
     assert not missing_by_call, "Expected query parameters not found: " + "; ".join(missing_by_call)
 
 
+def _assert_httpx_call_options(
+    mock_get: Any,
+    *,
+    headers: Mapping[str, str] | Sequence[tuple[str, str]] | None,
+    params: list[tuple[str, str]] | None,
+    verify: bool | None,
+    timeout: float | None,
+) -> None:
+    if headers is None and params is None and verify is None and timeout is None:
+        return
+    mock_get.assert_called()
+    for httpx_call in mock_get.call_args_list:
+        call_kwargs = httpx_call.kwargs
+        if headers is not None:
+            assert call_kwargs.get("headers") == headers
+        if params is not None:
+            assert call_kwargs.get("params") == params
+        if verify is not None:
+            assert call_kwargs.get("verify") is verify
+        if timeout is not None:
+            assert call_kwargs.get("timeout") == timeout
+
+
 def assert_httpx_get_kwargs(
     mock_get: Any,
     *,
@@ -810,7 +833,7 @@ def assert_httpx_get_kwargs(
     expected_url: str | None = None,
     expected_urls: list[str] | None = None,
     any_order: bool = False,
-    headers: Mapping[str, str] | None = None,
+    headers: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
     params: list[tuple[str, str]] | None = None,
     verify: bool | None = None,
     timeout: float | None = None,
@@ -841,13 +864,7 @@ def assert_httpx_get_kwargs(
         mock_get.assert_has_calls([call(url, **expected_call_kwargs) for url in expected_urls], any_order=any_order)
         if call_count is None:
             assert mock_get.call_count == len(expected_urls)
-    if verify is not None or timeout is not None:
-        mock_get.assert_called()
-        call_kwargs = mock_get.call_args.kwargs
-        if verify is not None:
-            assert call_kwargs.get("verify") is verify
-        if timeout is not None:
-            assert call_kwargs.get("timeout") == timeout
+    _assert_httpx_call_options(mock_get, headers=headers, params=params, verify=verify, timeout=timeout)
     if params_contains is not None:
         mock_get.assert_called()
         _assert_httpx_params_contain(mock_get, params_contains)

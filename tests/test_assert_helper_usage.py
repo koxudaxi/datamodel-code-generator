@@ -69,6 +69,9 @@ class _DirectAssertVisitor(ast.NodeVisitor):
     def visit_AsyncFunctionDef(self, _node: ast.AsyncFunctionDef) -> None:
         return
 
+    def visit_ClassDef(self, _node: ast.ClassDef) -> None:
+        return
+
 
 def _collect_function_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.Assert]:
     visitor = _DirectAssertVisitor()
@@ -150,6 +153,25 @@ def test_example():
     assert len(_collect_function_asserts(inner_function)) == 1
 
 
+def test_collect_function_asserts_ignores_nested_classes() -> None:
+    """Nested classes are reported on their own methods, not the outer test."""
+    module = ast.parse(
+        """
+def test_example():
+    class AssertsLater:
+        def assert_later(self):
+            assert False
+"""
+    )
+    outer_function = next(node for node in ast.walk(module) if isinstance(node, ast.FunctionDef))
+    inner_method = next(
+        node for node in ast.walk(module) if isinstance(node, ast.FunctionDef) and node.name == "assert_later"
+    )
+
+    assert _collect_function_asserts(outer_function) == []
+    assert len(_collect_function_asserts(inner_method)) == 1
+
+
 def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: MockerFixture) -> None:
     """Explicit call_count works with multi-URL httpx.get assertions."""
     mock_get = mocker.Mock()
@@ -190,6 +212,61 @@ def test_assert_httpx_get_kwargs_accepts_called_true(mocker: MockerFixture) -> N
     )
 
     assert_httpx_get_kwargs(mock_get, called=True)
+
+
+def test_assert_httpx_get_kwargs_validates_call_options_for_every_call(mocker: MockerFixture) -> None:
+    """HTTP option checks apply to all recorded URL requests."""
+    mock_get = mocker.Mock()
+    expected_headers = [("Authorization", "Bearer token")]
+    expected_params = [("version", "v2")]
+    mock_get(
+        "https://example.com/person.json",
+        headers=expected_headers,
+        verify=False,
+        follow_redirects=True,
+        params=expected_params,
+        timeout=60.0,
+    )
+    mock_get(
+        "https://example.com/address.json",
+        headers=expected_headers,
+        verify=False,
+        follow_redirects=True,
+        params=expected_params,
+        timeout=60.0,
+    )
+
+    assert_httpx_get_kwargs(
+        mock_get,
+        headers=expected_headers,
+        params=expected_params,
+        verify=False,
+        timeout=60.0,
+    )
+
+
+def test_assert_httpx_get_kwargs_reports_call_option_mismatch_per_call(mocker: MockerFixture) -> None:
+    """HTTP option failures catch mismatches before the last URL request."""
+    mock_get = mocker.Mock()
+    mock_get(
+        "https://example.com/person.json",
+        headers=[("Authorization", "Bearer old")],
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+    mock_get(
+        "https://example.com/address.json",
+        headers=[("Authorization", "Bearer token")],
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+
+    with pytest.raises(AssertionError):
+        assert_httpx_get_kwargs(mock_get, headers=[("Authorization", "Bearer token")])
 
 
 def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker: MockerFixture) -> None:

@@ -4378,7 +4378,7 @@ def test_main_openapi_read_only_write_only_union(output_file: Path) -> None:
 
 def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with URL $ref to external schema."""
-    mock_httpx_get(
+    httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
             "https://example.com/common.yaml", OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml"
         )
@@ -4398,11 +4398,12 @@ def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[...,
             "--allow-remote-refs",
         ],
     )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/common.yaml")
 
 
 def test_main_openapi_read_only_write_only_allof_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with allOf that references external URL schema."""
-    mock_httpx_get(
+    httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
             "https://example.com/common.yaml",
             OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml",
@@ -4423,6 +4424,7 @@ def test_main_openapi_read_only_write_only_allof_url_ref(mock_httpx_get: Callabl
             "--allow-remote-refs",
         ],
     )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/common.yaml")
 
 
 def test_main_openapi_read_only_write_only_allof_order(output_file: Path) -> None:

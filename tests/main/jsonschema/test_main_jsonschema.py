@@ -2187,8 +2187,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  person.json",
         ),
     )
-    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True)
-    assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True, call_count=8)
 
 
 @pytest.mark.parametrize(
@@ -2281,8 +2280,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         headers=headers_requests,
         params=query_parameters_requests,
         verify=bool(not http_ignore_tls),
+        call_count=8,
     )
-    assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
 
 
 def test_main_self_reference(output_file: Path) -> None:
@@ -9065,8 +9064,7 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         ),
     )
 
-    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True)
-    assert_httpx_get_kwargs(httpx_get_mock, call_count=3)
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True, call_count=3)
 
 
 @pytest.mark.benchmark

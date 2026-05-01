@@ -1529,7 +1529,9 @@ def test_url_with_http_headers(mock_httpx_get: Callable[..., Any], output_file: 
     useful for authentication (e.g., Bearer tokens) or custom API requirements.
     Format: `HeaderName:HeaderValue`.
     """
-    mock_httpx_get(MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json"))
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
 
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
@@ -1539,6 +1541,7 @@ def test_url_with_http_headers(mock_httpx_get: Callable[..., Any], output_file: 
         expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
         extra_args=["--http-headers", "Authorization:Bearer token"],
     )
+    assert_httpx_get_kwargs(mock_get, headers=[("Authorization", "Bearer token")])
 
 
 @pytest.mark.cli_doc(
