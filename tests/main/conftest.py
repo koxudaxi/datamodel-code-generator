@@ -138,11 +138,6 @@ def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> N
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
 
 
-def assert_exit_code(return_code: Exit, expected_exit: Exit, context: str = "") -> None:
-    """Assert exit code matches expected value in e2e helper code."""
-    _assert_exit_code(return_code, expected_exit, context)
-
-
 def _assert_captured_output(
     capsys: pytest.CaptureFixture[str] | None,
     *,
@@ -332,6 +327,15 @@ def assert_watch_called(
         pytest.fail(f"Expected watch debounce {debounce!r}, got {call_kwargs.get('debounce')!r}")
     if recursive is not None and call_kwargs.get("recursive") is not recursive:  # pragma: no cover
         pytest.fail(f"Expected watch recursive {recursive!r}, got {call_kwargs.get('recursive')!r}")
+
+
+def run_watch_and_assert(config: Any, *, expected_exit: Exit = Exit.OK) -> None:
+    """Run watch mode with the standard no-op callback arguments and assert its exit code."""
+    __tracebackhide__ = True
+    from datamodel_code_generator.watch import watch_and_regenerate
+
+    return_code = watch_and_regenerate(config, None, None, None)
+    _assert_exit_code(return_code, expected_exit, f"Watch config: {config!r}")
 
 
 def run_generate_file_and_assert(

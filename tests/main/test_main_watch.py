@@ -11,10 +11,10 @@ from datamodel_code_generator.__main__ import Exit
 from tests.conftest import assert_error_message
 from tests.main.conftest import (
     JSON_SCHEMA_DATA_PATH,
-    assert_exit_code,
     assert_watch_called,
     assert_watchfiles_module,
     run_main_with_args,
+    run_watch_and_assert,
 )
 
 if TYPE_CHECKING:
@@ -156,7 +156,6 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
     rapid file changes. Press Ctrl+C to stop watching.
     """
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
     mock_watchfiles.watch.return_value = iter([])
@@ -166,15 +165,13 @@ def test_watch_and_regenerate_starts_and_stops() -> None:
         "datamodel_code_generator.watch._get_watchfiles",
         return_value=mock_watchfiles,
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.OK)
+        run_watch_and_assert(config)
         assert_watch_called(mock_watchfiles, debounce=500, recursive=False)
 
 
 def test_watch_and_regenerate_without_input() -> None:
     """Test watch_and_regenerate returns error when input is None."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
     config = Config(input=None)
@@ -183,14 +180,12 @@ def test_watch_and_regenerate_without_input() -> None:
         "datamodel_code_generator.watch._get_watchfiles",
         return_value=mock_watchfiles,
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.ERROR)
+        run_watch_and_assert(config, expected_exit=Exit.ERROR)
 
 
 def test_watch_and_regenerate_with_directory() -> None:
     """Test that watch_and_regenerate handles directory input with recursive watching."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
     mock_watchfiles.watch.return_value = iter([])
@@ -200,15 +195,13 @@ def test_watch_and_regenerate_with_directory() -> None:
         "datamodel_code_generator.watch._get_watchfiles",
         return_value=mock_watchfiles,
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.OK)
+        run_watch_and_assert(config)
         assert_watch_called(mock_watchfiles, recursive=True)
 
 
 def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
     """Test that watch_and_regenerate handles KeyboardInterrupt gracefully."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
     mock_watchfiles.watch.side_effect = KeyboardInterrupt()
@@ -218,14 +211,12 @@ def test_watch_and_regenerate_handles_keyboard_interrupt() -> None:
         "datamodel_code_generator.watch._get_watchfiles",
         return_value=mock_watchfiles,
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.OK)
+        run_watch_and_assert(config)
 
 
 def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
     """Test that watch_and_regenerate calls generate on file change."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     output_file = tmp_path / "output.py"
     mock_watchfiles = MagicMock()
@@ -248,15 +239,13 @@ def test_watch_and_regenerate_on_change(tmp_path: Path) -> None:
             mock_generate,
         ),
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.OK)
+        run_watch_and_assert(config)
         mock_generate.assert_called_once()
 
 
 def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFixture[str]) -> None:
     """Test that watch_and_regenerate continues after generation error."""
     from datamodel_code_generator.__main__ import Config
-    from datamodel_code_generator.watch import watch_and_regenerate
 
     mock_watchfiles = MagicMock()
     mock_watchfiles.watch.return_value = iter([
@@ -274,6 +263,5 @@ def test_watch_and_regenerate_handles_generation_error(capsys: pytest.CaptureFix
             side_effect=Exception("Generation failed"),
         ),
     ):
-        result = watch_and_regenerate(config, None, None, None)
-        assert_exit_code(result, Exit.OK)
+        run_watch_and_assert(config)
         assert_error_message(capsys, "Generation failed")

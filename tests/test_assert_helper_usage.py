@@ -165,3 +165,69 @@ def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(
         expected_urls=["https://example.com/person.json", "https://example.com/address.json"],
         call_count=2,
     )
+
+
+def test_assert_httpx_get_kwargs_accepts_called_true(mocker: pytest.MockerFixture) -> None:
+    """called=True asserts that at least one URL request was made."""
+    mock_get = mocker.Mock()
+    mock_get(
+        "https://example.com/person.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=None,
+        timeout=30.0,
+    )
+
+    assert_httpx_get_kwargs(mock_get, called=True)
+
+
+def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker: pytest.MockerFixture) -> None:
+    """Subset query parameter checks apply to all recorded URL requests."""
+    mock_get = mocker.Mock()
+    mock_get(
+        "https://example.com/person.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=[("version", "v2"), ("format", "json")],
+        timeout=30.0,
+    )
+    mock_get(
+        "https://example.com/address.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=[("version", "v2"), ("format", "yaml")],
+        timeout=30.0,
+    )
+
+    assert_httpx_get_kwargs(
+        mock_get,
+        expected_urls=["https://example.com/person.json", "https://example.com/address.json"],
+        params_contains={"version": "v2"},
+    )
+
+
+def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocker: pytest.MockerFixture) -> None:
+    """Subset query parameter failures identify the request that mismatched."""
+    mock_get = mocker.Mock()
+    mock_get(
+        "https://example.com/person.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=[("version", "v2")],
+        timeout=30.0,
+    )
+    mock_get(
+        "https://example.com/address.json",
+        headers=None,
+        verify=True,
+        follow_redirects=True,
+        params=[("version", "v1")],
+        timeout=30.0,
+    )
+
+    with pytest.raises(AssertionError, match="call 2"):
+        assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2"})
