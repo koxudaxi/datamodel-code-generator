@@ -126,6 +126,20 @@ def test_e2e_modules_use_shared_assertion_helpers_reports_unmarked_assert(
         test_e2e_modules_use_shared_assertion_helpers()
 
 
+def test_collect_function_asserts_ignores_nested_async_helpers() -> None:
+    """Nested async helpers are reported on their own function, not the outer test."""
+    module = ast.parse(
+        """
+def test_example():
+    async def assert_later():
+        assert False
+"""
+    )
+    function = next(node for node in ast.walk(module) if isinstance(node, ast.FunctionDef))
+
+    assert _collect_function_asserts(function) == []
+
+
 def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: pytest.MockerFixture) -> None:
     """Explicit call_count works with multi-URL httpx.get assertions."""
     mock_get = mocker.Mock()
