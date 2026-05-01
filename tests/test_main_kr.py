@@ -18,6 +18,7 @@ from tests.conftest import (
     MockHttpxResponse,
     assert_error_message,
     assert_httpx_get_kwargs,
+    assert_output,
     create_assert_file_content,
     freeze_time,
 )
@@ -1115,13 +1116,9 @@ target-python-version = "3.11"
         )
 
 
-@pytest.mark.allow_direct_assert
 def test_help_shows_new_options() -> None:
     """Test that --profile and --ignore-pyproject appear in help."""
-    help_text = arg_parser.format_help()
-    assert "--profile" in help_text
-    assert "--ignore-pyproject" in help_text
-    assert "pyproject.toml" in help_text
+    assert_output(arg_parser.format_help(), EXPECTED_MAIN_KR_PATH / "help_shows_new_options.txt")
 
 
 @pytest.mark.skipif(

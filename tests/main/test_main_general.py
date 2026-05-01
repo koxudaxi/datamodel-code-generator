@@ -53,6 +53,7 @@ from tests.main.conftest import (
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_with_args,
+    run_main_with_system_exit,
 )
 
 if TYPE_CHECKING:
@@ -85,19 +86,18 @@ def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
     assert snooper_to_methods()(mock) == mock
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(argnames="no_color", argvalues=[False, True])
 def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
     """Test help output with and without color."""
     args = ["--no-color"] if no_color else []
     args += ["--help"]
 
-    with pytest.raises(expected_exception=SystemExit) as context:
-        run_main_with_args(args)
-    assert context.value.code == Exit.OK
-
-    output = capsys.readouterr().out
-    assert ("\x1b" not in output) == no_color
+    run_main_with_system_exit(
+        args,
+        expected_code=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "help" / ("no_color.txt" if no_color else "color.txt"),
+    )
 
 
 def test_show_help_when_no_input(mocker: MockerFixture) -> None:

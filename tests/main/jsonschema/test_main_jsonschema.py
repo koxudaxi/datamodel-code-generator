@@ -65,6 +65,21 @@ def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixtu
     run_main_with_system_exit(args, expected_code=2, capsys=capsys, expected_stderr_contains=expected_error)
 
 
+def _keep_model_order_field_references_expected_file(
+    target_version: PythonVersion,
+    *,
+    keep_model_order: bool,
+    disable_future_imports: bool,
+) -> str:
+    if target_version.has_native_deferred_annotations:
+        return "keep_model_order_field_references_native_deferred.py"
+    if disable_future_imports:
+        return "keep_model_order_field_references.py"
+    if keep_model_order:
+        return "keep_model_order_field_references_deferred.py"
+    return "keep_model_order_field_references_default.py"
+
+
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     package_dir = base_dir / "my_app"
     package_dir.mkdir()
@@ -215,7 +230,6 @@ def test_main_keep_model_order_field_references(output_file: Path) -> None:
     )
 
 
-@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("target_python_version", "keep_model_order", "disable_future_imports"),
     [
@@ -249,37 +263,30 @@ def test_main_keep_model_order_matrix_keep_model_order_field_references(
     if not is_supported_in_black(target_version):
         pytest.skip(f"Installed black ({black.__version__}) doesn't support Python {target_python_version}")
 
-    args = [
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
+    extra_args = [
         "--target-python-version",
         target_python_version,
         "--formatters",
         "isort",
     ]
     if keep_model_order:
-        args.append("--keep-model-order")
+        extra_args.append("--keep-model-order")
     if disable_future_imports:
-        args.append("--disable-future-imports")
+        extra_args.append("--disable-future-imports")
 
-    run_main_with_args(args)
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=_keep_model_order_field_references_expected_file(
+            target_version,
+            keep_model_order=keep_model_order,
+            disable_future_imports=disable_future_imports,
+        ),
+        extra_args=extra_args,
+    )
     code = output_file.read_text(encoding="utf-8")
-    compile(code, str(output_file), "exec")
-
-    if not keep_model_order:
-        return
-
-    metadata_index = code.index("class Metadata")
-    description_type_index = code.index("class DescriptionType")
-    use_deferred_annotations_for_target = target_version.has_native_deferred_annotations or not disable_future_imports
-    if use_deferred_annotations_for_target:
-        assert description_type_index < metadata_index
-    else:
-        assert metadata_index < description_type_index
 
     # For targets without native deferred annotations, validate runtime safety
     # under the current interpreter by executing the generated module.
