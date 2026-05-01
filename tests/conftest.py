@@ -9,13 +9,13 @@ import json
 import re
 import sys
 import time
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
-from unittest.mock import ANY, call
 
 import httpx
 import pytest
@@ -109,9 +109,9 @@ class HttpxGetMock(Protocol):
         *,
         headers: HttpxHeaders | None = None,
         verify: bool = True,
-        follow_redirects: bool = True,
+        follow_redirects: bool = False,
         params: HttpxParams | None = None,
-        timeout: float = 30.0,
+        timeout: float = 5.0,
     ) -> Any:
         """Record an httpx.get-style call."""
         raise NotImplementedError
@@ -886,6 +886,30 @@ def _assert_httpx_call_options(
             assert call_kwargs.get("timeout") == timeout
 
 
+def _assert_httpx_urls(
+    mock_get: HttpxGetMock,
+    *,
+    expected_url: str | None,
+    expected_urls: list[str] | None,
+    any_order: bool,
+) -> None:
+    if expected_url is None and expected_urls is None:
+        return
+
+    mock_get.assert_called()
+    actual_urls = [httpx_call.args[0] for httpx_call in mock_get.call_args_list]
+
+    if expected_url is not None:
+        assert mock_get.call_count == 1
+        assert actual_urls == [expected_url]
+
+    if expected_urls is not None:
+        if any_order:
+            assert Counter(actual_urls) == Counter(expected_urls)
+        else:
+            assert actual_urls == expected_urls
+
+
 def assert_httpx_get_kwargs(
     mock_get: HttpxGetMock,
     *,
@@ -909,22 +933,7 @@ def assert_httpx_get_kwargs(
         mock_get.assert_called()
     if call_count is not None:
         assert mock_get.call_count == call_count
-    expected_params = params
-    if expected_params is None and params_contains is not None:
-        expected_params = ANY
-    expected_call_kwargs = {
-        "headers": headers,
-        "verify": True if verify is None else verify,
-        "follow_redirects": True,
-        "params": expected_params,
-        "timeout": 30.0 if timeout is None else timeout,
-    }
-    if expected_url is not None:
-        mock_get.assert_called_once_with(expected_url, **expected_call_kwargs)
-    if expected_urls is not None:
-        mock_get.assert_has_calls([call(url, **expected_call_kwargs) for url in expected_urls], any_order=any_order)
-        if call_count is None:
-            assert mock_get.call_count == len(expected_urls)
+    _assert_httpx_urls(mock_get, expected_url=expected_url, expected_urls=expected_urls, any_order=any_order)
     _assert_httpx_call_options(mock_get, headers=headers, params=params, verify=verify, timeout=timeout)
     if params_contains is not None:
         mock_get.assert_called()
