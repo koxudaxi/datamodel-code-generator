@@ -57,8 +57,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-    from pytest_mock import MockerFixture
-
 FixtureRequest = pytest.FixtureRequest
 
 
@@ -2148,7 +2146,7 @@ def test_main_generate_custom_class_name_generator_keep_underscores(output_file:
     )
 
 
-def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_http_jsonschema(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
     base_url = "https://example.com/external_files_in_directory/"
@@ -2164,17 +2162,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
     run_main_url_and_assert(
         url="https://example.com/external_files_in_directory/person.json",
@@ -2216,7 +2205,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-    mocker: MockerFixture,
+    mock_httpx_get: Callable[..., Any],
     headers_arguments: tuple[str, str],
     headers_requests: list[tuple[str, str]],
     query_parameters_arguments: tuple[str, ...],
@@ -2239,17 +2228,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
     output_file: Path = tmp_path / "output.py"
     extra_args = [
@@ -9028,7 +9008,7 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
 
 
 @pytest.mark.benchmark
-def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_circular_ref_external_url_keywords(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test circular external refs with relative paths and schema keywords via URL input."""
     external_directory = JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords"
     base_url = "https://example.com/circular_ref_external_relative_keywords/"
@@ -9039,17 +9019,8 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         f"{base_url}defs/nested/child.json": "defs/nested/child.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
 
     run_main_url_and_assert(
