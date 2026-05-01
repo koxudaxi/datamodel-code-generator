@@ -6,10 +6,14 @@ import ast
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from tests.conftest import assert_httpx_get_kwargs
+
+if TYPE_CHECKING:
+    from pytest_mock import MockerFixture
 
 TESTS_ROOT = Path(__file__).parent
 E2E_TEST_PATHS = (
@@ -39,7 +43,8 @@ class DirectAssert:
 
 def _allows_direct_assert(function: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
     return any(
-        ast.unparse(decorator).startswith("pytest.mark.allow_direct_assert") for decorator in function.decorator_list
+        ast.unparse(decorator).split("(", 1)[0] == "pytest.mark.allow_direct_assert"
+        for decorator in function.decorator_list
     )
 
 
@@ -135,12 +140,14 @@ def test_example():
         assert False
 """
     )
-    function = next(node for node in ast.walk(module) if isinstance(node, ast.FunctionDef))
+    outer_function = next(node for node in ast.walk(module) if isinstance(node, ast.FunctionDef))
+    inner_function = next(node for node in ast.walk(module) if isinstance(node, ast.AsyncFunctionDef))
 
-    assert _collect_function_asserts(function) == []
+    assert _collect_function_asserts(outer_function) == []
+    assert len(_collect_function_asserts(inner_function)) == 1
 
 
-def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: pytest.MockerFixture) -> None:
+def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: MockerFixture) -> None:
     """Explicit call_count works with multi-URL httpx.get assertions."""
     mock_get = mocker.Mock()
     mock_get(
@@ -167,7 +174,7 @@ def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(
     )
 
 
-def test_assert_httpx_get_kwargs_accepts_called_true(mocker: pytest.MockerFixture) -> None:
+def test_assert_httpx_get_kwargs_accepts_called_true(mocker: MockerFixture) -> None:
     """called=True asserts that at least one URL request was made."""
     mock_get = mocker.Mock()
     mock_get(
@@ -182,7 +189,7 @@ def test_assert_httpx_get_kwargs_accepts_called_true(mocker: pytest.MockerFixtur
     assert_httpx_get_kwargs(mock_get, called=True)
 
 
-def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker: pytest.MockerFixture) -> None:
+def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker: MockerFixture) -> None:
     """Subset query parameter checks apply to all recorded URL requests."""
     mock_get = mocker.Mock()
     mock_get(
@@ -209,7 +216,7 @@ def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker
     )
 
 
-def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocker: pytest.MockerFixture) -> None:
+def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocker: MockerFixture) -> None:
     """Subset query parameter failures identify the request that mismatched."""
     mock_get = mocker.Mock()
     mock_get(
