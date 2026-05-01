@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-      pull-requests: read
+      pull-requests: write
     env:
       TARGET_OWNER: koxudaxi
       TARGET_REPO: datamodel-code-generator

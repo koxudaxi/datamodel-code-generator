@@ -68,6 +68,7 @@ jobs:
           PATCH_PATH: ${{ runner.temp }}/changelog.patch
         run: |
           set -euo pipefail
+          git add --intent-to-add -- CHANGELOG.md
           if git diff --quiet -- CHANGELOG.md; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
