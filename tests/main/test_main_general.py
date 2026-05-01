@@ -1046,7 +1046,7 @@ def test_check_directory_ignores_pycache(output_dir: Path) -> None:
     )
 
 
-def test_check_with_invalid_class_name(tmp_path: Path) -> None:
+def test_check_with_invalid_class_name(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --check cleans up temp directory when InvalidClassNameError occurs."""
     invalid_schema = tmp_path / "invalid.json"
     invalid_schema.write_text('{"title": "123InvalidName", "type": "object"}', encoding="utf-8")
@@ -1058,10 +1058,11 @@ def test_check_with_invalid_class_name(tmp_path: Path) -> None:
         extra_args=["--check"],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="You have to set `--class-name` option",
+        capsys=capsys,
     )
 
 
-def test_check_with_invalid_file_format(tmp_path: Path) -> None:
+def test_check_with_invalid_file_format(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --check cleans up temp directory when Error occurs (invalid file format)."""
     invalid_file = tmp_path / "invalid.txt"
     invalid_file.write_text("This is not a valid schema format!!!", encoding="utf-8")
@@ -1072,6 +1073,7 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
         extra_args=["--check"],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="Invalid file format",
+        capsys=capsys,
     )
 
 
@@ -1170,7 +1172,9 @@ def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: P
     )
 
 
-def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
+def test_all_exports_collision_strategy_requires_recursive(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test --all-exports-collision-strategy requires --all-exports-scope=recursive."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
@@ -1184,6 +1188,7 @@ def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> 
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="--all-exports-collision-strategy",
+        capsys=capsys,
     )
 
 
@@ -1226,7 +1231,9 @@ def test_all_exports_collision_resolved_successfully(output_dir: Path) -> None:
     ["minimal-prefix", "full-prefix"],
     ids=["minimal_prefix", "full_prefix"],
 )
-def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Path, strategy: str) -> None:
+def test_all_exports_recursive_prefix_collision_with_local_model(
+    output_dir: Path, strategy: str, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test that prefix resolution raises error when renamed export collides with local model."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "all_exports_prefix_collision.yaml",
@@ -1240,6 +1247,7 @@ def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Pat
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="InputMessage",
+        capsys=capsys,
     )
 
 
@@ -1258,7 +1266,9 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
     )
 
 
-def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> None:
+def test_all_exports_recursive_local_model_collision_error(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test --all-exports-scope=recursive raises error when child export collides with local model."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "all_exports_local_collision.yaml",
@@ -1270,6 +1280,7 @@ def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> 
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="conflicts with a model in __init__.py",
+        capsys=capsys,
     )
 
 
@@ -1959,7 +1970,7 @@ def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
         output=output,
         disable_timestamp=True,
     )
-    assert_generated_file_matches_output(return_result, output)
+    assert_generated_file_matches_output(f"{return_result}\n", output)
 
 
 def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:

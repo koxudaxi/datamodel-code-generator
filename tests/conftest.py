@@ -899,8 +899,10 @@ def assert_generated_file_matches_output(result: object, output_file: Path) -> N
     __tracebackhide__ = True
     assert isinstance(result, str)
     actual = output_file.read_text(encoding="utf-8")
-    if result.strip() != actual.strip():  # pragma: no cover
-        diff = _format_diff(result.strip(), actual.strip(), output_file)
+    expected = _normalize_line_endings(result)
+    actual = _normalize_line_endings(actual)
+    if expected != actual:  # pragma: no cover
+        diff = _format_diff(expected, actual, output_file)
         msg = f"Generated output differs from {output_file}\n{diff}"
         raise AssertionError(msg)
 

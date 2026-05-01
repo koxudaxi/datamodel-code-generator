@@ -772,7 +772,7 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
-def test_main_class_name_prefix_invalid(output_file: Path) -> None:
+def test_main_class_name_prefix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-prefix is rejected."""
     run_main_with_args(
         [
@@ -784,10 +784,12 @@ def test_main_class_name_prefix_invalid(output_file: Path) -> None:
             "123Invalid",
         ],
         expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--class-name-prefix '123Invalid' is not a valid Python identifier",
     )
 
 
-def test_main_class_name_suffix_invalid(output_file: Path) -> None:
+def test_main_class_name_suffix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-suffix is rejected."""
     run_main_with_args(
         [
@@ -799,6 +801,8 @@ def test_main_class_name_suffix_invalid(output_file: Path) -> None:
             "Schema!",
         ],
         expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--class-name-suffix 'Schema!' is not a valid Python identifier component",
     )
 
 
@@ -1004,7 +1008,7 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
 
 def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
-    mock_httpx_get(
+    httpx_get_mock = mock_httpx_get(
         json.dumps({
             "$schema": "http://json-schema.org/draft-07/schema#",
             "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
@@ -1030,6 +1034,7 @@ def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[...,
             output_path=output_file,
             input_file_type="jsonschema",
         )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema/../other/schema.json")
 
 
 def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
@@ -6533,7 +6538,7 @@ def test_main_jsonschema_type_mappings_to_boolean(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None:
+def test_main_jsonschema_type_mappings_invalid_format(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --type-mappings option with invalid format raises error."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
@@ -6547,6 +6552,7 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
             "invalid_without_equals",
         ],
         expected_stderr_contains="Invalid type mapping format",
+        capsys=capsys,
     )
 
 

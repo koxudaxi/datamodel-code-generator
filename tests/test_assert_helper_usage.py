@@ -48,6 +48,27 @@ def _statement(node: ast.Assert, source: str) -> str:
     return " ".join(statement.split())
 
 
+class _DirectAssertVisitor(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.asserts: list[ast.Assert] = []
+
+    def visit_Assert(self, node: ast.Assert) -> None:
+        self.asserts.append(node)
+
+    def visit_FunctionDef(self, _node: ast.FunctionDef) -> None:
+        return
+
+    def visit_AsyncFunctionDef(self, _node: ast.AsyncFunctionDef) -> None:
+        return
+
+
+def _collect_function_asserts(function: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ast.Assert]:
+    visitor = _DirectAssertVisitor()
+    for statement in function.body:
+        visitor.visit(statement)
+    return visitor.asserts
+
+
 def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
     source = path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(path))
@@ -63,8 +84,7 @@ def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
                 lineno=node.lineno,
                 statement=_statement(node, source),
             )
-            for node in ast.walk(function)
-            if isinstance(node, ast.Assert)
+            for node in _collect_function_asserts(function)
         )
 
     return direct_asserts

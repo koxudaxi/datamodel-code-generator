@@ -462,6 +462,7 @@ def run_main_and_assert(  # noqa: PLR0912
     if stdin_path is not None:
         if monkeypatch is None:  # pragma: no cover
             pytest.fail("monkeypatch is required when using stdin_path")
+        _copy_files(copy_files)
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
         _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
@@ -481,22 +482,13 @@ def run_main_and_assert(  # noqa: PLR0912
 
     _assert_exit_code(return_code, expected_exit, f"Input: {input_path}")
 
-    # Handle capture assertions
-    if capsys is not None and (
-        expected_stdout_path is not None
-        or expected_stderr is not None
-        or expected_stderr_contains is not None
-        or assert_no_stderr
-    ):
-        captured = capsys.readouterr()
-        if expected_stdout_path is not None:
-            assert_output(captured.out, expected_stdout_path)
-        if expected_stderr is not None and captured.err != expected_stderr:  # pragma: no cover
-            pytest.fail(f"Expected stderr:\n{expected_stderr}\n\nActual stderr:\n{captured.err}")
-        if expected_stderr_contains is not None and expected_stderr_contains not in captured.err:  # pragma: no cover
-            pytest.fail(f"Expected stderr to contain: {expected_stderr_contains!r}\n\nActual stderr:\n{captured.err}")
-        if assert_no_stderr and captured.err:  # pragma: no cover
-            pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    _assert_captured_output(
+        capsys,
+        expected_stdout_path=expected_stdout_path,
+        expected_stderr=expected_stderr,
+        expected_stderr_contains=expected_stderr_contains,
+        assert_no_stderr=assert_no_stderr,
+    )
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:
