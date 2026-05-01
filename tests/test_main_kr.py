@@ -5,7 +5,6 @@ from __future__ import annotations
 from argparse import Namespace
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, patch
 
 import black
 import pydantic
@@ -19,7 +18,8 @@ from tests.conftest import assert_error_message, assert_httpx_get_kwargs, create
 from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
+    from collections.abc import Callable
+    from typing import Any
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -1515,7 +1515,7 @@ Format: `HeaderName:HeaderValue`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None:
+def test_url_with_http_headers(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Fetch schema from URL with custom HTTP headers.
 
     The `--url` flag specifies a remote URL to fetch the schema from instead of
@@ -1523,12 +1523,7 @@ def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None
     useful for authentication (e.g., Bearer tokens) or custom API requirements.
     Format: `HeaderName:HeaderValue`.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    mocker.patch("httpx.get", return_value=mock_response)
+    mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
 
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
@@ -1708,28 +1703,23 @@ environments with self-signed certificates. Not recommended for production.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_ignore_tls(output_file: Path) -> None:
+def test_http_ignore_tls(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Disable TLS certificate verification for HTTPS requests.
 
     The `--http-ignore-tls` flag disables SSL/TLS certificate verification
     when fetching schemas from HTTPS URLs. This is useful for development
     environments with self-signed certificates. Not recommended for production.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        run_main_url_and_assert(
-            url="https://api.example.com/schema.json",
-            output_path=output_file,
-            input_file_type="jsonschema",
-            assert_func=assert_file_content,
-            expected_file="url_with_headers/output.py",
-            extra_args=["--http-ignore-tls"],
-        )
-        assert_httpx_get_kwargs(mock_get, verify=False)
+    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-ignore-tls"],
+    )
+    assert_httpx_get_kwargs(mock_get, verify=False)
 
 
 @pytest.mark.cli_doc(
@@ -1745,7 +1735,7 @@ specified: `--http-query-parameters version=v2 format=json`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_query_parameters(output_file: Path) -> None:
+def test_http_query_parameters(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Add query parameters to HTTP requests for remote schemas.
 
     The `--http-query-parameters` flag adds query parameters to HTTP requests
@@ -1753,21 +1743,16 @@ def test_http_query_parameters(output_file: Path) -> None:
     or format parameters. Format: `key=value`. Multiple parameters can be
     specified: `--http-query-parameters version=v2 format=json`.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        run_main_url_and_assert(
-            url="https://api.example.com/schema.json",
-            output_path=output_file,
-            input_file_type="jsonschema",
-            assert_func=assert_file_content,
-            expected_file="url_with_headers/output.py",
-            extra_args=["--http-query-parameters", "version=v2", "format=json"],
-        )
-        assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2", "format": "json"})
+    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-query-parameters", "version=v2", "format=json"],
+    )
+    assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2", "format": "json"})
 
 
 @pytest.mark.cli_doc(
@@ -1782,28 +1767,23 @@ Default is 30 seconds.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_timeout(output_file: Path) -> None:
+def test_http_timeout(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Set timeout for HTTP requests to remote hosts.
 
     The `--http-timeout` flag sets the timeout in seconds for HTTP requests
     when fetching schemas from URLs. Useful for slow servers or large schemas.
     Default is 30 seconds.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        run_main_url_and_assert(
-            url="https://api.example.com/schema.json",
-            output_path=output_file,
-            input_file_type="jsonschema",
-            assert_func=assert_file_content,
-            expected_file="url_with_headers/output.py",
-            extra_args=["--http-timeout", "60"],
-        )
-        assert_httpx_get_kwargs(mock_get, timeout=60.0)
+    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-timeout", "60"],
+    )
+    assert_httpx_get_kwargs(mock_get, timeout=60.0)
 
 
 @pytest.mark.cli_doc(

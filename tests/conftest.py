@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
+from unittest.mock import call
 
 import pytest
 import time_machine
@@ -784,14 +785,36 @@ def assert_httpx_get_kwargs(
     mock_get: Any,
     *,
     call_count: int | None = None,
+    called: bool | None = None,
+    expected_url: str | None = None,
+    expected_urls: list[str] | None = None,
+    any_order: bool = False,
+    headers: Mapping[str, str] | None = None,
+    params: list[tuple[str, str]] | None = None,
     verify: bool | None = None,
     timeout: float | None = None,
     params_contains: Mapping[str, str] | None = None,
 ) -> None:
     """Assert common httpx.get call options used by URL e2e tests."""
     __tracebackhide__ = True
+    if called is False:
+        mock_get.assert_not_called()
+        return
     if call_count is not None:
         assert mock_get.call_count == call_count
+    expected_call_kwargs = {
+        "headers": headers,
+        "verify": True if verify is None else verify,
+        "follow_redirects": True,
+        "params": params,
+        "timeout": 30.0 if timeout is None else timeout,
+    }
+    if expected_url is not None:
+        mock_get.assert_called_once_with(expected_url, **expected_call_kwargs)
+    if expected_urls is not None:
+        mock_get.assert_has_calls([call(url, **expected_call_kwargs) for url in expected_urls], any_order=any_order)
+        if call_count is None:
+            assert mock_get.call_count == len(expected_urls)
     if verify is not None or timeout is not None or params_contains is not None:
         mock_get.assert_called()
         call_kwargs = mock_get.call_args.kwargs
@@ -803,6 +826,32 @@ def assert_httpx_get_kwargs(
             params = dict(call_kwargs.get("params") or [])
             missing = {key: value for key, value in params_contains.items() if params.get(key) != value}
             assert not missing, f"Expected query parameters not found: {missing}; actual params: {params}"
+
+
+@pytest.fixture
+def mock_httpx_get(mocker: Any) -> Callable[..., Any]:
+    """Patch httpx.get with common mock response objects for URL e2e tests."""
+
+    def _mock_httpx_get(
+        *contents: str | Path,
+        status_code: int = 200,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        responses = []
+        for content in contents:
+            response = mocker.Mock()
+            response.status_code = status_code
+            response.headers = dict(headers or {})
+            response.text = content.read_text(encoding="utf-8") if isinstance(content, Path) else content
+            responses.append(response)
+
+        if not responses:
+            return mocker.patch("httpx.get")
+        if len(responses) == 1:
+            return mocker.patch("httpx.get", return_value=responses[0])
+        return mocker.patch("httpx.get", side_effect=responses)
+
+    return _mock_httpx_get
 
 
 def assert_warnings_contain(recorded_warnings: list[warnings.WarningMessage], *expected_messages: str) -> None:

@@ -33,6 +33,7 @@ from tests.conftest import (
     assert_generate_wrote_file,
     assert_generated_file_matches_output,
     assert_generated_modules_output,
+    assert_httpx_get_kwargs,
     assert_no_uncommented_generated_code,
     assert_output,
     assert_runtime_import_package,
@@ -55,7 +56,9 @@ from tests.main.conftest import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
+    from typing import Any
 
     from pytest_mock import MockerFixture
 
@@ -1469,7 +1472,9 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
         )
 
 
-def test_cli_input_overrides_pyproject_url(output_file: Path, tmp_path: Path, mocker: MockerFixture) -> None:
+def test_cli_input_overrides_pyproject_url(
+    output_file: Path, tmp_path: Path, mock_httpx_get: Callable[..., Any]
+) -> None:
     """Test --input takes precedence over pyproject.toml url setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
     pyproject_toml.write_text(
@@ -1483,7 +1488,7 @@ def test_cli_input_overrides_pyproject_url(output_file: Path, tmp_path: Path, mo
         encoding="utf-8",
     )
 
-    httpx_get_mock = mocker.patch("httpx.get")
+    httpx_get_mock = mock_httpx_get()
 
     with chdir(tmp_path):
         run_main_and_assert(
@@ -1506,10 +1511,12 @@ class Model(BaseModel):
             ),
         )
 
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
-def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mocker: MockerFixture) -> None:
+def test_cli_url_overrides_pyproject_input(
+    output_file: Path, tmp_path: Path, mock_httpx_get: Callable[..., Any]
+) -> None:
     """Test --url takes precedence over pyproject.toml input setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
     pyproject_toml.write_text(
@@ -1523,11 +1530,7 @@ def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mo
         encoding="utf-8",
     )
 
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = '{"type": "object", "properties": {"from_url": {"type": "integer"}}}'
-    httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
+    httpx_get_mock = mock_httpx_get('{"type": "object", "properties": {"from_url": {"type": "integer"}}}')
 
     with chdir(tmp_path):
         run_main_with_args([
@@ -1539,14 +1542,7 @@ def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mo
         ])
 
     assert_file_content(output_file, "cli_url_overrides_pyproject_input.py")
-    httpx_get_mock.assert_called_once_with(
-        "http://127.0.0.1:8123/schema.json",
-        headers=None,
-        verify=True,
-        follow_redirects=True,
-        params=None,
-        timeout=30.0,
-    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/schema.json")
 
 
 @pytest.mark.cli_doc(

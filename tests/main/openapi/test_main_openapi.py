@@ -10,7 +10,6 @@ import warnings
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import Mock, call
 
 import black
 import pydantic
@@ -34,6 +33,7 @@ from datamodel_code_generator.model import base as model_base
 from tests.conftest import (
     assert_directory_content,
     assert_error_message,
+    assert_httpx_get_kwargs,
     assert_warnings_contain,
     freeze_time,
 )
@@ -54,6 +54,9 @@ from tests.main.conftest import (
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
     from pytest_mock import MockerFixture
 
 EXTERNAL_REF_MAPPING_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
@@ -1755,22 +1758,11 @@ def test_main_generate_custom_class_name_generator_modular(
         assert_directory_content(output_path, main_modular_custom_class_name_dir)
 
 
-def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_http_openapi(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL."""
-
-    def get_mock_response(path: str) -> Mock:
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (OPEN_API_DATA_PATH / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=[
-            get_mock_response("refs.yaml"),
-            get_mock_response("definitions.yaml"),
-        ],
+    httpx_get_mock = mock_httpx_get(
+        OPEN_API_DATA_PATH / "refs.yaml",
+        OPEN_API_DATA_PATH / "definitions.yaml",
     )
 
     run_main_url_and_assert(
@@ -1780,27 +1772,16 @@ def test_main_http_openapi(mocker: MockerFixture, output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="http_refs.py",
     )
-    httpx_get_mock.assert_has_calls([
-        call(
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[
             "https://example.com/refs.yaml",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-        call(
             "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+        ],
+    )
 
 
-def test_main_http_openapi_with_custom_port(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_http_openapi_with_custom_port(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     schema_content = """\
 openapi: "3.0.0"
@@ -1823,12 +1804,7 @@ components:
         name:
           type: string
 """
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = schema_content
-
-    httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
+    httpx_get_mock = mock_httpx_get(schema_content)
 
     run_main_url_and_assert(
         url="http://127.0.0.1:8123/openapi.json",
@@ -1839,14 +1815,7 @@ components:
         extra_args=["--disable-timestamp"],
     )
 
-    httpx_get_mock.assert_called_once_with(
-        "http://127.0.0.1:8123/openapi.json",
-        headers=None,
-        verify=True,
-        follow_redirects=True,
-        params=None,
-        timeout=30.0,
-    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/openapi.json")
 
 
 @pytest.mark.cli_doc(
@@ -1896,14 +1865,10 @@ def test_main_openapi_body_and_parameters(output_file: Path) -> None:
     )
 
 
-def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_openapi_body_and_parameters_remote_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = input_path.read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(input_path)
 
     run_main_and_assert(
         input_path=input_path,
@@ -1913,16 +1878,7 @@ def test_main_openapi_body_and_parameters_remote_ref(mocker: MockerFixture, outp
         expected_file=EXPECTED_OPENAPI_PATH / "body_and_parameters" / "remote_ref.py",
         extra_args=["--openapi-scopes", "paths", "schemas", "--allow-remote-refs"],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://schema.example",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://schema.example")
 
 
 def test_main_openapi_body_and_parameters_only_paths(output_file: Path) -> None:
@@ -4432,15 +4388,9 @@ def test_main_openapi_read_only_write_only_union(output_file: Path) -> None:
     )
 
 
-def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with URL $ref to external schema."""
-    remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml").read_text()
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = remote_schema
-
-    mocker.patch("httpx.get", return_value=mock_response)
+    mock_httpx_get(OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml")
 
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only_url_ref.yaml",
@@ -4458,15 +4408,9 @@ def test_main_openapi_read_only_write_only_url_ref(mocker: MockerFixture, output
     )
 
 
-def test_main_openapi_read_only_write_only_allof_url_ref(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_openapi_read_only_write_only_allof_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with allOf that references external URL schema."""
-    remote_schema = (OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml").read_text()
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = remote_schema
-
-    mocker.patch("httpx.get", return_value=mock_response)
+    mock_httpx_get(OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml")
 
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref.yaml",

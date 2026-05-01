@@ -9,7 +9,6 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import TYPE_CHECKING
-from unittest.mock import call
 
 import black
 import pytest
@@ -49,6 +48,9 @@ from tests.main.conftest import (
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
     from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
@@ -834,17 +836,9 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
     )
 
 
-def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_root_id_jsonschema_with_local_file(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id.json",
         output_path=output_file,
@@ -852,7 +846,7 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_f
         assert_func=assert_file_content,
         expected_file="root_id.py",
     )
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 @pytest.mark.cli_doc(
@@ -868,7 +862,7 @@ Automatically enabled when using `--url` input.""",
     cli_args=["--allow-remote-refs"],
     golden_output="main/jsonschema/root_id.py",
 )
-def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Enable fetching of `$ref` targets over HTTP/HTTPS.
 
     When enabled, the generator will resolve `$ref` references that point to remote URLs,
@@ -877,15 +871,7 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
 
     Automatically enabled when using `--url` input.
     """
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
     input_file = tmp_path / "root_id.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -897,26 +883,15 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
         expected_file="root_id.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
 
 
 @pytest.mark.benchmark
-def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_root_id_jsonschema_self_refs_with_local_file(
+    mock_httpx_get: Callable[..., Any], output_file: Path
+) -> None:
     """Test root ID JSON Schema self-references with local file."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json",
         output_path=output_file,
@@ -925,17 +900,13 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
         expected_file="root_id.py",
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
     )
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 @pytest.mark.benchmark
-def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_self_refs_with_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test root ID JSON Schema self-references with remote file."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
     input_file = tmp_path / "root_id_self_ref.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -948,29 +919,12 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
 
 
-def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
     input_file = tmp_path / "root_id_absolute_url.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -982,16 +936,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
         expected_file="root_id_absolute_url.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_absolute_url.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
 
 
 def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> None:
@@ -1005,34 +950,31 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_url_with_relative_root_id_resolves_relative_refs(
+    mock_httpx_get: Callable[..., Any], tmp_path: Path
+) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
-    main_response = mocker.Mock()
-    main_response.status_code = 200
-    main_response.headers = {}
-    main_response.text = json.dumps({
-        "$id": "/schemas/v1/main.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Main",
-        "type": "object",
-        "properties": {
-            "sub": {
-                "$ref": "sub.schema.json",
-            }
-        },
-        "required": ["sub"],
-    })
-    sub_response = mocker.Mock()
-    sub_response.status_code = 200
-    sub_response.headers = {}
-    sub_response.text = json.dumps({
-        "$id": "/schemas/v1/sub.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Sub",
-        "type": "string",
-        "pattern": "^[0-9a-f]{8}$",
-    })
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
+    httpx_get_mock = mock_httpx_get(
+        json.dumps({
+            "$id": "/schemas/v1/main.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "Main",
+            "type": "object",
+            "properties": {
+                "sub": {
+                    "$ref": "sub.schema.json",
+                }
+            },
+            "required": ["sub"],
+        }),
+        json.dumps({
+            "$id": "/schemas/v1/sub.schema.json",
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "title": "Sub",
+            "type": "string",
+            "pattern": "^[0-9a-f]{8}$",
+        }),
+    )
     output_dir = tmp_path / "output"
 
     run_main_with_args([
@@ -1051,36 +993,23 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFix
         output_dir,
         EXPECTED_MAIN_PATH / "jsonschema" / "url_relative_root_id_resolves_relative_refs",
     )
-    httpx_get_mock.assert_has_calls([
-        call(
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[
             "http://localhost:8888/schemas/v1/main.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-        call(
             "http://localhost:8888/schemas/v1/sub.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+        ],
+    )
 
 
-def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = json.dumps({
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
-    })
-    mocker.patch("httpx.get", return_value=person_response)
+    mock_httpx_get(
+        json.dumps({
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
+        })
+    )
     schema = {
         "$id": "https://example.com/schema/main.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1103,9 +1032,9 @@ def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_pa
         )
 
 
-def test_main_remote_ref_blocked_when_explicitly_disabled(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
-    httpx_get_mock = mocker.patch("httpx.get")
+    httpx_get_mock = mock_httpx_get()
     schema = {
         "$id": "https://example.com/schema/main.json",
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -1121,7 +1050,7 @@ def test_main_remote_ref_blocked_when_explicitly_disabled(mocker: MockerFixture,
 
     with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
         generate(input_file, allow_remote_refs=False)
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -2279,75 +2208,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                "https://example.com/external_files_in_directory/person.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/friends.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/food.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-        ],
-        any_order=True,
-    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True)
     assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
 
 
@@ -2434,74 +2295,13 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                "https://example.com/external_files_in_directory/person.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/friends.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/food.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-        ],
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=list(url_to_path),
         any_order=True,
+        headers=headers_requests,
+        params=query_parameters_requests,
+        verify=bool(not http_ignore_tls),
     )
     assert_httpx_get_kwargs(httpx_get_mock, call_count=8)
 
@@ -7524,19 +7324,10 @@ def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
 
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_bundled_schema_with_id_url(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test bundled schema with $id using URL input produces same output as local file."""
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
-
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = schema_path.read_text()
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        return_value=mock_response,
-    )
+    httpx_get_mock = mock_httpx_get(schema_path)
 
     run_main_url_and_assert(
         url="https://cdn.example.com/schemas/bundled_schema_with_id.json",
@@ -7554,14 +7345,7 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
         ),
     )
 
-    httpx_get_mock.assert_called_once_with(
-        "https://cdn.example.com/schemas/bundled_schema_with_id.json",
-        headers=None,
-        verify=True,
-        follow_redirects=True,
-        params=None,
-        timeout=30.0,
-    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://cdn.example.com/schemas/bundled_schema_with_id.json")
 
 
 @pytest.mark.parametrize(
@@ -9299,35 +9083,7 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         ),
     )
 
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                f"{base_url}root.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                f"{base_url}defs/context.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                f"{base_url}defs/nested/child.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-        ],
-        any_order=True,
-    )
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True)
     assert_httpx_get_kwargs(httpx_get_mock, call_count=3)
 
 
