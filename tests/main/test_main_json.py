@@ -10,7 +10,12 @@ from packaging import version
 
 from datamodel_code_generator import chdir
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import MockHttpxResponse, assert_httpx_get_kwargs, create_assert_file_content
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_httpx_get_kwargs,
+    create_assert_file_content,
+)
 from tests.main.conftest import (
     EXPECTED_JSON_PATH,
     JSON_DATA_PATH,
@@ -19,7 +24,6 @@ from tests.main.conftest import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -161,7 +165,7 @@ def test_simple_json_snake_case_field(output_file: Path) -> None:
         )
 
 
-def test_main_http_json(mock_httpx_get: Callable[..., object], output_file: Path) -> None:
+def test_main_http_json(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test JSON code generation from HTTP URL."""
     httpx_get_mock = mock_httpx_get(MockHttpxResponse("https://example.com/pet.json", JSON_DATA_PATH / "pet.json"))
     run_main_url_and_assert(

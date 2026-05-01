@@ -31,6 +31,7 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
 from tests.conftest import (
+    HttpxGetMockFactory,
     MockHttpxResponse,
     assert_directory_content,
     assert_error_message,
@@ -55,9 +56,6 @@ from tests.main.conftest import (
 from tests.main.openapi.conftest import EXPECTED_OPENAPI_PATH, assert_file_content
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
-
     from pytest_mock import MockerFixture
 
 EXTERNAL_REF_MAPPING_DATA_PATH = OPEN_API_DATA_PATH / "external_ref_mapping"
@@ -1759,7 +1757,7 @@ def test_main_generate_custom_class_name_generator_modular(
         assert_directory_content(output_path, main_modular_custom_class_name_dir)
 
 
-def test_main_http_openapi(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_http_openapi(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse("https://example.com/refs.yaml", OPEN_API_DATA_PATH / "refs.yaml"),
@@ -1785,7 +1783,7 @@ def test_main_http_openapi(mock_httpx_get: Callable[..., Any], output_file: Path
     )
 
 
-def test_main_http_openapi_with_custom_port(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_http_openapi_with_custom_port(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
@@ -1853,7 +1851,7 @@ def test_main_openapi_body_and_parameters(output_file: Path) -> None:
     )
 
 
-def test_main_openapi_body_and_parameters_remote_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_openapi_body_and_parameters_remote_ref(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
     httpx_get_mock = mock_httpx_get(MockHttpxResponse("https://schema.example", input_path))
@@ -4376,7 +4374,7 @@ def test_main_openapi_read_only_write_only_union(output_file: Path) -> None:
     )
 
 
-def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test readOnly/writeOnly with URL $ref to external schema."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
@@ -4401,7 +4399,9 @@ def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[...,
     assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/common.yaml")
 
 
-def test_main_openapi_read_only_write_only_allof_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_openapi_read_only_write_only_allof_url_ref(
+    mock_httpx_get: HttpxGetMockFactory, output_file: Path
+) -> None:
     """Test readOnly/writeOnly with allOf that references external URL schema."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(

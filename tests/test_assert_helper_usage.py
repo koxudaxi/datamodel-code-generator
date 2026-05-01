@@ -10,12 +10,14 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tests.conftest import MockHttpxResponse, assert_httpx_get_kwargs
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_httpx_get_kwargs,
+    create_httpx_get_mock,
+)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
-
     from pytest_mock import MockerFixture
 
 TESTS_ROOT = Path(__file__).parent
@@ -194,7 +196,7 @@ def test_example():
 
 def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(mocker: MockerFixture) -> None:
     """Explicit call_count works with multi-URL httpx.get assertions."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
         headers=None,
@@ -221,7 +223,7 @@ def test_assert_httpx_get_kwargs_accepts_expected_urls_with_explicit_call_count(
 
 def test_assert_httpx_get_kwargs_accepts_called_true(mocker: MockerFixture) -> None:
     """called=True asserts that at least one URL request was made."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
         headers=None,
@@ -236,7 +238,7 @@ def test_assert_httpx_get_kwargs_accepts_called_true(mocker: MockerFixture) -> N
 
 def test_assert_httpx_get_kwargs_validates_call_options_for_every_call(mocker: MockerFixture) -> None:
     """HTTP option checks apply to all recorded URL requests."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     expected_headers = [("Authorization", "Bearer token")]
     expected_params = [("version", "v2")]
     mock_get(
@@ -267,7 +269,7 @@ def test_assert_httpx_get_kwargs_validates_call_options_for_every_call(mocker: M
 
 def test_assert_httpx_get_kwargs_reports_call_option_mismatch_per_call(mocker: MockerFixture) -> None:
     """HTTP option failures catch mismatches before the last URL request."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
         headers=[("Authorization", "Bearer old")],
@@ -291,7 +293,7 @@ def test_assert_httpx_get_kwargs_reports_call_option_mismatch_per_call(mocker: M
 
 def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker: MockerFixture) -> None:
     """Subset query parameter checks apply to all recorded URL requests."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
         headers=None,
@@ -318,7 +320,7 @@ def test_assert_httpx_get_kwargs_validates_params_contains_for_every_call(mocker
 
 def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocker: MockerFixture) -> None:
     """Subset query parameter failures identify the request that mismatched."""
-    mock_get = mocker.Mock()
+    mock_get = create_httpx_get_mock(mocker)
     mock_get(
         "https://example.com/person.json",
         headers=None,
@@ -340,7 +342,7 @@ def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocke
         assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2"})
 
 
-def test_mock_httpx_get_returns_response_for_registered_url(mock_httpx_get: Callable[..., Any]) -> None:
+def test_mock_httpx_get_returns_response_for_registered_url(mock_httpx_get: HttpxGetMockFactory) -> None:
     """URL-bound HTTP mocks return fixture content for the registered URL."""
     import httpx
 
@@ -351,7 +353,7 @@ def test_mock_httpx_get_returns_response_for_registered_url(mock_httpx_get: Call
     assert response.text == '{"type": "object"}'
 
 
-def test_mock_httpx_get_rejects_unregistered_url(mock_httpx_get: Callable[..., Any]) -> None:
+def test_mock_httpx_get_rejects_unregistered_url(mock_httpx_get: HttpxGetMockFactory) -> None:
     """URL-bound HTTP mocks fail when code fetches an unexpected URL."""
     import httpx
 

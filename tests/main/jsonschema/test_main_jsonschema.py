@@ -8,7 +8,6 @@ import os
 import tempfile
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import black
 import pytest
@@ -29,6 +28,7 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
 from tests.conftest import (
+    HttpxGetMockFactory,
     MockHttpxResponse,
     assert_directory_content,
     assert_httpx_get_kwargs,
@@ -52,10 +52,6 @@ from tests.main.conftest import (
     run_main_with_system_exit,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
 
 FixtureRequest = pytest.FixtureRequest
 
@@ -849,7 +845,7 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
     )
 
 
-def test_main_root_id_jsonschema_with_local_file(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_root_id_jsonschema_with_local_file(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
     httpx_get_mock = mock_httpx_get()
     run_main_and_assert(
@@ -875,7 +871,7 @@ Automatically enabled when using `--url` input.""",
     cli_args=["--allow-remote-refs"],
     golden_output="main/jsonschema/root_id.py",
 )
-def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: HttpxGetMockFactory, tmp_path: Path) -> None:
     """Enable fetching of `$ref` targets over HTTP/HTTPS.
 
     When enabled, the generator will resolve `$ref` references that point to remote URLs,
@@ -903,7 +899,7 @@ def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: Callable[..., 
 
 @pytest.mark.benchmark
 def test_main_root_id_jsonschema_self_refs_with_local_file(
-    mock_httpx_get: Callable[..., Any], output_file: Path
+    mock_httpx_get: HttpxGetMockFactory, output_file: Path
 ) -> None:
     """Test root ID JSON Schema self-references with local file."""
     httpx_get_mock = mock_httpx_get()
@@ -919,7 +915,9 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(
 
 
 @pytest.mark.benchmark
-def test_main_root_id_jsonschema_self_refs_with_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_self_refs_with_remote_file(
+    mock_httpx_get: HttpxGetMockFactory, tmp_path: Path
+) -> None:
     """Test root ID JSON Schema self-references with remote file."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
@@ -939,7 +937,7 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mock_httpx_get: Call
     assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json")
 
 
-def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: HttpxGetMockFactory, tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
@@ -970,7 +968,7 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
 
 
 def test_main_url_with_relative_root_id_resolves_relative_refs(
-    mock_httpx_get: Callable[..., Any], tmp_path: Path
+    mock_httpx_get: HttpxGetMockFactory, tmp_path: Path
 ) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
     httpx_get_mock = mock_httpx_get(
@@ -1010,7 +1008,7 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     )
 
 
-def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
     httpx_get_mock = mock_httpx_get(
         MockHttpxResponse(
@@ -1028,7 +1026,7 @@ def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[...,
     assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema/../other/schema.json")
 
 
-def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: Callable[..., Any]) -> None:
+def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: HttpxGetMockFactory) -> None:
     """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
     httpx_get_mock = mock_httpx_get()
 
@@ -2153,7 +2151,7 @@ def test_main_generate_custom_class_name_generator_keep_underscores(output_file:
     )
 
 
-def test_main_http_jsonschema(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_http_jsonschema(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
     base_url = "https://example.com/external_files_in_directory/"
@@ -2212,7 +2210,7 @@ def test_main_http_jsonschema(mock_httpx_get: Callable[..., Any], output_file: P
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-    mock_httpx_get: Callable[..., Any],
+    mock_httpx_get: HttpxGetMockFactory,
     headers_arguments: tuple[str, ...],
     headers_requests: list[tuple[str, str]],
     query_parameters_arguments: tuple[str, ...],
@@ -7290,7 +7288,7 @@ def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
 
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_bundled_schema_with_id_url(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_bundled_schema_with_id_url(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test bundled schema with $id using URL input produces same output as local file."""
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
     httpx_get_mock = mock_httpx_get(
@@ -9015,7 +9013,7 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
 
 
 @pytest.mark.benchmark
-def test_main_circular_ref_external_url_keywords(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_main_circular_ref_external_url_keywords(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test circular external refs with relative paths and schema keywords via URL input."""
     external_directory = JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords"
     base_url = "https://example.com/circular_ref_external_relative_keywords/"

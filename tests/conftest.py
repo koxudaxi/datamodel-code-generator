@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import starmap
@@ -16,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 from unittest.mock import ANY, call
 
+import httpx
 import pytest
 import time_machine
 from inline_snapshot import external_file, register_format_alias
@@ -25,7 +27,6 @@ from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
     import warnings
-    from collections.abc import Callable, Mapping, Sequence
 
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
@@ -89,6 +90,60 @@ class MockHttpxResponse:
     content: str | Path
     status_code: int = 200
     headers: Mapping[str, str] | None = None
+
+
+HttpxHeaders = Mapping[str, str] | Sequence[tuple[str, str]]
+HttpxParams = Mapping[str, str] | Sequence[tuple[str, str]]
+
+
+class HttpxGetMock(Protocol):
+    """Typed mock interface for the httpx.get calls used by e2e URL tests."""
+
+    call_count: int
+    call_args: Any
+    call_args_list: Sequence[Any]
+
+    def __call__(
+        self,
+        url: str,
+        *,
+        headers: HttpxHeaders | None = None,
+        verify: bool = True,
+        follow_redirects: bool = True,
+        params: HttpxParams | None = None,
+        timeout: float = 30.0,
+    ) -> Any:
+        """Record an httpx.get-style call."""
+        ...
+
+    def assert_called(self) -> None:
+        """Assert that the mock was called."""
+        ...
+
+    def assert_not_called(self) -> None:
+        """Assert that the mock was not called."""
+        ...
+
+    def assert_called_once_with(self, *args: Any, **kwargs: Any) -> None:
+        """Assert that the mock was called once with the expected arguments."""
+        ...
+
+    def assert_has_calls(self, calls: Sequence[Any], any_order: bool = False) -> None:
+        """Assert that the mock has the expected recorded calls."""
+        ...
+
+
+class HttpxGetMockFactory(Protocol):
+    """Factory fixture type for URL-bound httpx.get mocks."""
+
+    def __call__(self, *responses: MockHttpxResponse) -> HttpxGetMock:
+        """Patch httpx.get with URL-bound responses."""
+        ...
+
+
+def create_httpx_get_mock(mocker: Any) -> HttpxGetMock:
+    """Create a typed recording mock for httpx.get-style assertions."""
+    return cast("HttpxGetMock", mocker.create_autospec(httpx.get))
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -792,7 +847,7 @@ def assert_error_message(
     assert expected in captured.err, f"Expected '{expected}' in stderr, got: {captured.err}"
 
 
-def _assert_httpx_params_contain(mock_get: Any, params_contains: Mapping[str, str]) -> None:
+def _assert_httpx_params_contain(mock_get: HttpxGetMock, params_contains: Mapping[str, str]) -> None:
     missing_by_call = []
     for index, recorded_call in enumerate(mock_get.call_args_list, start=1):
         actual_params = dict(recorded_call.kwargs.get("params") or {})
@@ -803,10 +858,10 @@ def _assert_httpx_params_contain(mock_get: Any, params_contains: Mapping[str, st
 
 
 def _assert_httpx_call_options(
-    mock_get: Any,
+    mock_get: HttpxGetMock,
     *,
-    headers: Mapping[str, str] | Sequence[tuple[str, str]] | None,
-    params: list[tuple[str, str]] | None,
+    headers: HttpxHeaders | None,
+    params: HttpxParams | None,
     verify: bool | None,
     timeout: float | None,
 ) -> None:
@@ -826,15 +881,15 @@ def _assert_httpx_call_options(
 
 
 def assert_httpx_get_kwargs(
-    mock_get: Any,
+    mock_get: HttpxGetMock,
     *,
     call_count: int | None = None,
     called: bool | None = None,
     expected_url: str | None = None,
     expected_urls: list[str] | None = None,
     any_order: bool = False,
-    headers: Mapping[str, str] | Sequence[tuple[str, str]] | None = None,
-    params: list[tuple[str, str]] | None = None,
+    headers: HttpxHeaders | None = None,
+    params: HttpxParams | None = None,
     verify: bool | None = None,
     timeout: float | None = None,
     params_contains: Mapping[str, str] | None = None,
@@ -871,12 +926,12 @@ def assert_httpx_get_kwargs(
 
 
 @pytest.fixture
-def mock_httpx_get(mocker: Any) -> Callable[..., Any]:
+def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
     """Patch httpx.get with URL-bound mock response objects for URL e2e tests."""
 
     def _mock_httpx_get(
         *responses: MockHttpxResponse,
-    ) -> Any:
+    ) -> HttpxGetMock:
         queued_responses: dict[str, list[MockHttpxResponse]] = {}
         for response in responses:
             queued_responses.setdefault(response.url, []).append(response)
@@ -898,7 +953,7 @@ def mock_httpx_get(mocker: Any) -> Callable[..., Any]:
             )
             return response
 
-        return mocker.patch("httpx.get", side_effect=_response_for_url)
+        return cast("HttpxGetMock", mocker.patch("httpx.get", autospec=True, side_effect=_response_for_url))
 
     return _mock_httpx_get
 

@@ -28,6 +28,7 @@ from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVers
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import (
+    HttpxGetMockFactory,
     MockHttpxResponse,
     assert_directory_content,
     assert_generate_wrote_file,
@@ -57,9 +58,7 @@ from tests.main.conftest import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
     from pathlib import Path
-    from typing import Any
 
     from pytest_mock import MockerFixture
 
@@ -1484,7 +1483,7 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
 
 
 def test_cli_input_overrides_pyproject_url(
-    output_file: Path, tmp_path: Path, mock_httpx_get: Callable[..., Any]
+    output_file: Path, tmp_path: Path, mock_httpx_get: HttpxGetMockFactory
 ) -> None:
     """Test --input takes precedence over pyproject.toml url setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
@@ -1514,7 +1513,7 @@ def test_cli_input_overrides_pyproject_url(
 
 
 def test_cli_url_overrides_pyproject_input(
-    output_file: Path, tmp_path: Path, mock_httpx_get: Callable[..., Any]
+    output_file: Path, tmp_path: Path, mock_httpx_get: HttpxGetMockFactory
 ) -> None:
     """Test --url takes precedence over pyproject.toml input setting."""
     pyproject_toml = tmp_path / "pyproject.toml"

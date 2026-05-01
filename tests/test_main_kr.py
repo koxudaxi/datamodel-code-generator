@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from argparse import Namespace
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import black
 import pydantic
@@ -15,6 +14,7 @@ from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.arguments import arg_parser
 from tests.conftest import (
+    HttpxGetMockFactory,
     MockHttpxResponse,
     assert_error_message,
     assert_httpx_get_kwargs,
@@ -23,10 +23,6 @@ from tests.conftest import (
     freeze_time,
 )
 from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-    from typing import Any
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -1518,7 +1514,7 @@ Format: `HeaderName:HeaderValue`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_url_with_http_headers(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_url_with_http_headers(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Fetch schema from URL with custom HTTP headers.
 
     The `--url` flag specifies a remote URL to fetch the schema from instead of
@@ -1709,7 +1705,7 @@ environments with self-signed certificates. Not recommended for production.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_ignore_tls(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_http_ignore_tls(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Disable TLS certificate verification for HTTPS requests.
 
     The `--http-ignore-tls` flag disables SSL/TLS certificate verification
@@ -1743,7 +1739,7 @@ specified: `--http-query-parameters version=v2 format=json`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_query_parameters(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_http_query_parameters(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Add query parameters to HTTP requests for remote schemas.
 
     The `--http-query-parameters` flag adds query parameters to HTTP requests
@@ -1777,7 +1773,7 @@ Default is 30 seconds.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_timeout(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
+def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Set timeout for HTTP requests to remote hosts.
 
     The `--http-timeout` flag sets the timeout in seconds for HTTP requests
