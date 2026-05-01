@@ -2206,7 +2206,7 @@ def test_main_http_jsonschema(mock_httpx_get: Callable[..., Any], output_file: P
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
     mock_httpx_get: Callable[..., Any],
-    headers_arguments: tuple[str, str],
+    headers_arguments: tuple[str, ...],
     headers_requests: list[tuple[str, str]],
     query_parameters_arguments: tuple[str, ...],
     query_parameters_requests: list[tuple[str, str]],

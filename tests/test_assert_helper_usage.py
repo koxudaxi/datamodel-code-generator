@@ -85,6 +85,17 @@ def _collect_direct_asserts(path: Path) -> list[DirectAssert]:
     tree = ast.parse(source, filename=str(path))
     direct_asserts: list[DirectAssert] = []
 
+    direct_asserts.extend(
+        DirectAssert(
+            path=path.relative_to(TESTS_ROOT),
+            function_name="<module>",
+            lineno=node.lineno,
+            statement=_statement(node, source),
+        )
+        for node in tree.body
+        if isinstance(node, ast.Assert)
+    )
+
     for function in [node for node in ast.walk(tree) if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))]:
         if _allows_direct_assert(function):
             continue
@@ -135,6 +146,15 @@ def test_e2e_modules_use_shared_assertion_helpers_reports_unmarked_assert(
 
     with pytest.raises(pytest.fail.Exception, match="Direct assert statements"):
         test_e2e_modules_use_shared_assertion_helpers()
+
+
+def test_collect_direct_asserts_reports_module_level_assert(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Module-level direct asserts are reported by the guard."""
+    test_file = tmp_path / "test_example.py"
+    test_file.write_text("assert False\n", encoding="utf-8")
+    monkeypatch.setattr(sys.modules[__name__], "TESTS_ROOT", tmp_path)
+
+    assert _collect_direct_asserts(test_file) == [DirectAssert(Path("test_example.py"), "<module>", 1, "assert False")]
 
 
 def test_collect_function_asserts_ignores_nested_async_helpers() -> None:
