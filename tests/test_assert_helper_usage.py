@@ -10,9 +10,12 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tests.conftest import assert_httpx_get_kwargs
+from tests.conftest import MockHttpxResponse, assert_httpx_get_kwargs
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+    from typing import Any
+
     from pytest_mock import MockerFixture
 
 TESTS_ROOT = Path(__file__).parent
@@ -238,3 +241,24 @@ def test_assert_httpx_get_kwargs_reports_params_contains_mismatch_per_call(mocke
 
     with pytest.raises(AssertionError, match="call 2"):
         assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2"})
+
+
+def test_mock_httpx_get_returns_response_for_registered_url(mock_httpx_get: Callable[..., Any]) -> None:
+    """URL-bound HTTP mocks return fixture content for the registered URL."""
+    import httpx
+
+    mock_httpx_get(MockHttpxResponse("https://example.com/schema.json", '{"type": "object"}'))
+
+    response = httpx.get("https://example.com/schema.json")
+
+    assert response.text == '{"type": "object"}'
+
+
+def test_mock_httpx_get_rejects_unregistered_url(mock_httpx_get: Callable[..., Any]) -> None:
+    """URL-bound HTTP mocks fail when code fetches an unexpected URL."""
+    import httpx
+
+    mock_httpx_get(MockHttpxResponse("https://example.com/schema.json", '{"type": "object"}'))
+
+    with pytest.raises(pytest.fail.Exception, match=r"Unexpected httpx\.get URL"):
+        httpx.get("https://example.com/other.json")

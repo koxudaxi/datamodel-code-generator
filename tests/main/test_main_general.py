@@ -28,6 +28,7 @@ from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVers
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
 from tests.conftest import (
+    MockHttpxResponse,
     assert_directory_content,
     assert_generate_wrote_file,
     assert_generated_file_matches_output,
@@ -1528,7 +1529,12 @@ def test_cli_url_overrides_pyproject_input(
         encoding="utf-8",
     )
 
-    httpx_get_mock = mock_httpx_get('{"type": "object", "properties": {"from_url": {"type": "integer"}}}')
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "http://127.0.0.1:8123/schema.json",
+            JSON_SCHEMA_DATA_PATH / "cli_url_overrides_pyproject_input.json",
+        )
+    )
 
     with chdir(tmp_path):
         run_main_with_args([

@@ -28,7 +28,13 @@ from datamodel_code_generator import (
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, assert_httpx_get_kwargs, freeze_time, validate_generated_code
+from tests.conftest import (
+    MockHttpxResponse,
+    assert_directory_content,
+    assert_httpx_get_kwargs,
+    freeze_time,
+    validate_generated_code,
+)
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
@@ -842,7 +848,7 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
 
 def test_main_root_id_jsonschema_with_local_file(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
-    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
+    httpx_get_mock = mock_httpx_get()
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id.json",
         output_path=output_file,
@@ -875,7 +881,9 @@ def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: Callable[..., 
 
     Automatically enabled when using `--url` input.
     """
-    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -895,7 +903,7 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(
     mock_httpx_get: Callable[..., Any], output_file: Path
 ) -> None:
     """Test root ID JSON Schema self-references with local file."""
-    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
+    httpx_get_mock = mock_httpx_get()
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json",
         output_path=output_file,
@@ -910,7 +918,9 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(
 @pytest.mark.benchmark
 def test_main_root_id_jsonschema_self_refs_with_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test root ID JSON Schema self-references with remote file."""
-    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id_self_ref.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -928,7 +938,9 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mock_httpx_get: Call
 
 def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
-    httpx_get_mock = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "person.json")
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id_absolute_url.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -959,25 +971,14 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
 ) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
     httpx_get_mock = mock_httpx_get(
-        json.dumps({
-            "$id": "/schemas/v1/main.schema.json",
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "Main",
-            "type": "object",
-            "properties": {
-                "sub": {
-                    "$ref": "sub.schema.json",
-                }
-            },
-            "required": ["sub"],
-        }),
-        json.dumps({
-            "$id": "/schemas/v1/sub.schema.json",
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "title": "Sub",
-            "type": "string",
-            "pattern": "^[0-9a-f]{8}$",
-        }),
+        MockHttpxResponse(
+            "http://localhost:8888/schemas/v1/main.schema.json",
+            JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "main.schema.json",
+        ),
+        MockHttpxResponse(
+            "http://localhost:8888/schemas/v1/sub.schema.json",
+            JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "sub.schema.json",
+        ),
     )
     output_dir = tmp_path / "output"
 
@@ -1006,55 +1007,30 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     )
 
 
-def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
+def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
     httpx_get_mock = mock_httpx_get(
-        json.dumps({
-            "$schema": "http://json-schema.org/draft-07/schema#",
-            "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
-        })
+        MockHttpxResponse(
+            "https://example.com/schema/../other/schema.json",
+            JSON_SCHEMA_DATA_PATH / "remote_ref" / "other.schema.json",
+        )
     )
-    schema = {
-        "$id": "https://example.com/schema/main.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Test",
-        "type": "object",
-        "properties": {
-            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
-        },
-    }
-
-    input_file = tmp_path / "schema.json"
-    input_file.write_text(json.dumps(schema))
-    output_file = tmp_path / "output.py"
 
     with pytest.warns(FutureWarning, match="--allow-remote-refs"):
         run_main_and_assert(
-            input_path=input_file,
+            input_path=JSON_SCHEMA_DATA_PATH / "remote_ref" / "main.json",
             output_path=output_file,
             input_file_type="jsonschema",
         )
     assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/schema/../other/schema.json")
 
 
-def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: Callable[..., Any], tmp_path: Path) -> None:
+def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: Callable[..., Any]) -> None:
     """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
     httpx_get_mock = mock_httpx_get()
-    schema = {
-        "$id": "https://example.com/schema/main.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Test",
-        "type": "object",
-        "properties": {
-            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
-        },
-    }
-
-    input_file = tmp_path / "schema.json"
-    input_file.write_text(json.dumps(schema))
 
     with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
-        generate(input_file, allow_remote_refs=False)
+        generate(JSON_SCHEMA_DATA_PATH / "remote_ref" / "main.json", allow_remote_refs=False)
     assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
@@ -7333,7 +7309,9 @@ def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
 def test_main_bundled_schema_with_id_url(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test bundled schema with $id using URL input produces same output as local file."""
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
-    httpx_get_mock = mock_httpx_get(schema_path)
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://cdn.example.com/schemas/bundled_schema_with_id.json", schema_path)
+    )
 
     run_main_url_and_assert(
         url="https://cdn.example.com/schemas/bundled_schema_with_id.json",

@@ -1,0 +1,7 @@
+{
+  "$id": "/schemas/v1/sub.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sub",
+  "type": "string",
+  "pattern": "^[0-9a-f]{8}$"
+}

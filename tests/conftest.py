@@ -9,6 +9,7 @@ import json
 import re
 import sys
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from itertools import starmap
 from pathlib import Path
@@ -78,6 +79,16 @@ class CliDocKwargs(TypedDict, total=False):
 
     aliases: list[str] | None
     """Alternative option names (e.g., ["--capitalise-enum-members"])."""
+
+
+@dataclass(frozen=True)
+class MockHttpxResponse:
+    """URL-bound httpx.get mock response for remote schema e2e tests."""
+
+    url: str
+    content: str | Path
+    status_code: int = 200
+    headers: Mapping[str, str] | None = None
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -844,26 +855,33 @@ def assert_httpx_get_kwargs(
 
 @pytest.fixture
 def mock_httpx_get(mocker: Any) -> Callable[..., Any]:
-    """Patch httpx.get with common mock response objects for URL e2e tests."""
+    """Patch httpx.get with URL-bound mock response objects for URL e2e tests."""
 
     def _mock_httpx_get(
-        *contents: str | Path,
-        status_code: int = 200,
-        headers: Mapping[str, str] | None = None,
+        *responses: MockHttpxResponse,
     ) -> Any:
-        responses = []
-        for content in contents:
-            response = mocker.Mock()
-            response.status_code = status_code
-            response.headers = dict(headers or {})
-            response.text = content.read_text(encoding="utf-8") if isinstance(content, Path) else content
-            responses.append(response)
+        queued_responses: dict[str, list[MockHttpxResponse]] = {}
+        for response in responses:
+            queued_responses.setdefault(response.url, []).append(response)
 
-        if not responses:
-            return mocker.patch("httpx.get")
-        if len(responses) == 1:
-            return mocker.patch("httpx.get", return_value=responses[0])
-        return mocker.patch("httpx.get", side_effect=responses)
+        def _response_for_url(url: str, *_args: Any, **_kwargs: Any) -> Any:
+            if url not in queued_responses or not queued_responses[url]:  # pragma: no cover
+                pytest.fail(
+                    f"Unexpected httpx.get URL: {url!r}. Registered URLs: {sorted(queued_responses)}",
+                    pytrace=False,
+                )
+            response_config = queued_responses[url].pop(0)
+            response = mocker.Mock()
+            response.status_code = response_config.status_code
+            response.headers = dict(response_config.headers or {})
+            response.text = (
+                response_config.content.read_text(encoding="utf-8")
+                if isinstance(response_config.content, Path)
+                else response_config.content
+            )
+            return response
+
+        return mocker.patch("httpx.get", side_effect=_response_for_url)
 
     return _mock_httpx_get
 

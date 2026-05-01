@@ -31,6 +31,7 @@ from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.model import base as model_base
 from tests.conftest import (
+    MockHttpxResponse,
     assert_directory_content,
     assert_error_message,
     assert_httpx_get_kwargs,
@@ -1761,8 +1762,11 @@ def test_main_generate_custom_class_name_generator_modular(
 def test_main_http_openapi(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL."""
     httpx_get_mock = mock_httpx_get(
-        OPEN_API_DATA_PATH / "refs.yaml",
-        OPEN_API_DATA_PATH / "definitions.yaml",
+        MockHttpxResponse("https://example.com/refs.yaml", OPEN_API_DATA_PATH / "refs.yaml"),
+        MockHttpxResponse(
+            "https://teamdigitale.github.io/openapi/0.0.6/definitions.yaml",
+            OPEN_API_DATA_PATH / "definitions.yaml",
+        ),
     )
 
     run_main_url_and_assert(
@@ -1783,28 +1787,12 @@ def test_main_http_openapi(mock_httpx_get: Callable[..., Any], output_file: Path
 
 def test_main_http_openapi_with_custom_port(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI code generation from HTTP URL with custom port preserves port in refs."""
-    schema_content = """\
-openapi: "3.0.0"
-info:
-  title: Minimal API
-  version: "1.0.0"
-paths: {}
-components:
-  schemas:
-    Item:
-      type: object
-      properties:
-        id:
-          type: string
-        owner:
-          $ref: "#/components/schemas/User"
-    User:
-      type: object
-      properties:
-        name:
-          type: string
-"""
-    httpx_get_mock = mock_httpx_get(schema_content)
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "http://127.0.0.1:8123/openapi.json",
+            OPEN_API_DATA_PATH / "http_openapi_with_custom_port.yaml",
+        )
+    )
 
     run_main_url_and_assert(
         url="http://127.0.0.1:8123/openapi.json",
@@ -1868,7 +1856,7 @@ def test_main_openapi_body_and_parameters(output_file: Path) -> None:
 def test_main_openapi_body_and_parameters_remote_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test OpenAPI generation with body and parameters remote reference."""
     input_path = OPEN_API_DATA_PATH / "body_and_parameters_remote_ref.yaml"
-    httpx_get_mock = mock_httpx_get(input_path)
+    httpx_get_mock = mock_httpx_get(MockHttpxResponse("https://schema.example", input_path))
 
     run_main_and_assert(
         input_path=input_path,
@@ -4390,7 +4378,11 @@ def test_main_openapi_read_only_write_only_union(output_file: Path) -> None:
 
 def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with URL $ref to external schema."""
-    mock_httpx_get(OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml")
+    mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/common.yaml", OPEN_API_DATA_PATH / "read_only_write_only_url_ref_remote.yaml"
+        )
+    )
 
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only_url_ref.yaml",
@@ -4410,7 +4402,12 @@ def test_main_openapi_read_only_write_only_url_ref(mock_httpx_get: Callable[...,
 
 def test_main_openapi_read_only_write_only_allof_url_ref(mock_httpx_get: Callable[..., Any], output_file: Path) -> None:
     """Test readOnly/writeOnly with allOf that references external URL schema."""
-    mock_httpx_get(OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml")
+    mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/common.yaml",
+            OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref_remote.yaml",
+        )
+    )
 
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "read_only_write_only_allof_url_ref.yaml",

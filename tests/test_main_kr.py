@@ -14,7 +14,13 @@ from packaging import version
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
 from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.arguments import arg_parser
-from tests.conftest import assert_error_message, assert_httpx_get_kwargs, create_assert_file_content, freeze_time
+from tests.conftest import (
+    MockHttpxResponse,
+    assert_error_message,
+    assert_httpx_get_kwargs,
+    create_assert_file_content,
+    freeze_time,
+)
 from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 if TYPE_CHECKING:
@@ -1523,7 +1529,7 @@ def test_url_with_http_headers(mock_httpx_get: Callable[..., Any], output_file: 
     useful for authentication (e.g., Bearer tokens) or custom API requirements.
     Format: `HeaderName:HeaderValue`.
     """
-    mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_httpx_get(MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json"))
 
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
@@ -1710,7 +1716,9 @@ def test_http_ignore_tls(mock_httpx_get: Callable[..., Any], output_file: Path) 
     when fetching schemas from HTTPS URLs. This is useful for development
     environments with self-signed certificates. Not recommended for production.
     """
-    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
         output_path=output_file,
@@ -1743,7 +1751,9 @@ def test_http_query_parameters(mock_httpx_get: Callable[..., Any], output_file: 
     or format parameters. Format: `key=value`. Multiple parameters can be
     specified: `--http-query-parameters version=v2 format=json`.
     """
-    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
         output_path=output_file,
@@ -1774,7 +1784,9 @@ def test_http_timeout(mock_httpx_get: Callable[..., Any], output_file: Path) -> 
     when fetching schemas from URLs. Useful for slow servers or large schemas.
     Default is 30 seconds.
     """
-    mock_get = mock_httpx_get(JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
     run_main_url_and_assert(
         url="https://api.example.com/schema.json",
         output_path=output_file,
