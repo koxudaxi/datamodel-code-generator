@@ -12,20 +12,16 @@ concurrency:
 
 jobs:
   build-preview:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/docs-deploy.yaml
     with:
       checkout_ref: ${{ github.event.pull_request.head.sha }}
-      deploy_branch: pr-${{ github.event.pull_request.number }}
+      # Fork PRs run the docs build only. Only same-repo PRs get a deploy
+      # branch and Cloudflare secrets for preview deployment.
+      deploy_branch: ${{ github.event.pull_request.head.repo.full_name == github.repository && format('pr-{0}', github.event.pull_request.number) || '' }}
     secrets:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-  build-pr:
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
-    uses: ./.github/workflows/docs-deploy.yaml
-    with:
-      checkout_ref: ${{ github.event.pull_request.head.sha }}
+      CLOUDFLARE_API_TOKEN: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_API_TOKEN || '' }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ github.event.pull_request.head.repo.full_name == github.repository && secrets.CLOUDFLARE_ACCOUNT_ID || '' }}
 
   build-production:
     if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
