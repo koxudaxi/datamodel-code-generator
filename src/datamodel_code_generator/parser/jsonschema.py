@@ -3877,7 +3877,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
         if ref.startswith("file://"):
-            from urllib.parse import urlparse  # noqa: PLC0415
             from urllib.request import url2pathname  # noqa: PLC0415
 
             parsed = urlparse(ref)
@@ -3890,7 +3889,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.remote_object_cache.get_or_put(
                 ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
-        if self.http_local_ref_path is not None:
+        if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
             return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
             ref, default_factory=lambda key: load_data(self._get_text_from_url(key))

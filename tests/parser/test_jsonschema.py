@@ -309,6 +309,18 @@ def test_json_schema_ref_url_from_local_http_path_missing_file(tmp_path: Path) -
         parser._get_ref_body_from_url("http://example.com/schema")
 
 
+def test_json_schema_ref_url_from_local_http_path_ignores_non_http_scheme(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Test local HTTP path resolution does not handle non-HTTP URL schemes."""
+    parser = JsonSchemaParser("", http_local_ref_path=tmp_path)
+    mocker.patch.object(parser, "_get_text_from_url", return_value='{"type": "object"}')
+    local_http_path = mocker.patch.object(parser, "_get_ref_body_from_local_http_path")
+
+    assert parser._get_ref_body_from_url("ftp://example.com/schema.json") == {"type": "object"}
+    local_http_path.assert_not_called()
+
+
 def test_json_schema_ref_url_from_local_http_path_symlink_escape(tmp_path: Path) -> None:
     """Test local HTTP JSON schema references cannot escape the schema store through symlinks."""
     schema_store = tmp_path / "schemas"
@@ -318,7 +330,7 @@ def test_json_schema_ref_url_from_local_http_path_symlink_escape(tmp_path: Path)
     outside_schema.write_text('{"type": "object"}', encoding="utf-8")
     try:
         local_schema.symlink_to(outside_schema)
-    except OSError as exc:
+    except OSError as exc:  # pragma: no cover
         pytest.skip(f"symlink creation is not supported: {exc}")
 
     parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
