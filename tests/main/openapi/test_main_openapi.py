@@ -3855,6 +3855,23 @@ def test_main_openapi_byte_format(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_type_mappings_byte_to_binary(output_file: Path) -> None:
+    """Test mapping OpenAPI byte format to binary preserves base64 encoding."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "type_mappings_byte_to_binary.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="type_mappings_byte_to_binary.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--type-mappings",
+            "string+byte=binary",
+        ],
+    )
+
+
 def test_main_openapi_unquoted_null(output_file: Path) -> None:
     """Test OpenAPI generation with unquoted null values."""
     run_main_and_assert(
