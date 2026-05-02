@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Root",
+  "type": "object",
+  "properties": {
+    "first_thing": {
+      "type": "object",
+      "properties": {
+        "signal_id": {
+          "title": "Signal ID",
+          "discriminator": {
+            "propertyName": "source"
+          },
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string"
+                },
+                "source": {
+                  "const": "catalog"
+                }
+              },
+              "required": [
+                "source",
+                "domain"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "source": {
+                  "const": "agent"
+                }
+              },
+              "required": [
+                "source",
+                "url"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "second_thing": {
+      "type": "object",
+      "properties": {
+        "signal_id": {
+          "title": "Signal ID",
+          "discriminator": {
+            "propertyName": "source"
+          },
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string"
+                },
+                "source": {
+                  "const": "catalog"
+                }
+              },
+              "required": [
+                "source",
+                "domain"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string"
+                },
+                "source": {
+                  "const": "agent"
+                }
+              },
+              "required": [
+                "source",
+                "url"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}
