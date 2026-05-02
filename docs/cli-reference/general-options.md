@@ -1638,7 +1638,9 @@ Resolve HTTP references from local schema files.
 
 The `--http-local-ref-path` flag maps HTTP(S) `$ref` URLs to files under
 a local schema store instead of fetching them from the network. The host and
-URL path are used as the relative path under the schema store.
+URL path are used as the relative path under the schema store. For example,
+`https://api.example.com/schemas/pet.json` is read from
+`schemas/api.example.com/schemas/pet.json`.
 
 !!! tip "Usage"
 
@@ -1655,19 +1657,7 @@ URL path are used as the relative path under the schema store.
     ```json
     {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Pet",
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "tag": {
-          "type": "string"
-        }
-      }
+      "$ref": "https://api.example.com/schemas/pet.json"
     }
     ```
 
@@ -1680,13 +1670,17 @@ URL path are used as the relative path under the schema store.
     
     from __future__ import annotations
     
-    from pydantic import BaseModel
+    from pydantic import BaseModel, RootModel
     
     
     class Pet(BaseModel):
         id: int | None = None
         name: str | None = None
         tag: str | None = None
+    
+    
+    class Model(RootModel[Pet]):
+        root: Pet
     ```
 
 ---

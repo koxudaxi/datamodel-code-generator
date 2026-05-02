@@ -5272,9 +5272,9 @@ Use default values from schema in generated models.
 The `--use-default` flag allows required fields with default values to be generated
 with their defaults, making them optional to provide when instantiating the model.
 
-    The field type still follows the schema's nullability. For example, a required
-    string field with a default is generated as `str = 'value'`, not
-    `str | None = 'value'`, unless the schema allows null.
+When `--strict-nullable` is enabled, the field type still follows the schema's
+nullability. For example, a required string field with a default is generated
+as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
 
 **Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
 

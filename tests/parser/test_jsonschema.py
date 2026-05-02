@@ -289,6 +289,8 @@ def test_json_schema_ref_url_from_local_http_path_with_extension(tmp_path: Path,
     [
         "http:///application/package/element/sub-element",
         "http://example.com/application/package/../sub-element",
+        "http://example.com/..%5C..%5CWindows%5Cwin.ini",
+        "http://example.com/path%2Fwith-slash",
     ],
 )
 def test_json_schema_ref_url_from_local_http_path_invalid_path(tmp_path: Path, ref: str) -> None:
@@ -305,6 +307,24 @@ def test_json_schema_ref_url_from_local_http_path_missing_file(tmp_path: Path) -
 
     with pytest.raises(Error, match=r"\$ref local file not found for http://example.com/schema"):
         parser._get_ref_body_from_url("http://example.com/schema")
+
+
+def test_json_schema_ref_url_from_local_http_path_symlink_escape(tmp_path: Path) -> None:
+    """Test local HTTP JSON schema references cannot escape the schema store through symlinks."""
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "example.com" / "schema.json"
+    local_schema.parent.mkdir(parents=True)
+    outside_schema = tmp_path / "outside.json"
+    outside_schema.write_text('{"type": "object"}', encoding="utf-8")
+    try:
+        local_schema.symlink_to(outside_schema)
+    except OSError as exc:
+        pytest.skip(f"symlink creation is not supported: {exc}")
+
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
+
+    with pytest.raises(Error, match="Unsupported local HTTP \\$ref URL path"):
+        parser._get_ref_body_from_url("http://example.com/schema.json")
 
 
 @pytest.mark.parametrize(

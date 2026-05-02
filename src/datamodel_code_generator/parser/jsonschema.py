@@ -3850,14 +3850,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise Error(msg)
 
         parts = [unquote(part) for part in parsed.path.split("/") if part]
-        if not parsed.netloc or any(part in {".", ".."} for part in parts):
+        if not parsed.netloc or any(part in {".", ".."} or "/" in part or "\\" in part for part in parts):
             msg = f"Unsupported local HTTP $ref URL path: {ref}"
             raise Error(msg)
 
+        base_path = self.http_local_ref_path.resolve()
         relative_path = Path(parsed.netloc, *parts)
-        file_paths = [self.http_local_ref_path / relative_path]
+        file_paths = [(base_path / relative_path).resolve()]
         if not parts or not Path(parts[-1]).suffix:
-            file_paths.append(file_paths[0].with_name(f"{file_paths[0].name}.json"))
+            file_paths.append((base_path / relative_path.with_name(f"{relative_path.name}.json")).resolve())
+
+        if any(not file_path.is_relative_to(base_path) for file_path in file_paths):
+            msg = f"Unsupported local HTTP $ref URL path: {ref}"
+            raise Error(msg)
 
         for file_path in file_paths:
             if file_path.is_file():
