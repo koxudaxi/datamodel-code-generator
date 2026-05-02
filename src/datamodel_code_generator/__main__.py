@@ -177,6 +177,7 @@ class Config(BaseModel):  # noqa: PLR0904
         "output",
         "custom_template_dir",
         "custom_file_header_path",
+        "http_local_ref_path",
         mode="before",
     )
     def validate_path(cls, value: Any) -> Path | None:  # noqa: N805
@@ -493,6 +494,7 @@ class Config(BaseModel):  # noqa: PLR0904
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     allow_remote_refs: Optional[bool] = None  # noqa: UP045
     http_headers: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
+    http_local_ref_path: Optional[Path] = None  # noqa: UP045
     http_ignore_tls: bool = False
     http_timeout: Optional[float] = None  # noqa: UP045
     use_annotated: bool = False
@@ -944,6 +946,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         allof_class_hierarchy=config.allof_class_hierarchy,
         allow_remote_refs=config.allow_remote_refs,
         http_headers=config.http_headers,
+        http_local_ref_path=config.http_local_ref_path,
         http_ignore_tls=config.http_ignore_tls,
         http_timeout=config.http_timeout,
         use_annotated=config.use_annotated,

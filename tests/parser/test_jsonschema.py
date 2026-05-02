@@ -200,6 +200,55 @@ class Pet(BaseModel):
     )
 
 
+def test_json_schema_ref_url_from_local_http_path(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test HTTP JSON schema references resolved from a local schema store."""
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "example.com" / "application" / "package" / "element" / "sub-element.json"
+    local_schema.parent.mkdir(parents=True)
+    local_schema.write_text(
+        json.dumps(
+            {
+                "$id": "http://example.com/application/package/element/sub-element",
+                "title": "SubElement",
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                    },
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
+    mock_get = mocker.patch("httpx.get")
+
+    parser.parse_raw_obj(
+        "Model",
+        {
+            "type": "object",
+            "properties": {
+                "sub_element": {
+                    "$ref": "http://example.com/application/package/element/sub-element",
+                },
+            },
+        },
+        ["Model"],
+    )
+
+    assert (
+        dump_templates(list(parser.results))
+        == """class Model(BaseModel):
+    sub_element: Optional[SubElement] = None
+
+
+class SubElement(BaseModel):
+    name: Optional[str] = None"""
+    )
+    mock_get.assert_not_called()
+
+
 @pytest.mark.parametrize(
     ("source_obj", "generated_classes"),
     [

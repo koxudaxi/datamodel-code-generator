@@ -1104,6 +1104,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
+        self.http_local_ref_path: Path | None = config.http_local_ref_path
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
         self.http_ignore_tls: bool = config.http_ignore_tls
         self.http_timeout: float | None = config.http_timeout

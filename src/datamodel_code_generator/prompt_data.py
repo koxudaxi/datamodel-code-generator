@@ -63,6 +63,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--graphql-no-typename": "Exclude __typename field from generated GraphQL models.",
     "--http-headers": "Fetch schema from URL with custom HTTP headers.",
     "--http-ignore-tls": "Disable TLS certificate verification for HTTPS requests.",
+    "--http-local-ref-path": "Resolve HTTP references from local schema files.",
     "--http-query-parameters": "Add query parameters to HTTP requests for remote schemas.",
     "--http-timeout": "Set timeout for HTTP requests to remote hosts.",
     "--ignore-enum-constraints": "Ignore enum constraints and use base string type instead of Enum classes.",
