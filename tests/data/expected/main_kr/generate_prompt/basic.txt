@@ -162,6 +162,7 @@
 - `--generate-pyproject-config`: Generate pyproject.toml configuration from CLI arguments.
 - `--http-headers`: Fetch schema from URL with custom HTTP headers.
 - `--http-ignore-tls`: Disable TLS certificate verification for HTTPS requests.
+- `--http-local-ref-path`: Resolve HTTP references from local schema files.
 - `--http-query-parameters`: Add query parameters to HTTP requests for remote schemas.
 - `--http-timeout`: Set timeout for HTTP requests to remote hosts.
 - `--ignore-pyproject`: Ignore pyproject.toml configuration file.
@@ -215,6 +216,11 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         (example: "Authorization: Basic dXNlcjpwYXNz")
   --http-ignore-tls     Disable verification of the remote host's TLS
                         certificate
+  --http-local-ref-path HTTP_LOCAL_REF_PATH
+                        Resolve HTTP(S) JSON Schema $ref URLs from a local
+                        directory instead of fetching them. URLs are mapped
+                        under the directory by host and path; extensionless
+                        refs also try '.json'.
   --http-query-parameters HTTP_QUERY_PARAMETERS [HTTP_QUERY_PARAMETERS ...]
                         Set query parameters in HTTP requests to the remote
                         host. (example: "ref=branch")
