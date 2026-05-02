@@ -65,6 +65,18 @@ Use helpers such as `run_main_and_assert`, `run_main_url_and_assert`,
 full expected-file or inline snapshot comparisons for generated output over
 substring checks.
 
+The file-output helpers use
+[`inline-snapshot`](https://15r10nk.github.io/inline-snapshot/latest/) and
+`external_file()` internally. When an expected output file is missing, the
+failure message includes the command to create it, such as
+`tox run -e <version> -- --inline-snapshot=create`. When an existing expected
+file differs from the generated output, the failure includes a diff and the
+command to update it, such as
+`tox run -e <version> -- --inline-snapshot=fix`. Review the generated files and
+the resulting `git diff` before committing. See the inline-snapshot
+[`--inline-snapshot` pytest options](https://15r10nk.github.io/inline-snapshot/latest/pytest/#-inline-snapshotcreatefixtrimupdate)
+for the meaning of `create` and `fix`.
+
 Direct `assert` statements are blocked in the guarded E2E test modules by
 `tests/test_assert_helper_usage.py`. If you add a new E2E test file that checks
 generated output, add it to `E2E_TEST_PATHS` in that guard test so new direct
