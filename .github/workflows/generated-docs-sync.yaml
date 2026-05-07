@@ -62,6 +62,16 @@ jobs:
         run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
       - name: Build prompt data
         run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
+      - name: Update generate prompt snapshots
+        run: |
+          .tox/cli-docs/bin/pytest \
+            tests/test_main_kr.py::test_generate_prompt_basic \
+            tests/test_main_kr.py::test_generate_prompt_with_question \
+            tests/test_main_kr.py::test_generate_prompt_with_options \
+            tests/test_main_kr.py::test_generate_prompt_with_list_options \
+            --inline-snapshot=fix \
+            -p no:xdist \
+            -q
       - name: Build schema docs
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build llms.txt
@@ -72,11 +82,21 @@ jobs:
           PATCH_PATH: ${{ runner.temp }}/generated-docs.patch
         run: |
           set -euo pipefail
-          if git diff --quiet -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py; then
+          generated_paths=(
+            README.md
+            docs/index.md
+            docs/cli-reference/
+            docs/llms.txt
+            docs/llms-full.txt
+            docs/supported_formats.md
+            src/datamodel_code_generator/prompt_data.py
+            tests/data/expected/main_kr/generate_prompt/
+          )
+          if git diff --quiet -- "${generated_paths[@]}"; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git diff --binary -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py > "$PATCH_PATH"
+          git diff --binary -- "${generated_paths[@]}" > "$PATCH_PATH"
           echo "has_changes=true" >> "$GITHUB_OUTPUT"
       - name: Upload generated docs patch
         if: steps.patch.outputs.has_changes == 'true'
