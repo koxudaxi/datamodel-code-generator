@@ -3648,6 +3648,32 @@ def test_main_openapi_type_alias(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(
+    version.parse(black.__version__) < version.parse("23.3.0"),
+    reason="Installed black doesn't support the target python version",
+)
+def test_main_openapi_enum_literal_type_alias_property_ref(output_file: Path) -> None:
+    """Ensure property-referenced enum schemas produce named literal aliases."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "enum_literal_type_alias_property_ref.json",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="enum_literal_type_alias_property_ref.py",
+        extra_args=[
+            "--target-python-version",
+            "3.11",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--use-union-operator",
+            "--enum-field-as-literal",
+            "all",
+            "--use-type-alias",
+        ],
+    )
+
+
+@pytest.mark.skipif(
     int(black.__version__.split(".")[0]) < 23,
     reason="Installed black doesn't support the new 'type' statement",
 )
