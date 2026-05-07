@@ -508,7 +508,7 @@ class OpenAPIParser(JsonSchemaParser):
         camel_path_name = snake_to_upper_camel(normalized)
         return f"{camel_path_name}{method.capitalize()}{suffix}"
 
-    def parse_all_parameters(  # noqa: PLR0912, PLR0914, PLR0915
+    def parse_all_parameters(  # noqa: PLR0912, PLR0914
         self,
         name: str,
         parameters: list[ReferenceObject | ParameterObject],
@@ -551,8 +551,9 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
-                    effective_required = False
+                use_default_with_required = (
+                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
+                )
                 fields.append(
                     self.get_object_field(
                         field_name=field_name,
@@ -563,6 +564,7 @@ class OpenAPIParser(JsonSchemaParser):
                         alias=alias,
                         effective_default=effective_default,
                         effective_has_default=effective_has_default,
+                        use_default_with_required=use_default_with_required,
                     )
                 )
             else:
@@ -600,8 +602,9 @@ class OpenAPIParser(JsonSchemaParser):
                     class_name=reference.name,
                 )
                 effective_required = parameter.required
-                if self.apply_default_values_for_required_fields and effective_has_default:
-                    effective_required = False
+                use_default_with_required = (
+                    effective_required and self.apply_default_values_for_required_fields and effective_has_default
+                )
                 # Handle multiple aliases (Pydantic v2 AliasChoices)
                 single_alias: str | None = None
                 validation_aliases: list[str] | None = None
@@ -639,6 +642,7 @@ class OpenAPIParser(JsonSchemaParser):
                         has_default=effective_has_default,
                         type_has_null=object_schema.type_has_null if object_schema else None,
                         use_serialization_alias=self.use_serialization_alias,
+                        use_default_with_required=use_default_with_required,
                     )
                 )
 

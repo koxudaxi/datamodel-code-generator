@@ -10,12 +10,12 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 25 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
-| ⚙️ [General Options](general-options.md) | 16 | Utilities and meta options |
+| ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
 
 ## All Options
@@ -105,6 +105,7 @@ This documentation is auto-generated from test cases.
 - [`--help`](utility-options.md#help)
 - [`--http-headers`](general-options.md#http-headers)
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls)
+- [`--http-local-ref-path`](general-options.md#http-local-ref-path)
 - [`--http-query-parameters`](general-options.md#http-query-parameters)
 - [`--http-timeout`](general-options.md#http-timeout)
 
@@ -212,6 +213,7 @@ This documentation is auto-generated from test cases.
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
+- [`--use-single-line-docstring`](field-customization.md#use-single-line-docstring)
 - [`--use-specialized-enum`](typing-customization.md#use-specialized-enum)
 - [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types)

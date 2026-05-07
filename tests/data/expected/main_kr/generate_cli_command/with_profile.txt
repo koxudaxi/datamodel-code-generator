@@ -1,0 +1,2 @@
+datamodel-codegen --input api.yaml --snake-case-field --target-python-version 3.11
+

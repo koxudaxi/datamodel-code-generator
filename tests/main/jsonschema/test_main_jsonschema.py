@@ -8,8 +8,6 @@ import os
 import tempfile
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import call
 
 import black
 import pytest
@@ -26,10 +24,17 @@ from datamodel_code_generator import (
     chdir,
     generate,
 )
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.format import is_supported_in_black
 from datamodel_code_generator.model import base as model_base
-from tests.conftest import assert_directory_content, freeze_time, validate_generated_code
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_directory_content,
+    assert_httpx_get_kwargs,
+    freeze_time,
+    validate_generated_code,
+)
 from tests.main.conftest import (
     ALIASES_DATA_PATH,
     BLACK_PY313_SKIP,
@@ -44,22 +49,31 @@ from tests.main.conftest import (
     run_main_and_assert,
     run_main_url_and_assert,
     run_main_with_args,
+    run_main_with_system_exit,
 )
 from tests.main.jsonschema.conftest import EXPECTED_JSON_SCHEMA_PATH, assert_file_content
-
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
 
 FixtureRequest = pytest.FixtureRequest
 
 
 def assert_run_main_with_args_error(args: list[str], capsys: pytest.CaptureFixture[str], expected_error: str) -> None:
     """Assert that running the CLI exits with code 2 and emits the expected error."""
-    with pytest.raises(SystemExit) as exc_info:
-        run_main_with_args(args)
-    assert exc_info.value.code == 2
-    captured = capsys.readouterr()
-    assert expected_error in captured.err
+    run_main_with_system_exit(args, expected_code=2, capsys=capsys, expected_stderr_contains=expected_error)
+
+
+def _keep_model_order_field_references_expected_file(
+    target_version: PythonVersion,
+    *,
+    keep_model_order: bool,
+    disable_future_imports: bool,
+) -> str:
+    if target_version.has_native_deferred_annotations:
+        return "keep_model_order_field_references_native_deferred.py"
+    if disable_future_imports:
+        return "keep_model_order_field_references.py"
+    if keep_model_order:
+        return "keep_model_order_field_references_deferred.py"
+    return "keep_model_order_field_references_default.py"
 
 
 def _install_test_my_app(base_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -245,37 +259,30 @@ def test_main_keep_model_order_matrix_keep_model_order_field_references(
     if not is_supported_in_black(target_version):
         pytest.skip(f"Installed black ({black.__version__}) doesn't support Python {target_python_version}")
 
-    args = [
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
+    extra_args = [
         "--target-python-version",
         target_python_version,
         "--formatters",
         "isort",
     ]
     if keep_model_order:
-        args.append("--keep-model-order")
+        extra_args.append("--keep-model-order")
     if disable_future_imports:
-        args.append("--disable-future-imports")
+        extra_args.append("--disable-future-imports")
 
-    run_main_with_args(args)
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "keep_model_order_field_references.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=_keep_model_order_field_references_expected_file(
+            target_version,
+            keep_model_order=keep_model_order,
+            disable_future_imports=disable_future_imports,
+        ),
+        extra_args=extra_args,
+    )
     code = output_file.read_text(encoding="utf-8")
-    compile(code, str(output_file), "exec")
-
-    if not keep_model_order:
-        return
-
-    metadata_index = code.index("class Metadata")
-    description_type_index = code.index("class DescriptionType")
-    use_deferred_annotations_for_target = target_version.has_native_deferred_annotations or not disable_future_imports
-    if use_deferred_annotations_for_target:
-        assert description_type_index < metadata_index
-    else:
-        assert metadata_index < description_type_index
 
     # For targets without native deferred annotations, validate runtime safety
     # under the current interpreter by executing the generated module.
@@ -458,11 +465,10 @@ def test_main_jsonschema_no_empty_collapsed_external_model(tmp_path: Path) -> No
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "external_collapse",
         output_path=tmp_path,
-        file_should_not_exist=tmp_path / "child.py",
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "no_empty_collapsed_external_model",
         input_file_type="jsonschema",
         extra_args=["--collapse-root-models"],
     )
-    assert (tmp_path / "__init__.py").exists()
 
 
 @pytest.mark.cli_doc(
@@ -504,19 +510,9 @@ def test_main_null_and_array(output_file: Path) -> None:
 The `--use-default` flag allows required fields with default values to be generated
 with their defaults, making them optional to provide when instantiating the model.
 
-!!! warning "Fields with defaults become nullable"
-    When using `--use-default`, fields with default values are generated as nullable
-    types (e.g., `str | None` instead of `str`), even if the schema does not allow
-    null values.
-
-    If you want fields to strictly follow the schema's type definition (non-nullable),
-    use `--strict-nullable` together with `--use-default`.
-
-!!! note "Future behavior change"
-    In a future major version, the default behavior of `--use-default` may change to
-    generate non-nullable types that match the schema definition (equivalent to using
-    `--strict-nullable`). If you rely on the current nullable behavior, consider
-    explicitly handling this in your code.""",
+When `--strict-nullable` is enabled, the field type still follows the schema's
+nullability. For example, a required string field with a default is generated
+as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.""",
     input_schema="jsonschema/use_default_with_const.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-default"],
     golden_output="jsonschema/use_default_with_const.py",
@@ -528,19 +524,9 @@ def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> No
     The `--use-default` flag allows required fields with default values to be generated
     with their defaults, making them optional to provide when instantiating the model.
 
-    !!! warning "Fields with defaults become nullable"
-        When using `--use-default`, fields with default values are generated as nullable
-        types (e.g., `str | None` instead of `str`), even if the schema does not allow
-        null values.
-
-        If you want fields to strictly follow the schema's type definition (non-nullable),
-        use `--strict-nullable` together with `--use-default`.
-
-    !!! note "Future behavior change"
-        In a future major version, the default behavior of `--use-default` may change to
-        generate non-nullable types that match the schema definition (equivalent to using
-        `--strict-nullable`). If you rely on the current nullable behavior, consider
-        explicitly handling this in your code.
+    When `--strict-nullable` is enabled, the field type still follows the schema's
+    nullability. For example, a required string field with a default is generated
+    as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_default_with_const.json",
@@ -771,30 +757,38 @@ def test_main_class_name_suffix_with_class_name(output_file: Path) -> None:
     )
 
 
-def test_main_class_name_prefix_invalid(output_file: Path) -> None:
+def test_main_class_name_prefix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-prefix is rejected."""
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
-        "--output",
-        str(output_file),
-        "--class-name-prefix",
-        "123Invalid",
-    ])
-    assert return_code == Exit.ERROR
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+            "--output",
+            str(output_file),
+            "--class-name-prefix",
+            "123Invalid",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--class-name-prefix '123Invalid' is not a valid Python identifier",
+    )
 
 
-def test_main_class_name_suffix_invalid(output_file: Path) -> None:
+def test_main_class_name_suffix_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test that invalid --class-name-suffix is rejected."""
-    return_code: Exit = main([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
-        "--output",
-        str(output_file),
-        "--class-name-suffix",
-        "Schema!",
-    ])
-    assert return_code == Exit.ERROR
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "class_name_affix.json"),
+            "--output",
+            str(output_file),
+            "--class-name-suffix",
+            "Schema!",
+        ],
+        expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="--class-name-suffix 'Schema!' is not a valid Python identifier component",
+    )
 
 
 def test_main_jsonschema_reserved_field_names(output_file: Path) -> None:
@@ -831,17 +825,9 @@ def test_main_jsonschema_missing_anchor_reports_error(capsys: pytest.CaptureFixt
     )
 
 
-def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_root_id_jsonschema_with_local_file(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test root ID JSON Schema with local file reference."""
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get()
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id.json",
         output_path=output_file,
@@ -849,7 +835,7 @@ def test_main_root_id_jsonschema_with_local_file(mocker: MockerFixture, output_f
         assert_func=assert_file_content,
         expected_file="root_id.py",
     )
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 @pytest.mark.cli_doc(
@@ -865,7 +851,7 @@ Automatically enabled when using `--url` input.""",
     cli_args=["--allow-remote-refs"],
     golden_output="main/jsonschema/root_id.py",
 )
-def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_remote_file(mock_httpx_get: HttpxGetMockFactory, tmp_path: Path) -> None:
     """Enable fetching of `$ref` targets over HTTP/HTTPS.
 
     When enabled, the generator will resolve `$ref` references that point to remote URLs,
@@ -874,15 +860,9 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
 
     Automatically enabled when using `--url` input.
     """
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -894,26 +874,15 @@ def test_main_root_id_jsonschema_with_remote_file(mocker: MockerFixture, tmp_pat
         expected_file="root_id.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
 @pytest.mark.benchmark
-def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_root_id_jsonschema_self_refs_with_local_file(
+    mock_httpx_get: HttpxGetMockFactory, output_file: Path
+) -> None:
     """Test root ID JSON Schema self-references with local file."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get()
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json",
         output_path=output_file,
@@ -922,17 +891,17 @@ def test_main_root_id_jsonschema_self_refs_with_local_file(mocker: MockerFixture
         expected_file="root_id.py",
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
     )
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 @pytest.mark.benchmark
-def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_self_refs_with_remote_file(
+    mock_httpx_get: HttpxGetMockFactory, tmp_path: Path
+) -> None:
     """Test root ID JSON Schema self-references with remote file."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id_self_ref.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -945,29 +914,14 @@ def test_main_root_id_jsonschema_self_refs_with_remote_file(mocker: MockerFixtur
         transform=lambda s: s.replace("filename:  root_id_self_ref.json", "filename:  root_id.json"),
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_self_ref.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
-def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_root_id_jsonschema_with_absolute_remote_file(mock_httpx_get: HttpxGetMockFactory, tmp_path: Path) -> None:
     """Test root ID JSON Schema with absolute remote file URL."""
-    root_id_response = mocker.Mock()
-    root_id_response.status_code = 200
-    root_id_response.headers = {}
-    root_id_response.text = "dummy"
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = (JSON_SCHEMA_DATA_PATH / "person.json").read_text()
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[person_response])
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://example.com/person.json", JSON_SCHEMA_DATA_PATH / "person.json")
+    )
     input_file = tmp_path / "root_id_absolute_url.json"
     output_file: Path = tmp_path / "output.py"
     run_main_and_assert(
@@ -979,16 +933,7 @@ def test_main_root_id_jsonschema_with_absolute_remote_file(mocker: MockerFixture
         expected_file="root_id_absolute_url.py",
         copy_files=[(JSON_SCHEMA_DATA_PATH / "root_id_absolute_url.json", input_file)],
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/person.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/person.json", call_count=1)
 
 
 def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> None:
@@ -1002,37 +947,23 @@ def test_main_root_id_jsonschema_with_absolute_local_file(output_file: Path) -> 
     )
 
 
-def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_url_with_relative_root_id_resolves_relative_refs(
+    mock_httpx_get: HttpxGetMockFactory, tmp_path: Path
+) -> None:
     """Test --url input keeps resolving relative refs remotely when root $id is path-only."""
-    main_response = mocker.Mock()
-    main_response.status_code = 200
-    main_response.headers = {}
-    main_response.text = json.dumps({
-        "$id": "/schemas/v1/main.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Main",
-        "type": "object",
-        "properties": {
-            "sub": {
-                "$ref": "sub.schema.json",
-            }
-        },
-        "required": ["sub"],
-    })
-    sub_response = mocker.Mock()
-    sub_response.status_code = 200
-    sub_response.headers = {}
-    sub_response.text = json.dumps({
-        "$id": "/schemas/v1/sub.schema.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Sub",
-        "type": "string",
-        "pattern": "^[0-9a-f]{8}$",
-    })
-    httpx_get_mock = mocker.patch("httpx.get", side_effect=[main_response, sub_response])
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "http://localhost:8888/schemas/v1/main.schema.json",
+            JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "main.schema.json",
+        ),
+        MockHttpxResponse(
+            "http://localhost:8888/schemas/v1/sub.schema.json",
+            JSON_SCHEMA_DATA_PATH / "url_relative_root_id" / "sub.schema.json",
+        ),
+    )
     output_dir = tmp_path / "output"
 
-    result = run_main_with_args([
+    run_main_with_args([
         "--url",
         "http://localhost:8888/schemas/v1/main.schema.json",
         "--output",
@@ -1041,85 +972,52 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(mocker: MockerFix
         "jsonschema",
         "--output-model-type",
         "pydantic_v2.BaseModel",
+        "--disable-timestamp",
     ])
 
-    assert result == Exit.OK
-    main_content = (output_dir / "__init__.py").read_text(encoding="utf-8")
-    sub_content = (output_dir / "sub.py").read_text(encoding="utf-8")
-    assert "class Main(BaseModel):" in main_content
-    assert "sub: sub_1.Schema" in main_content
-    assert "class Schema(RootModel[constr(pattern=r'^[0-9a-f]{8}$')]):" in sub_content
-    httpx_get_mock.assert_has_calls([
-        call(
+    assert_directory_content(
+        output_dir,
+        EXPECTED_MAIN_PATH / "jsonschema" / "url_relative_root_id_resolves_relative_refs",
+    )
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[
             "http://localhost:8888/schemas/v1/main.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-        call(
             "http://localhost:8888/schemas/v1/sub.schema.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+        ],
+        call_count=2,
+    )
 
 
-def test_main_remote_ref_emits_deprecation_warning(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
-    person_response = mocker.Mock()
-    person_response.status_code = 200
-    person_response.headers = {}
-    person_response.text = json.dumps({
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "definitions": {"Thing": {"type": "object", "properties": {"name": {"type": "string"}}}},
-    })
-    mocker.patch("httpx.get", return_value=person_response)
-    schema = {
-        "$id": "https://example.com/schema/main.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Test",
-        "type": "object",
-        "properties": {
-            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
-        },
-    }
-
-    input_file = tmp_path / "schema.json"
-    input_file.write_text(json.dumps(schema))
-    output_file = tmp_path / "output.py"
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/schema/../other/schema.json",
+            JSON_SCHEMA_DATA_PATH / "remote_ref" / "other.schema.json",
+        )
+    )
 
     with pytest.warns(FutureWarning, match="--allow-remote-refs"):
         run_main_and_assert(
-            input_path=input_file,
+            input_path=JSON_SCHEMA_DATA_PATH / "remote_ref" / "main.json",
             output_path=output_file,
             input_file_type="jsonschema",
         )
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_url="https://example.com/schema/../other/schema.json",
+        call_count=1,
+    )
 
 
-def test_main_remote_ref_blocked_when_explicitly_disabled(mocker: MockerFixture, tmp_path: Path) -> None:
+def test_main_remote_ref_blocked_when_explicitly_disabled(mock_httpx_get: HttpxGetMockFactory) -> None:
     """Test that remote $ref fetching is blocked when allow_remote_refs=False."""
-    httpx_get_mock = mocker.patch("httpx.get")
-    schema = {
-        "$id": "https://example.com/schema/main.json",
-        "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "Test",
-        "type": "object",
-        "properties": {
-            "ref_field": {"$ref": "../other/schema.json#/definitions/Thing"},
-        },
-    }
-
-    input_file = tmp_path / "schema.json"
-    input_file.write_text(json.dumps(schema))
+    httpx_get_mock = mock_httpx_get()
 
     with pytest.raises(Error, match=r"Fetching remote \$ref is disabled"):
-        generate(input_file, allow_remote_refs=False)
-    httpx_get_mock.assert_not_called()
+        generate(JSON_SCHEMA_DATA_PATH / "remote_ref" / "main.json", allow_remote_refs=False)
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
 def test_main_missing_local_ref_error_message(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1313,6 +1211,26 @@ def test_main_reuse_model_collapse_inline_definitions(output_file: Path) -> None
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+    )
+
+
+def test_main_reuse_model_discriminator_literal(output_file: Path) -> None:
+    """Reuse inherited discriminator literals instead of injecting the reuse path segment."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_discriminator_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--reuse-model",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
     )
 
 
@@ -1909,6 +1827,7 @@ def test_main_generate_relative_input_path(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_main_generate_external_absolute_input_path(tmp_path: Path) -> None:
     """Test helper keeps absolute input paths that are outside the repository root."""
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -2164,7 +2083,6 @@ def test_main_generate_pydantic_v2_dataclass_enum(output_file: Path) -> None:
 def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_file: str, output_file: Path) -> None:
     """Test pydantic_v2.BaseModel with dict defaults."""
     input_ = (JSON_SCHEMA_DATA_PATH / input_file).relative_to(Path.cwd())
-    assert not input_.is_absolute()
     generate(
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
@@ -2177,8 +2095,6 @@ def test_main_generate_pydantic_v2_model_default_dict(input_file: str, expected_
 def test_main_generate_from_directory(tmp_path: Path) -> None:
     """Test generation from directory input."""
     input_ = (JSON_SCHEMA_DATA_PATH / "external_files_in_directory").relative_to(Path.cwd())
-    assert not input_.is_absolute()
-    assert input_.is_dir()
     generate(
         input_=input_,
         input_file_type=InputFileType.JsonSchema,
@@ -2240,7 +2156,7 @@ def test_main_generate_custom_class_name_generator_keep_underscores(output_file:
     )
 
 
-def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_http_jsonschema(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test HTTP JSON Schema fetching."""
     external_directory = JSON_SCHEMA_DATA_PATH / "external_files_in_directory"
     base_url = "https://example.com/external_files_in_directory/"
@@ -2256,17 +2172,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
     run_main_url_and_assert(
         url="https://example.com/external_files_in_directory/person.json",
@@ -2279,76 +2186,7 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                "https://example.com/external_files_in_directory/person.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/friends.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/food.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-        ],
-        any_order=True,
-    )
-    assert httpx_get_mock.call_count == 8
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True, call_count=8)
 
 
 @pytest.mark.parametrize(
@@ -2377,8 +2215,8 @@ def test_main_http_jsonschema(mocker: MockerFixture, output_file: Path) -> None:
     ],
 )
 def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ignore_tls(
-    mocker: MockerFixture,
-    headers_arguments: tuple[str, str],
+    mock_httpx_get: HttpxGetMockFactory,
+    headers_arguments: tuple[str, ...],
     headers_requests: list[tuple[str, str]],
     query_parameters_arguments: tuple[str, ...],
     query_parameters_requests: list[tuple[str, str]],
@@ -2400,17 +2238,8 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
         f"{base_url}definitions/drink/tea.json": "definitions/drink/tea.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
     output_file: Path = tmp_path / "output.py"
     extra_args = [
@@ -2434,76 +2263,15 @@ def test_main_http_jsonschema_with_http_headers_and_http_query_parameters_and_ig
             "#   filename:  person.json",
         ),
     )
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                "https://example.com/external_files_in_directory/person.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/pet/pet.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/relative/animal/fur.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/friends.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/food.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/machine/robot.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/coffee.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-            call(
-                "https://example.com/external_files_in_directory/definitions/drink/tea.json",
-                headers=headers_requests,
-                verify=bool(not http_ignore_tls),
-                follow_redirects=True,
-                params=query_parameters_requests,
-                timeout=30.0,
-            ),
-        ],
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=list(url_to_path),
         any_order=True,
+        headers=headers_requests,
+        params=query_parameters_requests,
+        verify=bool(not http_ignore_tls),
+        call_count=8,
     )
-    assert httpx_get_mock.call_count == 8
 
 
 def test_main_self_reference(output_file: Path) -> None:
@@ -3304,6 +3072,7 @@ def test_long_description_wrap_string_literal(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_version(capsys: pytest.CaptureFixture) -> None:
     """Test version output."""
     with pytest.raises(SystemExit) as e:
@@ -5178,6 +4947,72 @@ def test_all_of_use_default(output_file: Path) -> None:
     )
 
 
+def test_allof_required_use_default(output_file: Path) -> None:
+    """Test allOf with required fields and --use-default renders defaults without nullable types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default"],
+    )
+
+
+def test_allof_inherited_required_use_default(output_file: Path) -> None:
+    """Test allOf required override preserves inherited defaults with --use-default."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_inherited_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default"],
+    )
+
+
+def test_force_optional_required(output_file: Path) -> None:
+    """Test --force-optional makes required fields optional."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "force_optional_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--force-optional"],
+    )
+
+
+def test_use_default_msgspec_field_ordering(output_file: Path) -> None:
+    """Required fields with defaults must sort after required fields without for msgspec.Struct."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_required_use_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--output-model-type", "msgspec.Struct"],
+    )
+
+
+def test_use_default_required_null_default(output_file: Path) -> None:
+    """Required nullable field with default null must not break dataclass field ordering."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_default_required_null_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--output-model-type", "dataclasses.dataclass"],
+    )
+
+
+def test_use_default_strict_nullable_required(output_file: Path) -> None:
+    """Required nullable field with default must render the default, not Field(...), under --strict-nullable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_default_strict_nullable_required.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=["--use-default", "--strict-nullable", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 def test_main_root_one_of(output_dir: Path) -> None:
     """Test root-level oneOf schemas."""
     run_main_and_assert(
@@ -6732,7 +6567,7 @@ def test_main_jsonschema_type_mappings_to_boolean(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None:
+def test_main_jsonschema_type_mappings_invalid_format(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --type-mappings option with invalid format raises error."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "type_mappings.json",
@@ -6746,6 +6581,7 @@ def test_main_jsonschema_type_mappings_invalid_format(output_file: Path) -> None
             "invalid_without_equals",
         ],
         expected_stderr_contains="Invalid type mapping format",
+        capsys=capsys,
     )
 
 
@@ -7523,18 +7359,11 @@ def test_main_bundled_schema_with_id_local_file(output_file: Path) -> None:
 
 @pytest.mark.benchmark
 @LEGACY_BLACK_SKIP
-def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_bundled_schema_with_id_url(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test bundled schema with $id using URL input produces same output as local file."""
     schema_path = JSON_SCHEMA_DATA_PATH / "bundled_schema_with_id.json"
-
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = schema_path.read_text()
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        return_value=mock_response,
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse("https://cdn.example.com/schemas/bundled_schema_with_id.json", schema_path)
     )
 
     run_main_url_and_assert(
@@ -7553,13 +7382,10 @@ def test_main_bundled_schema_with_id_url(mocker: MockerFixture, output_file: Pat
         ),
     )
 
-    httpx_get_mock.assert_called_once_with(
-        "https://cdn.example.com/schemas/bundled_schema_with_id.json",
-        headers=None,
-        verify=True,
-        follow_redirects=True,
-        params=None,
-        timeout=30.0,
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_url="https://cdn.example.com/schemas/bundled_schema_with_id.json",
+        call_count=1,
     )
 
 
@@ -9020,24 +8846,21 @@ def test_field_validators_with_no_field_skipped(output_file: Path, tmp_path: Pat
     }"""
     )
 
-    result = run_main_with_args([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--validators",
-        str(config_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-    ])
-
-    assert result == Exit.OK
-    content = output_file.read_text(encoding="utf-8")
-    assert "validate_name_validator" in content
-    assert "validate_something" not in content
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_with_no_field_skipped.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
 
 
 def test_field_validators_plain_mode(output_file: Path, tmp_path: Path) -> None:
@@ -9083,24 +8906,21 @@ def test_field_validators_all_skipped(output_file: Path, tmp_path: Path) -> None
     }"""
     )
 
-    result = run_main_with_args([
-        "--input",
-        str(JSON_SCHEMA_DATA_PATH / "field_validators.json"),
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--validators",
-        str(config_file),
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--disable-timestamp",
-    ])
-
-    assert result == Exit.OK
-    content = output_file.read_text(encoding="utf-8")
-    assert "@field_validator" not in content
-    assert "validate_something" not in content
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="field_validators_all_skipped.py",
+        extra_args=[
+            "--validators",
+            str(config_file),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--disable-timestamp",
+        ],
+        skip_code_validation=True,
+    )
 
 
 def test_validators_invalid_json(output_file: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -9268,7 +9088,7 @@ def test_main_circular_ref_external_relative_keywords(output_file: Path) -> None
 
 
 @pytest.mark.benchmark
-def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_circular_ref_external_url_keywords(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test circular external refs with relative paths and schema keywords via URL input."""
     external_directory = JSON_SCHEMA_DATA_PATH / "circular_ref_external_relative_keywords"
     base_url = "https://example.com/circular_ref_external_relative_keywords/"
@@ -9279,17 +9099,8 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         f"{base_url}defs/nested/child.json": "defs/nested/child.json",
     }
 
-    def get_mock_response(url: str, **_: object) -> mocker.Mock:
-        path = url_to_path.get(url)
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (external_directory / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=get_mock_response,
+    httpx_get_mock = mock_httpx_get(
+        *(MockHttpxResponse(url, external_directory / path) for url, path in url_to_path.items())
     )
 
     run_main_url_and_assert(
@@ -9304,36 +9115,7 @@ def test_main_circular_ref_external_url_keywords(mocker: MockerFixture, output_f
         ),
     )
 
-    httpx_get_mock.assert_has_calls(
-        [
-            call(
-                f"{base_url}root.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                f"{base_url}defs/context.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-            call(
-                f"{base_url}defs/nested/child.json",
-                headers=None,
-                verify=True,
-                follow_redirects=True,
-                params=None,
-                timeout=30.0,
-            ),
-        ],
-        any_order=True,
-    )
-    assert httpx_get_mock.call_count == 3
+    assert_httpx_get_kwargs(httpx_get_mock, expected_urls=list(url_to_path), any_order=True, call_count=3)
 
 
 @pytest.mark.benchmark

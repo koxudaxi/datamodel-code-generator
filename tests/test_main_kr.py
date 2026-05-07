@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from argparse import Namespace
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import Mock, patch
 
 import black
 import pydantic
@@ -13,13 +11,18 @@ import pytest
 from packaging import version
 
 from datamodel_code_generator import MIN_VERSION, chdir, inferred_message
-from datamodel_code_generator.__main__ import Exit, main
+from datamodel_code_generator.__main__ import Exit
 from datamodel_code_generator.arguments import arg_parser
-from tests.conftest import assert_error_message, create_assert_file_content, freeze_time
-from tests.main.conftest import run_main_and_assert, run_main_with_args
-
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_error_message,
+    assert_httpx_get_kwargs,
+    assert_output,
+    create_assert_file_content,
+    freeze_time,
+)
+from tests.main.conftest import run_main_and_assert, run_main_url_and_assert, run_main_with_args
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 OPEN_API_DATA_PATH: Path = DATA_PATH / "openapi"
@@ -101,12 +104,15 @@ def test_main_modular(output_dir: Path) -> None:
         )
 
 
+@freeze_time(TIMESTAMP)
 def test_main_modular_no_file(capsys: pytest.CaptureFixture[str]) -> None:
     """Test main function on modular file with no output name outputs to stdout."""
-    run_main_with_args(["--input", str(OPEN_API_DATA_PATH / "modular.yaml")], expected_exit=Exit.OK)
-    captured = capsys.readouterr()
-    assert "class Chocolate" in captured.out
-    assert "class Source" in captured.out
+    run_main_with_args(
+        ["--input", str(OPEN_API_DATA_PATH / "modular.yaml")],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "main_modular_no_file" / "output.py",
+    )
 
 
 def test_main_modular_filename(output_file: Path) -> None:
@@ -1008,14 +1014,12 @@ target-python-version = "3.10"
     output_file = tmp_path / "output.py"
 
     with chdir(tmp_path):
-        return_code = run_main_with_args(
+        run_main_with_args(
             ["--input", str(input_file), "--output", str(output_file), "--profile", "nonexistent"],
             expected_exit=Exit.ERROR,
             capsys=capsys,
         )
-        assert return_code == Exit.ERROR
-        captured = capsys.readouterr()
-        assert "Profile 'nonexistent' not found in pyproject.toml" in captured.err
+        assert_error_message(capsys, "Profile 'nonexistent' not found in pyproject.toml")
 
 
 @freeze_time("2019-07-26")
@@ -1104,22 +1108,13 @@ target-python-version = "3.11"
         run_main_with_args(
             ["--profile", "api", "--generate-cli-command"],
             capsys=capsys,
+            expected_stdout_path=EXPECTED_GENERATE_CLI_COMMAND_PATH / "with_profile.txt",
         )
-        captured = capsys.readouterr()
-        # Profile value should override base
-        assert "--target-python-version 3.11" in captured.out
-        # Base value should be inherited
-        assert "--snake-case-field" in captured.out
-        # Profile-specific value (no quotes when no spaces in value)
-        assert "--input api.yaml" in captured.out
 
 
 def test_help_shows_new_options() -> None:
     """Test that --profile and --ignore-pyproject appear in help."""
-    help_text = arg_parser.format_help()
-    assert "--profile" in help_text
-    assert "--ignore-pyproject" in help_text
-    assert "pyproject.toml" in help_text
+    assert_output(arg_parser.format_help(), EXPECTED_MAIN_KR_PATH / "help_shows_new_options.txt")
 
 
 @pytest.mark.skipif(
@@ -1243,9 +1238,7 @@ target-python-version = "3.11"
                 "--disable-timestamp",
             ],
         )
-        output_content = output_file.read_text()
-        assert "firstName" in output_content
-        assert "first_name" not in output_content
+        assert_file_content(output_file, EXPECTED_PYPROJECT_PROFILE_PATH / "ignore_pyproject_with_profile.py")
 
 
 def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -1255,14 +1248,12 @@ def test_profile_without_pyproject_errors(tmp_path: Path, capsys: pytest.Capture
     output_file = tmp_path / "output.py"
 
     with chdir(tmp_path):
-        return_code = run_main_with_args(
+        run_main_with_args(
             ["--input", str(input_file), "--output", str(output_file), "--profile", "api"],
             expected_exit=Exit.ERROR,
             capsys=capsys,
         )
-        assert return_code == Exit.ERROR
-        captured = capsys.readouterr()
-        assert "no [tool.datamodel-codegen] section found" in captured.err.lower()
+        assert_error_message(capsys, "no [tool.datamodel-codegen] section found")
 
 
 @freeze_time("2019-07-26")
@@ -1523,7 +1514,7 @@ Format: `HeaderName:HeaderValue`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None:
+def test_url_with_http_headers(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Fetch schema from URL with custom HTTP headers.
 
     The `--url` flag specifies a remote URL to fetch the schema from instead of
@@ -1531,25 +1522,67 @@ def test_url_with_http_headers(mocker: MockerFixture, output_file: Path) -> None
     useful for authentication (e.g., Bearer tokens) or custom API requirements.
     Format: `HeaderName:HeaderValue`.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
 
-    mocker.patch("httpx.get", return_value=mock_response)
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py",
+        extra_args=["--http-headers", "Authorization:Bearer token"],
+    )
+    assert_httpx_get_kwargs(mock_get, headers=[("Authorization", "Bearer token")])
 
-    return_code = main([
+
+@pytest.mark.cli_doc(
+    options=["--http-local-ref-path"],
+    option_description="""Resolve HTTP references from local schema files.
+
+The `--http-local-ref-path` flag maps HTTP(S) `$ref` URLs to files under
+a local schema store instead of fetching them from the network. The host and
+URL path are used as the relative path under the schema store. For example,
+`https://api.example.com/schemas/pet.json` is read from
+`schemas/api.example.com/schemas/pet.json`.""",
+    input_schema="jsonschema/http_local_ref_path_root.json",
+    cli_args=[
         "--url",
         "https://api.example.com/schema.json",
-        "--output",
-        str(output_file),
-        "--input-file-type",
-        "jsonschema",
-        "--http-headers",
-        "Authorization:Bearer token",
-    ])
-    assert return_code == 0
-    assert_file_content(output_file, EXPECTED_MAIN_KR_PATH / "url_with_headers" / "output.py")
+        "--http-local-ref-path",
+        "schemas",
+    ],
+    golden_output="main_kr/http_local_ref_path/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_local_ref_path_cli_doc(mock_httpx_get: HttpxGetMockFactory, output_file: Path, tmp_path: Path) -> None:
+    """Resolve HTTP references from local schema files.
+
+    The `--http-local-ref-path` flag maps HTTP(S) `$ref` URLs to files under
+    a local schema store instead of fetching them from the network. The host and
+    URL path are used as the relative path under the schema store.
+    """
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "api.example.com" / "schemas" / "pet.json"
+    local_schema.parent.mkdir(parents=True)
+    local_schema.write_text((JSON_SCHEMA_DATA_PATH / "pet_simple.json").read_text(), encoding="utf-8")
+    mock_get = mock_httpx_get(
+        MockHttpxResponse(
+            "https://api.example.com/schema.json",
+            JSON_SCHEMA_DATA_PATH / "http_local_ref_path_root.json",
+        )
+    )
+
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "http_local_ref_path" / "output.py",
+        extra_args=["--http-local-ref-path", str(schema_store)],
+    )
+    assert_httpx_get_kwargs(mock_get)
 
 
 @pytest.mark.cli_doc(
@@ -1720,33 +1753,25 @@ environments with self-signed certificates. Not recommended for production.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_ignore_tls(output_file: Path) -> None:
+def test_http_ignore_tls(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Disable TLS certificate verification for HTTPS requests.
 
     The `--http-ignore-tls` flag disables SSL/TLS certificate verification
     when fetching schemas from HTTPS URLs. This is useful for development
     environments with self-signed certificates. Not recommended for production.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-ignore-tls",
-        ])
-        assert return_code == 0
-        # Verify that verify=False was passed to httpx.get
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert call_kwargs.get("verify") is False
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-ignore-tls"],
+    )
+    assert_httpx_get_kwargs(mock_get, verify=False)
 
 
 @pytest.mark.cli_doc(
@@ -1762,7 +1787,7 @@ specified: `--http-query-parameters version=v2 format=json`.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_query_parameters(output_file: Path) -> None:
+def test_http_query_parameters(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Add query parameters to HTTP requests for remote schemas.
 
     The `--http-query-parameters` flag adds query parameters to HTTP requests
@@ -1770,32 +1795,18 @@ def test_http_query_parameters(output_file: Path) -> None:
     or format parameters. Format: `key=value`. Multiple parameters can be
     specified: `--http-query-parameters version=v2 format=json`.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-query-parameters",
-            "version=v2",
-            "format=json",
-        ])
-        assert return_code == 0
-        # Verify query parameters were passed as list of tuples
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert "params" in call_kwargs
-        # params is a list of tuples: [("version", "v2"), ("format", "json")]
-        params = call_kwargs["params"]
-        assert ("version", "v2") in params
-        assert ("format", "json") in params
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-query-parameters", "version=v2", "format=json"],
+    )
+    assert_httpx_get_kwargs(mock_get, params_contains={"version": "v2", "format": "json"})
 
 
 @pytest.mark.cli_doc(
@@ -1810,34 +1821,25 @@ Default is 30 seconds.""",
     golden_output="main_kr/url_with_headers/output.py",
 )
 @freeze_time("2019-07-26")
-def test_http_timeout(output_file: Path) -> None:
+def test_http_timeout(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Set timeout for HTTP requests to remote hosts.
 
     The `--http-timeout` flag sets the timeout in seconds for HTTP requests
     when fetching schemas from URLs. Useful for slow servers or large schemas.
     Default is 30 seconds.
     """
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = JSON_SCHEMA_DATA_PATH.joinpath("pet_simple.json").read_text()
-
-    with patch("httpx.get", return_value=mock_response) as mock_get:
-        return_code = main([
-            "--url",
-            "https://api.example.com/schema.json",
-            "--output",
-            str(output_file),
-            "--input-file-type",
-            "jsonschema",
-            "--http-timeout",
-            "60",
-        ])
-        assert return_code == 0
-        # Verify that timeout=60 was passed to httpx.get
-        mock_get.assert_called_once()
-        call_kwargs = mock_get.call_args[1]
-        assert call_kwargs.get("timeout") == 60.0
+    mock_get = mock_httpx_get(
+        MockHttpxResponse("https://api.example.com/schema.json", JSON_SCHEMA_DATA_PATH / "pet_simple.json")
+    )
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="url_with_headers/output.py",
+        extra_args=["--http-timeout", "60"],
+    )
+    assert_httpx_get_kwargs(mock_get, timeout=60.0)
 
 
 @pytest.mark.cli_doc(
@@ -2062,64 +2064,56 @@ def test_generate_prompt_basic(capsys: pytest.CaptureFixture[str]) -> None:
     This prompt can be copied to ChatGPT, Claude, or other LLMs to get
     recommendations for appropriate CLI options.
     """
-    return_code = main(["--generate-prompt"])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify structure
-    assert "# datamodel-code-generator CLI Options Consultation" in captured.out
-    assert "## Current CLI Options" in captured.out
-    assert "## Options by Category" in captured.out
-    assert "## All Available Options (Full Help)" in captured.out
-    assert "## Instructions" in captured.out
-    assert "(No options specified)" in captured.out
+    run_main_with_args(
+        ["--generate-prompt"],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "basic.txt",
+    )
 
 
 def test_generate_prompt_with_question(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with a question argument."""
     question = "How do I convert enums to Literal types?"
-    return_code = main(["--generate-prompt", question])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    assert "## Your Question" in captured.out
-    assert question in captured.out
+    run_main_with_args(
+        ["--generate-prompt", question],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_question.txt",
+    )
 
 
 def test_generate_prompt_with_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with other CLI options set."""
-    return_code = main([
-        "--input",
-        "schema.json",
-        "--output-model-type",
-        "pydantic_v2.BaseModel",
-        "--snake-case-field",
-        "--generate-prompt",
-        "What other options should I use?",
-    ])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify options are shown
-    assert "--input schema.json" in captured.out
-    assert "--output-model-type pydantic_v2.BaseModel" in captured.out
-    assert "--snake-case-field" in captured.out
-    assert "What other options should I use?" in captured.out
+    run_main_with_args(
+        [
+            "--input",
+            "schema.json",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--snake-case-field",
+            "--generate-prompt",
+            "What other options should I use?",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_options.txt",
+    )
 
 
 def test_generate_prompt_with_list_options(capsys: pytest.CaptureFixture[str]) -> None:
     """Test --generate-prompt with list options (e.g., --strict-types)."""
-    return_code = main([
-        "--strict-types",
-        "str",
-        "int",
-        "--generate-prompt",
-    ])
-    assert return_code == Exit.OK
-    captured = capsys.readouterr()
-
-    # Verify list options are formatted correctly
-    assert "--strict-types str int" in captured.out
+    run_main_with_args(
+        [
+            "--strict-types",
+            "str",
+            "int",
+            "--generate-prompt",
+        ],
+        expected_exit=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_KR_PATH / "generate_prompt" / "with_list_options.txt",
+    )
 
 
 @freeze_time("2019-07-26")

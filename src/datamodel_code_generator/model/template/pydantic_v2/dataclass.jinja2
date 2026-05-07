@@ -25,9 +25,7 @@ class {{ class_name }}({{ base_class }}):
 class {{ class_name }}:
 {%- endif %}
 {%- if description %}
-    """
-    {{ description | escape_docstring | indent(4) }}
-    """
+    {{ description }}
 {%- endif %}
 {%- if not fields and not description %}
     pass
@@ -41,14 +39,12 @@ class {{ class_name }}:
     {%- else %}
     {{ field.name }}: {{ field.type_hint }}
     {%- endif %}
-    {%- if not field.has_default_factory_in_field and not field.required and (field.represented_default != 'None' or not field.strip_default_none or field.data_type.is_optional)
+    {%- if not field.has_default_factory_in_field and (not field.required or field.use_default_with_required) and (field.represented_default != 'None' or not field.strip_default_none or field.data_type.is_optional)
             %} = {{ field.represented_default }}
     {%- endif -%}
     {%- endif %}
     {%- if field.docstring %}
-    """
-    {{ field.docstring | escape_docstring | indent(4) }}
-    """
+    {{ field.docstring }}
 {%- if field.use_inline_field_description and not loop.last %}
 
 {% endif %}

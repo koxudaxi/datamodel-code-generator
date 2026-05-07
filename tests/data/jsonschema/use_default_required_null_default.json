@@ -1,0 +1,10 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "Container",
+    "type": "object",
+    "properties": {
+        "a": {"type": ["string", "null"], "default": null},
+        "b": {"type": "integer"}
+    },
+    "required": ["a", "b"]
+}

@@ -1003,6 +1003,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_field_description: bool = config.use_field_description
         self.use_field_description_example: bool = config.use_field_description_example
         self.use_inline_field_description: bool = config.use_inline_field_description
+        self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
@@ -1086,6 +1087,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+        if config.use_single_line_docstring:
+            self.extra_template_data[ALL_MODEL]["use_single_line_docstring"] = True
 
         if config.target_pydantic_version:
             if config.use_generic_base_class:
@@ -1122,6 +1125,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
+        self.http_local_ref_path: Path | None = config.http_local_ref_path
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
         self.http_ignore_tls: bool = config.http_ignore_tls
         self.http_timeout: float | None = config.http_timeout
@@ -1636,6 +1640,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         if discriminator_value is not None:
                             discriminator_values = [discriminator_value]
                             break
+                    # Reuse models are created as empty subclasses with a "/reuse" path suffix.
+                    # Scan inherited fields to recover the discriminator literal from the base.
+                    if not discriminator_values and discriminator_model.path.endswith("/reuse"):
+                        for discriminator_field in discriminator_model.iter_all_fields():  # pragma: no branch
+                            if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                                continue
+                            discriminator_value = get_discriminator_field_value(discriminator_field)
+                            if discriminator_value is not None:  # pragma: no branch
+                                discriminator_values = [discriminator_value]
+                                break
 
                     if not discriminator_values and mapping:
                         check_paths(discriminator_model, mapping)  # ty: ignore
@@ -2201,6 +2215,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if isinstance(model, Enum):
                 continue
             for model_field in model.fields:
+                if model_field.required and not model_field.use_default_with_required:
+                    continue
                 if model_field.default is None or model_field.default is UNDEFINED:
                     continue
                 if isinstance(model_field.default, Member):
@@ -2248,6 +2264,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model
                 copied_original_field.required = True
+                if self.apply_default_values_for_required_fields and copied_original_field.has_default:
+                    copied_original_field.use_default_with_required = True
                 model.fields.insert(index, copied_original_field)
                 model.fields.remove(model_field)
 

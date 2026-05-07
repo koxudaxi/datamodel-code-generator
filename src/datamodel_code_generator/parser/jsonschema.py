@@ -16,7 +16,7 @@ from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
-from urllib.parse import ParseResult, unquote
+from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
 from pydantic import (
@@ -746,6 +746,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return _get_type(type_, format_, data_formats)
 
+    def _is_base64_encoded_binary_mapping(self, type_: str, format_: str) -> bool:
+        if type_ != "string" or format_ != "byte" or not self.type_mappings:
+            return False
+        return self.type_mappings.get((type_, format_)) == "binary"
+
     @cached_property
     def schema_paths(self) -> list[tuple[str, list[str]]]:
         """Get schema paths for definitions and defs.
@@ -1202,6 +1207,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         original_field_name: str | None,
         effective_default: Any = None,
         effective_has_default: bool | None = None,
+        use_default_with_required: bool = False,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
         default_value = effective_default if effective_has_default is not None else field.default
@@ -1252,6 +1258,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             use_frozen_field=self.use_frozen_field,
             use_serialization_alias=self.use_serialization_alias,
             use_default_factory_for_optional_nested_models=self.use_default_factory_for_optional_nested_models,
+            use_default_with_required=use_default_with_required,
         )
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
@@ -1290,8 +1297,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else:
                 kwargs_to_pass = obj.model_dump()
 
+            types = self._get_type_with_mappings(type_, format__)
+            if types == Types.binary and self._is_base64_encoded_binary_mapping(type_, format__):
+                kwargs_to_pass["base64_encoded"] = True
+
             return self.data_type_manager.get_data_type(
-                self._get_type_with_mappings(type_, format__),
+                types,
                 field_constraints=self.field_constraints,
                 **kwargs_to_pass,
             )
@@ -2478,22 +2489,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.data_type(reference=base_classes[0])
         if required:
             for field in fields:
-                if self.force_optional_for_required_fields or (  # pragma: no cover
-                    self.apply_default_values_for_required_fields and field.has_default
-                ):
+                if self.force_optional_for_required_fields:  # pragma: no cover
                     continue  # pragma: no cover
                 if (field.original_name or field.name) in required:
                     field.required = True
+                    if self.apply_default_values_for_required_fields and field.has_default:
+                        field.use_default_with_required = True
         if obj.required:
             field_name_to_field = {f.original_name or f.name: f for f in fields}
             for required_ in obj.required:
                 if required_ in field_name_to_field:
                     field = field_name_to_field[required_]
-                    if self.force_optional_for_required_fields or (
-                        self.apply_default_values_for_required_fields and field.has_default
-                    ):
+                    if self.force_optional_for_required_fields:
                         continue
                     field.required = True
+                    if self.apply_default_values_for_required_fields and field.has_default:
+                        field.use_default_with_required = True
                 else:
                     fields.append(
                         self.data_model_field_type(required=True, original_name=required_, data_type=DataType())
@@ -2829,12 +2840,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 class_name=class_name,
             )
 
-            if self.force_optional_for_required_fields or (
-                self.apply_default_values_for_required_fields and effective_has_default
-            ):
+            if self.force_optional_for_required_fields:
                 required: bool = False
             else:
                 required = original_field_name in requires
+            use_default_with_required = (
+                required and self.apply_default_values_for_required_fields and effective_has_default
+            )
             fields.append(
                 self.get_object_field(
                     field_name=field_name,
@@ -2845,6 +2857,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     original_field_name=original_field_name,
                     effective_default=effective_default,
                     effective_has_default=effective_has_default,
+                    use_default_with_required=use_default_with_required,
                 )
             )
         return fields
@@ -3818,7 +3831,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
-            if not resolved_ref.startswith("file://"):
+            if not resolved_ref.startswith("file://") and self.http_local_ref_path is None:
                 if self.allow_remote_refs is False:
                     msg = (
                         f"Fetching remote $ref is disabled: {resolved_ref}\n"
@@ -3838,10 +3851,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
+    def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
+        assert self.http_local_ref_path is not None
+        parsed = urlparse(ref)
+        if parsed.scheme not in {"http", "https"}:  # pragma: no cover
+            msg = f"Unsupported local HTTP $ref URL: {ref}"
+            raise Error(msg)
+
+        parts = [unquote(part) for part in parsed.path.split("/") if part]
+        if not parsed.netloc or any(part in {".", ".."} or "/" in part or "\\" in part for part in parts):
+            msg = f"Unsupported local HTTP $ref URL path: {ref}"
+            raise Error(msg)
+
+        base_path = self.http_local_ref_path.resolve()
+        relative_path = Path(parsed.netloc, *parts)
+        file_paths = [(base_path / relative_path).resolve()]
+        if not parts or not Path(parts[-1]).suffix:
+            file_paths.append((base_path / relative_path.with_name(f"{relative_path.name}.json")).resolve())
+
+        if any(not file_path.is_relative_to(base_path) for file_path in file_paths):
+            msg = f"Unsupported local HTTP $ref URL path: {ref}"
+            raise Error(msg)
+
+        for file_path in file_paths:
+            if file_path.is_file():
+                return self.remote_object_cache.get_or_put(
+                    str(file_path),
+                    default_factory=lambda _, file_path=file_path: load_data_from_path(file_path, self.encoding),
+                )
+
+        msg = f"$ref local file not found for {ref}: tried {', '.join(str(path) for path in file_paths)}"
+        raise Error(msg)
+
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
         if ref.startswith("file://"):
-            from urllib.parse import urlparse  # noqa: PLC0415
             from urllib.request import url2pathname  # noqa: PLC0415
 
             parsed = urlparse(ref)
@@ -3854,6 +3898,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.remote_object_cache.get_or_put(
                 ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
+        if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
+            return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
             ref, default_factory=lambda key: load_data(self._get_text_from_url(key))
         )

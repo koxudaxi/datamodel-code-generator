@@ -11,7 +11,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode
+from datamodel_code_generator import AllOfMergeMode, Error
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
@@ -198,6 +198,145 @@ class Pet(BaseModel):
         params=None,
         timeout=30.0,
     )
+
+
+def test_json_schema_ref_url_from_local_http_path(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test HTTP JSON schema references resolved from a local schema store."""
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "example.com" / "application" / "package" / "element" / "sub-element.json"
+    local_schema.parent.mkdir(parents=True)
+    local_schema.write_text(
+        json.dumps(
+            {
+                "$id": "http://example.com/application/package/element/sub-element",
+                "title": "SubElement",
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                    },
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
+    mock_get = mocker.patch("httpx.get")
+
+    parser.parse_raw_obj(
+        "Model",
+        {
+            "type": "object",
+            "properties": {
+                "sub_element": {
+                    "$ref": "http://example.com/application/package/element/sub-element",
+                },
+            },
+        },
+        ["Model"],
+    )
+
+    assert (
+        dump_templates(list(parser.results))
+        == """class Model(BaseModel):
+    sub_element: Optional[SubElement] = None
+
+
+class SubElement(BaseModel):
+    name: Optional[str] = None"""
+    )
+    mock_get.assert_not_called()
+
+
+def test_json_schema_ref_url_from_local_http_path_with_extension(tmp_path: Path, mocker: MockerFixture) -> None:
+    """Test HTTP JSON schema references with an extension resolved from a local schema store."""
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "example.com" / "application" / "package" / "element" / "sub-element.json"
+    local_schema.parent.mkdir(parents=True)
+    local_schema.write_text(
+        json.dumps(
+            {
+                "title": "SubElement",
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                    },
+                },
+            },
+        ),
+        encoding="utf-8",
+    )
+
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
+    mock_get = mocker.patch("httpx.get")
+
+    assert parser._get_ref_body_from_url("http://example.com/application/package/element/sub-element.json") == {
+        "title": "SubElement",
+        "type": "object",
+        "properties": {
+            "name": {
+                "type": "string",
+            },
+        },
+    }
+    mock_get.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "ref",
+    [
+        "http:///application/package/element/sub-element",
+        "http://example.com/application/package/../sub-element",
+        "http://example.com/..%5C..%5CWindows%5Cwin.ini",
+        "http://example.com/path%2Fwith-slash",
+    ],
+)
+def test_json_schema_ref_url_from_local_http_path_invalid_path(tmp_path: Path, ref: str) -> None:
+    """Test invalid local HTTP JSON schema reference paths are rejected."""
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=tmp_path)
+
+    with pytest.raises(Error, match="Unsupported local HTTP \\$ref URL path"):
+        parser._get_ref_body_from_url(ref)
+
+
+def test_json_schema_ref_url_from_local_http_path_missing_file(tmp_path: Path) -> None:
+    """Test missing local HTTP JSON schema references show the attempted local paths."""
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=tmp_path)
+
+    with pytest.raises(Error, match=r"\$ref local file not found for http://example.com/schema"):
+        parser._get_ref_body_from_url("http://example.com/schema")
+
+
+def test_json_schema_ref_url_from_local_http_path_ignores_non_http_scheme(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    """Test local HTTP path resolution does not handle non-HTTP URL schemes."""
+    parser = JsonSchemaParser("", http_local_ref_path=tmp_path)
+    mocker.patch.object(parser, "_get_text_from_url", return_value='{"type": "object"}')
+    local_http_path = mocker.patch.object(parser, "_get_ref_body_from_local_http_path")
+
+    assert parser._get_ref_body_from_url("ftp://example.com/schema.json") == {"type": "object"}
+    local_http_path.assert_not_called()
+
+
+def test_json_schema_ref_url_from_local_http_path_symlink_escape(tmp_path: Path) -> None:
+    """Test local HTTP JSON schema references cannot escape the schema store through symlinks."""
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "example.com" / "schema.json"
+    local_schema.parent.mkdir(parents=True)
+    outside_schema = tmp_path / "outside.json"
+    outside_schema.write_text('{"type": "object"}', encoding="utf-8")
+    try:
+        local_schema.symlink_to(outside_schema)
+    except OSError as exc:  # pragma: no cover
+        pytest.skip(f"symlink creation is not supported: {exc}")
+
+    parser = JsonSchemaParser("", allow_remote_refs=False, http_local_ref_path=schema_store)
+
+    with pytest.raises(Error, match="Unsupported local HTTP \\$ref URL path"):
+        parser._get_ref_body_from_url("http://example.com/schema.json")
 
 
 @pytest.mark.parametrize(

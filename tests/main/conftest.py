@@ -82,9 +82,13 @@ DEFAULT_FREEZE_TIME = "2019-07-26"
 @pytest.fixture(autouse=True)
 def reset_namespace(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset argument namespace before each test."""
+    from datamodel_code_generator.model.base import _get_environment, _get_template_with_custom_dir
+
     namespace_ = Namespace(no_color=False)
     monkeypatch.setattr("datamodel_code_generator.__main__.namespace", namespace_)
     monkeypatch.setattr("datamodel_code_generator.arguments.namespace", namespace_)
+    _get_environment.cache_clear()
+    _get_template_with_custom_dir.cache_clear()
 
 
 @pytest.fixture(autouse=True)
@@ -132,6 +136,34 @@ def _assert_exit_code(return_code: Exit, expected_exit: Exit, context: str) -> N
     """Assert exit code matches expected value."""
     if return_code != expected_exit:  # pragma: no cover
         pytest.fail(f"Expected exit code {expected_exit!r}, got {return_code!r}\n{context}")
+
+
+def _assert_captured_output(
+    capsys: pytest.CaptureFixture[str] | None,
+    *,
+    expected_stdout_path: Path | None = None,
+    expected_stderr: str | None = None,
+    expected_stderr_contains: str | None = None,
+    assert_no_stderr: bool = False,
+) -> None:
+    if not any((
+        expected_stdout_path is not None,
+        expected_stderr is not None,
+        expected_stderr_contains is not None,
+        assert_no_stderr,
+    )):
+        return
+    if capsys is None:  # pragma: no cover
+        pytest.fail("capsys is required when captured output assertions are set")
+    captured = capsys.readouterr()
+    if expected_stdout_path is not None:
+        assert_output(captured.out, expected_stdout_path)
+    if expected_stderr is not None and captured.err != expected_stderr:  # pragma: no cover
+        pytest.fail(f"Expected stderr:\n{expected_stderr}\n\nActual stderr:\n{captured.err}")
+    if expected_stderr_contains is not None and expected_stderr_contains not in captured.err:  # pragma: no cover
+        pytest.fail(f"Expected stderr to contain: {expected_stderr_contains!r}\n\nActual stderr:\n{captured.err}")
+    if assert_no_stderr and captured.err:  # pragma: no cover
+        pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
 
 
 def _get_valid_cli_options() -> frozenset[str]:
@@ -218,14 +250,20 @@ def run_main_with_args(
     expected_exit: Exit = Exit.OK,
     capsys: pytest.CaptureFixture[str] | None = None,
     expected_stdout_path: Path | None = None,
+    expected_stderr: str | None = None,
+    expected_stderr_contains: str | None = None,
+    assert_no_stderr: bool = False,
 ) -> Exit:
     """Execute main() with custom arguments.
 
     Args:
         args: Command line arguments to pass to main()
         expected_exit: Expected exit code (default: Exit.OK)
-        capsys: pytest capsys fixture for capturing output (required if expected_stdout_path is set)
+        capsys: pytest capsys fixture for capturing output assertions
         expected_stdout_path: Path to file with expected stdout content
+        expected_stderr: Exact expected stderr
+        expected_stderr_contains: Expected stderr substring
+        assert_no_stderr: Assert stderr is empty
 
     Returns:
         Exit code from main()
@@ -233,12 +271,71 @@ def run_main_with_args(
     __tracebackhide__ = True
     return_code = main(list(args))
     _assert_exit_code(return_code, expected_exit, f"Args: {args}")
-    if expected_stdout_path is not None:
-        if capsys is None:  # pragma: no cover
-            pytest.fail("capsys is required when expected_stdout_path is set")
-        captured = capsys.readouterr()
-        assert_output(captured.out, expected_stdout_path)
+    _assert_captured_output(
+        capsys,
+        expected_stdout_path=expected_stdout_path,
+        expected_stderr=expected_stderr,
+        expected_stderr_contains=expected_stderr_contains,
+        assert_no_stderr=assert_no_stderr,
+    )
     return return_code
+
+
+def run_main_with_system_exit(
+    args: Sequence[str],
+    *,
+    expected_code: int | Exit,
+    capsys: pytest.CaptureFixture[str] | None = None,
+    expected_stdout_path: Path | None = None,
+    expected_stderr: str | None = None,
+    expected_stderr_contains: str | None = None,
+    assert_no_stderr: bool = False,
+) -> None:
+    """Execute main() expecting argparse/SystemExit and assert captured output."""
+    __tracebackhide__ = True
+    with pytest.raises(SystemExit) as exc_info:
+        main(list(args))
+    if exc_info.value.code != expected_code:  # pragma: no cover
+        pytest.fail(f"Expected SystemExit code {expected_code!r}, got {exc_info.value.code!r}\nArgs: {args}")
+    _assert_captured_output(
+        capsys,
+        expected_stdout_path=expected_stdout_path,
+        expected_stderr=expected_stderr,
+        expected_stderr_contains=expected_stderr_contains,
+        assert_no_stderr=assert_no_stderr,
+    )
+
+
+def assert_watchfiles_module(result: object) -> None:
+    """Assert watchfiles dependency resolution returned a usable module."""
+    __tracebackhide__ = True
+    if result is None or not hasattr(result, "watch"):  # pragma: no cover
+        pytest.fail("Expected watchfiles module with a watch attribute")
+
+
+def assert_watch_called(
+    mock_watchfiles: Any,
+    *,
+    debounce: int | None = None,
+    recursive: bool | None = None,
+) -> None:
+    """Assert watchfiles.watch was called with expected options."""
+    __tracebackhide__ = True
+    mock_watchfiles.watch.assert_called_once()
+    call_kwargs = mock_watchfiles.watch.call_args.kwargs
+    if debounce is not None and call_kwargs.get("debounce") != debounce:  # pragma: no cover
+        pytest.fail(f"Expected watch debounce {debounce!r}, got {call_kwargs.get('debounce')!r}")
+    if recursive is not None and call_kwargs.get("recursive") is not recursive:  # pragma: no cover
+        pytest.fail(f"Expected watch recursive {recursive!r}, got {call_kwargs.get('recursive')!r}")
+
+
+def run_watch_and_assert(config: Any, *, expected_exit: Exit = Exit.OK) -> None:
+    """Run watch mode with the standard no-op callback arguments and assert its exit code."""
+    __tracebackhide__ = True
+    from datamodel_code_generator.watch import watch_and_regenerate
+
+    return_code = watch_and_regenerate(config, None, None, None)
+    _assert_exit_code(return_code, expected_exit, f"Watch config: {config!r}")
 
 
 def run_generate_file_and_assert(
@@ -369,6 +466,7 @@ def run_main_and_assert(  # noqa: PLR0912
     if stdin_path is not None:
         if monkeypatch is None:  # pragma: no cover
             pytest.fail("monkeypatch is required when using stdin_path")
+        _copy_files(copy_files)
         monkeypatch.setattr("sys.stdin", stdin_path.open(encoding="utf-8"))
         args: list[str] = []
         _extend_args(args, output_path=output_path, input_file_type=input_file_type, extra_args=extra_args)
@@ -388,22 +486,13 @@ def run_main_and_assert(  # noqa: PLR0912
 
     _assert_exit_code(return_code, expected_exit, f"Input: {input_path}")
 
-    # Handle capture assertions
-    if capsys is not None and (
-        expected_stdout_path is not None
-        or expected_stderr is not None
-        or expected_stderr_contains is not None
-        or assert_no_stderr
-    ):
-        captured = capsys.readouterr()
-        if expected_stdout_path is not None:
-            assert_output(captured.out, expected_stdout_path)
-        if expected_stderr is not None and captured.err != expected_stderr:  # pragma: no cover
-            pytest.fail(f"Expected stderr:\n{expected_stderr}\n\nActual stderr:\n{captured.err}")
-        if expected_stderr_contains is not None and expected_stderr_contains not in captured.err:  # pragma: no cover
-            pytest.fail(f"Expected stderr to contain: {expected_stderr_contains!r}\n\nActual stderr:\n{captured.err}")
-        if assert_no_stderr and captured.err:  # pragma: no cover
-            pytest.fail(f"Expected no stderr, but got:\n{captured.err}")
+    _assert_captured_output(
+        capsys,
+        expected_stdout_path=expected_stdout_path,
+        expected_stderr=expected_stderr,
+        expected_stderr_contains=expected_stderr_contains,
+        assert_no_stderr=assert_no_stderr,
+    )
 
     # Skip output verification if expected_exit is not OK
     if expected_exit != Exit.OK:

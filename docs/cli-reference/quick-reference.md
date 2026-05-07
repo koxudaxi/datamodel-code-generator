@@ -88,6 +88,7 @@ datamodel-codegen [OPTIONS]
 | [`--use-inline-field-description`](field-customization.md#use-inline-field-description) | Add field descriptions as inline comments. |
 | [`--use-schema-description`](field-customization.md#use-schema-description) | Use schema description as class docstring. |
 | [`--use-serialization-alias`](field-customization.md#use-serialization-alias) | Use serialization_alias instead of alias for field aliasing (Pydantic v2 only). |
+| [`--use-single-line-docstring`](field-customization.md#use-single-line-docstring) | Emit short docstrings on a single line. |
 | [`--use-title-as-name`](field-customization.md#use-title-as-name) | Use schema title as the generated class name. |
 
 ### 🏗️ Model Customization
@@ -191,6 +192,7 @@ datamodel-codegen [OPTIONS]
 | [`--generate-pyproject-config`](general-options.md#generate-pyproject-config) | Generate pyproject.toml configuration from CLI arguments. |
 | [`--http-headers`](general-options.md#http-headers) | Fetch schema from URL with custom HTTP headers. |
 | [`--http-ignore-tls`](general-options.md#http-ignore-tls) | Disable TLS certificate verification for HTTPS requests. |
+| [`--http-local-ref-path`](general-options.md#http-local-ref-path) | Resolve HTTP references from local schema files. |
 | [`--http-query-parameters`](general-options.md#http-query-parameters) | Add query parameters to HTTP requests for remote schemas. |
 | [`--http-timeout`](general-options.md#http-timeout) | Set timeout for HTTP requests to remote hosts. |
 | [`--ignore-pyproject`](general-options.md#ignore-pyproject) | Ignore pyproject.toml configuration file. |
@@ -275,6 +277,7 @@ All options sorted alphabetically:
 - [`--help`](utility-options.md#help) - Show help message and exit
 - [`--http-headers`](general-options.md#http-headers) - Fetch schema from URL with custom HTTP headers.
 - [`--http-ignore-tls`](general-options.md#http-ignore-tls) - Disable TLS certificate verification for HTTPS requests.
+- [`--http-local-ref-path`](general-options.md#http-local-ref-path) - Resolve HTTP references from local schema files.
 - [`--http-query-parameters`](general-options.md#http-query-parameters) - Add query parameters to HTTP requests for remote schemas.
 - [`--http-timeout`](general-options.md#http-timeout) - Set timeout for HTTP requests to remote hosts.
 - [`--ignore-enum-constraints`](typing-customization.md#ignore-enum-constraints) - Ignore enum constraints and use base string type instead of ...
@@ -352,6 +355,7 @@ All options sorted alphabetically:
 - [`--use-schema-description`](field-customization.md#use-schema-description) - Use schema description as class docstring.
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias) - Use serialization_alias instead of alias for field aliasing ...
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any) - Wrap fields with subtypes in Pydantic's SerializeAsAny.
+- [`--use-single-line-docstring`](field-customization.md#use-single-line-docstring) - Emit short docstrings on a single line.
 - [`--use-specialized-enum`](typing-customization.md#use-specialized-enum) - Generate StrEnum/IntEnum for string/integer enums (Python 3....
 - [`--use-standard-collections`](typing-customization.md#use-standard-collections) - Use built-in dict/list instead of typing.Dict/List.
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types) - Use Python standard library types for string formats instead...

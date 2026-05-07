@@ -66,6 +66,68 @@ def escape_docstring(value: str | None) -> str | None:
     return value.replace("\\", "\\\\").replace('"""', '\\"\\"\\"')
 
 
+def _ends_with_unescaped_quote(value: str) -> bool:
+    """Return whether *value* ends with a double quote that is not escaped."""
+    if not value.endswith('"'):
+        return False
+
+    backslash_count = 0
+    for char in reversed(value[:-1]):
+        if char != "\\":
+            break
+        backslash_count += 1
+    return backslash_count % 2 == 0
+
+
+def format_docstring(value: str | None, indent_spaces: int = 0, *, use_single_line_docstring: bool = False) -> str:
+    """Format *value* as a docstring as per PEP 257.
+
+    PEP 257 recommends that docstrings that can fit on one line should be formatted on a
+    single line, for consistency and readability. When use_single_line_docstring is
+    false, docstrings retain the historical multi-line formatting. It is assumed that
+    the opening triple-quotes are indented appropriately in the template. If it's a
+    multi-line docstring, each line including the closing triple-quotes will be indented
+    as per indent_spaces.
+
+    Args:
+        value: docstring text
+        indent_spaces: Spaces to indent for all lines after the opening triple-quotes
+        use_single_line_docstring: Use one-line docstrings when possible
+
+    Returns:
+        Empty string when `value` is falsy; otherwise the docstring block.
+    """
+    if value is None or not value.strip():
+        return ""
+
+    escaped = escape_docstring(value) or ""
+
+    if use_single_line_docstring and "\n" not in value and "\r" not in value:
+        if _ends_with_unescaped_quote(escaped):
+            escaped = f'{escaped[:-1]}\\"'
+
+        return f'"""{escaped}"""'
+
+    indent = max(indent_spaces, 0) * " "
+    if indent:
+        escaped = "\n".join(f"{indent}{line}" if line else "" for line in escaped.split("\n"))
+        return f'"""\n{escaped}\n{indent}"""'
+    return f'"""\n{escaped}\n"""'
+
+
+class _RenderedDataModelField:
+    """Proxy a field with a pre-rendered docstring for built-in templates."""
+
+    __slots__ = ("_field", "docstring")
+
+    def __init__(self, field: DataModelFieldBase, docstring: str) -> None:
+        self._field = field
+        self.docstring = docstring
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._field, name)
+
+
 ALL_MODEL: str = "#all#"
 GENERIC_BASE_CLASS_PATH: str = "#/__datamodel_code_generator__/generic_base_class__"
 GENERIC_BASE_CLASS_NAME: str = "__generic_base_class__"
@@ -173,6 +235,7 @@ class DataModelFieldBase(_BaseModel):
     use_frozen_field: bool = False
     use_serialization_alias: bool = False
     use_default_factory_for_optional_nested_models: bool = False
+    use_default_with_required: bool = False
 
     if not TYPE_CHECKING:  # pragma: no branch
 
@@ -357,6 +420,7 @@ class DataModelFieldBase(_BaseModel):
             if description is not None and "\n" not in description:
                 escaped = escape_docstring(description)
                 return f'"""{escaped}"""'
+
         return None
 
     @property
@@ -452,7 +516,8 @@ def _get_environment(template_subdir: Path, custom_template_dir: Path | None) ->
         loader=loader,
         autoescape=select_autoescape(["html", "xml"]),
     )
-    env.filters["escape_docstring"] = escape_docstring
+    env.filters["escape_docstring"] = escape_docstring  # For old custom templates
+    env.filters["format_docstring"] = format_docstring
     return env
 
 
@@ -485,7 +550,8 @@ def _get_environment_with_absolute_path(absolute_template_dir: Path, builtin_sub
         loader=ChoiceLoader(loaders),
         autoescape=select_autoescape(["html", "xml"]),
     )
-    env.filters["escape_docstring"] = escape_docstring
+    env.filters["escape_docstring"] = escape_docstring  # For old custom templates
+    env.filters["format_docstring"] = format_docstring
     return env
 
 
@@ -597,6 +663,9 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
     SUPPORTS_FIELD_RENAMING: ClassVar[bool] = False
     SUPPORTS_KW_ONLY: ClassVar[bool] = False
     REQUIRES_RUNTIME_IMPORTS_WITH_RUFF_CHECK: ClassVar[bool] = False
+    DOCSTRING_INDENT: ClassVar[int] = 4
+    FIELD_DOCSTRING_INDENT: ClassVar[int] = 4
+    FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = True
     has_forward_reference: bool = False
 
     def __init__(  # noqa: PLR0913
@@ -901,17 +970,45 @@ class DataModel(TemplateBase, Nullable, ABC):  # noqa: PLR0904
 
     def render(self, *, class_name: str | None = None) -> str:
         """Render the model to a string using the template."""
+        use_custom_template = self.template_file_path.is_absolute()
         return self._render(
             class_name=class_name or self.class_name,
-            fields=self.fields,
+            fields=self.fields if use_custom_template else self.rendered_fields,
             decorators=self.decorators,
             base_class=self.base_class,
             methods=self.methods,
-            description=self.description,
+            description=self.description
+            if use_custom_template or not self.FORMAT_DESCRIPTION_AS_DOCSTRING
+            else self.rendered_description,
             dataclass_arguments=self.dataclass_arguments,
             path=self.path,
             **self.extra_template_data,
         )
+
+    @property
+    def use_single_line_docstring(self) -> bool:
+        """Whether single-line docstring formatting is enabled for this model."""
+        return bool(self.extra_template_data.get("use_single_line_docstring"))
+
+    def _format_docstring(self, value: str | None, indent_spaces: int) -> str:
+        return format_docstring(
+            value,
+            indent_spaces,
+            use_single_line_docstring=self.use_single_line_docstring,
+        )
+
+    @property
+    def rendered_description(self) -> str:
+        """Return the model description as a generated docstring literal."""
+        return self._format_docstring(self.description, self.DOCSTRING_INDENT)
+
+    @property
+    def rendered_fields(self) -> list[DataModelFieldBase | _RenderedDataModelField]:
+        """Return fields with docstrings prepared for built-in templates."""
+        return [
+            _RenderedDataModelField(field, self._format_docstring(field.docstring, self.FIELD_DOCSTRING_INDENT))
+            for field in self.fields
+        ]
 
 
 _rebuild_namespace = {"Union": Union, "DataModelFieldBase": DataModelFieldBase, "DataType": DataType}

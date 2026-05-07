@@ -8,7 +8,7 @@ from pydantic import AnyUrl, BaseModel, Field, RootModel
 
 
 class Pet(BaseModel):
-    id: int | None = 1
+    id: int = 1
     name: str
     tag: str | None = None
 
