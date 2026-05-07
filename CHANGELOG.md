@@ -4,6 +4,70 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+## [0.57.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.57.0) - 2026-05-07
+
+## Breaking Changes
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### Code Generation Changes
+* `--use-default` no longer makes required fields nullable - Previously, `--use-default` turned required fields into optional nullable fields (e.g., `status: str | None = 'active'`). Now required fields keep their original non-nullable type and just get the default value rendered (e.g., `status: str = 'active'`). Users whose downstream code depends on these fields being `Optional`/nullable will need to update. (#3054)
+* Required model-ref fields no longer render defaults without `--use-default` - Previously, required fields referencing models (e.g., `shipping_address: Address`) inconsistently rendered defaults with `validate_default=True` while scalar required fields did not. Now all required fields consistently omit defaults unless `--use-default` is passed. Users who relied on the previous behavior where model-ref required fields had defaults rendered will see those defaults removed. (#3054)
+
+### Custom Template Update Required
+* Built-in Jinja2 templates now use `field.use_default_with_required` - The built-in templates for `BaseModel`, `dataclass`, `pydantic_v2/dataclass`, and `msgspec` were updated to check `field.use_default_with_required` alongside `field.required` when deciding whether to render defaults. Custom templates that replicate the old default-rendering logic (e.g., `{%- if not field.required %}`) will still work but won't support the new `--use-default` behavior for required fields. To get the updated behavior, custom templates should change conditions like `not field.required` to `(not field.required or field.use_default_with_required)`. (#3054)
+
+## What's Changed
+* Harden workflow credentials by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3095
+* Fix release automation workflows by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3110
+* Enforce shared assertions in e2e tests by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3108
+* Fix docs preview required check by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3112
+* Fix required field default rendering and --use-default nullable types by @butvinm in https://github.com/koxudaxi/datamodel-code-generator/pull/3054
+* Remove unused CLI doc schema version lookup by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3113
+* Fix byte to binary type mapping by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3114
+* Create generated docs sync PRs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3117
+* Support local HTTP ref paths by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3116
+* Fix reuse discriminator literals by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3115
+* docstrings that can be single line to be formatted on a single line by @kevin-paulson-mindbridge-ai in https://github.com/koxudaxi/datamodel-code-generator/pull/3107
+* Fix indefinite hang on OpenAPI schemas with cyclic model dependencies by @kevin-paulson-mindbridge-ai in https://github.com/koxudaxi/datamodel-code-generator/pull/3078
+* Add OpenAPI enum literal alias regression test by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3124
+* Fix pydantic model extra warnings by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3127
+* Fix snake case array discriminator by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3125
+* Fix serialization alias choices by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3126
+* Fix generated docs sync prompt snapshots by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3129
+* Add manual generated docs sync trigger by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3130
+* Use source tree for generated prompt snapshots by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3132
+* Propagate enum member descriptions for anyOf const pattern by @mvanhorn in https://github.com/koxudaxi/datamodel-code-generator/pull/3133
+* Allow generated prompt snapshot updates by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3134
+* Write generated prompt snapshots directly by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3135
+* Preserve tox python preference for generated docs by @koxudaxi in https://github.com/koxudaxi/datamodel-code-generator/pull/3136
+* Sync generated docs by @dcg-generated-docs[bot] in https://github.com/koxudaxi/datamodel-code-generator/pull/3137
+
+## New Contributors
+* @mvanhorn made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3133
+* @dcg-generated-docs[bot] made their first contribution in https://github.com/koxudaxi/datamodel-code-generator/pull/3137
+
+**Full Changelog**: https://github.com/koxudaxi/datamodel-code-generator/compare/0.56.1...0.57.0
+
+---
+
 ## [0.56.1](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.56.1) - 2026-04-16
 
 ## What's Changed
