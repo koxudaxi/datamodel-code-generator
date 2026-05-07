@@ -1,6 +1,12 @@
 name: Update CHANGELOG
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to add to CHANGELOG.md
+        required: true
+        type: string
   release:
     types: [published]
 
@@ -20,10 +26,11 @@ jobs:
       - name: Get release info and update CHANGELOG
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
 
-          TAG="${{ github.event.release.tag_name }}"
+          TAG="$RELEASE_TAG"
           DATE=$(gh release view "$TAG" --json publishedAt --jq '.publishedAt | split("T")[0]')
           BODY=$(gh release view "$TAG" --json body --jq '.body // ""')
 
@@ -112,9 +119,10 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PATCH_PATH: ${{ runner.temp }}/changelog.patch
           TARGET_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
         run: |
           set -euo pipefail
-          tag_name="${{ github.event.release.tag_name }}"
+          tag_name="$RELEASE_TAG"
           safe_tag="$(printf '%s' "$tag_name" | tr -c 'A-Za-z0-9._-' '-')"
           sync_branch="docs/changelog-${safe_tag}"
 
