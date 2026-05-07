@@ -64,6 +64,8 @@ jobs:
       - name: Build prompt data
         run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
       - name: Update generate prompt snapshots
+        env:
+          PYTHONPATH: ${{ github.workspace }}/src
         run: |
           .tox/cli-docs/bin/pytest \
             tests/test_main_kr.py::test_generate_prompt_basic \
