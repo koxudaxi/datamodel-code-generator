@@ -11,9 +11,7 @@ from pydantic import AliasChoices, BaseModel, Field
 
 class User(BaseModel):
     user_name: str | None = Field(
-        None,
-        serialization_alias='user_name',
-        validation_alias=AliasChoices('user_name', 'user-name', 'userName'),
+        None, validation_alias=AliasChoices('user_name', 'user-name', 'userName')
     )
     id: int | None = None
 
@@ -40,9 +38,7 @@ class MergedObj(BaseModel):
 
 class Root(BaseModel):
     my_field: str | None = Field(
-        None,
-        serialization_alias='my_field',
-        validation_alias=AliasChoices('my_field', 'my-field', 'myField'),
+        None, validation_alias=AliasChoices('my_field', 'my-field', 'myField')
     )
     other_field: int | None = None
     user: User | None = Field(None, title='User')

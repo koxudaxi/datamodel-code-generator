@@ -167,11 +167,13 @@ class DataModelField(DataModelFieldV1):
             # Format as AliasChoices(...) - use _RawRepr to prevent double-quoting
             aliases_repr = ", ".join(repr(a) for a in self.validation_aliases)
             data["validation_alias"] = _RawRepr(f"AliasChoices({aliases_repr})")
-            if self.use_serialization_alias and serialization_alias:
+            if self.use_serialization_alias and serialization_alias and serialization_alias != self.name:
                 data["serialization_alias"] = serialization_alias
 
         if self.use_serialization_alias and "alias" in data:
-            data["serialization_alias"] = data.pop("alias")
+            serialization_alias = data.pop("alias")
+            if serialization_alias != self.name:
+                data["serialization_alias"] = serialization_alias
 
         # **extra is not supported in pydantic 2.0
         json_schema_extra = {k: v for k, v in data.items() if k not in self._DEFAULT_FIELD_KEYS}
