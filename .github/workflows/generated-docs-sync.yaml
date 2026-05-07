@@ -1,6 +1,7 @@
 name: Sync Generated Docs
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
