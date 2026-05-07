@@ -48,6 +48,8 @@ jobs:
           UV_PYTHON_PREFERENCE: "only-managed"
       - name: Update generated docs
         run: tox run --skip-uv-sync --skip-pkg-install -e generated-docs
+        env:
+          UV_PYTHON_PREFERENCE: "only-managed"
       - name: Create generated docs patch
         id: patch
         env:
