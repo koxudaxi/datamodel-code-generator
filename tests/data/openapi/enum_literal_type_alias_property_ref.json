@@ -1,0 +1,60 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Enum Literal Type Alias Property Ref",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/things": {
+      "get": {
+        "parameters": [
+          {
+            "name": "ownership",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/EnumFromParam"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Thing"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EnumFromParam": {
+        "type": "string",
+        "enum": [
+          "a",
+          "b"
+        ]
+      },
+      "EnumFromProperty": {
+        "type": "string",
+        "enum": [
+          "x",
+          "y"
+        ]
+      },
+      "Thing": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/EnumFromProperty"
+          }
+        }
+      }
+    }
+  }
+}
