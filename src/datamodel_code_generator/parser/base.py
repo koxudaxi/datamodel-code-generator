@@ -2125,7 +2125,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     if isinstance(discriminator, dict)
                                     else discriminator
                                 )
-                                copied_data_type.discriminator = prop_name
+                                field_name, _ = self.model_resolver.get_valid_field_name_and_alias(
+                                    field_name=prop_name,
+                                    model_type=self.field_name_model_type,
+                                )
+                                copied_data_type.discriminator = field_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
