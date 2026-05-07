@@ -1930,7 +1930,6 @@ def test_generate_returns_string_with_dataclass() -> None:
     assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py")
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_uses_multiline_docstring_by_default() -> None:
     """Test that schema descriptions keep the historical multi-line docstring format."""
     json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
@@ -1941,11 +1940,9 @@ def test_generate_uses_multiline_docstring_by_default() -> None:
         use_schema_description=True,
         disable_timestamp=True,
     )
-    assert isinstance(result, str)
-    assert 'class Person(BaseModel):\n    """\n    Person model\n    """' in result
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_multiline_docstring_by_default.py")
 
 
-@pytest.mark.allow_direct_assert
 def test_generate_uses_single_line_docstring_when_enabled() -> None:
     """Test that schema descriptions use one-line docstrings when requested."""
     json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
@@ -1957,8 +1954,7 @@ def test_generate_uses_single_line_docstring_when_enabled() -> None:
         use_single_line_docstring=True,
         disable_timestamp=True,
     )
-    assert isinstance(result, str)
-    assert 'class Person(BaseModel):\n    """Person model"""' in result
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_single_line_docstring_when_enabled.py")
 
 
 @pytest.mark.cli_doc(
