@@ -67,6 +67,7 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/src
         run: |
+          set +e
           .tox/cli-docs/bin/pytest \
             tests/test_main_kr.py::test_generate_prompt_basic \
             tests/test_main_kr.py::test_generate_prompt_with_question \
@@ -75,6 +76,11 @@ jobs:
             --inline-snapshot=fix \
             -p no:xdist \
             -q
+          snapshot_status=$?
+          set -e
+          if [ "$snapshot_status" -ne 0 ] && git diff --quiet -- tests/data/expected/main_kr/generate_prompt/; then
+            exit "$snapshot_status"
+          fi
       - name: Build schema docs
         run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
       - name: Build llms.txt
