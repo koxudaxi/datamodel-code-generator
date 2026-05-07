@@ -12,7 +12,10 @@ on:
       - 'scripts/build_prompt_data.py'
       - 'scripts/build_schema_docs.py'
       - 'scripts/build_llms_txt.py'
+      - 'scripts/update_generate_prompt_snapshots.py'
       - 'scripts/update_docs_version.py'
+      - 'tox.ini'
+      - '.github/workflows/generated-docs-sync.yaml'
       - 'docs/**/*.md'
       - 'CHANGELOG.md'
       - 'README.md'
@@ -39,52 +42,12 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup README environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e readme
+      - name: Setup generated docs environment
+        run: tox run -vv --notest --skip-missing-interpreters false -e generated-docs
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup CLI docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e cli-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup schema docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e schema-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup llms.txt environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e llms-txt
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Update README
-        run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
-      - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest --collect-cli-docs -p no:xdist -q
-      - name: Build CLI docs
-        run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
-      - name: Build prompt data
-        run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
-      - name: Update generate prompt snapshots
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src
-        run: |
-          set +e
-          .tox/cli-docs/bin/pytest \
-            tests/test_main_kr.py::test_generate_prompt_basic \
-            tests/test_main_kr.py::test_generate_prompt_with_question \
-            tests/test_main_kr.py::test_generate_prompt_with_options \
-            tests/test_main_kr.py::test_generate_prompt_with_list_options \
-            --inline-snapshot=fix \
-            -p no:xdist \
-            -q
-          snapshot_status=$?
-          set -e
-          if [ "$snapshot_status" -ne 0 ] && git diff --quiet -- tests/data/expected/main_kr/generate_prompt/; then
-            exit "$snapshot_status"
-          fi
-      - name: Build schema docs
-        run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
-      - name: Build llms.txt
-        run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
+      - name: Update generated docs
+        run: tox run --skip-uv-sync --skip-pkg-install -e generated-docs
       - name: Create generated docs patch
         id: patch
         env:
