@@ -396,7 +396,7 @@ def indent_code_block(content: str, prefix: str) -> str:
     lines = content.strip().split("\n")
     result = f"{prefix}```python\n"
     for line in lines:
-        result += f"{prefix}{line}\n" if line else f"{prefix}\n"
+        result += f"{prefix}{line}\n" if line else "\n"
     result += f"{prefix}```\n\n"
     return result
 
@@ -469,14 +469,14 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
                 content = read_expected_file(stdout_value)
                 md += f"{prefix}```\n"
                 for line in content.strip().split("\n"):
-                    md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+                    md += f"{prefix}{line}\n" if line else "\n"
                 md += f"{prefix}```\n\n"
             except (FileNotFoundError, ValueError) as e:
                 md += f"{prefix}> **Error:** {e}\n\n"
         else:
             md += f"{prefix}```\n"
             for line in stdout_value.strip().split("\n"):
-                md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+                md += f"{prefix}{line}\n" if line else "\n"
             md += f"{prefix}```\n\n"
     elif example.comparison_output and example.model_outputs:
         model_labels = dict(ORDERED_MODEL_OUTPUT_LABELS)
@@ -534,7 +534,7 @@ def _generate_single_example_output(example: CLIDocExample, prefix: str = "    "
             content = read_expected_file(example.golden_output)
             md += f"{prefix}```python\n"
             for line in content.strip().split("\n"):
-                md += f"{prefix}{line}\n" if line else f"{prefix}\n"
+                md += f"{prefix}{line}\n" if line else "\n"
             md += f"{prefix}```\n\n"
         except (FileNotFoundError, ValueError) as e:
             md += f"{prefix}> **Error:** {e}\n\n"

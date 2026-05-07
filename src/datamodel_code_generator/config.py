@@ -63,7 +63,7 @@ else:
 class GenerateConfig(BaseModel):
     """Configuration model for generate()."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True, protected_namespaces=())
 
     input_filename: str | None = None
     input_file_type: InputFileType = InputFileType.Auto
@@ -207,7 +207,7 @@ class GenerateConfig(BaseModel):
 class ParserConfig(BaseModel):
     """Configuration model for Parser.__init__()."""
 
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)
+    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True, protected_namespaces=())
 
     data_model_type: type[DataModel] = pydantic_v2.BaseModel
     data_model_root_type: type[DataModel] = pydantic_v2.RootModel

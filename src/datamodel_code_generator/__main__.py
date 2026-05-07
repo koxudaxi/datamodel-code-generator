@@ -142,7 +142,7 @@ signal.signal(signal.SIGINT, sig_int_handler)
 class Config(BaseModel):  # noqa: PLR0904
     """Configuration model for code generation."""
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)  # ty: ignore
+    model_config = ConfigDict(arbitrary_types_allowed=True, protected_namespaces=())  # ty: ignore
 
     def get(self, item: str) -> Any:  # pragma: no cover
         """Get attribute value by name."""
