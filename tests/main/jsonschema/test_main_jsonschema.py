@@ -1214,6 +1214,26 @@ def test_main_reuse_model_collapse_inline_definitions(output_file: Path) -> None
     )
 
 
+def test_main_reuse_model_discriminator_literal(output_file: Path) -> None:
+    """Reuse inherited discriminator literals instead of injecting the reuse path segment."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "reuse_model_discriminator_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--reuse-model",
+            "--use-union-operator",
+            "--use-standard-collections",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_reuse_model_collapse_with_root(output_file: Path) -> None:
     """Test --reuse-model --collapse-reuse-models skips RootModel deduplication."""
     run_main_and_assert(

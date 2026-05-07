@@ -1619,6 +1619,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         if discriminator_value is not None:
                             discriminator_values = [discriminator_value]
                             break
+                    # Reuse models are created as empty subclasses with a "/reuse" path suffix.
+                    # Scan inherited fields to recover the discriminator literal from the base.
+                    if not discriminator_values and discriminator_model.path.endswith("/reuse"):
+                        for discriminator_field in discriminator_model.iter_all_fields():  # pragma: no branch
+                            if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                                continue
+                            discriminator_value = get_discriminator_field_value(discriminator_field)
+                            if discriminator_value is not None:  # pragma: no branch
+                                discriminator_values = [discriminator_value]
+                                break
 
                     if not discriminator_values and mapping:
                         check_paths(discriminator_model, mapping)  # ty: ignore
