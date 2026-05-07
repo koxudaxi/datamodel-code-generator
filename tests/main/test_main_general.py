@@ -2452,6 +2452,17 @@ def test_generate_with_imported_config_from_top_level() -> None:
 
 
 @pytest.mark.allow_direct_assert
+def test_config_models_allow_internal_model_extra_options() -> None:
+    """Test config models allow internal options with model_ prefixes."""
+    from datamodel_code_generator.config import ParserConfig
+
+    for config_model in (Config, GenerateConfig, ParserConfig):
+        assert config_model.model_config["protected_namespaces"] == ()
+        assert "model_extra_keys" in config_model.model_fields
+        assert "model_extra_keys_without_x_prefix" in config_model.model_fields
+
+
+@pytest.mark.allow_direct_assert
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
