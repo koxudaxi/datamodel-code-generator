@@ -510,9 +510,9 @@ def test_main_null_and_array(output_file: Path) -> None:
 The `--use-default` flag allows required fields with default values to be generated
 with their defaults, making them optional to provide when instantiating the model.
 
-    The field type still follows the schema's nullability. For example, a required
-    string field with a default is generated as `str = 'value'`, not
-    `str | None = 'value'`, unless the schema allows null.""",
+When `--strict-nullable` is enabled, the field type still follows the schema's
+nullability. For example, a required string field with a default is generated
+as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.""",
     input_schema="jsonschema/use_default_with_const.json",
     cli_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-default"],
     golden_output="jsonschema/use_default_with_const.py",
@@ -524,9 +524,9 @@ def test_use_default_pydantic_v2_with_json_schema_const(output_file: Path) -> No
     The `--use-default` flag allows required fields with default values to be generated
     with their defaults, making them optional to provide when instantiating the model.
 
-    The field type still follows the schema's nullability. For example, a required
-    string field with a default is generated as `str = 'value'`, not
-    `str | None = 'value'`, unless the schema allows null.
+    When `--strict-nullable` is enabled, the field type still follows the schema's
+    nullability. For example, a required string field with a default is generated
+    as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
     """
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "use_default_with_const.json",

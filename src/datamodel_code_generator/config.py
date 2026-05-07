@@ -143,6 +143,7 @@ class GenerateConfig(BaseModel):
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     allow_remote_refs: bool | None = None
     http_headers: Sequence[tuple[str, str]] | None = None
+    http_local_ref_path: Path | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
     use_annotated: bool = False
@@ -276,6 +277,7 @@ class ParserConfig(BaseModel):
     allof_class_hierarchy: AllOfClassHierarchy = AllOfClassHierarchy.IfNoConflict
     allow_remote_refs: bool | None = None
     http_headers: Sequence[tuple[str, str]] | None = None
+    http_local_ref_path: Path | None = None
     http_ignore_tls: bool = False
     http_timeout: float | None = None
     use_annotated: bool = False

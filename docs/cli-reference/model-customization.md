@@ -5272,6 +5272,10 @@ Use default values from schema in generated models.
 The `--use-default` flag allows required fields with default values to be generated
 with their defaults, making them optional to provide when instantiating the model.
 
+When `--strict-nullable` is enabled, the field type still follows the schema's
+nullability. For example, a required string field with a default is generated
+as `str = 'value'`, not `str | None = 'value'`, unless the schema allows null.
+
 **Related:** [`--strict-nullable`](model-customization.md#strict-nullable)
 
 !!! tip "Usage"
@@ -5281,21 +5285,6 @@ with their defaults, making them optional to provide when instantiating the mode
     ```
 
     1. :material-arrow-left: `--use-default` - the option documented here
-
-!!! warning "Fields with defaults become nullable"
-    When using `--use-default`, fields with default values are generated as nullable
-    types (e.g., `str | None` instead of `str`), even if the schema does not allow
-    null values.
-
-    If you want fields to strictly follow the schema's type definition (non-nullable),
-    use `--strict-nullable` together with `--use-default`.
-
-
-!!! note "Future behavior change"
-    In a future major version, the default behavior of `--use-default` may change to
-    generate non-nullable types that match the schema definition (equivalent to using
-    `--strict-nullable`). If you rely on the current nullable behavior, consider
-    explicitly handling this in your code.
 
 ??? example "Examples"
 

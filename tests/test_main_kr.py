@@ -1538,6 +1538,54 @@ def test_url_with_http_headers(mock_httpx_get: HttpxGetMockFactory, output_file:
 
 
 @pytest.mark.cli_doc(
+    options=["--http-local-ref-path"],
+    option_description="""Resolve HTTP references from local schema files.
+
+The `--http-local-ref-path` flag maps HTTP(S) `$ref` URLs to files under
+a local schema store instead of fetching them from the network. The host and
+URL path are used as the relative path under the schema store. For example,
+`https://api.example.com/schemas/pet.json` is read from
+`schemas/api.example.com/schemas/pet.json`.""",
+    input_schema="jsonschema/http_local_ref_path_root.json",
+    cli_args=[
+        "--url",
+        "https://api.example.com/schema.json",
+        "--http-local-ref-path",
+        "schemas",
+    ],
+    golden_output="main_kr/http_local_ref_path/output.py",
+)
+@freeze_time("2019-07-26")
+def test_http_local_ref_path_cli_doc(mock_httpx_get: HttpxGetMockFactory, output_file: Path, tmp_path: Path) -> None:
+    """Resolve HTTP references from local schema files.
+
+    The `--http-local-ref-path` flag maps HTTP(S) `$ref` URLs to files under
+    a local schema store instead of fetching them from the network. The host and
+    URL path are used as the relative path under the schema store.
+    """
+    schema_store = tmp_path / "schemas"
+    local_schema = schema_store / "api.example.com" / "schemas" / "pet.json"
+    local_schema.parent.mkdir(parents=True)
+    local_schema.write_text((JSON_SCHEMA_DATA_PATH / "pet_simple.json").read_text(), encoding="utf-8")
+    mock_get = mock_httpx_get(
+        MockHttpxResponse(
+            "https://api.example.com/schema.json",
+            JSON_SCHEMA_DATA_PATH / "http_local_ref_path_root.json",
+        )
+    )
+
+    run_main_url_and_assert(
+        url="https://api.example.com/schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "http_local_ref_path" / "output.py",
+        extra_args=["--http-local-ref-path", str(schema_store)],
+    )
+    assert_httpx_get_kwargs(mock_get)
+
+
+@pytest.mark.cli_doc(
     options=["--input"],
     option_description="""Specify the input schema file path.
 

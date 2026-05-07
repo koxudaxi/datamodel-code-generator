@@ -16,7 +16,7 @@ from contextlib import contextmanager, suppress
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
-from urllib.parse import ParseResult, unquote
+from urllib.parse import ParseResult, unquote, urlparse
 from warnings import warn
 
 from pydantic import (
@@ -3831,7 +3831,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:
         """Get the body of a reference from URL or remote file."""
         if is_url(resolved_ref):
-            if not resolved_ref.startswith("file://"):
+            if not resolved_ref.startswith("file://") and self.http_local_ref_path is None:
                 if self.allow_remote_refs is False:
                     msg = (
                         f"Fetching remote $ref is disabled: {resolved_ref}\n"
@@ -3851,10 +3851,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._get_ref_body_from_url(resolved_ref)
         return self._get_ref_body_from_remote(resolved_ref)
 
+    def _get_ref_body_from_local_http_path(self, ref: str) -> dict[str, YamlValue]:
+        assert self.http_local_ref_path is not None
+        parsed = urlparse(ref)
+        if parsed.scheme not in {"http", "https"}:  # pragma: no cover
+            msg = f"Unsupported local HTTP $ref URL: {ref}"
+            raise Error(msg)
+
+        parts = [unquote(part) for part in parsed.path.split("/") if part]
+        if not parsed.netloc or any(part in {".", ".."} or "/" in part or "\\" in part for part in parts):
+            msg = f"Unsupported local HTTP $ref URL path: {ref}"
+            raise Error(msg)
+
+        base_path = self.http_local_ref_path.resolve()
+        relative_path = Path(parsed.netloc, *parts)
+        file_paths = [(base_path / relative_path).resolve()]
+        if not parts or not Path(parts[-1]).suffix:
+            file_paths.append((base_path / relative_path.with_name(f"{relative_path.name}.json")).resolve())
+
+        if any(not file_path.is_relative_to(base_path) for file_path in file_paths):
+            msg = f"Unsupported local HTTP $ref URL path: {ref}"
+            raise Error(msg)
+
+        for file_path in file_paths:
+            if file_path.is_file():
+                return self.remote_object_cache.get_or_put(
+                    str(file_path),
+                    default_factory=lambda _, file_path=file_path: load_data_from_path(file_path, self.encoding),
+                )
+
+        msg = f"$ref local file not found for {ref}: tried {', '.join(str(path) for path in file_paths)}"
+        raise Error(msg)
+
     def _get_ref_body_from_url(self, ref: str) -> dict[str, YamlValue]:
         """Get reference body from a URL (HTTP, HTTPS, or file scheme)."""
         if ref.startswith("file://"):
-            from urllib.parse import urlparse  # noqa: PLC0415
             from urllib.request import url2pathname  # noqa: PLC0415
 
             parsed = urlparse(ref)
@@ -3867,6 +3898,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self.remote_object_cache.get_or_put(
                 ref, default_factory=lambda _: load_data_from_path(file_path, self.encoding)
             )
+        if self.http_local_ref_path is not None and urlparse(ref).scheme in {"http", "https"}:
+            return self._get_ref_body_from_local_http_path(ref)
         return self.remote_object_cache.get_or_put(
             ref, default_factory=lambda key: load_data(self._get_text_from_url(key))
         )
