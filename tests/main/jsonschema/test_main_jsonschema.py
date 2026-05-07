@@ -3827,6 +3827,18 @@ def test_main_jsonschema_anyof_const_enum_nested(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_anyof_const_enum_descriptions(output_file: Path) -> None:
+    """Test anyOf const enum member descriptions are preserved."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_const_enum_descriptions.yaml",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_const_enum_descriptions.py",
+        extra_args=["--use-field-description"],
+    )
+
+
 def test_main_jsonschema_anyof_const_enum_nested_literal(output_file: Path) -> None:
     """Test nested anyOf const with --enum-field-as-literal all."""
     run_main_and_assert(

@@ -1,0 +1,16 @@
+$schema: http://json-schema.org/draft-07/schema#
+type: object
+title: Config
+$defs:
+  JobExecutionMode:
+    description: Machine job execution mode.
+    anyOf:
+      - const: 0
+        title: SimulationMode
+        description: Simulation only.
+      - const: 1
+        title: TestMode
+        description: Test mode.
+properties:
+  mode:
+    $ref: '#/$defs/JobExecutionMode'
