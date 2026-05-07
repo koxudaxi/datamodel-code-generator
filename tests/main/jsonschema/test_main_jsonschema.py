@@ -989,6 +989,94 @@ def test_main_url_with_relative_root_id_resolves_relative_refs(
     )
 
 
+def test_main_url_jsonschema_relative_ref_without_fragment(
+    mock_httpx_get: HttpxGetMockFactory, output_file: Path
+) -> None:
+    """Test URL input with a relative remote reference that has no fragment."""
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/schemas/root.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "RemoteRoot",
+                "type": "object",
+                "properties": {"person": {"$ref": "person.json"}},
+            }),
+        ),
+        MockHttpxResponse(
+            "https://example.com/schemas/person.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "Person",
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            }),
+        ),
+    )
+
+    run_main_url_and_assert(
+        url="https://example.com/schemas/root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="remote_relative_ref.py",
+    )
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[
+            "https://example.com/schemas/root.json",
+            "https://example.com/schemas/person.json",
+        ],
+        call_count=2,
+    )
+
+
+def test_main_jsonschema_remote_relative_ref_without_fragment(
+    mock_httpx_get: HttpxGetMockFactory, output_file: Path
+) -> None:
+    """Test remote file parsing with a relative reference that has no fragment."""
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "https://example.com/schemas/person.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "Person",
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "friend": {"$ref": "friend.json"},
+                },
+            }),
+        ),
+        MockHttpxResponse(
+            "https://example.com/schemas/friend.json",
+            json.dumps({
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "Friend",
+                "type": "object",
+                "properties": {"nickname": {"type": "string"}},
+            }),
+        ),
+    )
+
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "remote_relative_ref_root.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="remote_relative_ref_nested.py",
+        extra_args=["--allow-remote-refs"],
+    )
+    assert_httpx_get_kwargs(
+        httpx_get_mock,
+        expected_urls=[
+            "https://example.com/schemas/person.json",
+            "https://example.com/schemas/friend.json",
+        ],
+        call_count=2,
+    )
+
+
 def test_main_remote_ref_emits_deprecation_warning(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test that implicit remote $ref fetching emits a FutureWarning when flag is not set."""
     httpx_get_mock = mock_httpx_get(
@@ -3007,6 +3095,32 @@ def test_main_jsonschema_base_class_map_list(output_file: Path) -> None:
 
 def test_main_jsonschema_base_class_map_empty_list(output_file: Path) -> None:
     """Test base_class_map with empty strings list (falls back to default)."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="base_class_map_empty_list.py",
+        extra_args=[
+            "--base-class-map",
+            '{"User": ["", ""]}',
+        ],
+    )
+
+
+def test_main_jsonschema_base_class_map_json_when_path_check_raises(
+    output_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test base_class_map JSON parsing when path probing raises OSError."""
+    original_is_file = Path.is_file
+
+    def raise_for_mapping_value(self: Path) -> bool:
+        if str(self).startswith('{"User"'):
+            raise OSError
+        return original_is_file(self)
+
+    monkeypatch.setattr(Path, "is_file", raise_for_mapping_value)
+
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "base_class_map_empty_list.json",
         output_path=output_file,
@@ -6825,6 +6939,64 @@ def test_main_jsonschema_multiple_aliases_pydantic_v2(output_file: Path) -> None
             str(ALIASES_DATA_PATH / "multiple_aliases.json"),
             "--output-model-type",
             "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_multiple_aliases_serialization_alias_pydantic_v2(output_file: Path) -> None:
+    """Test multiple aliases with serialization_alias for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_file="jsonschema_multiple_aliases_serialization_alias_pydantic_v2.py",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "multiple_aliases.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-serialization-alias",
+        ],
+    )
+
+
+def test_main_jsonschema_array_combined_types(output_file: Path) -> None:
+    """Test array schemas combined with allOf, object fields, and enum values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_combined.py.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="array_combined.py",
+    )
+
+
+def test_main_jsonschema_recursive_array(output_file: Path) -> None:
+    """Test a root array schema that recursively references itself."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "recursive_array.py.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="recursive_array.py",
+    )
+
+
+def test_main_jsonschema_serialization_alias_same_name_pydantic_v2(output_file: Path) -> None:
+    """Test use_serialization_alias skips aliases that match the field name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_alias_same_name.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_alias_same_name.py",
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "same_alias.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-serialization-alias",
         ],
     )
 

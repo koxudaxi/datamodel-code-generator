@@ -2824,6 +2824,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         use_field_description_example=self.use_field_description_example,
                         use_inline_field_description=self.use_inline_field_description,
                         original_name=original_field_name,
+                        use_serialization_alias=self.use_serialization_alias,
                     )
                 )
                 continue
