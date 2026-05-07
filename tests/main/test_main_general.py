@@ -1930,6 +1930,56 @@ def test_generate_returns_string_with_dataclass() -> None:
     assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py")
 
 
+def test_generate_uses_multiline_docstring_by_default() -> None:
+    """Test that schema descriptions keep the historical multi-line docstring format."""
+    json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        use_schema_description=True,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_multiline_docstring_by_default.py")
+
+
+def test_generate_uses_single_line_docstring_when_enabled() -> None:
+    """Test that schema descriptions use one-line docstrings when requested."""
+    json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        use_schema_description=True,
+        use_single_line_docstring=True,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_single_line_docstring_when_enabled.py")
+
+
+@pytest.mark.cli_doc(
+    options=["--use-single-line-docstring"],
+    option_description="""Emit short docstrings on a single line.
+
+The `--use-single-line-docstring` flag formats docstrings that fit on one line
+as compact single-line docstrings while keeping the historical multi-line
+format as the default.""",
+    input_schema="jsonschema/person.json",
+    cli_args=["--use-field-description", "--use-single-line-docstring"],
+    golden_output="main/use_single_line_docstring.py",
+    related_options=["--use-schema-description", "--use-field-description"],
+)
+def test_main_use_single_line_docstring(output_file: Path) -> None:
+    """Emit short docstrings on a single line."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="use_single_line_docstring.py",
+        extra_args=["--use-field-description", "--use-single-line-docstring"],
+    )
+
+
 def test_generate_returns_none_when_output_path_provided(tmp_path: Path) -> None:
     """Test that generate() returns None when output path is provided."""
     json_schema = '{"type": "object", "properties": {"name": {"type": "string"}}}'

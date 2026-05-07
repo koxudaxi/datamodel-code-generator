@@ -454,6 +454,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_field_description_example: bool = False
     use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
+    use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope = ReuseScope.Module
@@ -908,6 +909,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_field_description_example=config.use_field_description_example,
         use_attribute_docstrings=config.use_attribute_docstrings,
         use_inline_field_description=config.use_inline_field_description,
+        use_single_line_docstring=config.use_single_line_docstring,
         use_default_kwarg=config.use_default_kwarg,
         reuse_model=config.reuse_model,
         reuse_scope=config.reuse_scope,

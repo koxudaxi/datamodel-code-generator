@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 24 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 25 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
@@ -213,6 +213,7 @@ This documentation is auto-generated from test cases.
 - [`--use-schema-description`](field-customization.md#use-schema-description)
 - [`--use-serialization-alias`](field-customization.md#use-serialization-alias)
 - [`--use-serialize-as-any`](model-customization.md#use-serialize-as-any)
+- [`--use-single-line-docstring`](field-customization.md#use-single-line-docstring)
 - [`--use-specialized-enum`](typing-customization.md#use-specialized-enum)
 - [`--use-standard-collections`](typing-customization.md#use-standard-collections)
 - [`--use-standard-primitive-types`](typing-customization.md#use-standard-primitive-types)

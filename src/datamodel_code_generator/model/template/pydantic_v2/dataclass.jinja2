@@ -25,9 +25,7 @@ class {{ class_name }}({{ base_class }}):
 class {{ class_name }}:
 {%- endif %}
 {%- if description %}
-    """
-    {{ description | escape_docstring | indent(4) }}
-    """
+    {{ description }}
 {%- endif %}
 {%- if not fields and not description %}
     pass
@@ -46,9 +44,7 @@ class {{ class_name }}:
     {%- endif -%}
     {%- endif %}
     {%- if field.docstring %}
-    """
-    {{ field.docstring | escape_docstring | indent(4) }}
-    """
+    {{ field.docstring }}
 {%- if field.use_inline_field_description and not loop.last %}
 
 {% endif %}

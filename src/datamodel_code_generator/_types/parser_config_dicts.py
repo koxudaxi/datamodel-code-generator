@@ -79,6 +79,7 @@ class ParserConfigDict(TypedDict):
     use_field_description_example: NotRequired[bool]
     use_attribute_docstrings: NotRequired[bool]
     use_inline_field_description: NotRequired[bool]
+    use_single_line_docstring: NotRequired[bool]
     use_default_kwarg: NotRequired[bool]
     reuse_model: NotRequired[bool]
     reuse_scope: NotRequired[ReuseScope | None]

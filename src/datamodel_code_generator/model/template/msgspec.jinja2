@@ -9,9 +9,7 @@ class {{ class_name }}({{ base_class }}{%- for key, value in (base_class_kwargs|
 class {{ class_name }}:
 {%- endif %}
 {%- if description %}
-    """
-    {{ description | escape_docstring | indent(4) }}
-    """
+    {{ description }}
 {%- endif %}
 {%- set ns = namespace(has_rendered_field=false) -%}
 {%- for field in fields -%}
@@ -37,9 +35,7 @@ class {{ class_name }}:
 
 
     {%- if not field.extras.get('is_classvar') and field.docstring %}
-    """
-    {{ field.docstring | escape_docstring | indent(4) }}
-    """
+    {{ field.docstring }}
 {%- if field.use_inline_field_description and not loop.last %}
 
 {% endif %}

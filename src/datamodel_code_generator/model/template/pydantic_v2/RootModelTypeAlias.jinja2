@@ -12,11 +12,7 @@
 {%- set use_base_type = config and config.regex_engine -%}
 {{ class_name }} = RootModel[{{get_type_hint(fields, use_base_type)}}]{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
-"""
 {{ description }}
-"""
 {%- elif fields and fields[0].docstring %}
-"""
 {{ fields[0].docstring }}
-"""
 {%- endif %}

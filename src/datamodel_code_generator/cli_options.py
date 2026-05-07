@@ -156,6 +156,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-inline-field-description": CLIOptionMeta(
         name="--use-inline-field-description", category=OptionCategory.FIELD
     ),
+    "--use-single-line-docstring": CLIOptionMeta(name="--use-single-line-docstring", category=OptionCategory.FIELD),
     "--field-constraints": CLIOptionMeta(name="--field-constraints", category=OptionCategory.FIELD),
     "--field-extra-keys": CLIOptionMeta(name="--field-extra-keys", category=OptionCategory.FIELD),
     "--field-extra-keys-without-x-prefix": CLIOptionMeta(

@@ -727,6 +727,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
         "use_type_checking_imports": config.use_type_checking_imports,
+        "use_single_line_docstring": config.use_single_line_docstring,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None

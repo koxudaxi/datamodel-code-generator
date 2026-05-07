@@ -3,9 +3,7 @@
 {% endfor -%}
 class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
-    """
-    {{ description | escape_docstring | indent(4) }}
-    """
+    {{ description }}
 {%- endif %}
 {%- if not fields and not description and not config and not class_body_lines %}
     pass
@@ -32,9 +30,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- endif -%}
     {%- endif %}
     {%- if field.docstring %}
-    """
-    {{ field.docstring | escape_docstring | indent(4) }}
-    """
+    {{ field.docstring }}
 {%- if field.use_inline_field_description and not loop.last %}
 
 {% endif %}

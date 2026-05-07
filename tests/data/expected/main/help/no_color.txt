@@ -261,6 +261,9 @@ Field customization:
                         aliasing (Pydantic v2 only). This allows setting
                         values using the Pythonic field name while serializing
                         to the original name.
+  --use-single-line-docstring
+                        Use single-line docstrings when the content fits on
+                        one line
 
 Model customization:
   --all-exports-collision-strategy {error,minimal-prefix,full-prefix}

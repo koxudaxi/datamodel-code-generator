@@ -861,6 +861,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-single-line-docstring",
+    help="Use single-line docstrings when the content fits on one line",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--union-mode",
     help="Union mode for only pydantic v2 field",
     choices=[u.value for u in UnionMode],

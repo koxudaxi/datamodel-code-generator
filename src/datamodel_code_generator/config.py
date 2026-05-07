@@ -103,6 +103,7 @@ class GenerateConfig(BaseModel):
     use_field_description_example: bool = False
     use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
+    use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope = ReuseScope.Module
@@ -243,6 +244,7 @@ class ParserConfig(BaseModel):
     use_field_description_example: bool = False
     use_attribute_docstrings: bool = False
     use_inline_field_description: bool = False
+    use_single_line_docstring: bool = False
     use_default_kwarg: bool = False
     reuse_model: bool = False
     reuse_scope: ReuseScope | None = None

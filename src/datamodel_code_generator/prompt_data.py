@@ -131,6 +131,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-generic-base-class": "Generate a shared base class with model configuration to avoid repetition (DRY).",
     "--use-generic-container-types": "Use generic container types (Sequence, Mapping) for type hinting.",
     "--use-inline-field-description": "Add field descriptions as inline comments.",
+    "--use-single-line-docstring": "Use single-line docstrings when the content fits on one line.",
     "--use-non-positive-negative-number-constrained-types": "Use NonPositive/NonNegative types for number constraints.",
     "--use-one-literal-as-default": "Use single literal value as default when enum has only one option.",
     "--use-operation-id-as-name": "Use OpenAPI operationId as the generated function/class name.",

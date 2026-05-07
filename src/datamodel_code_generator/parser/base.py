@@ -985,6 +985,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.use_field_description: bool = config.use_field_description
         self.use_field_description_example: bool = config.use_field_description_example
         self.use_inline_field_description: bool = config.use_inline_field_description
+        self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
@@ -1068,6 +1069,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+        if config.use_single_line_docstring:
+            self.extra_template_data[ALL_MODEL]["use_single_line_docstring"] = True
 
         if config.target_pydantic_version:
             if config.use_generic_base_class:

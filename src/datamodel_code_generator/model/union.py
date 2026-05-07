@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 class _DataTypeUnionBase(DataModel):
     """Base class for GraphQL union types with shared __init__ logic."""
 
+    FORMAT_DESCRIPTION_AS_DOCSTRING: ClassVar[bool] = False
+
     def __init__(  # noqa: PLR0913
         self,
         *,
