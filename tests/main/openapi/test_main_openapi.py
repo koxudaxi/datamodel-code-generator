@@ -2576,6 +2576,7 @@ def test_main_openapi_discriminator_in_array_underscore(output_file: Path) -> No
     )
 
 
+@LEGACY_BLACK_SKIP
 @freeze_time("2023-07-27")
 def test_main_openapi_discriminator_in_array_snake_case(output_file: Path) -> None:
     """Test collapsed list item discriminator uses snake_case field name."""
