@@ -6829,6 +6829,24 @@ def test_main_jsonschema_multiple_aliases_pydantic_v2(output_file: Path) -> None
     )
 
 
+def test_main_jsonschema_multiple_aliases_serialization_alias_pydantic_v2(output_file: Path) -> None:
+    """Test multiple aliases with serialization_alias for Pydantic v2."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "multiple_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_file="jsonschema_multiple_aliases_serialization_alias_pydantic_v2.py",
+        assert_func=assert_file_content,
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "multiple_aliases.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-serialization-alias",
+        ],
+    )
+
+
 def test_main_jsonschema_discriminator_multiple_aliases_pydantic_v2(output_file: Path) -> None:
     """Test discriminator with multiple aliases using AliasChoices for Pydantic v2."""
     run_main_and_assert(

@@ -161,11 +161,14 @@ class DataModelField(DataModelFieldV1):
 
         # Handle multiple aliases using AliasChoices (Pydantic v2 feature)
         if self.validation_aliases:
+            serialization_alias = data.get("alias") or self.validation_aliases[0]
             # Remove single alias if present (validation_aliases takes precedence)
             data.pop("alias", None)
             # Format as AliasChoices(...) - use _RawRepr to prevent double-quoting
             aliases_repr = ", ".join(repr(a) for a in self.validation_aliases)
             data["validation_alias"] = _RawRepr(f"AliasChoices({aliases_repr})")
+            if self.use_serialization_alias and serialization_alias:
+                data["serialization_alias"] = serialization_alias
 
         if self.use_serialization_alias and "alias" in data:
             data["serialization_alias"] = data.pop("alias")
