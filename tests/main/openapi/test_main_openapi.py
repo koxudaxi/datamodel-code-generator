@@ -2576,6 +2576,28 @@ def test_main_openapi_discriminator_in_array_underscore(output_file: Path) -> No
     )
 
 
+@freeze_time("2023-07-27")
+def test_main_openapi_discriminator_in_array_snake_case(output_file: Path) -> None:
+    """Test collapsed list item discriminator uses snake_case field name."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_in_array_snake_case.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="discriminator/in_array_snake_case_pydantic_v2.py",
+        extra_args=[
+            "--target-python-version",
+            "3.12",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-annotated",
+            "--snake-case-field",
+            "--collapse-root-models",
+        ],
+        force_exec_validation=True,
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

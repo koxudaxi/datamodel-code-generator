@@ -1,0 +1,36 @@
+openapi: "3.0.0"
+info:
+  title: Repro
+  version: "1.0"
+paths: {}
+components:
+  schemas:
+    FooType:
+      type: object
+      required:
+        - objectType
+      properties:
+        objectType:
+          type: string
+          enum:
+            - FOO
+    BarType:
+      type: object
+      required:
+        - objectType
+      properties:
+        objectType:
+          type: string
+          enum:
+            - BAR
+    Container:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            discriminator:
+              propertyName: objectType
+            oneOf:
+              - $ref: "#/components/schemas/FooType"
+              - $ref: "#/components/schemas/BarType"
