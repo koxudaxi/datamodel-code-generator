@@ -83,12 +83,12 @@ jobs:
           path: ${{ runner.temp }}/changelog.patch
           if-no-files-found: error
 
-  commit-changelog:
+  create-changelog-pr:
     needs: build-changelog
     if: needs.build-changelog.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -100,19 +100,70 @@ jobs:
         with:
           name: changelog-patch
           path: ${{ runner.temp }}
-      - name: Commit and push
+      # Use the GitHub App token so branch and PR events run normal checks.
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        with:
+          app-id: ${{ secrets.GENERATED_DOCS_APP_ID }}
+          private-key: ${{ secrets.GENERATED_DOCS_APP_PRIVATE_KEY }}
+      - name: Create or update changelog PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           PATCH_PATH: ${{ runner.temp }}/changelog.patch
+          TARGET_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          tag_name="${{ github.event.release.tag_name }}"
+          safe_tag="$(printf '%s' "$tag_name" | tr -c 'A-Za-z0-9._-' '-')"
+          sync_branch="docs/changelog-${safe_tag}"
+
           git apply --index --whitespace=nowarn "$PATCH_PATH"
           if git diff --staged --quiet; then
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "docs: update CHANGELOG.md for ${{ github.event.release.tag_name }}"
-          git fetch origin main
-          git rebase origin/main
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" HEAD:main
+          git commit -m "docs: update CHANGELOG.md for ${tag_name}"
+
+          remote_url="https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
+          remote_sha="$(git ls-remote --heads "$remote_url" "$sync_branch" | awk '{print $1}')"
+          if [ -n "$remote_sha" ]; then
+            git push --force-with-lease="refs/heads/${sync_branch}:${remote_sha}" \
+              "$remote_url" \
+              "HEAD:refs/heads/${sync_branch}"
+          else
+            git push "$remote_url" "HEAD:refs/heads/${sync_branch}"
+          fi
+
+          pr_body="$(mktemp)"
+          cat > "$pr_body" <<EOF
+          Updates CHANGELOG.md for ${tag_name}.
+
+          This PR was created automatically after publishing ${GITHUB_EVENT_NAME} ${GITHUB_SHA}.
+          EOF
+
+          target_owner="${TARGET_REPO%%/*}"
+          existing_pr="$(
+            gh pr list \
+              --repo "$TARGET_REPO" \
+              --base main \
+              --head "${target_owner}:${sync_branch}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [ -n "$existing_pr" ]; then
+            gh pr edit "$existing_pr" \
+              --repo "$TARGET_REPO" \
+              --title "Update CHANGELOG for ${tag_name}" \
+              --body-file "$pr_body"
+          else
+            gh pr create \
+              --repo "$TARGET_REPO" \
+              --base main \
+              --head "${target_owner}:${sync_branch}" \
+              --title "Update CHANGELOG for ${tag_name}" \
+              --body-file "$pr_body"
+          fi
