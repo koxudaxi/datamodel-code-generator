@@ -1,0 +1,32 @@
+openapi: 3.0.0
+info:
+  title: Parameter Content
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      parameters:
+        - name: ignored
+          in: query
+          content:
+            application/json: {}
+        - name: filter
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: string
+            text/plain:
+              schema:
+                type: integer
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean

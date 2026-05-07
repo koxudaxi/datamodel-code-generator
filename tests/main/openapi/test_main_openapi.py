@@ -1007,6 +1007,22 @@ def test_main_multiple_aliases_parameters_pydantic_v2(output_file: Path) -> None
     )
 
 
+def test_main_openapi_parameter_content(output_file: Path) -> None:
+    """Test OpenAPI parameters defined with content media types."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "parameter_content.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="parameter_content.py",
+        extra_args=[
+            "--openapi-scopes",
+            "paths",
+            "parameters",
+        ],
+    )
+
+
 def test_main_with_bad_aliases(output_file: Path) -> None:
     """Test OpenAPI generation with invalid aliases file."""
     run_main_and_assert(

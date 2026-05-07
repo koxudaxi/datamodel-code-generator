@@ -683,9 +683,8 @@ class ModelResolver:  # noqa: PLR0904
             if self.root_id:
                 effective_base = self.root_id if is_url(self.root_id) else join_url(self.base_url, self.root_id)
             joined_url = join_url(effective_base, ref)
-            if "#" in joined_url:
-                return joined_url
-            return f"{joined_url}#"
+            joined_url_without_fragment, _, fragment = joined_url.partition("#")
+            return f"{joined_url_without_fragment}#{fragment}"
 
         if is_url(ref):
             file_part, path_part = ref.split("#", 1)
