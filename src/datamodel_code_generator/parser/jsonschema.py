@@ -2155,6 +2155,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         }
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_obj_dict)
 
+    def _iter_inherited_schema_objects(
+        self, base_classes: list[Reference], visited: frozenset[str]
+    ) -> Iterator[tuple[JsonSchemaObject, frozenset[str]]]:
+        """Yield inherited schema objects with updated visited paths."""
+        for base in base_classes:
+            if not base.path:  # pragma: no cover
+                continue
+            if base.path in visited:  # pragma: no cover
+                continue
+            next_visited = visited | {base.path}
+
+            try:
+                parent_schema = self._load_ref_schema_object(base.path)
+            except Exception:  # pragma: no cover  # noqa: BLE001, S112
+                continue
+            yield parent_schema, next_visited
+
     def _get_inherited_field_type(
         self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
     ) -> DataType | None:
@@ -2166,18 +2183,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if visited is None:
             visited = frozenset()
 
-        for base in base_classes:
-            if not base.path:  # pragma: no cover
-                continue
-            if base.path in visited:  # pragma: no cover
-                continue
-            visited |= {base.path}
-
-            try:
-                parent_schema = self._load_ref_schema_object(base.path)
-            except Exception:  # pragma: no cover  # noqa: BLE001, S112
-                continue
-
+        for parent_schema, next_visited in self._iter_inherited_schema_objects(base_classes, visited):
             result: DataType | None = None
             if parent_schema.properties:
                 prop_schema = parent_schema.properties.get(prop_name)
@@ -2191,7 +2197,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if parent_schema.allOf:
                 grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
                 if grandparent_refs:
-                    parent_result = self._get_inherited_field_type(prop_name, grandparent_refs, visited)
+                    parent_result = self._get_inherited_field_type(prop_name, grandparent_refs, next_visited)
                     if parent_result is not None:
                         return parent_result
                     return result
@@ -2223,18 +2229,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if visited is None:
             visited = frozenset()
 
-        for base in base_classes:
-            if not base.path:  # pragma: no cover
-                continue
-            if base.path in visited:  # pragma: no cover
-                continue
-            visited |= {base.path}
-
-            try:
-                parent_schema = self._load_ref_schema_object(base.path)
-            except Exception:  # pragma: no cover  # noqa: BLE001, S112
-                continue
-
+        for parent_schema, next_visited in self._iter_inherited_schema_objects(base_classes, visited):
             if parent_schema.properties:
                 prop_schema = parent_schema.properties.get(prop_name)
                 if isinstance(prop_schema, JsonSchemaObject):
@@ -2243,7 +2238,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if parent_schema.allOf:
                 grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
                 if grandparent_refs:
-                    parent_schema_result = self._get_inherited_field_schema(prop_name, grandparent_refs, visited)
+                    parent_schema_result = self._get_inherited_field_schema(prop_name, grandparent_refs, next_visited)
                     if parent_schema_result is not None:
                         return parent_schema_result
 
