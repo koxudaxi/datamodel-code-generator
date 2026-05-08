@@ -7013,6 +7013,76 @@ def test_main_jsonschema_serialization_alias_same_name_pydantic_v2(output_file: 
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--serialization-aliases"],
+    option_description="""Apply custom Pydantic v2 serialization aliases from JSON file.
+
+The `--serialization-aliases` option lets Pydantic v2 models keep input aliases
+or validation aliases while using separate output-only names for serialization.""",
+    input_schema="jsonschema/serialization_aliases.json",
+    cli_args=[
+        "--aliases",
+        "aliases/serialization_aliases.json",
+        "--serialization-aliases",
+        "aliases/serialization_aliases_output.json",
+        "--output-model-type",
+        "pydantic_v2.BaseModel",
+    ],
+    golden_output="jsonschema/serialization_aliases.py",
+)
+def test_main_jsonschema_serialization_aliases_pydantic_v2(output_file: Path) -> None:
+    """Test explicit serialization aliases with independent validation aliases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_aliases.py",
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "serialization_aliases.json"),
+            "--serialization-aliases",
+            str(ALIASES_DATA_PATH / "serialization_aliases_output.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_serialization_aliases_with_use_serialization_alias_pydantic_v2(output_file: Path) -> None:
+    """Test explicit serialization aliases override alias removal mode."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="serialization_aliases_with_use_serialization_alias.py",
+        extra_args=[
+            "--aliases",
+            str(ALIASES_DATA_PATH / "serialization_aliases.json"),
+            "--serialization-aliases",
+            str(ALIASES_DATA_PATH / "serialization_aliases_output.json"),
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-serialization-alias",
+        ],
+    )
+
+
+def test_main_jsonschema_serialization_aliases_invalid(output_file: Path) -> None:
+    """Test invalid serialization_aliases mapping exits with an error."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--serialization-aliases",
+            str(ALIASES_DATA_PATH / "serialization_aliases.json"),
+        ],
+    )
+
+
 def test_main_jsonschema_discriminator_multiple_aliases_pydantic_v2(output_file: Path) -> None:
     """Test discriminator with multiple aliases using AliasChoices for Pydantic v2."""
     run_main_and_assert(

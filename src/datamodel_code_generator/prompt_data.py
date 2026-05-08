@@ -101,6 +101,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--schema-version": "Schema version to use for parsing.",
     "--schema-version-mode": "Schema version validation mode.",
     "--set-default-enum-member": "Set the first enum member as the default value for enum fields.",
+    "--serialization-aliases": "Apply custom Pydantic v2 serialization aliases from JSON file.",
     "--shared-module-name": "Customize the name of the shared module for deduplicated models.",
     "--skip-root-model": "Skip generation of root model when schema contains nested definitions.",
     "--snake-case-field": "Convert field names to snake_case format.",

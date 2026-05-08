@@ -887,6 +887,15 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--serialization-aliases",
+    help="Serialization alias mapping file (JSON) for Pydantic v2. "
+    "Format: {'<schema_field>': '<serialization_alias>'}. "
+    "Supports hierarchical formats: "
+    "Flat: {'name': 'fullName'} applies to all occurrences. "
+    "Scoped: {'User.name': 'fullName'} applies to specific class.",
+    type=Path,
+)
+field_options.add_argument(
     "--use-frozen-field",
     help="Use Field(frozen=True) for readOnly fields (Pydantic v2).",
     action="store_true",

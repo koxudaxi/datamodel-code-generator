@@ -10,7 +10,7 @@ This documentation is auto-generated from test cases.
 |----------|---------|-------------|
 | 📁 [Base Options](base-options.md) | 10 | Input/output configuration |
 | 🔧 [Typing Customization](typing-customization.md) | 29 | Type annotation and import behavior |
-| 🏷️ [Field Customization](field-customization.md) | 25 | Field naming and docstring behavior |
+| 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
 | 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
@@ -168,6 +168,7 @@ This documentation is auto-generated from test cases.
 
 - [`--schema-version`](base-options.md#schema-version)
 - [`--schema-version-mode`](base-options.md#schema-version-mode)
+- [`--serialization-aliases`](field-customization.md#serialization-aliases)
 - [`--set-default-enum-member`](field-customization.md#set-default-enum-member)
 - [`--shared-module-name`](general-options.md#shared-module-name)
 - [`--skip-root-model`](model-customization.md#skip-root-model)

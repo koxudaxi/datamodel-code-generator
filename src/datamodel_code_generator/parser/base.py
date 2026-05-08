@@ -14,7 +14,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -997,6 +997,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.field_constraints: bool = config.field_constraints
         self.snake_case_field: bool = config.snake_case_field
         self.strip_default_none: bool = config.strip_default_none
+        self.serialization_aliases: Mapping[str, str] = config.serialization_aliases or {}
         self.apply_default_values_for_required_fields: bool = config.apply_default_values_for_required_fields
         self.force_optional_for_required_fields: bool = config.force_optional_for_required_fields
         self.use_schema_description: bool = config.use_schema_description
@@ -1182,6 +1183,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ):
             return ModelType.PYDANTIC
         return ModelType.CLASS
+
+    def get_serialization_alias(
+        self,
+        original_field_name: str,
+        field_name: str,
+        class_name: str | None = None,
+    ) -> str | None:
+        """Get an explicit serialization alias for a field."""
+        if not self.serialization_aliases:
+            return None
+        scoped_keys = (f"{class_name}.{original_field_name}", f"{class_name}.{field_name}")[
+            : 2 * (class_name is not None)
+        ]
+        keys = (*scoped_keys, original_field_name, field_name)
+        for key in keys:
+            if key in self.serialization_aliases:
+                return self.serialization_aliases[key]
+        return None
 
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
@@ -1760,6 +1779,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 required=True,
                                 alias=single_alias,
                                 validation_aliases=validation_aliases,
+                                serialization_alias=self.get_serialization_alias(
+                                    field_name, field_name, discriminator_model.name
+                                ),
                                 use_serialization_alias=self.use_serialization_alias,
                             )
                         )

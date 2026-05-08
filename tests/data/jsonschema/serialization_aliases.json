@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Messaging",
+  "type": "object",
+  "definitions": {
+    "SendMessageV2": {
+      "type": "object",
+      "properties": {
+        "textMessage": {
+          "type": "string"
+        }
+      },
+      "required": ["textMessage"]
+    },
+    "OtherMessage": {
+      "type": "object",
+      "properties": {
+        "other-name": {
+          "type": "string"
+        }
+      },
+      "required": ["other-name"]
+    },
+    "SameNameMessage": {
+      "type": "object",
+      "properties": {
+        "same-name": {
+          "type": "string"
+        }
+      },
+      "required": ["same-name"]
+    }
+  },
+  "properties": {
+    "send": {
+      "$ref": "#/definitions/SendMessageV2"
+    },
+    "other": {
+      "$ref": "#/definitions/OtherMessage"
+    },
+    "same": {
+      "$ref": "#/definitions/SameNameMessage"
+    }
+  }
+}

@@ -565,6 +565,7 @@ class OpenAPIParser(JsonSchemaParser):
                         effective_default=effective_default,
                         effective_has_default=effective_has_default,
                         use_default_with_required=use_default_with_required,
+                        class_name=reference.name,
                     )
                 )
             else:
@@ -620,6 +621,7 @@ class OpenAPIParser(JsonSchemaParser):
                         required=effective_required,
                         alias=single_alias,
                         validation_aliases=validation_aliases,
+                        serialization_alias=self.get_serialization_alias(parameter_name, field_name, reference.name),
                         constraints=object_schema.model_dump(exclude_none=True)
                         if object_schema and self.is_constraints_field(object_schema)
                         else None,

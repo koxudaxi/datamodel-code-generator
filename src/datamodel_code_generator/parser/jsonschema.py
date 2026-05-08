@@ -1216,6 +1216,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         effective_default: Any = None,
         effective_has_default: bool | None = None,
         use_default_with_required: bool = False,
+        class_name: str | None = None,
     ) -> DataModelFieldBase:
         """Create a data model field from a JSON Schema object field."""
         default_value = effective_default if effective_has_default is not None else field.default
@@ -1239,6 +1240,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validation_aliases = alias
         else:
             single_alias = alias
+        serialization_alias = (
+            self.get_serialization_alias(original_field_name, field_name or "", class_name)
+            if original_field_name
+            else None
+        )
         return self.data_model_field_type(
             name=field_name,
             default=default_value,
@@ -1246,6 +1252,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             required=required,
             alias=single_alias,
             validation_aliases=validation_aliases,
+            serialization_alias=serialization_alias,
             constraints=constraints,
             nullable=field.nullable
             if self.strict_nullable and field.nullable is not None
@@ -2638,6 +2645,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                                     original_name=request,
                                     alias=single_alias,
                                     validation_aliases=validation_aliases,
+                                    serialization_alias=self.get_serialization_alias(request, field_name, name),
                                     data_type=data_type,
                                     use_serialization_alias=self.use_serialization_alias,
                                 )
@@ -2826,6 +2834,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         required=False if self.force_optional_for_required_fields else original_field_name in requires,
                         alias=single_alias,
                         validation_aliases=validation_aliases,
+                        serialization_alias=self.get_serialization_alias(original_field_name, field_name, class_name),
                         strip_default_none=self.strip_default_none,
                         use_annotated=self.use_annotated,
                         use_field_description=self.use_field_description,
@@ -2867,6 +2876,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     effective_default=effective_default,
                     effective_has_default=effective_has_default,
                     use_default_with_required=use_default_with_required,
+                    class_name=class_name,
                 )
             )
         return fields
