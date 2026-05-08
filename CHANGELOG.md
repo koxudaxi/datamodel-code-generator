@@ -4,27 +4,10 @@ All notable changes to this project are documented in this file.
 This changelog is automatically generated from GitHub Releases.
 
 ---
+
 ## [0.57.0](https://github.com/koxudaxi/datamodel-code-generator/releases/tag/0.57.0) - 2026-05-07
 
 ## Breaking Changes
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ### Code Generation Changes
