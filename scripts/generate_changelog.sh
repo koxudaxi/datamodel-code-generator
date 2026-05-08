@@ -103,10 +103,24 @@ prepend_release_entry() {
         write_header > "$changelog"
     fi
 
-    awk -v header="$tmp_dir/header.md" -v old_entries="$tmp_dir/old_entries.md" '
+    awk -v header="$tmp_dir/header.md" -v old_entries="$tmp_dir/old_entries.md" -v tag="$tag" '
+        function is_release_heading(line) {
+            return index(line, "## [" tag "](") == 1
+        }
         /^---$/ && !found {found=1; skip_blank=1; next}
         found && skip_blank && $0 == "" {skip_blank=0; next}
+        found && skip_duplicate {
+            if ($0 == "---") {
+                skip_duplicate=0
+                skip_blank=1
+            }
+            next
+        }
         !found {print > header; next}
+        found && is_release_heading($0) {
+            skip_duplicate=1
+            next
+        }
         found {skip_blank=0; print > old_entries}
     ' \
         "$changelog"
