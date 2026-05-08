@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 import textwrap
 from typing import TYPE_CHECKING
 
@@ -15,6 +16,7 @@ if TYPE_CHECKING:
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="generate_changelog.sh requires jq")
+@pytest.mark.skipif(sys.platform == "win32", reason="generate_changelog.sh is tested on POSIX runners")
 def test_prepend_release_entry_replaces_existing_tag(tmp_path: Path) -> None:
     """Existing release entries are replaced instead of duplicated."""
     changelog = tmp_path / "CHANGELOG.md"
