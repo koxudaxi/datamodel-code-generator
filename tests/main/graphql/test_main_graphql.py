@@ -198,10 +198,7 @@ def test_main_graphql_multiple_aliases_pydantic_v2(output_file: Path) -> None:
     )
 
 
-@pytest.mark.skipif(
-    black.__version__.split(".")[0] == "19",
-    reason="Installed black doesn't support the old style",
-)
+@LEGACY_BLACK_SKIP
 def test_main_graphql_serialization_aliases_pydantic_v2(output_file: Path) -> None:
     """Test GraphQL with explicit Pydantic v2 serialization aliases."""
     run_main_and_assert(

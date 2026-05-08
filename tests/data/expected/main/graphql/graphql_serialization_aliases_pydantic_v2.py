@@ -26,13 +26,13 @@ The `String` scalar type represents textual data, represented as UTF-8 character
 
 class Event(BaseModel):
     end_date: DateTime = Field(
-        ..., validation_alias=AliasChoices('endDate', 'end_date', 'endDate')
+        ..., validation_alias=AliasChoices('endDate', 'end_date')
     )
     name: String
     start_date: DateTime = Field(
         ...,
         serialization_alias='startsAt',
-        validation_alias=AliasChoices('startDate', 'start_date', 'startDate'),
+        validation_alias=AliasChoices('startDate', 'start_date'),
     )
     typename__: Literal['Event'] | None = Field(
         'Event', alias='__typename', serialization_alias='__typename'

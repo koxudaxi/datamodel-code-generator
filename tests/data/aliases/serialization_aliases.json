@@ -1,3 +1,10 @@
 {
-  "SendMessageV2.textMessage": ["message", "text"]
+  "SendMessageV2.textMessage": ["message", "text"],
+  "RequiredOnlyMessage.missing-required": ["missingRequiredInput", "missing-required"],
+  "RequiredOnlyMessage.plain-missing": "plainMissingInput",
+  "RequiredOnlyRefMessage.grand-name": ["grandInput", "grand-name"],
+  "RequiredOnlyRefMessage.ref-missing-required": ["refMissingInput", "ref-missing-required"],
+  "RequiredOnlyRefMessage.ref-plain-missing": "refPlainMissingInput",
+  "RequiredOnlyEmptyAllOfMessage.empty-missing": ["emptyMissingInput", "empty-missing"],
+  "RequiredOnlyRecursiveEmptyMessage.recursive-missing": "recursiveMissingInput"
 }

@@ -7069,13 +7069,15 @@ def test_main_jsonschema_serialization_aliases_with_use_serialization_alias_pyda
     )
 
 
-def test_main_jsonschema_serialization_aliases_invalid(output_file: Path) -> None:
+def test_main_jsonschema_serialization_aliases_invalid(output_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test invalid serialization_aliases mapping exits with an error."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "serialization_aliases.json",
         output_path=output_file,
         input_file_type="jsonschema",
         expected_exit=Exit.ERROR,
+        capsys=capsys,
+        expected_stderr_contains="Unable to load serialization alias mapping",
         extra_args=[
             "--serialization-aliases",
             str(ALIASES_DATA_PATH / "serialization_aliases.json"),

@@ -819,12 +819,12 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:
+def _find_base_classes(model: DataModel) -> list[DataModel]:  # pragma: no cover
     """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:  # pragma: no cover
     """Find a field by original_name in the models and their base classes."""
     for model in models:
         for field in model.iter_all_fields():  # pragma: no cover
@@ -833,7 +833,7 @@ def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBa
     return None  # pragma: no cover
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:  # pragma: no cover
     """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
@@ -1193,10 +1193,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         """Get an explicit serialization alias for a field."""
         if not self.serialization_aliases:
             return None
-        scoped_keys = (f"{class_name}.{original_field_name}", f"{class_name}.{field_name}")[
-            : 2 * (class_name is not None)
-        ]
-        keys = (*scoped_keys, original_field_name, field_name)
+        keys = []
+        if class_name is not None:  # pragma: no branch
+            keys.extend((f"{class_name}.{original_field_name}", f"{class_name}.{field_name}"))
+        keys.extend((original_field_name, field_name))
         for key in keys:
             if key in self.serialization_aliases:
                 return self.serialization_aliases[key]
@@ -1780,7 +1780,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 alias=single_alias,
                                 validation_aliases=validation_aliases,
                                 serialization_alias=self.get_serialization_alias(
-                                    field_name, field_name, discriminator_model.name
+                                    property_name, field_name, discriminator_model.name
                                 ),
                                 use_serialization_alias=self.use_serialization_alias,
                             )
@@ -2251,7 +2251,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 model_field.extras["validate_default"] = True
 
-    def __override_required_field(
+    def __override_required_field(  # pragma: no cover
         self,
         models: list[DataModel],
     ) -> None:

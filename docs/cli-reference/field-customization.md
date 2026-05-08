@@ -2003,6 +2003,108 @@ or validation aliases while using separate output-only names for serialization.
             }
           },
           "required": ["same-name"]
+        },
+        "RequiredOnlyMessage": {
+          "type": "object",
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "known-name": {
+                  "type": "string"
+                }
+              },
+              "required": ["known-name", "missing-required", "plain-missing"]
+            }
+          ],
+          "required": ["known-name", "missing-required", "plain-missing"]
+        },
+        "RequiredOnlyGrandBase": {
+          "type": "object",
+          "properties": {
+            "grand-name": {
+              "type": "integer"
+            },
+            "bare-name": {}
+          },
+          "required": ["grand-name", "bare-name"]
+        },
+        "RequiredOnlyBase": {
+          "type": "object",
+          "properties": {
+            "base-name": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/RequiredOnlyGrandBase"
+            }
+          ],
+          "required": ["base-name"]
+        },
+        "RequiredOnlyRefMessage": {
+          "type": "object",
+          "properties": {
+            "own-name": {
+              "type": "string"
+            }
+          },
+          "allOf": [
+            {
+              "$ref": "#/definitions/RequiredOnlyBase"
+            }
+          ],
+          "required": [
+            "own-name",
+            "grand-name",
+            "bare-name",
+            "ignored-missing",
+            "ref-missing-required",
+            "ref-plain-missing"
+          ]
+        },
+        "RequiredOnlyEmptyAllOfBase": {
+          "type": "object",
+          "allOf": [
+            {
+              "type": "object"
+            }
+          ]
+        },
+        "RequiredOnlyEmptyAllOfMessage": {
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/definitions/RequiredOnlyEmptyAllOfBase"
+            }
+          ],
+          "required": ["empty-missing"]
+        },
+        "RequiredOnlyRecursiveEmptyGrandBase": {
+          "type": "object",
+          "properties": {
+            "unrelated-name": {
+              "type": "string"
+            }
+          }
+        },
+        "RequiredOnlyRecursiveEmptyBase": {
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/definitions/RequiredOnlyRecursiveEmptyGrandBase"
+            }
+          ]
+        },
+        "RequiredOnlyRecursiveEmptyMessage": {
+          "type": "object",
+          "allOf": [
+            {
+              "$ref": "#/definitions/RequiredOnlyRecursiveEmptyBase"
+            }
+          ],
+          "required": ["recursive-missing"]
         }
       },
       "properties": {
@@ -2014,6 +2116,18 @@ or validation aliases while using separate output-only names for serialization.
         },
         "same": {
           "$ref": "#/definitions/SameNameMessage"
+        },
+        "requiredOnly": {
+          "$ref": "#/definitions/RequiredOnlyMessage"
+        },
+        "requiredOnlyRef": {
+          "$ref": "#/definitions/RequiredOnlyRefMessage"
+        },
+        "requiredOnlyEmptyAllOf": {
+          "$ref": "#/definitions/RequiredOnlyEmptyAllOfMessage"
+        },
+        "requiredOnlyRecursiveEmpty": {
+          "$ref": "#/definitions/RequiredOnlyRecursiveEmptyMessage"
         }
       }
     }
@@ -2027,6 +2141,8 @@ or validation aliases while using separate output-only names for serialization.
     #   timestamp: 2019-07-26T00:00:00+00:00
 
     from __future__ import annotations
+
+    from typing import Any
 
     from pydantic import AliasChoices, BaseModel, Field
 
@@ -2047,10 +2163,79 @@ or validation aliases while using separate output-only names for serialization.
         same_name: str = Field(..., alias='same-name', serialization_alias='same_name')
 
 
+    class RequiredOnlyMessage(BaseModel):
+        known_name: str = Field(..., alias='known-name')
+        missingRequiredInput: Any = Field(
+            ...,
+            serialization_alias='missingRequired',
+            validation_alias=AliasChoices('missing-required', 'missingRequiredInput'),
+        )
+        plainMissingInput: Any = Field(
+            ..., alias='plain-missing', serialization_alias='plainMissing'
+        )
+
+
+    class RequiredOnlyGrandBase(BaseModel):
+        grand_name: int = Field(..., alias='grand-name')
+        bare_name: Any = Field(..., alias='bare-name')
+
+
+    class RequiredOnlyBase(RequiredOnlyGrandBase):
+        base_name: str = Field(..., alias='base-name')
+
+
+    class RequiredOnlyRefMessage(RequiredOnlyBase):
+        own_name: str = Field(..., alias='own-name')
+        grand_name: int = Field(
+            ...,
+            serialization_alias='grandName',
+            validation_alias=AliasChoices('grand-name', 'grandInput'),
+        )
+        bare_name: Any = Field(..., alias='bare-name', serialization_alias='bareName')
+        refMissingInput: Any = Field(
+            ...,
+            serialization_alias='refMissingRequired',
+            validation_alias=AliasChoices('ref-missing-required', 'refMissingInput'),
+        )
+        refPlainMissingInput: Any = Field(
+            ..., alias='ref-plain-missing', serialization_alias='refPlainMissing'
+        )
+
+
+    class RequiredOnlyEmptyAllOfBase(BaseModel):
+        pass
+
+
+    class RequiredOnlyEmptyAllOfMessage(RequiredOnlyEmptyAllOfBase):
+        emptyMissingInput: Any = Field(
+            ...,
+            serialization_alias='emptyMissing',
+            validation_alias=AliasChoices('empty-missing', 'emptyMissingInput'),
+        )
+
+
+    class RequiredOnlyRecursiveEmptyGrandBase(BaseModel):
+        unrelated_name: str | None = Field(None, alias='unrelated-name')
+
+
+    class RequiredOnlyRecursiveEmptyBase(RequiredOnlyRecursiveEmptyGrandBase):
+        pass
+
+
+    class RequiredOnlyRecursiveEmptyMessage(RequiredOnlyRecursiveEmptyBase):
+        recursiveMissingInput: Any = Field(
+            ..., alias='recursive-missing', serialization_alias='recursiveMissing'
+        )
+
+
     class Messaging(BaseModel):
         send: SendMessageV2 | None = None
         other: OtherMessage | None = None
         same: SameNameMessage | None = None
+        requiredOnly: RequiredOnlyMessage | None = None
+        requiredOnlyRef: RequiredOnlyRefMessage | None = None
+        requiredOnlyEmptyAllOf: RequiredOnlyEmptyAllOfMessage | None = None
+        requiredOnlyRecursiveEmpty: RequiredOnlyRecursiveEmptyMessage | None = None
     ```
 
 ---

@@ -1,5 +1,13 @@
 {
   "SendMessageV2.textMessage": "messageText",
   "other-name": "otherName",
+  "RequiredOnlyMessage.missing-required": "missingRequired",
+  "RequiredOnlyMessage.plain-missing": "plainMissing",
+  "RequiredOnlyRefMessage.grand-name": "grandName",
+  "RequiredOnlyRefMessage.bare-name": "bareName",
+  "RequiredOnlyRefMessage.ref-missing-required": "refMissingRequired",
+  "RequiredOnlyRefMessage.ref-plain-missing": "refPlainMissing",
+  "RequiredOnlyEmptyAllOfMessage.empty-missing": "emptyMissing",
+  "RequiredOnlyRecursiveEmptyMessage.recursive-missing": "recursiveMissing",
   "same-name": "same_name"
 }
