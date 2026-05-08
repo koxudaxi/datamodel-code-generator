@@ -40,10 +40,20 @@
               "type": "string"
             }
           },
-          "required": ["known-name", "missing-required", "plain-missing"]
+          "required": [
+            "known-name",
+            "missing-required",
+            "plain-missing",
+            "allof-unmapped"
+          ]
         }
       ],
-      "required": ["known-name", "missing-required", "plain-missing"]
+      "required": [
+        "known-name",
+        "missing-required",
+        "plain-missing",
+        "allof-unmapped"
+      ]
     },
     "RequiredOnlyGrandBase": {
       "type": "object",

@@ -33,6 +33,7 @@ class RequiredOnlyMessage(BaseModel):
         validation_alias=AliasChoices('missing-required', 'missingRequiredInput'),
     )
     plainMissingInput: Any = Field(..., serialization_alias='plainMissing')
+    allof_unmapped: Any = Field(..., serialization_alias='allof-unmapped')
 
 
 class RequiredOnlyGrandBase(BaseModel):
@@ -52,6 +53,7 @@ class RequiredOnlyRefMessage(RequiredOnlyBase):
         validation_alias=AliasChoices('grand-name', 'grandInput'),
     )
     bare_name: Any = Field(..., serialization_alias='bareName')
+    ignored_missing: Any = Field(..., serialization_alias='ignored-missing')
     refMissingInput: Any = Field(
         ...,
         serialization_alias='refMissingRequired',

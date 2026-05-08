@@ -2155,7 +2155,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         }
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_obj_dict)
 
-    def _get_inherited_field_type(  # noqa: PLR0912
+    def _get_inherited_field_type(
         self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
     ) -> DataType | None:
         """Get the data type for an inherited property from parent schemas.
@@ -2173,13 +2173,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             visited |= {base.path}
 
-            if "#" in base.path:
-                file_part, fragment = base.path.split("#", 1)
-                ref = f"{file_part}#{fragment}" if file_part else f"#{fragment}"
-            else:  # pragma: no cover
-                ref = f"#{base.path}"
             try:
-                parent_schema = self._load_ref_schema_object(ref)
+                parent_schema = self._load_ref_schema_object(base.path)
             except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
 
@@ -2203,6 +2198,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
+    def _split_alias(self, alias: str | list[str] | None) -> tuple[str | None, list[str] | None]:  # noqa: PLR6301
+        """Split a resolver alias result into single and validation aliases."""
+        if isinstance(alias, list):
+            return None, alias
+        return alias, None
+
+    def _get_inherited_field(self, prop_name: str, base_classes: list[Reference]) -> DataModelFieldBase | None:
+        """Get an inherited generated field from parsed base models."""
+        for base in base_classes:
+            data_model = base.source if isinstance(base.source, DataModel) else None
+            if data_model is None:
+                data_model = next((result for result in self.results if result.reference.path == base.path), None)
+            if data_model is not None:
+                for field in data_model.iter_all_fields():
+                    if prop_name in {field.original_name, field.name}:
+                        return field
+        return None
+
     def _get_inherited_field_schema(
         self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
     ) -> JsonSchemaObject | None:
@@ -2217,13 +2230,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             visited |= {base.path}
 
-            if "#" in base.path:
-                file_part, fragment = base.path.split("#", 1)
-                ref = f"{file_part}#{fragment}" if file_part else f"#{fragment}"
-            else:  # pragma: no cover
-                ref = f"#{base.path}"
             try:
-                parent_schema = self._load_ref_schema_object(ref)
+                parent_schema = self._load_ref_schema_object(base.path)
             except Exception:  # pragma: no cover  # noqa: BLE001, S112
                 continue
 
@@ -2241,45 +2249,56 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
-    def _get_inherited_model_field(  # noqa: PLR0912
-        self, prop_name: str, base_classes: list[Reference], visited: frozenset[str] | None = None
-    ) -> DataModelFieldBase | None:
-        """Get the generated field for an inherited property from parent models."""
-        if visited is None:
-            visited = frozenset()
+    def _build_missing_required_field(
+        self,
+        required_field_name: str,
+        excludes: set[str],
+        base_classes: list[Reference],
+        class_name: str,
+    ) -> DataModelFieldBase:
+        """Build a field for a required name that is not declared in properties."""
+        field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+            required_field_name,
+            excludes=excludes,
+            model_type=self.field_name_model_type,
+            class_name=class_name,
+        )
+        inherited_field = self._get_inherited_field(required_field_name, base_classes)
+        if inherited_field is not None and inherited_field.name:
+            field_name = inherited_field.name
+        single_alias, validation_aliases = self._split_alias(alias)
+        serialization_alias = self.get_serialization_alias(required_field_name, field_name, class_name)
+        inherited_schema = self._get_inherited_field_schema(required_field_name, base_classes)
+        if inherited_schema is not None:
+            data_type = (
+                inherited_field.data_type.model_copy(deep=True)
+                if inherited_schema.enum and inherited_field is not None
+                else self._get_inherited_field_type(required_field_name, base_classes)
+                or self._build_lightweight_type(inherited_schema)
+            )
+            return self.get_object_field(
+                field_name=field_name,
+                field=inherited_schema,
+                required=True,
+                field_type=data_type or DataType(type=ANY, import_=IMPORT_ANY),
+                alias=alias,
+                original_field_name=required_field_name,
+                use_default_with_required=self.apply_default_values_for_required_fields
+                and inherited_schema.has_default,
+                class_name=class_name,
+            )
 
-        for base in base_classes:
-            if not base.path:  # pragma: no cover
-                continue
-            if base.path in visited:  # pragma: no cover
-                continue
-            visited |= {base.path}
-
-            for data_model in self.results:
-                if data_model.reference.path != base.path:
-                    continue
-                for field in data_model.fields:
-                    if prop_name in {field.original_name, field.name}:
-                        return field
-
-            if "#" in base.path:
-                file_part, fragment = base.path.split("#", 1)
-                ref = f"{file_part}#{fragment}" if file_part else f"#{fragment}"
-            else:  # pragma: no cover
-                ref = f"#{base.path}"
-            try:
-                parent_schema = self._load_ref_schema_object(ref)
-            except Exception:  # pragma: no cover  # noqa: BLE001, S112
-                continue
-
-            if parent_schema.allOf:
-                grandparent_refs = [self.model_resolver.add_ref(item.ref) for item in parent_schema.allOf if item.ref]
-                if grandparent_refs:  # pragma: no branch
-                    parent_field = self._get_inherited_model_field(prop_name, grandparent_refs, visited)
-                    if parent_field is not None:  # pragma: no branch
-                        return parent_field
-
-        return None
+        return self.data_model_field_type(
+            name=field_name,
+            required=True,
+            original_name=required_field_name,
+            alias=single_alias,
+            validation_aliases=validation_aliases,
+            serialization_alias=serialization_alias,
+            data_type=self._get_inherited_field_type(required_field_name, base_classes)
+            or DataType(type=ANY, import_=IMPORT_ANY),
+            use_serialization_alias=self.use_serialization_alias,
+        )
 
     def _schema_signature(self, prop_schema: JsonSchemaObject | bool) -> str | bool:  # noqa: FBT001, PLR6301
         """Normalize property schema for comparison across allOf items."""
@@ -2505,7 +2524,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             kwargs.pop("dataclass_arguments", None)
         return data_model_class(**kwargs)
 
-    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915
+    def _parse_object_common_part(  # noqa: PLR0912, PLR0913, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2599,63 +2618,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if self.apply_default_values_for_required_fields and field.has_default:
                         field.use_default_with_required = True
                 else:
-                    field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
-                        required_,
-                        excludes={field.name for field in fields if field.name},
-                        model_type=self.field_name_model_type,
-                        class_name=name,
-                    )
-                    single_alias: str | None = None
-                    validation_aliases: list[str] | None = None
-                    if isinstance(alias, list):
-                        validation_aliases = alias
-                    else:
-                        single_alias = alias
-                    serialization_alias = self.get_serialization_alias(required_, field_name, name)
-                    inherited_schema = self._get_inherited_field_schema(required_, base_classes)
-                    if inherited_schema is not None:
-                        inherited_model_field = self._get_inherited_model_field(required_, base_classes)
-                        inherited_field_name = (
-                            inherited_model_field.name
-                            if inherited_model_field is not None and inherited_model_field.name
-                            else field_name
-                        )
-                        inherited_data_type = (
-                            inherited_model_field.data_type.model_copy(deep=True)
-                            if inherited_schema.enum and inherited_model_field is not None
-                            else self._get_inherited_field_type(required_, base_classes)
-                            or self._build_lightweight_type(inherited_schema)
-                        )
-                        if inherited_data_type is None:
-                            inherited_data_type = DataType(type=ANY, import_=IMPORT_ANY)
-                        fields.append(
-                            self.get_object_field(
-                                field_name=inherited_field_name,
-                                field=inherited_schema,
-                                required=True,
-                                field_type=inherited_data_type,
-                                alias=alias,
-                                original_field_name=required_,
-                                use_default_with_required=(
-                                    self.apply_default_values_for_required_fields and inherited_schema.has_default
-                                ),
-                                class_name=name,
-                            )
-                        )
-                        continue
-                    if serialization_alias is None:
-                        continue
-                    data_type = DataType(type=ANY, import_=IMPORT_ANY)
                     fields.append(
-                        self.data_model_field_type(
-                            name=field_name,
-                            required=True,
-                            original_name=required_,
-                            alias=single_alias,
-                            validation_aliases=validation_aliases,
-                            serialization_alias=serialization_alias,
-                            data_type=data_type,
-                            use_serialization_alias=self.use_serialization_alias,
+                        self._build_missing_required_field(
+                            required_,
+                            excludes={field.name for field in fields if field.name},
+                            base_classes=base_classes,
+                            class_name=name,
                         )
                     )
         name = self._apply_title_as_name(name, obj)  # pragma: no cover
@@ -2693,7 +2661,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.data_type(reference=reference)
 
-    def _parse_all_of_item(  # noqa: PLR0912, PLR0913, PLR0914, PLR0915, PLR0917
+    def _parse_all_of_item(  # noqa: PLR0912, PLR0913, PLR0917
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2756,68 +2724,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                                 continue
                             if self.force_optional_for_required_fields:
                                 continue
-                            field_name, alias = self.model_resolver.get_valid_field_name_and_alias(
+                            field = self._build_missing_required_field(
                                 required_field_name,
                                 excludes=existing_field_names,
-                                model_type=self.field_name_model_type,
+                                base_classes=base_classes,
                                 class_name=name,
                             )
-                            single_alias: str | None = None
-                            validation_aliases: list[str] | None = None
-                            if isinstance(alias, list):
-                                validation_aliases = alias
-                            else:
-                                single_alias = alias
-                            serialization_alias = self.get_serialization_alias(required_field_name, field_name, name)
-                            inherited_schema = self._get_inherited_field_schema(required_field_name, base_classes)
-                            if inherited_schema is not None:
-                                inherited_model_field = self._get_inherited_model_field(
-                                    required_field_name, base_classes
-                                )
-                                inherited_field_name = (
-                                    inherited_model_field.name
-                                    if inherited_model_field is not None and inherited_model_field.name
-                                    else field_name
-                                )
-                                data_type = (
-                                    inherited_model_field.data_type.model_copy(deep=True)
-                                    if inherited_schema.enum and inherited_model_field is not None
-                                    else self._get_inherited_field_type(required_field_name, base_classes)
-                                    or self._build_lightweight_type(inherited_schema)
-                                )
-                                if data_type is None:
-                                    data_type = DataType(type=ANY, import_=IMPORT_ANY)
-                                fields.append(
-                                    self.get_object_field(
-                                        field_name=inherited_field_name,
-                                        field=inherited_schema,
-                                        required=True,
-                                        field_type=data_type,
-                                        alias=alias,
-                                        original_field_name=required_field_name,
-                                        use_default_with_required=(
-                                            self.apply_default_values_for_required_fields
-                                            and inherited_schema.has_default
-                                        ),
-                                        class_name=name,
-                                    )
-                                )
-                                existing_field_names.update({required_field_name, inherited_field_name})
-                                continue
-                            data_type = DataType(type=ANY, import_=IMPORT_ANY)
-                            fields.append(
-                                self.data_model_field_type(
-                                    name=field_name,
-                                    required=True,
-                                    original_name=required_field_name,
-                                    alias=single_alias,
-                                    validation_aliases=validation_aliases,
-                                    serialization_alias=serialization_alias,
-                                    data_type=data_type,
-                                    use_serialization_alias=self.use_serialization_alias,
-                                )
-                            )
-                            existing_field_names.update({required_field_name, field_name})
+                            fields.append(field)
+                            existing_field_names.update({required_field_name, field.name or required_field_name})
                 elif all_of_item.required:
                     required.extend(all_of_item.required)
                 self._parse_all_of_item(
