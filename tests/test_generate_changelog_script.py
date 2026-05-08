@@ -7,12 +7,11 @@ import shutil
 import subprocess
 import sys
 import textwrap
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
 
-if TYPE_CHECKING:
-    from pathlib import Path
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "generate_changelog.sh"
 
 
 @pytest.mark.skipif(shutil.which("jq") is None, reason="generate_changelog.sh requires jq")
@@ -68,7 +67,7 @@ def test_prepend_release_entry_replaces_existing_tag(tmp_path: Path) -> None:
     env = {**os.environ, "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
     command = [
         "bash",
-        "scripts/generate_changelog.sh",
+        str(SCRIPT),
         "--repo",
         "koxudaxi/datamodel-code-generator",
         "--tag",
