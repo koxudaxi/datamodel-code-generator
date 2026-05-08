@@ -87,3 +87,4 @@ def test_prepend_release_entry_replaces_existing_tag(tmp_path: Path) -> None:
     assert "Old release body" not in first_run
     assert "* Fixed changelog generation" in first_run
     assert "## [0.56.1]" in first_run
+    assert "Previous release body" in first_run
