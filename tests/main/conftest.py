@@ -334,7 +334,7 @@ def run_watch_and_assert(config: Any, *, expected_exit: Exit = Exit.OK) -> None:
     __tracebackhide__ = True
     from datamodel_code_generator.watch import watch_and_regenerate
 
-    return_code = watch_and_regenerate(config, None, None, None)
+    return_code = watch_and_regenerate(config, None, None, None, None)
     _assert_exit_code(return_code, expected_exit, f"Watch config: {config!r}")
 
 

@@ -1007,6 +1007,26 @@ def test_main_multiple_aliases_parameters_pydantic_v2(output_file: Path) -> None
     )
 
 
+def test_main_openapi_serialization_aliases_parameters_pydantic_v2(output_file: Path) -> None:
+    """Test OpenAPI parameters with explicit Pydantic v2 serialization aliases."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "serialization_aliases_parameters.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="openapi_serialization_aliases_parameters.py",
+        extra_args=[
+            "--serialization-aliases",
+            str(DATA_PATH / "aliases" / "serialization_aliases_parameters.json"),
+            "--openapi-scopes",
+            "paths",
+            "parameters",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 def test_main_openapi_parameter_content(output_file: Path) -> None:
     """Test OpenAPI parameters defined with content media types."""
     run_main_and_assert(

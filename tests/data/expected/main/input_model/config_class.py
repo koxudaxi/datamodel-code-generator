@@ -135,6 +135,7 @@ class GenerateConfig(TypedDict, closed=True):
     snake_case_field: NotRequired[bool]
     strip_default_none: NotRequired[bool]
     aliases: NotRequired[Mapping[str, str | list[str]] | None]
+    serialization_aliases: NotRequired[Mapping[str, str] | None]
     disable_timestamp: NotRequired[bool]
     enable_version_header: NotRequired[bool]
     enable_command_header: NotRequired[bool]

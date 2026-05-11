@@ -83,6 +83,7 @@ class GenerateConfig(BaseModel):
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Mapping[str, str | list[str]] | None = None
+    serialization_aliases: Mapping[str, str] | None = None
     disable_timestamp: bool = False
     enable_version_header: bool = False
     enable_command_header: bool = False
@@ -227,6 +228,7 @@ class ParserConfig(BaseModel):
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Mapping[str, str | list[str]] | None = None
+    serialization_aliases: Mapping[str, str] | None = None
     allow_population_by_field_name: bool = False
     apply_default_values_for_required_fields: bool = False
     allow_extra_fields: bool = False

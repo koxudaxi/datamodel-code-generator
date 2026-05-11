@@ -158,7 +158,13 @@ class Config(BaseModel):  # noqa: PLR0904
         return cls.model_fields
 
     @field_validator(
-        "aliases", "extra_template_data", "custom_formatters_kwargs", "validators", "default_values", mode="before"
+        "aliases",
+        "serialization_aliases",
+        "extra_template_data",
+        "custom_formatters_kwargs",
+        "validators",
+        "default_values",
+        mode="before",
     )
     def validate_file(cls, value: Any) -> TextIOBase | None:  # noqa: N805
         """Validate and open file path."""
@@ -434,6 +440,7 @@ class Config(BaseModel):  # noqa: PLR0904
     snake_case_field: bool = False
     strip_default_none: bool = False
     aliases: Optional[TextIOBase] = None  # noqa: UP045
+    serialization_aliases: Optional[TextIOBase] = None  # noqa: UP045
     default_values: Optional[TextIOBase] = None  # noqa: UP045
     disable_timestamp: bool = False
     enable_version_header: bool = False
@@ -864,6 +871,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
     output: Path | None,
     extra_template_data: dict[str, Any] | None,
     aliases: dict[str, str] | None,
+    serialization_aliases: dict[str, str] | None,
     command_line: str | None,
     custom_formatters_kwargs: dict[str, str] | None,
     settings_path: Path | None = None,
@@ -889,6 +897,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         strip_default_none=config.strip_default_none,
         extra_template_data=extra_template_data,  # ty: ignore
         aliases=aliases,
+        serialization_aliases=serialization_aliases,
         disable_timestamp=config.disable_timestamp,
         enable_version_header=config.enable_version_header,
         enable_command_header=config.enable_command_header,
@@ -1230,6 +1239,13 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         print(error, file=sys.stderr)  # noqa: T201
         return Exit.ERROR
 
+    serialization_aliases, error = _load_json_config(
+        config.serialization_aliases, "serialization alias mapping", _validate_string_mapping
+    )
+    if error:
+        print(error, file=sys.stderr)  # noqa: T201
+        return Exit.ERROR
+
     default_value_overrides, error = _load_json_config(
         config.default_values, "default values mapping", _validate_string_key_dict
     )
@@ -1290,6 +1306,7 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             output=generate_output,
             extra_template_data=extra_template_data,
             aliases=aliases,
+            serialization_aliases=serialization_aliases,
             command_line=shlex.join(["datamodel-codegen", *args]) if config.enable_command_header else None,
             custom_formatters_kwargs=custom_formatters_kwargs,
             settings_path=config.output,
@@ -1344,7 +1361,12 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
             from datamodel_code_generator.watch import watch_and_regenerate  # noqa: PLC0415
 
             return watch_and_regenerate(
-                config, extra_template_data, aliases, custom_formatters_kwargs, default_value_overrides
+                config,
+                extra_template_data,
+                aliases,
+                serialization_aliases,
+                custom_formatters_kwargs,
+                default_value_overrides,
             )
         except Exception as e:  # noqa: BLE001
             print(str(e), file=sys.stderr)  # noqa: T201

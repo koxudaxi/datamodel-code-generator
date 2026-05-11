@@ -30,6 +30,10 @@ class Event(BaseModel):
     )
     name: String
     start_date: DateTime = Field(
-        ..., validation_alias=AliasChoices('startDate', 'start_date')
+        ...,
+        serialization_alias='startsAt',
+        validation_alias=AliasChoices('startDate', 'start_date'),
     )
-    typename__: Literal['Event'] | None = Field('Event', alias='__typename')
+    typename__: Literal['Event'] | None = Field(
+        'Event', alias='__typename', serialization_alias='__typename'
+    )

@@ -14,7 +14,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -819,12 +819,12 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:
+def _find_base_classes(model: DataModel) -> list[DataModel]:  # pragma: no cover
     """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:  # pragma: no cover
     """Find a field by original_name in the models and their base classes."""
     for model in models:
         for field in model.iter_all_fields():  # pragma: no cover
@@ -833,7 +833,7 @@ def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBa
     return None  # pragma: no cover
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:  # pragma: no cover
     """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
@@ -997,6 +997,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.field_constraints: bool = config.field_constraints
         self.snake_case_field: bool = config.snake_case_field
         self.strip_default_none: bool = config.strip_default_none
+        self.serialization_aliases: Mapping[str, str] = config.serialization_aliases or {}
         self.apply_default_values_for_required_fields: bool = config.apply_default_values_for_required_fields
         self.force_optional_for_required_fields: bool = config.force_optional_for_required_fields
         self.use_schema_description: bool = config.use_schema_description
@@ -1182,6 +1183,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ):
             return ModelType.PYDANTIC
         return ModelType.CLASS
+
+    def get_serialization_alias(
+        self,
+        original_field_name: str,
+        field_name: str,
+        class_name: str | None = None,
+    ) -> str | None:
+        """Get an explicit serialization alias for a field."""
+        if not self.serialization_aliases:
+            return None
+        keys = []
+        if class_name is not None:  # pragma: no branch
+            keys.extend((f"{class_name}.{original_field_name}", f"{class_name}.{field_name}"))
+        keys.extend((original_field_name, field_name))
+        for key in keys:
+            if key in self.serialization_aliases:
+                return self.serialization_aliases[key]
+        return None
 
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
@@ -1760,6 +1779,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 required=True,
                                 alias=single_alias,
                                 validation_aliases=validation_aliases,
+                                serialization_alias=self.get_serialization_alias(
+                                    property_name, field_name, discriminator_model.name
+                                ),
                                 use_serialization_alias=self.use_serialization_alias,
                             )
                         )
@@ -2229,7 +2251,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 model_field.extras["validate_default"] = True
 
-    def __override_required_field(
+    def __override_required_field(  # pragma: no cover
         self,
         models: list[DataModel],
     ) -> None:

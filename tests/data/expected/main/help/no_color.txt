@@ -228,6 +228,13 @@ Field customization:
   --remove-special-field-name-prefix
                         Remove field name prefix if it has a special meaning
                         e.g. underscores
+  --serialization-aliases SERIALIZATION_ALIASES
+                        Serialization alias mapping file (JSON) for Pydantic
+                        v2. Format: {'<schema_field>':
+                        '<serialization_alias>'}. Supports hierarchical
+                        formats: Flat: {'name': 'fullName'} applies to all
+                        occurrences. Scoped: {'User.name': 'fullName'} applies
+                        to specific class.
   --snake-case-field    Change camel-case field name to snake-case
   --special-field-name-prefix SPECIAL_FIELD_NAME_PREFIX
                         Set field name prefix when first character can't be
