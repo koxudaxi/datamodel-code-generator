@@ -2014,10 +2014,20 @@ or validation aliases while using separate output-only names for serialization.
                   "type": "string"
                 }
               },
-              "required": ["known-name", "missing-required", "plain-missing"]
+              "required": [
+                "known-name",
+                "missing-required",
+                "plain-missing",
+                "allof-unmapped"
+              ]
             }
           ],
-          "required": ["known-name", "missing-required", "plain-missing"]
+          "required": [
+            "known-name",
+            "missing-required",
+            "plain-missing",
+            "allof-unmapped"
+          ]
         },
         "RequiredOnlyGrandBase": {
           "type": "object",
@@ -2173,6 +2183,7 @@ or validation aliases while using separate output-only names for serialization.
         plainMissingInput: Any = Field(
             ..., alias='plain-missing', serialization_alias='plainMissing'
         )
+        allof_unmapped: Any = Field(..., alias='allof-unmapped')
 
 
     class RequiredOnlyGrandBase(BaseModel):
@@ -2192,6 +2203,7 @@ or validation aliases while using separate output-only names for serialization.
             validation_alias=AliasChoices('grand-name', 'grandInput'),
         )
         bare_name: Any = Field(..., alias='bare-name', serialization_alias='bareName')
+        ignored_missing: Any = Field(..., alias='ignored-missing')
         refMissingInput: Any = Field(
             ...,
             serialization_alias='refMissingRequired',
