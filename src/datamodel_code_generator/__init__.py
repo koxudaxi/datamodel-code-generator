@@ -524,6 +524,21 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
         config = GenerateConfig.model_validate(options)
 
+    if (
+        config.output_datetime_class is not None
+        and config.output_datetime_class is not DatetimeClassType.Datetime
+    ):
+        if config.output_model_type == DataModelType.DataclassesDataclass:
+            raise Error(
+                '`--output-datetime-class` only allows "datetime" for '
+                f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
+            )
+        if config.output_model_type == DataModelType.TypingTypedDict:
+            raise Error(
+                '`--output-datetime-class` only allows "datetime" for '
+                f"`--output-model-type` {DataModelType.TypingTypedDict.value}"
+            )
+
     # Variables that may be modified during processing
     input_filename = config.input_filename
     input_file_type = config.input_file_type
