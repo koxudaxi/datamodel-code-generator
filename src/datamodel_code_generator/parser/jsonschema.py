@@ -1087,7 +1087,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 unique_name = self.model_resolver.get_class_name(variant_name, unique=False).name
                 path_parts[-1] = unique_name
                 variant_ref = self.model_resolver.add(path_parts, unique_name, class_name=True, unique=False)
-                data_type.reference = variant_ref
+                self.generation_store.replace_data_type_ref(data_type, variant_ref)
             elif not self._ref_schema_has_model(ref_path):  # pragma: no branch
                 if not hasattr(self, "_force_base_model_refs"):
                     self._force_base_model_refs: set[str] = set()
@@ -1105,9 +1105,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """
         if self.read_only_write_only_model_type != ReadOnlyWriteOnlyModelType.RequestResponse:
             return model_fields
-        for field in model_fields:
-            if field.data_type:  # pragma: no branch
-                self._update_data_type_ref_for_variant(field.data_type, suffix)
+        with self.generation_store.defer_refresh():
+            for field in model_fields:
+                if field.data_type:  # pragma: no branch
+                    self._update_data_type_ref_for_variant(field.data_type, suffix)
         return model_fields
 
     def _generate_forced_base_models(self) -> None:
@@ -1169,7 +1170,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             treat_dot_as_module=self.treat_dot_as_module,
             dataclass_arguments=self.dataclass_arguments,
         )
-        self.results.append(model)
+        self.generation_store.register_model(model)
 
     def _create_request_response_models(  # noqa: PLR0913, PLR0917
         self,
@@ -2557,7 +2558,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         new_type.is_set = new_type.is_set or current_type.is_set
                         if new_type.kwargs is None and current_type.kwargs is not None:  # pragma: no cover
                             new_type.kwargs = current_type.kwargs
-                        field.data_type = new_type
+                        self.generation_store.replace_field_type(field, new_type)
                 # Handle List[Any] case: inherit item type from parent if items have Any type
                 elif field_name and self._is_list_with_any_item_type(current_type):
                     inherited_type = self._get_inherited_field_type(field_name, base_classes)
@@ -2585,10 +2586,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if is_wrapped:
                         wrapper = current_type.model_copy(deep=True)
                         wrapper.data_types[0] = new_type
-                        field.data_type = wrapper
+                        self.generation_store.replace_field_type(field, wrapper)
                         continue
 
-                    field.data_type = new_type  # pragma: no cover
+                    self.generation_store.replace_field_type(field, new_type)  # pragma: no cover
         # ignore an undetected object
         if ignore_duplicate_model and not fields and len(base_classes) == 1:
             with self.model_resolver.current_base_path_context(self.model_resolver._base_path):  # noqa: SLF001
@@ -2652,7 +2653,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 treat_dot_as_module=self.treat_dot_as_module,
                 dataclass_arguments=self.dataclass_arguments,
             )
-            self.results.append(data_model_type)
+            self.generation_store.register_model(data_model_type)
 
         return self.data_type(reference=reference)
 
@@ -2784,7 +2785,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         nullable=obj.type_has_null,
                         treat_dot_as_module=self.treat_dot_as_module,
                     )
-                    self.results.append(data_model_root)
+                    self.generation_store.register_model(data_model_root)
                     return self.data_type(reference=reference)
 
                 return ref_data_type
@@ -2866,7 +2867,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.results.append(data_model_root)
+        self.generation_store.register_model(data_model_root)
         return self.data_type(reference=reference)
 
     def parse_object_fields(
@@ -3051,7 +3052,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 treat_dot_as_module=self.treat_dot_as_module,
                 dataclass_arguments=self.dataclass_arguments,
             )
-            self.results.append(data_model_type)
+            self.generation_store.register_model(data_model_type)
 
         return self.data_type(reference=reference)
 
@@ -3527,7 +3528,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.results.append(data_model_root)
+        self.generation_store.register_model(data_model_root)
         return self.data_type(reference=reference)
 
     def parse_root_type(  # noqa: PLR0912, PLR0914, PLR0915
@@ -3655,7 +3656,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             treat_dot_as_module=self.treat_dot_as_module,
             default=default_value if has_default_override else UNDEFINED,
         )
-        self.results.append(data_model_root_type)
+        self.generation_store.register_model(data_model_root_type)
         return self.data_type(reference=reference)
 
     def _parse_multiple_types_with_properties(
@@ -3717,7 +3718,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             treat_dot_as_module=self.treat_dot_as_module,
             default=obj.default if obj.has_default else UNDEFINED,
         )
-        self.results.append(data_model_root_type)
+        self.generation_store.register_model(data_model_root_type)
 
     def parse_enum_as_literal(self, obj: JsonSchemaObject) -> DataType:
         """Parse enum values as a Literal type."""
@@ -3847,7 +3848,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 nullable=obj.type_has_null,
                 treat_dot_as_module=self.treat_dot_as_module,
             )
-            self.results.append(data_model_root_type)
+            self.generation_store.register_model(data_model_root_type)
             return self.data_type(reference=reference)
 
         def create_enum(reference_: Reference) -> DataType:
@@ -3878,7 +3879,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 default=obj.default if obj.has_default else UNDEFINED,
                 treat_dot_as_module=self.treat_dot_as_module,
             )
-            self.results.append(enum)
+            self.generation_store.register_model(enum)
             return self.data_type(reference=reference_)
 
         name = self._apply_title_as_name(name, obj)
@@ -3933,7 +3934,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             nullable=obj.type_has_null,
             treat_dot_as_module=self.treat_dot_as_module,
         )
-        self.results.append(data_model_root_type)
+        self.generation_store.register_model(data_model_root_type)
         return self.data_type(reference=reference)
 
     def _get_ref_body(self, resolved_ref: str) -> dict[str, YamlValue]:

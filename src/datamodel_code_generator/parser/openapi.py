@@ -651,7 +651,7 @@ class OpenAPIParser(JsonSchemaParser):
         if OpenAPIScope.Parameters in self.open_api_scopes and fields:
             # Using _create_data_model from parent class JsonSchemaParser
             # This method automatically adds frozen=True for DataClass types
-            self.results.append(
+            self.generation_store.register_model(
                 self._create_data_model(
                     fields=fields,
                     reference=reference,

@@ -147,6 +147,9 @@ def test_sort_data_models() -> None:
     assert unresolved == []
     assert require_update_action_models == ["B", "A"]
 
+    _, _, seeded_require_update_action_models = sort_data_models(reference, require_update_action_models=["B"])
+    assert seeded_require_update_action_models == ["B", "A"]
+
 
 def test_sort_data_models_unresolved() -> None:
     """Test sorting data models with unresolved references."""
