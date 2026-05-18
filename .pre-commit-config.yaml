@@ -53,3 +53,9 @@ repos:
     language: system
     files: ^(src/datamodel_code_generator/parser/schema_version\.py|scripts/build_schema_docs\.py|docs/supported_formats\.md)$
     pass_filenames: false
+  - id: generation-store-usage
+    name: Check parser GenerationStore usage
+    entry: uv run python scripts/check_generation_store_usage.py
+    language: system
+    files: ^src/datamodel_code_generator/parser/.*\.py$
+    pass_filenames: false
