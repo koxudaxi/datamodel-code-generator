@@ -3331,10 +3331,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for ctx in contexts:
             # If any model in this module needs typing_extensions.TypedDict (e.g. for PEP 728
             # closed/extra_items backport), remove typing.TypedDict to avoid duplicate imports.
-            if (
-                IMPORT_TYPED_DICT_BACKPORT.import_ in ctx.imports.get(IMPORT_TYPED_DICT_BACKPORT.from_, set())
-                and IMPORT_TYPED_DICT.import_ in ctx.imports.get(IMPORT_TYPED_DICT.from_, set())
-            ):
+            if IMPORT_TYPED_DICT_BACKPORT.import_ in ctx.imports.get(
+                IMPORT_TYPED_DICT_BACKPORT.from_, set()
+            ) and IMPORT_TYPED_DICT.import_ in ctx.imports.get(IMPORT_TYPED_DICT.from_, set()):
                 while ctx.imports.counter.get((IMPORT_TYPED_DICT.from_, IMPORT_TYPED_DICT.import_), 0) > 0:
                     ctx.imports.remove(IMPORT_TYPED_DICT)
 
