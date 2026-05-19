@@ -2466,3 +2466,51 @@ def test_config_models_allow_internal_model_extra_options() -> None:
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__
+
+
+def test_generate_typeddict_datetime_default_uses_str() -> None:
+    """Test that TypedDict output uses str for datetime fields by default."""
+    json_schema = '{"type": "object", "properties": {"created_at": {"type": "string", "format": "date-time"}}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        output_model_type=DataModelType.TypingTypedDict,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_typeddict_datetime_default_uses_str.py")
+
+
+def test_generate_typeddict_with_datetime_class_uses_datetime() -> None:
+    """Test that TypedDict output uses datetime.datetime when DatetimeClassType.Datetime is specified."""
+    from datamodel_code_generator.format import DatetimeClassType
+
+    json_schema = '{"type": "object", "properties": {"created_at": {"type": "string", "format": "date-time"}}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        output_model_type=DataModelType.TypingTypedDict,
+        output_datetime_class=DatetimeClassType.Datetime,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_typeddict_with_datetime_class_uses_datetime.py")
+
+
+def test_generate_typeddict_with_non_datetime_class_raises_error() -> None:
+    """Test that TypedDict rejects pydantic-specific datetime types with a clear error."""
+    from datamodel_code_generator.format import DatetimeClassType
+
+    json_schema = '{"type": "object", "properties": {"created_at": {"type": "string", "format": "date-time"}}}'
+    with pytest.raises(
+        Error,
+        match=r'`--output-datetime-class` only allows "datetime" for `--output-model-type` typing\.TypedDict',
+    ):
+        generate(
+            json_schema,
+            input_file_type=InputFileType.JsonSchema,
+            input_filename="schema.json",
+            output_model_type=DataModelType.TypingTypedDict,
+            output_datetime_class=DatetimeClassType.Awaredatetime,
+            disable_timestamp=True,
+        )

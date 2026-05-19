@@ -326,9 +326,14 @@ class Config(BaseModel):  # noqa: PLR0904
             values["external_ref_mapping"] = mapping
         return values
 
-    __validate_output_datetime_class_err: ClassVar[str] = (
+    __validate_output_datetime_class_dataclass_err: ClassVar[str] = (
         '`--output-datetime-class` only allows "datetime" for '
         f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
+    )
+
+    __validate_output_datetime_class_typeddict_err: ClassVar[str] = (
+        '`--output-datetime-class` only allows "datetime" for '
+        f"`--output-model-type` {DataModelType.TypingTypedDict.value}"
     )
 
     __validate_original_field_name_delimiter_err: ClassVar[str] = (
@@ -350,12 +355,11 @@ class Config(BaseModel):  # noqa: PLR0904
     def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
         """Validate output datetime class compatibility."""
         datetime_class_type: DatetimeClassType | None = self.output_datetime_class
-        if (
-            datetime_class_type
-            and datetime_class_type is not DatetimeClassType.Datetime
-            and self.output_model_type == DataModelType.DataclassesDataclass
-        ):
-            raise Error(self.__validate_output_datetime_class_err)
+        if datetime_class_type and datetime_class_type is not DatetimeClassType.Datetime:
+            if self.output_model_type == DataModelType.DataclassesDataclass:
+                raise Error(self.__validate_output_datetime_class_dataclass_err)
+            if self.output_model_type == DataModelType.TypingTypedDict:
+                raise Error(self.__validate_output_datetime_class_typeddict_err)
         return self
 
     @model_validator(mode="after")  # ty: ignore

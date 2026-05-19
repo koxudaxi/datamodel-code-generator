@@ -4601,6 +4601,27 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     )
 
 
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_mixed_closed_no_duplicate_imports(output_file: Path) -> None:
+    """Test that mixing closed and open TypedDicts in the same file does not produce duplicate TypedDict imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_mixed_closed.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_mixed_closed.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--no-use-closed-typed-dict"],
     option_description="""Disable PEP 728 TypedDict closed/extra_items generation.

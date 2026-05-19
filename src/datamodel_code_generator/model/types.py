@@ -10,12 +10,15 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from datamodel_code_generator import DateClassType, DatetimeClassType, PythonVersion, PythonVersionMin
 from datamodel_code_generator.imports import (
     IMPORT_ANY,
+    IMPORT_DATE,
+    IMPORT_DATETIME,
     IMPORT_DECIMAL,
     IMPORT_IPV4ADDRESS,
     IMPORT_IPV4NETWORK,
     IMPORT_IPV6ADDRESS,
     IMPORT_IPV6NETWORK,
     IMPORT_PATH,
+    IMPORT_TIME,
     IMPORT_TIMEDELTA,
     IMPORT_UUID,
 )
@@ -136,12 +139,24 @@ class DataTypeManager(_DataTypeManager):
             use_serialize_as_any=use_serialize_as_any,
         )
 
+        datetime_map = (
+            {
+                Types.time: self.data_type.from_import(IMPORT_TIME),
+                Types.date: self.data_type.from_import(IMPORT_DATE),
+                Types.date_time: self.data_type.from_import(IMPORT_DATETIME),
+                Types.timedelta: self.data_type.from_import(IMPORT_TIMEDELTA),
+            }
+            if target_datetime_class is DatetimeClassType.Datetime
+            else {}
+        )
+
         standard_primitive_map = (
             standard_primitive_type_map_factory(self.data_type) if use_standard_primitive_types else {}
         )
 
         self.type_map: dict[Types, DataType] = {
             **type_map_factory(self.data_type),
+            **datetime_map,
             **standard_primitive_map,
         }
 

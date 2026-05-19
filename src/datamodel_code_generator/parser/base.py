@@ -77,6 +77,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
 )
 from datamodel_code_generator.model.enum import Enum, Member
+from datamodel_code_generator.model.imports import IMPORT_TYPED_DICT, IMPORT_TYPED_DICT_BACKPORT
 from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStatement
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
@@ -3326,6 +3327,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for ctx in contexts:
             used_names = self._collect_used_names_from_models(ctx.models)
             ctx.imports.remove_unused(used_names)
+
+        for ctx in contexts:
+            # If any model in this module needs typing_extensions.TypedDict (e.g. for PEP 728
+            # closed/extra_items backport), remove typing.TypedDict to avoid duplicate imports.
+            if IMPORT_TYPED_DICT_BACKPORT.import_ in ctx.imports.get(
+                IMPORT_TYPED_DICT_BACKPORT.from_, set()
+            ) and IMPORT_TYPED_DICT.import_ in ctx.imports.get(IMPORT_TYPED_DICT.from_, set()):
+                while ctx.imports.counter.get((IMPORT_TYPED_DICT.from_, IMPORT_TYPED_DICT.import_), 0) > 0:
+                    ctx.imports.remove(IMPORT_TYPED_DICT)
 
         for ctx in contexts:
             self.__change_imported_model_name(ctx.models, ctx.imports, ctx.scoped_model_resolver)
