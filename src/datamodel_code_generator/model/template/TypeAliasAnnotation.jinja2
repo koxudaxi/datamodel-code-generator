@@ -11,19 +11,13 @@ Annotated[{{ _field.type_hint }}, {{ _field.field }}]
 {%- if fields %}
 {{ class_name }}: TypeAlias = {{ get_type_annotation(fields[0]) }}{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
-"""
-{{ description | escape_docstring | indent(0) }}
-"""
+{{ description }}
 {%- elif fields[0].docstring %}
-"""
-{{ fields[0].docstring | escape_docstring | indent(0) }}
-"""
+{{ fields[0].docstring }}
 {%- endif %}
 {%- else %}
 {{ class_name }}: TypeAlias = {{ base_class }}{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
-"""
-{{ description | escape_docstring | indent(0) }}
-"""
+{{ description }}
 {%- endif %}
 {%- endif %}

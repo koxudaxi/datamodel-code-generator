@@ -1,0 +1,18 @@
+openapi: 3.0.0
+info:
+  title: Serialization Aliases
+  version: 1.0.0
+paths:
+  /messages:
+    get:
+      parameters:
+        - name: textMessage
+          in: query
+          required: true
+          content:
+            application/json:
+              schema:
+                type: string
+      responses:
+        "204":
+          description: No content

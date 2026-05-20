@@ -143,6 +143,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--empty-enum-field-name": CLIOptionMeta(name="--empty-enum-field-name", category=OptionCategory.FIELD),
     "--set-default-enum-member": CLIOptionMeta(name="--set-default-enum-member", category=OptionCategory.FIELD),
     "--aliases": CLIOptionMeta(name="--aliases", category=OptionCategory.FIELD),
+    "--serialization-aliases": CLIOptionMeta(name="--serialization-aliases", category=OptionCategory.FIELD),
     "--default-values": CLIOptionMeta(name="--default-values", category=OptionCategory.FIELD),
     "--no-alias": CLIOptionMeta(name="--no-alias", category=OptionCategory.FIELD),
     "--use-serialization-alias": CLIOptionMeta(name="--use-serialization-alias", category=OptionCategory.FIELD),
@@ -156,6 +157,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-inline-field-description": CLIOptionMeta(
         name="--use-inline-field-description", category=OptionCategory.FIELD
     ),
+    "--use-single-line-docstring": CLIOptionMeta(name="--use-single-line-docstring", category=OptionCategory.FIELD),
     "--field-constraints": CLIOptionMeta(name="--field-constraints", category=OptionCategory.FIELD),
     "--field-extra-keys": CLIOptionMeta(name="--field-extra-keys", category=OptionCategory.FIELD),
     "--field-extra-keys-without-x-prefix": CLIOptionMeta(
@@ -268,6 +270,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--allow-remote-refs": CLIOptionMeta(name="--allow-remote-refs", category=OptionCategory.GENERAL),
     "--no-allow-remote-refs": CLIOptionMeta(name="--no-allow-remote-refs", category=OptionCategory.GENERAL),
     "--http-headers": CLIOptionMeta(name="--http-headers", category=OptionCategory.GENERAL),
+    "--http-local-ref-path": CLIOptionMeta(name="--http-local-ref-path", category=OptionCategory.GENERAL),
     "--http-ignore-tls": CLIOptionMeta(name="--http-ignore-tls", category=OptionCategory.GENERAL),
     "--http-query-parameters": CLIOptionMeta(name="--http-query-parameters", category=OptionCategory.GENERAL),
     "--http-timeout": CLIOptionMeta(name="--http-timeout", category=OptionCategory.GENERAL),

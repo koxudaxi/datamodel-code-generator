@@ -27,6 +27,7 @@ from datamodel_code_generator.imports import (
 from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_ANYURL,
     IMPORT_AWARE_DATETIME,
+    IMPORT_BASE64BYTES,
     IMPORT_BASE64STR,
     IMPORT_CONBYTES,
     IMPORT_CONDECIMAL,
@@ -365,8 +366,11 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
 
     def get_data_bytes_type(self, types: Types, **kwargs: Any) -> DataType:
         """Get bytes data type with constraints (conbytes)."""
+        base64_encoded = kwargs.pop("base64_encoded", False)
         data_type_kwargs: dict[str, Any] = self.transform_kwargs(kwargs, bytes_kwargs)
         strict = StrictTypes.bytes in self.strict_types
+        if base64_encoded and not data_type_kwargs and not strict:
+            return self.data_type.from_import(IMPORT_BASE64BYTES)
         if data_type_kwargs and not strict:
             return self.data_type.from_import(IMPORT_CONBYTES, kwargs=data_type_kwargs)
         # conbytes doesn't accept strict argument

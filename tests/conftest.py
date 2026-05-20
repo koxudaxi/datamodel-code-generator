@@ -9,10 +9,15 @@ import json
 import re
 import sys
 import time
+from collections import Counter
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from itertools import starmap
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, TypedDict, cast
 
+import httpx
 import pytest
 import time_machine
 from inline_snapshot import external_file, register_format_alias
@@ -21,7 +26,7 @@ from typing_extensions import Required
 from datamodel_code_generator import MIN_VERSION
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    import warnings
 
 CLI_DOC_COLLECTION_OUTPUT = Path(__file__).parent / "cli_doc" / ".cli_doc_collection.json"
 CLI_DOC_SCHEMA_VERSION = 1
@@ -75,6 +80,70 @@ class CliDocKwargs(TypedDict, total=False):
 
     aliases: list[str] | None
     """Alternative option names (e.g., ["--capitalise-enum-members"])."""
+
+
+@dataclass(frozen=True)
+class MockHttpxResponse:
+    """URL-bound httpx.get mock response for remote schema e2e tests."""
+
+    url: str
+    content: str | Path
+    status_code: int = 200
+    headers: Mapping[str, str] | None = None
+
+
+HttpxHeaders = Mapping[str, str] | Sequence[tuple[str, str]]
+HttpxParams = Mapping[str, str] | Sequence[tuple[str, str]]
+
+
+class HttpxGetMock(Protocol):
+    """Typed mock interface for the httpx.get calls used by e2e URL tests."""
+
+    call_count: int
+    call_args: Any
+    call_args_list: Sequence[Any]
+
+    def __call__(
+        self,
+        url: str,
+        *,
+        headers: HttpxHeaders | None = None,
+        verify: bool = True,
+        follow_redirects: bool = False,
+        params: HttpxParams | None = None,
+        timeout: float = 5.0,
+    ) -> Any:
+        """Record an httpx.get-style call."""
+        raise NotImplementedError
+
+    def assert_called(self) -> None:
+        """Assert that the mock was called."""
+        raise NotImplementedError
+
+    def assert_not_called(self) -> None:
+        """Assert that the mock was not called."""
+        raise NotImplementedError
+
+    def assert_called_once_with(self, *args: Any, **kwargs: Any) -> None:
+        """Assert that the mock was called once with the expected arguments."""
+        raise NotImplementedError
+
+    def assert_has_calls(self, calls: Sequence[Any], any_order: bool = False) -> None:
+        """Assert that the mock has the expected recorded calls."""
+        raise NotImplementedError
+
+
+class HttpxGetMockFactory(Protocol):
+    """Factory fixture type for URL-bound httpx.get mocks."""
+
+    def __call__(self, *responses: MockHttpxResponse) -> HttpxGetMock:
+        """Patch httpx.get with URL-bound responses."""
+        raise NotImplementedError
+
+
+def create_httpx_get_mock(mocker: Any) -> HttpxGetMock:
+    """Create a typed recording mock for httpx.get-style assertions."""
+    return cast("HttpxGetMock", mocker.create_autospec(httpx.get))
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -374,6 +443,12 @@ def _normalize_line_endings(text: str) -> str:
     return text.replace("\r\n", "\n")
 
 
+def _normalize_generated_text(text: str) -> str:
+    """Normalize generated text for file comparisons."""
+    text = _normalize_line_endings(text)
+    return text if text.endswith("\n") else f"{text}\n"
+
+
 def _get_tox_env() -> str:  # pragma: no cover
     """Get the current tox environment name from TOX_ENV_NAME or fallback.
 
@@ -647,6 +722,8 @@ def assert_exact_directory_content(
 
 def _get_full_body(result: object) -> str:
     """Get full body from Result."""
+    if isinstance(result, str):
+        return result
     return getattr(result, "body", "")
 
 
@@ -693,12 +770,36 @@ def assert_parser_modules(
         _assert_with_external_file(_get_full_body(result), expected_path)
 
 
+def assert_generated_modules_output(
+    modules: Mapping[tuple[str, ...], Any],
+    expected_dir: Path,
+    transform: Callable[[str], str] | None = None,
+) -> None:
+    """Assert generate(output=None) module output matches expected files exactly."""
+    __tracebackhide__ = True
+    output_files = set(starmap(Path, modules))
+    expected_files = {path.relative_to(expected_dir) for path in expected_dir.rglob("*.py")}
+
+    extra = expected_files - output_files
+    assert not extra, f"Expected files not in generated modules: {extra}"
+
+    missing = output_files - expected_files
+    assert not missing, f"Generated modules not in expected files: {missing}"
+
+    for paths, result in modules.items():
+        expected_path = expected_dir.joinpath(*paths)
+        content = _get_full_body(result)
+        if transform is not None:
+            content = transform(content)
+        _assert_with_external_file(content, expected_path)
+
+
 def write_generated_modules(output_dir: Path, modules: dict[tuple[str, ...], Any]) -> None:
     """Write parser-generated module output to a package directory."""
     for module_path, result in modules.items():
         file_path = output_dir.joinpath(*module_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(result.body, encoding="utf-8")
+        file_path.write_text(_get_full_body(result), encoding="utf-8")
 
 
 def assert_runtime_result_model(output_dir: Path) -> None:
@@ -750,6 +851,178 @@ def assert_error_message(
     __tracebackhide__ = True
     captured = capsys.readouterr()
     assert expected in captured.err, f"Expected '{expected}' in stderr, got: {captured.err}"
+
+
+def _assert_httpx_params_contain(mock_get: HttpxGetMock, params_contains: Mapping[str, str]) -> None:
+    missing_by_call = []
+    for index, recorded_call in enumerate(mock_get.call_args_list, start=1):
+        actual_params = dict(recorded_call.kwargs.get("params") or {})
+        missing = {key: value for key, value in params_contains.items() if actual_params.get(key) != value}
+        if missing:
+            missing_by_call.append(f"call {index}: missing {missing}; actual params: {actual_params}")
+    assert not missing_by_call, "Expected query parameters not found: " + "; ".join(missing_by_call)
+
+
+def _assert_httpx_call_options(
+    mock_get: HttpxGetMock,
+    *,
+    headers: HttpxHeaders | None,
+    params: HttpxParams | None,
+    verify: bool | None,
+    timeout: float | None,
+) -> None:
+    if headers is None and params is None and verify is None and timeout is None:
+        return
+    mock_get.assert_called()
+    for httpx_call in mock_get.call_args_list:
+        call_kwargs = httpx_call.kwargs
+        if headers is not None:
+            assert call_kwargs.get("headers") == headers
+        if params is not None:
+            assert call_kwargs.get("params") == params
+        if verify is not None:
+            assert call_kwargs.get("verify") is verify
+        if timeout is not None:
+            assert call_kwargs.get("timeout") == timeout
+
+
+def _assert_httpx_urls(
+    mock_get: HttpxGetMock,
+    *,
+    expected_url: str | None,
+    expected_urls: list[str] | None,
+    any_order: bool,
+) -> None:
+    if expected_url is None and expected_urls is None:
+        return
+
+    mock_get.assert_called()
+    actual_urls = [httpx_call.args[0] for httpx_call in mock_get.call_args_list]
+
+    if expected_url is not None:
+        assert mock_get.call_count == 1
+        assert actual_urls == [expected_url]
+
+    if expected_urls is not None:
+        if any_order:
+            assert Counter(actual_urls) == Counter(expected_urls)
+        else:
+            assert actual_urls == expected_urls
+
+
+def assert_httpx_get_kwargs(
+    mock_get: HttpxGetMock,
+    *,
+    call_count: int | None = None,
+    called: bool | None = None,
+    expected_url: str | None = None,
+    expected_urls: list[str] | None = None,
+    any_order: bool = False,
+    headers: HttpxHeaders | None = None,
+    params: HttpxParams | None = None,
+    verify: bool | None = None,
+    timeout: float | None = None,
+    params_contains: Mapping[str, str] | None = None,
+) -> None:
+    """Assert common httpx.get call options used by URL e2e tests."""
+    __tracebackhide__ = True
+    if called is False:
+        mock_get.assert_not_called()
+        return
+    if called is True:
+        mock_get.assert_called()
+    if call_count is not None:
+        assert mock_get.call_count == call_count
+    _assert_httpx_urls(mock_get, expected_url=expected_url, expected_urls=expected_urls, any_order=any_order)
+    _assert_httpx_call_options(mock_get, headers=headers, params=params, verify=verify, timeout=timeout)
+    if params_contains is not None:
+        mock_get.assert_called()
+        _assert_httpx_params_contain(mock_get, params_contains)
+
+
+@pytest.fixture
+def mock_httpx_get(mocker: Any) -> HttpxGetMockFactory:
+    """Patch httpx.get with URL-bound mock response objects for URL e2e tests."""
+
+    def _mock_httpx_get(
+        *responses: MockHttpxResponse,
+    ) -> HttpxGetMock:
+        queued_responses: dict[str, list[MockHttpxResponse]] = {}
+        for response in responses:
+            queued_responses.setdefault(response.url, []).append(response)
+
+        def _response_for_url(url: str, *_args: Any, **_kwargs: Any) -> Any:
+            if url not in queued_responses or not queued_responses[url]:  # pragma: no cover
+                pytest.fail(
+                    f"Unexpected httpx.get URL: {url!r}. Registered URLs: {sorted(queued_responses)}",
+                    pytrace=False,
+                )
+            response_config = queued_responses[url].pop(0)
+            response = mocker.Mock()
+            response.status_code = response_config.status_code
+            response.headers = dict(response_config.headers or {})
+            response.text = (
+                response_config.content.read_text(encoding="utf-8")
+                if isinstance(response_config.content, Path)
+                else response_config.content
+            )
+            return response
+
+        return cast("HttpxGetMock", mocker.patch("httpx.get", autospec=True, side_effect=_response_for_url))
+
+    return _mock_httpx_get
+
+
+def assert_warnings_contain(recorded_warnings: list[warnings.WarningMessage], *expected_messages: str) -> None:
+    """Assert recorded warnings include each expected message fragment."""
+    __tracebackhide__ = True
+    messages = [str(warning.message) for warning in recorded_warnings]
+    missing = [expected for expected in expected_messages if not any(expected in message for message in messages)]
+    assert not missing, f"Expected warning messages not found: {missing}; actual warnings: {messages}"
+
+
+def assert_warnings_do_not_contain(recorded_warnings: list[warnings.WarningMessage], *unexpected_messages: str) -> None:
+    """Assert recorded warnings do not include any unexpected message fragment."""
+    __tracebackhide__ = True
+    messages = [str(warning.message) for warning in recorded_warnings]
+    found = [unexpected for unexpected in unexpected_messages if any(unexpected in message for message in messages)]
+    assert not found, f"Unexpected warning messages found: {found}; actual warnings: {messages}"
+
+
+def assert_no_uncommented_generated_code(
+    generated_content: str,
+    *,
+    forbidden_starts: tuple[str, ...] = (),
+    forbidden_contains: tuple[str, ...] = (),
+) -> None:
+    """Assert generated Python does not contain forbidden uncommented code fragments."""
+    __tracebackhide__ = True
+    uncommented_lines = [line.strip() for line in generated_content.split("\n") if not line.strip().startswith("#")]
+    for forbidden_start in forbidden_starts:
+        matches = [line for line in uncommented_lines if line.startswith(forbidden_start)]
+        assert not matches, f"Generated code contains forbidden line prefix {forbidden_start!r}: {matches}"
+    for forbidden_fragment in forbidden_contains:
+        matches = [line for line in uncommented_lines if forbidden_fragment in line]
+        assert not matches, f"Generated code contains forbidden fragment {forbidden_fragment!r}: {matches}"
+
+
+def assert_generate_wrote_file(result: object, output_file: Path) -> None:
+    """Assert generate(..., output=path) wrote a file and returned None."""
+    __tracebackhide__ = True
+    assert result is None
+    assert output_file.exists()
+
+
+def assert_generated_file_matches_output(result: object, output_file: Path) -> None:
+    """Assert generate(output=None) text matches the same generation written to a file."""
+    __tracebackhide__ = True
+    assert isinstance(result, str)
+    actual = _normalize_generated_text(output_file.read_text(encoding="utf-8"))
+    expected = _normalize_generated_text(result)
+    if expected != actual:  # pragma: no cover
+        diff = _format_diff(expected, actual, output_file)
+        msg = f"Generated output differs from {output_file}\n{diff}"
+        raise AssertionError(msg)
 
 
 @pytest.fixture(autouse=True)

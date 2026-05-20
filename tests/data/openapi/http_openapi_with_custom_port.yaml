@@ -1,0 +1,19 @@
+openapi: "3.0.0"
+info:
+  title: Minimal API
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        owner:
+          $ref: "#/components/schemas/User"
+    User:
+      type: object
+      properties:
+        name:
+          type: string

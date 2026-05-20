@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ArrayCombined",
+  "type": "object",
+  "properties": {
+    "array_allof": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "allOf": [
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "array_object": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "array_enum": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "enum": [
+        [
+          "ready"
+        ]
+      ]
+    }
+  }
+}

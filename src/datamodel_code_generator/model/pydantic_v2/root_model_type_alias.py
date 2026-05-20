@@ -28,4 +28,6 @@ class RootModelTypeAlias(RootModel):
 
     TEMPLATE_FILE_PATH: ClassVar[str] = "pydantic_v2/RootModelTypeAlias.jinja2"
     IS_ALIAS: ClassVar[bool] = True
+    DOCSTRING_INDENT: ClassVar[int] = 0
+    FIELD_DOCSTRING_INDENT: ClassVar[int] = 0
     DEFAULT_IMPORTS: ClassVar[tuple[Import, ...]] = (IMPORT_ROOT_MODEL,)

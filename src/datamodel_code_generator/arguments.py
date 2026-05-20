@@ -194,6 +194,13 @@ base_options.add_argument(
     help="Timeout in seconds for HTTP requests to remote hosts (default: 30)",
 )
 base_options.add_argument(
+    "--http-local-ref-path",
+    help=(
+        "Resolve HTTP(S) JSON Schema $ref URLs from a local directory instead of fetching them. "
+        "URLs are mapped under the directory by host and path; extensionless refs also try '.json'."
+    ),
+)
+base_options.add_argument(
     "--input",
     help="Input file/directory (default: stdin)",
 )
@@ -854,6 +861,12 @@ field_options.add_argument(
     default=None,
 )
 field_options.add_argument(
+    "--use-single-line-docstring",
+    help="Use single-line docstrings when the content fits on one line",
+    action="store_true",
+    default=None,
+)
+field_options.add_argument(
     "--union-mode",
     help="Union mode for only pydantic v2 field",
     choices=[u.value for u in UnionMode],
@@ -872,6 +885,15 @@ field_options.add_argument(
     "This allows setting values using the Pythonic field name while serializing to the original name.",
     action="store_true",
     default=None,
+)
+field_options.add_argument(
+    "--serialization-aliases",
+    help="Serialization alias mapping file (JSON) for Pydantic v2. "
+    "Format: {'<schema_field>': '<serialization_alias>'}. "
+    "Supports hierarchical formats: "
+    "Flat: {'name': 'fullName'} applies to all occurrences. "
+    "Scoped: {'User.name': 'fullName'} applies to specific class.",
+    type=Path,
 )
 field_options.add_argument(
     "--use-frozen-field",

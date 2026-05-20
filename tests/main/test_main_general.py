@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import black
 import pytest
-from inline_snapshot import snapshot
 
 import datamodel_code_generator
 from datamodel_code_generator import (
@@ -28,7 +27,22 @@ from datamodel_code_generator.config import GenerateConfig
 from datamodel_code_generator.format import CodeFormatter, Formatter, PythonVersion
 from datamodel_code_generator.model.pydantic_v2 import UnionMode
 from datamodel_code_generator.parser.openapi import OpenAPIParser
-from tests.conftest import assert_output, assert_runtime_import_package, create_assert_file_content, freeze_time
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_directory_content,
+    assert_generate_wrote_file,
+    assert_generated_file_matches_output,
+    assert_generated_modules_output,
+    assert_httpx_get_kwargs,
+    assert_no_uncommented_generated_code,
+    assert_output,
+    assert_runtime_import_package,
+    assert_warnings_contain,
+    assert_warnings_do_not_contain,
+    create_assert_file_content,
+    freeze_time,
+)
 from tests.main.conftest import (
     DATA_PATH,
     DEFAULT_VALUES_DATA_PATH,
@@ -40,6 +54,7 @@ from tests.main.conftest import (
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_with_args,
+    run_main_with_system_exit,
 )
 
 if TYPE_CHECKING:
@@ -61,6 +76,7 @@ def test_debug(mocker: MockerFixture) -> None:
         run_main_with_args(["--debug", "--help"])
 
 
+@pytest.mark.allow_direct_assert
 def test_snooper_to_methods_without_pysnooper(mocker: MockerFixture) -> None:
     """Test snooper_to_methods function without pysnooper installed."""
     # Simulate pysnooper not being installed by making import fail
@@ -75,24 +91,24 @@ def test_show_help(no_color: bool, capsys: pytest.CaptureFixture[str]) -> None:
     args = ["--no-color"] if no_color else []
     args += ["--help"]
 
-    with pytest.raises(expected_exception=SystemExit) as context:
-        run_main_with_args(args)
-    assert context.value.code == Exit.OK
-
-    output = capsys.readouterr().out
-    assert ("\x1b" not in output) == no_color
+    run_main_with_system_exit(
+        args,
+        expected_code=Exit.OK,
+        capsys=capsys,
+        expected_stdout_path=EXPECTED_MAIN_PATH / "help" / ("no_color.txt" if no_color else "color.txt"),
+    )
 
 
 def test_show_help_when_no_input(mocker: MockerFixture) -> None:
     """Test help display when no input is provided."""
     print_help_mock = mocker.patch("datamodel_code_generator.__main__.arg_parser.print_help")
     isatty_mock = mocker.patch("sys.stdin.isatty", return_value=True)
-    return_code: Exit = run_main_with_args([], expected_exit=Exit.ERROR)
-    assert return_code == Exit.ERROR
-    assert isatty_mock.called
-    assert print_help_mock.called
+    run_main_with_args([], expected_exit=Exit.ERROR)
+    isatty_mock.assert_called()
+    print_help_mock.assert_called()
 
 
+@pytest.mark.allow_direct_assert
 def test_no_args_has_default(monkeypatch: pytest.MonkeyPatch) -> None:
     """No argument should have a default value set because it would override pyproject.toml values.
 
@@ -400,6 +416,7 @@ def test_use_attribute_docstrings_command_line(output_file: Path) -> None:
     )
 
 
+@pytest.mark.allow_direct_assert
 def test_filename_with_newline_injection(tmp_path: Path) -> None:
     """Test that filenames with newlines cannot inject code into generated files."""
     schema_content = """{"type": "object", "properties": {"name": {"type": "string"}}}"""
@@ -425,11 +442,11 @@ os.system('echo INJECTED')
         "Filename not properly sanitized"
     )
 
-    assert not any(
-        line.strip().startswith("import os") and not line.strip().startswith("#")
-        for line in generated_content.split("\n")
+    assert_no_uncommented_generated_code(
+        generated_content,
+        forbidden_starts=("import os",),
+        forbidden_contains=("os.system",),
     )
-    assert not any("os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n"))
 
     compile(generated_content, str(output_path), "exec")
 
@@ -451,7 +468,7 @@ def test_filename_with_various_control_characters(tmp_path: Path) -> None:
         ("mixed_characters", "schema.json\n\r\t\nimport os; os.system('echo MIXED')"),
     ]
 
-    for test_name, malicious_filename in test_cases:
+    for _test_name, malicious_filename in test_cases:
         output_path = tmp_path / "output.py"
 
         generate(
@@ -463,14 +480,11 @@ def test_filename_with_various_control_characters(tmp_path: Path) -> None:
 
         generated_content = output_path.read_text()
 
-        assert not any(
-            line.strip().startswith("import ") and not line.strip().startswith("#")
-            for line in generated_content.split("\n")
-        ), f"Injection found for {test_name}"
-
-        assert not any(
-            "os.system" in line and not line.strip().startswith("#") for line in generated_content.split("\n")
-        ), f"System call found for {test_name}"
+        assert_no_uncommented_generated_code(
+            generated_content,
+            forbidden_starts=("import ",),
+            forbidden_contains=("os.system",),
+        )
 
         compile(generated_content, str(output_path), "exec")
 
@@ -550,6 +564,7 @@ def test_schema_parse_error_includes_nested_path(tmp_path: Path) -> None:
         )
 
 
+@pytest.mark.allow_direct_assert
 def test_schema_parse_error_original_error(tmp_path: Path) -> None:
     """Test that SchemaParseError preserves the original error."""
     invalid_schema = tmp_path / "invalid_schema.json"
@@ -569,6 +584,7 @@ def test_schema_parse_error_original_error(tmp_path: Path) -> None:
     assert exc_info.value.path is not None
 
 
+@pytest.mark.allow_direct_assert
 def test_schema_parse_error_without_path() -> None:
     """Test SchemaParseError message formatting without path."""
     error = SchemaParseError("Test error message")
@@ -645,6 +661,7 @@ strict-types = ["str", "int"]
         )
 
 
+@pytest.mark.allow_direct_assert
 @pytest.mark.parametrize(
     ("json_str", "expected"),
     [
@@ -1028,7 +1045,7 @@ def test_check_directory_ignores_pycache(output_dir: Path) -> None:
     )
 
 
-def test_check_with_invalid_class_name(tmp_path: Path) -> None:
+def test_check_with_invalid_class_name(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --check cleans up temp directory when InvalidClassNameError occurs."""
     invalid_schema = tmp_path / "invalid.json"
     invalid_schema.write_text('{"title": "123InvalidName", "type": "object"}', encoding="utf-8")
@@ -1040,10 +1057,11 @@ def test_check_with_invalid_class_name(tmp_path: Path) -> None:
         extra_args=["--check"],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="You have to set `--class-name` option",
+        capsys=capsys,
     )
 
 
-def test_check_with_invalid_file_format(tmp_path: Path) -> None:
+def test_check_with_invalid_file_format(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     """Test --check cleans up temp directory when Error occurs (invalid file format)."""
     invalid_file = tmp_path / "invalid.txt"
     invalid_file.write_text("This is not a valid schema format!!!", encoding="utf-8")
@@ -1054,6 +1072,7 @@ def test_check_with_invalid_file_format(tmp_path: Path) -> None:
         extra_args=["--check"],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="Invalid file format",
+        capsys=capsys,
     )
 
 
@@ -1148,15 +1167,13 @@ def test_all_exports_scope_recursive_collision_avoided_by_renaming(output_dir: P
         output_path=output_dir,
         input_file_type="openapi",
         extra_args=["--disable-timestamp", "--all-exports-scope", "recursive"],
+        expected_directory=EXPECTED_MAIN_PATH / "openapi" / "all_exports_scope_recursive_collision_avoided_by_renaming",
     )
 
-    # Verify both Tea and Tea_1 exist in _internal.py (collision avoided through renaming)
-    internal_content = (output_dir / "_internal.py").read_text()
-    assert "class Tea(BaseModel):" in internal_content, "Tea class should exist in _internal.py"
-    assert "class Tea_1(BaseModel):" in internal_content, "Tea_1 class should exist in _internal.py"
 
-
-def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> None:
+def test_all_exports_collision_strategy_requires_recursive(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test --all-exports-collision-strategy requires --all-exports-scope=recursive."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "modular.yaml",
@@ -1170,6 +1187,7 @@ def test_all_exports_collision_strategy_requires_recursive(output_dir: Path) -> 
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="--all-exports-collision-strategy",
+        capsys=capsys,
     )
 
 
@@ -1212,7 +1230,9 @@ def test_all_exports_collision_resolved_successfully(output_dir: Path) -> None:
     ["minimal-prefix", "full-prefix"],
     ids=["minimal_prefix", "full_prefix"],
 )
-def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Path, strategy: str) -> None:
+def test_all_exports_recursive_prefix_collision_with_local_model(
+    output_dir: Path, strategy: str, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test that prefix resolution raises error when renamed export collides with local model."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "all_exports_prefix_collision.yaml",
@@ -1226,6 +1246,7 @@ def test_all_exports_recursive_prefix_collision_with_local_model(output_dir: Pat
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="InputMessage",
+        capsys=capsys,
     )
 
 
@@ -1244,7 +1265,9 @@ def test_all_exports_scope_recursive_jsonschema_multi_file(output_dir: Path) -> 
     )
 
 
-def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> None:
+def test_all_exports_recursive_local_model_collision_error(
+    output_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     """Test --all-exports-scope=recursive raises error when child export collides with local model."""
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "all_exports_local_collision.yaml",
@@ -1256,6 +1279,7 @@ def test_all_exports_recursive_local_model_collision_error(output_dir: Path) -> 
         ],
         expected_exit=Exit.ERROR,
         expected_stderr_contains="conflicts with a model in __init__.py",
+        capsys=capsys,
     )
 
 
@@ -1458,7 +1482,9 @@ def test_use_specialized_enum_pyproject_override_with_cli(output_file: Path, tmp
         )
 
 
-def test_cli_input_overrides_pyproject_url(output_file: Path, tmp_path: Path, mocker: MockerFixture) -> None:
+def test_cli_input_overrides_pyproject_url(
+    output_file: Path, tmp_path: Path, mock_httpx_get: HttpxGetMockFactory
+) -> None:
     """Test --input takes precedence over pyproject.toml url setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
     pyproject_toml.write_text(
@@ -1472,33 +1498,23 @@ def test_cli_input_overrides_pyproject_url(output_file: Path, tmp_path: Path, mo
         encoding="utf-8",
     )
 
-    httpx_get_mock = mocker.patch("httpx.get")
+    httpx_get_mock = mock_httpx_get()
 
     with chdir(tmp_path):
         run_main_and_assert(
             input_path=cli_input.relative_to(tmp_path),
             output_path=output_file,
             extra_args=["--disable-timestamp"],
-            expected_output=snapshot(
-                """\
-# generated by datamodel-codegen:
-#   filename:  cli.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    from_input: str | None = None
-"""
-            ),
+            assert_func=assert_file_content,
+            expected_file="cli_input_overrides_pyproject_url.py",
         )
 
-    httpx_get_mock.assert_not_called()
+    assert_httpx_get_kwargs(httpx_get_mock, called=False)
 
 
-def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mocker: MockerFixture) -> None:
+def test_cli_url_overrides_pyproject_input(
+    output_file: Path, tmp_path: Path, mock_httpx_get: HttpxGetMockFactory
+) -> None:
     """Test --url takes precedence over pyproject.toml input setting."""
     pyproject_toml = tmp_path / "pyproject.toml"
     pyproject_toml.write_text(
@@ -1512,11 +1528,12 @@ def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mo
         encoding="utf-8",
     )
 
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.headers = {}
-    mock_response.text = '{"type": "object", "properties": {"from_url": {"type": "integer"}}}'
-    httpx_get_mock = mocker.patch("httpx.get", return_value=mock_response)
+    httpx_get_mock = mock_httpx_get(
+        MockHttpxResponse(
+            "http://127.0.0.1:8123/schema.json",
+            JSON_SCHEMA_DATA_PATH / "cli_url_overrides_pyproject_input.json",
+        )
+    )
 
     with chdir(tmp_path):
         run_main_with_args([
@@ -1527,28 +1544,8 @@ def test_cli_url_overrides_pyproject_input(output_file: Path, tmp_path: Path, mo
             "--disable-timestamp",
         ])
 
-    assert output_file.read_text(encoding="utf-8") == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  http://127.0.0.1:8123/schema.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    from_url: int | None = None
-"""
-    )
-    httpx_get_mock.assert_called_once_with(
-        "http://127.0.0.1:8123/schema.json",
-        headers=None,
-        verify=True,
-        follow_redirects=True,
-        params=None,
-        timeout=30.0,
-    )
+    assert_file_content(output_file, "cli_url_overrides_pyproject_input.py")
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="http://127.0.0.1:8123/schema.json")
 
 
 @pytest.mark.cli_doc(
@@ -1642,11 +1639,10 @@ def test_format_code_fallback_on_error(tmp_path: Path, mocker: MockerFixture) ->
             input_=schema,
             input_file_type=InputFileType.JsonSchema,
             output=output,
+            disable_timestamp=True,
         )
 
-    content = output.read_text()
-    assert "class Model" in content
-    assert "name:" in content
+    assert_file_content(output, "format_code_fallback_on_error.py")
 
 
 def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: MockerFixture) -> None:
@@ -1664,11 +1660,11 @@ def test_format_code_fallback_on_error_init_exports(tmp_path: Path, mocker: Mock
             input_=OPEN_API_DATA_PATH / "modular.yaml",
             input_file_type=InputFileType.OpenAPI,
             output=output_dir,
+            disable_timestamp=True,
             all_exports_scope=AllExportsScope.Children,
         )
 
-    init_content = (output_dir / "__init__.py").read_text()
-    assert "__all__" in init_content or "from ." in init_content
+    assert_directory_content(output_dir, EXPECTED_MAIN_PATH / "openapi" / "format_code_fallback_on_error_init_exports")
 
 
 def test_init_exports_without_formatting(tmp_path: Path) -> None:
@@ -1682,11 +1678,7 @@ def test_init_exports_without_formatting(tmp_path: Path) -> None:
         all_exports_scope=AllExportsScope.Children,
     )
 
-    assert isinstance(results, dict)
-    init_key = ("__init__.py",)
-    assert init_key in results
-    init_content = results[init_key].body
-    assert "__all__" in init_content or "from ." in init_content
+    assert_generated_modules_output(results, EXPECTED_MAIN_PATH / "openapi" / "init_exports_without_formatting")
 
 
 def test_generate_parent_scoped_naming_backward_compat(tmp_path: Path) -> None:
@@ -1697,11 +1689,10 @@ def test_generate_parent_scoped_naming_backward_compat(tmp_path: Path) -> None:
         input_file_type=InputFileType.JsonSchema,
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
         parent_scoped_naming=True,
     )
-    content = output_file.read_text()
-    assert "class ModelOrderItem" in content
-    assert "class ModelCartItem" in content
+    assert_file_content(output_file, "generate_parent_scoped_naming_backward_compat.py")
 
 
 def test_ruff_check_and_format_combined(output_file: Path) -> None:
@@ -1770,13 +1761,9 @@ def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
         input_path=JSON_SCHEMA_DATA_PATH / "all_exports_multi_file",
         output_path=output_dir,
         extra_args=["--formatters", "ruff-check", "ruff-format", "--disable-timestamp"],
+        expected_directory=EXPECTED_MAIN_PATH / "jsonschema" / "all_exports_multi_file_ruff",
         skip_code_validation=True,
     )
-    order_file = output_dir / "order.py"
-    assert order_file.exists()
-    content = order_file.read_text()
-    assert "from __future__ import annotations" in content
-    assert "class Order" in content
 
 
 def test_type_checking_imports_default_to_runtime_imports_for_modular_pydantic_ruff(output_dir: Path) -> None:
@@ -1858,11 +1845,10 @@ def test_generate_multi_module_pydantic_ruff_defaults_to_runtime_imports() -> No
         disable_timestamp=True,
     )
 
-    assert isinstance(result, dict)
-    internal = result["_internal.py",]
-    assert "TYPE_CHECKING" not in internal
-    assert "from . import models" in internal
-    assert "Tea_1.model_rebuild()" in internal
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "openapi" / "generate_multi_module_pydantic_ruff_defaults_to_runtime_imports",
+    )
 
 
 @pytest.mark.cli_doc(
@@ -1900,10 +1886,10 @@ def test_use_type_checking_imports_for_multi_module_pydantic_ruff() -> None:
         disable_timestamp=True,
     )
 
-    assert isinstance(result, dict)
-    internal = result["_internal.py",]
-    assert "TYPE_CHECKING" in internal
-    assert internal == (EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_internal.py").read_text().rstrip()
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "openapi" / "use_type_checking_imports_for_multi_module_pydantic_ruff",
+    )
 
 
 def test_generate_returns_string_when_output_none() -> None:
@@ -1915,20 +1901,7 @@ def test_generate_returns_string_when_output_none() -> None:
         input_filename="test.json",
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  test.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    name: str | None = None\
-"""
-    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_when_output_none.py")
 
 
 def test_generate_returns_string_with_pydantic_v2() -> None:
@@ -1941,19 +1914,7 @@ def test_generate_returns_string_with_pydantic_v2() -> None:
         output_model_type=DataModelType.PydanticV2BaseModel,
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  schema.json
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    value: float | None = None"""
-    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_pydantic_v2.py")
 
 
 def test_generate_returns_string_with_dataclass() -> None:
@@ -1966,19 +1927,56 @@ def test_generate_returns_string_with_dataclass() -> None:
         output_model_type=DataModelType.DataclassesDataclass,
         disable_timestamp=True,
     )
-    assert result == snapshot(
-        """\
-# generated by datamodel-codegen:
-#   filename:  data.json
-
-from __future__ import annotations
-
-from dataclasses import dataclass
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_dataclass.py")
 
 
-@dataclass
-class Model:
-    value: str | None = None"""
+def test_generate_uses_multiline_docstring_by_default() -> None:
+    """Test that schema descriptions keep the historical multi-line docstring format."""
+    json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        use_schema_description=True,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_multiline_docstring_by_default.py")
+
+
+def test_generate_uses_single_line_docstring_when_enabled() -> None:
+    """Test that schema descriptions use one-line docstrings when requested."""
+    json_schema = '{"title": "Person", "description": "Person model", "type": "object", "properties": {}}'
+    result = generate(
+        json_schema,
+        input_file_type=InputFileType.JsonSchema,
+        input_filename="schema.json",
+        use_schema_description=True,
+        use_single_line_docstring=True,
+        disable_timestamp=True,
+    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_uses_single_line_docstring_when_enabled.py")
+
+
+@pytest.mark.cli_doc(
+    options=["--use-single-line-docstring"],
+    option_description="""Emit short docstrings on a single line.
+
+The `--use-single-line-docstring` flag formats docstrings that fit on one line
+as compact single-line docstrings while keeping the historical multi-line
+format as the default.""",
+    input_schema="jsonschema/person.json",
+    cli_args=["--use-field-description", "--use-single-line-docstring"],
+    golden_output="main/use_single_line_docstring.py",
+    related_options=["--use-schema-description", "--use-field-description"],
+)
+def test_main_use_single_line_docstring(output_file: Path) -> None:
+    """Emit short docstrings on a single line."""
+    run_main_and_assert(
+        input_path=DATA_PATH / "jsonschema" / "person.json",
+        output_path=output_file,
+        assert_func=assert_file_content,
+        expected_file="use_single_line_docstring.py",
+        extra_args=["--use-field-description", "--use-single-line-docstring"],
     )
 
 
@@ -1992,8 +1990,7 @@ def test_generate_returns_none_when_output_path_provided(tmp_path: Path) -> None
         output=output,
         disable_timestamp=True,
     )
-    assert result is None
-    assert output.exists()
+    assert_generate_wrote_file(result, output)
 
 
 def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
@@ -2015,10 +2012,7 @@ def test_generate_file_content_matches_return_value(tmp_path: Path) -> None:
         output=output,
         disable_timestamp=True,
     )
-    file_content = output.read_text()
-
-    assert isinstance(return_result, str)
-    assert return_result.strip() == file_content.strip()
+    assert_generated_file_matches_output(return_result, output)
 
 
 def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
@@ -2061,54 +2055,14 @@ def test_generate_returns_dict_for_multiple_modules(tmp_path: Path) -> None:
         disable_timestamp=True,
     )
 
-    assert result == snapshot({
-        ("__init__.py",): """\
-# generated by datamodel-codegen:
-#   filename:  test_generate_returns_dict_for0\
-""",
-        ("address.py",): """\
-# generated by datamodel-codegen:
-#   filename:  address.json
-
-from __future__ import annotations
-
-from typing import Any
-
-from pydantic import BaseModel, RootModel
+    assert_generated_modules_output(
+        result,
+        EXPECTED_MAIN_PATH / "generate_returns_dict_for_multiple_modules",
+        transform=lambda output: output.replace(f"#   filename:  {tmp_path.name}", "#   filename:  <tmpdir>"),
+    )
 
 
-class Model(RootModel[Any]):
-    root: Any
-
-
-class Address(BaseModel):
-    street: str | None = None
-    city: str | None = None\
-""",
-        ("main.py",): """\
-# generated by datamodel-codegen:
-#   filename:  main.json
-
-from __future__ import annotations
-
-from typing import Any
-
-from pydantic import BaseModel, RootModel
-
-from . import address as address_1
-
-
-class Model(RootModel[Any]):
-    root: Any
-
-
-class User(BaseModel):
-    id: int | None = None
-    address: address_1.Address | None = None\
-""",
-    })
-
-
+@pytest.mark.allow_direct_assert
 def test_generated_modules_type_alias_is_exported() -> None:
     """Test that GeneratedModules is exported from the module."""
     assert GeneratedModules is not None
@@ -2123,19 +2077,7 @@ def test_generate_returns_string_with_custom_file_header() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
     )
-    assert result == snapshot(
-        """\
-# Custom header
-# More comments
-
-from __future__ import annotations
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    name: str | None = None"""
-    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header.py")
 
 
 def test_generate_returns_string_with_custom_file_header_and_code() -> None:
@@ -2147,20 +2089,7 @@ def test_generate_returns_string_with_custom_file_header_and_code() -> None:
         input_file_type=InputFileType.JsonSchema,
         custom_file_header=custom_header,
     )
-    assert result == snapshot(
-        '''\
-"""Module docstring."""
-from __future__ import annotations
-
-import sys
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    id: int | None = None\
-'''
-    )
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_and_code.py")
 
 
 def test_generate_returns_string_with_custom_file_header_no_future() -> None:
@@ -2173,15 +2102,7 @@ def test_generate_returns_string_with_custom_file_header_no_future() -> None:
         custom_file_header=custom_header,
         disable_future_imports=True,
     )
-    assert result == snapshot("""\
-# Custom header for legacy code
-
-from pydantic import BaseModel
-
-
-class Model(BaseModel):
-    id: int | None = None\
-""")
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_returns_string_with_custom_file_header_no_future.py")
 
 
 def test_generate_with_dict_jsonschema() -> None:
@@ -2242,9 +2163,7 @@ def test_generate_with_dict_openapi_validation_warns() -> None:
         )
         assert_output(result, EXPECTED_MAIN_PATH / "dict_input" / "openapi.py")
         # Check that both deprecated warning and dict input warning were raised
-        warning_messages = [str(warning.message) for warning in w]
-        assert any("deprecated" in msg.lower() for msg in warning_messages)
-        assert any("dict input" in msg.lower() for msg in warning_messages)
+        assert_warnings_contain(w, "deprecated", "dict input")
 
 
 @pytest.mark.parametrize(
@@ -2270,6 +2189,7 @@ def test_generate_with_config_object(output_file: Path) -> None:
         input_filename="test.json",
         output=output_file,
         output_model_type=DataModelType.PydanticV2BaseModel,
+        disable_timestamp=True,
         use_schema_description=True,
         snake_case_field=True,
         field_constraints=True,
@@ -2279,9 +2199,7 @@ def test_generate_with_config_object(output_file: Path) -> None:
         input_='{"type": "object", "properties": {"userName": {"type": "string"}}}',
         config=config,
     )
-    content = output_file.read_text(encoding="utf-8")
-    assert "class Model" in content
-    assert "user_name" in content
+    assert_file_content(output_file, "generate_with_config_object.py")
 
 
 def test_generate_config_with_union_mode() -> None:
@@ -2338,6 +2256,7 @@ def test_parser_with_config_and_options_raises_error() -> None:
         JsonSchemaParser(source="{}", config=config, field_constraints=True)
 
 
+@pytest.mark.allow_direct_assert
 def test_jsonschema_parser_with_explicit_target_datetime_class() -> None:
     """Test JsonSchemaParser with explicit target_datetime_class option."""
     from datamodel_code_generator.format import DatetimeClassType
@@ -2347,6 +2266,7 @@ def test_jsonschema_parser_with_explicit_target_datetime_class() -> None:
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
 
 
+@pytest.mark.allow_direct_assert
 def test_openapi_parser_with_explicit_wrap_string_literal() -> None:
     """Test OpenAPIParser with explicit wrap_string_literal option."""
     from datamodel_code_generator.parser.openapi import OpenAPIParser
@@ -2358,6 +2278,7 @@ def test_openapi_parser_with_explicit_wrap_string_literal() -> None:
     assert parser.wrap_string_literal is True
 
 
+@pytest.mark.allow_direct_assert
 def test_graphql_parser_with_explicit_target_datetime_class() -> None:
     """Test GraphQLParser with explicit target_datetime_class option."""
     from datamodel_code_generator.format import DatetimeClassType
@@ -2367,6 +2288,7 @@ def test_graphql_parser_with_explicit_target_datetime_class() -> None:
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Awaredatetime
 
 
+@pytest.mark.allow_direct_assert
 def test_jsonschema_parser_with_config_object() -> None:
     """Test JsonSchemaParser with ParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import ParserConfig
@@ -2388,6 +2310,7 @@ def test_jsonschema_parser_with_config_object() -> None:
     assert parser.data_type_manager.target_datetime_class == DatetimeClassType.Datetime
 
 
+@pytest.mark.allow_direct_assert
 def test_openapi_parser_with_config_object() -> None:
     """Test OpenAPIParser with OpenAPIParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import OpenAPIParserConfig
@@ -2411,6 +2334,7 @@ def test_openapi_parser_with_config_object() -> None:
     assert parser.wrap_string_literal is True
 
 
+@pytest.mark.allow_direct_assert
 def test_graphql_parser_with_config_object() -> None:
     """Test GraphQLParser with GraphQLParserConfig object to cover config is not None branch."""
     from datamodel_code_generator.config import GraphQLParserConfig
@@ -2495,7 +2419,7 @@ def test_use_annotated_no_warning_with_flag(output_file: Path) -> None:
             input_file_type="jsonschema",
             extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-annotated"],
         )
-    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+    assert_warnings_do_not_contain(w, "--use-annotated will be enabled")
 
 
 def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
@@ -2508,9 +2432,10 @@ def test_use_annotated_no_warning_with_no_flag(output_file: Path) -> None:
             input_file_type="jsonschema",
             extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--no-use-annotated"],
         )
-    assert not any("--use-annotated will be enabled" in str(warning.message) for warning in w)
+    assert_warnings_do_not_contain(w, "--use-annotated will be enabled")
 
 
+@pytest.mark.allow_direct_assert
 def test_import_generate_config_from_top_level() -> None:
     """Test that GenerateConfig can be imported from top-level module."""
     from datamodel_code_generator import GenerateConfig as TopLevelGenerateConfig
@@ -2521,12 +2446,23 @@ def test_import_generate_config_from_top_level() -> None:
 
 def test_generate_with_imported_config_from_top_level() -> None:
     """Test generate() with GenerateConfig imported from top-level."""
-    config = datamodel_code_generator.GenerateConfig(class_name="TestModel")
+    config = datamodel_code_generator.GenerateConfig(class_name="TestModel", disable_timestamp=True)
     result = generate('{"type": "object"}', config=config)
-    assert result is not None
-    assert "class TestModel" in result
+    assert_output(result, EXPECTED_MAIN_PATH / "generate_with_imported_config_from_top_level.py")
 
 
+@pytest.mark.allow_direct_assert
+def test_config_models_allow_internal_model_extra_options() -> None:
+    """Test config models allow internal options with model_ prefixes."""
+    from datamodel_code_generator.config import ParserConfig
+
+    for config_model in (Config, GenerateConfig, ParserConfig):
+        assert config_model.model_config["protected_namespaces"] == ()
+        assert "model_extra_keys" in config_model.model_fields
+        assert "model_extra_keys_without_x_prefix" in config_model.model_fields
+
+
+@pytest.mark.allow_direct_assert
 def test_all_exports_includes_generate_config() -> None:
     """Test that __all__ includes GenerateConfig."""
     assert "GenerateConfig" in datamodel_code_generator.__all__

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
-from unittest.mock import call
 
 import black
 import pytest
@@ -11,7 +10,12 @@ from packaging import version
 
 from datamodel_code_generator import chdir
 from datamodel_code_generator.__main__ import Exit
-from tests.conftest import create_assert_file_content
+from tests.conftest import (
+    HttpxGetMockFactory,
+    MockHttpxResponse,
+    assert_httpx_get_kwargs,
+    create_assert_file_content,
+)
 from tests.main.conftest import (
     EXPECTED_JSON_PATH,
     JSON_DATA_PATH,
@@ -21,8 +25,6 @@ from tests.main.conftest import (
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    from pytest_mock import MockerFixture
 
 
 assert_file_content = create_assert_file_content(EXPECTED_JSON_PATH)
@@ -163,22 +165,9 @@ def test_simple_json_snake_case_field(output_file: Path) -> None:
         )
 
 
-def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
+def test_main_http_json(mock_httpx_get: HttpxGetMockFactory, output_file: Path) -> None:
     """Test JSON code generation from HTTP URL."""
-
-    def get_mock_response(path: str) -> mocker.Mock:
-        mock = mocker.Mock()
-        mock.status_code = 200
-        mock.headers = {}
-        mock.text = (JSON_DATA_PATH / path).read_text()
-        return mock
-
-    httpx_get_mock = mocker.patch(
-        "httpx.get",
-        side_effect=[
-            get_mock_response("pet.json"),
-        ],
-    )
+    httpx_get_mock = mock_httpx_get(MockHttpxResponse("https://example.com/pet.json", JSON_DATA_PATH / "pet.json"))
     run_main_url_and_assert(
         url="https://example.com/pet.json",
         output_path=output_file,
@@ -190,16 +179,7 @@ def test_main_http_json(mocker: MockerFixture, output_file: Path) -> None:
             "#   filename:  pet.json",
         ),
     )
-    httpx_get_mock.assert_has_calls([
-        call(
-            "https://example.com/pet.json",
-            headers=None,
-            verify=True,
-            follow_redirects=True,
-            params=None,
-            timeout=30.0,
-        ),
-    ])
+    assert_httpx_get_kwargs(httpx_get_mock, expected_url="https://example.com/pet.json")
 
 
 @pytest.mark.skipif(

@@ -710,6 +710,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "data_type_manager_type": data_model_types.data_type_manager,
         "dump_resolve_reference_action": data_model_types.dump_resolve_reference_action,
         "extra_template_data": extra_template_data,
+        "serialization_aliases": config.serialization_aliases,
         "base_path": input_.parent if isinstance(input_, Path) and input_.is_file() else None,
         "remote_text_cache": remote_text_cache,
         "known_third_party": data_model_types.known_third_party,
@@ -727,6 +728,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "dataclass_arguments": dataclass_arguments,
         "defer_formatting": defer_formatting,
         "use_type_checking_imports": config.use_type_checking_imports,
+        "use_single_line_docstring": config.use_single_line_docstring,
         "enum_field_as_literal": (
             config.enum_field_as_literal
             if config.enum_field_as_literal is not None

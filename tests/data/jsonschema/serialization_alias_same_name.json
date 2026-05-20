@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AliasSameName",
+  "type": "object",
+  "properties": {
+    "my_field": {
+      "type": "string"
+    }
+  }
+}

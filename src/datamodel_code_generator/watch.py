@@ -20,10 +20,11 @@ def _get_watchfiles() -> Any:
     return watchfiles
 
 
-def watch_and_regenerate(
+def watch_and_regenerate(  # noqa: PLR0913, PLR0917
     config: Config,
     extra_template_data: dict[str, Any] | None,
     aliases: dict[str, str] | None,
+    serialization_aliases: dict[str, str] | None,
     custom_formatters_kwargs: dict[str, str] | None,
     default_value_overrides: dict[str, Any] | None = None,
 ) -> Exit:
@@ -54,6 +55,7 @@ def watch_and_regenerate(
                     output=config.output,
                     extra_template_data=extra_template_data,
                     aliases=aliases,
+                    serialization_aliases=serialization_aliases,
                     command_line=None,
                     custom_formatters_kwargs=custom_formatters_kwargs,
                     default_value_overrides=default_value_overrides,

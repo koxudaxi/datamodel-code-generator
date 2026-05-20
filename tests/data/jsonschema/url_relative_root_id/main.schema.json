@@ -1,0 +1,14 @@
+{
+  "$id": "/schemas/v1/main.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Main",
+  "type": "object",
+  "properties": {
+    "sub": {
+      "$ref": "sub.schema.json"
+    }
+  },
+  "required": [
+    "sub"
+  ]
+}

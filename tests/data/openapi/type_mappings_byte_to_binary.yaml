@@ -1,0 +1,11 @@
+openapi: 3.0.3
+components:
+  schemas:
+    Foo:
+      type: object
+      properties:
+        bar:
+          type: string
+          format: byte
+      required:
+        - bar

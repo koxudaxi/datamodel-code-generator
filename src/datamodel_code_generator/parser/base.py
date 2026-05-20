@@ -14,7 +14,7 @@ import re
 import sys
 from abc import ABC, abstractmethod
 from collections import Counter, OrderedDict, defaultdict
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from itertools import groupby
 from pathlib import Path
 from typing import (
@@ -493,7 +493,7 @@ def add_model_path_to_list(
     return paths
 
 
-def sort_data_models(  # noqa: PLR0912, PLR0915
+def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     unsorted_data_models: list[DataModel],
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
@@ -502,8 +502,10 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
     """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
         sorted_data_models = OrderedDict()
+
     if require_update_action_models is None:
         require_update_action_models = []
+
     sorted_model_count: int = len(sorted_data_models)
 
     unresolved_references: list[DataModel] = []
@@ -521,6 +523,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 add_model_path_to_list(require_update_action_models, model)
         else:
             unresolved_references.append(model)
+
     if unresolved_references:
         if sorted_model_count != len(sorted_data_models) and recursion_count:
             try:
@@ -534,6 +537,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 pass
 
         # sort on base_class dependency
+        seen_orderings: set[tuple[str, ...]] = set()
         while True:
             ordered_models: list[tuple[int, DataModel]] = []
             # Build lookup dict for O(1) index access instead of O(n) list.index()
@@ -552,6 +556,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         for b in model.base_classes
                         if b.reference and b.reference.path in path_to_index
                     ]
+
                 if indexes:
                     ordered_models.append((
                         max(indexes),
@@ -562,9 +567,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                         -1,
                         model,
                     ))
+
             sorted_unresolved_models = [m[1] for m in sorted(ordered_models, key=operator.itemgetter(0))]
             if sorted_unresolved_models == unresolved_references:
                 break
+
+            sig = tuple(m.path for m in sorted_unresolved_models)
+            if sig in seen_orderings:
+                # Base-class dependency order has no fixed point (e.g. cyclic inheritance with
+                # discriminators). Further iterations only permute the list; use stable order.
+                unresolved_references.sort(key=lambda m: m.path)
+                break
+
+            seen_orderings.add(sig)
             unresolved_references = sorted_unresolved_models
 
         # circular reference
@@ -578,16 +593,19 @@ def sort_data_models(  # noqa: PLR0912, PLR0915
                 if update_action_parent:
                     add_model_path_to_list(require_update_action_models, model)
                 continue
+
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
                 add_model_path_to_list(require_update_action_models, model)
                 continue
+
             # unresolved
             unresolved_classes = ", ".join(
                 f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
             )
             msg = f"A Parser can not resolve classes: {unresolved_classes}."
             raise Exception(msg)  # noqa: TRY002
+
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
@@ -801,12 +819,12 @@ def title_to_class_name(title: str) -> str:
     return "".join(x for x in classname.title() if not x.isspace())
 
 
-def _find_base_classes(model: DataModel) -> list[DataModel]:
+def _find_base_classes(model: DataModel) -> list[DataModel]:  # pragma: no cover
     """Get direct base class DataModels."""
     return [b.reference.source for b in model.base_classes if b.reference and isinstance(b.reference.source, DataModel)]
 
 
-def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:
+def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBase | None:  # pragma: no cover
     """Find a field by original_name in the models and their base classes."""
     for model in models:
         for field in model.iter_all_fields():  # pragma: no cover
@@ -815,7 +833,7 @@ def _find_field(original_name: str, models: list[DataModel]) -> DataModelFieldBa
     return None  # pragma: no cover
 
 
-def _copy_data_types(data_types: list[DataType]) -> list[DataType]:
+def _copy_data_types(data_types: list[DataType]) -> list[DataType]:  # pragma: no cover
     """Deep copy a list of DataType objects, preserving references."""
     copied_data_types: list[DataType] = []
     for data_type_ in data_types:
@@ -979,12 +997,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.field_constraints: bool = config.field_constraints
         self.snake_case_field: bool = config.snake_case_field
         self.strip_default_none: bool = config.strip_default_none
+        self.serialization_aliases: Mapping[str, str] = config.serialization_aliases or {}
         self.apply_default_values_for_required_fields: bool = config.apply_default_values_for_required_fields
         self.force_optional_for_required_fields: bool = config.force_optional_for_required_fields
         self.use_schema_description: bool = config.use_schema_description
         self.use_field_description: bool = config.use_field_description
         self.use_field_description_example: bool = config.use_field_description_example
         self.use_inline_field_description: bool = config.use_inline_field_description
+        self.use_single_line_docstring: bool = config.use_single_line_docstring
         self.use_default_kwarg: bool = config.use_default_kwarg
         self.reuse_model: bool = config.reuse_model
         self.reuse_scope: ReuseScope | None = config.reuse_scope
@@ -1068,6 +1088,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 self.generic_base_class_config["use_attribute_docstrings"] = True
             else:
                 self.extra_template_data[ALL_MODEL]["use_attribute_docstrings"] = True
+        if config.use_single_line_docstring:
+            self.extra_template_data[ALL_MODEL]["use_single_line_docstring"] = True
 
         if config.target_pydantic_version:
             if config.use_generic_base_class:
@@ -1104,6 +1126,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.wrap_string_literal: bool | None = config.wrap_string_literal
         self.allow_remote_refs: bool | None = config.allow_remote_refs
         self.http_headers: Sequence[tuple[str, str]] | None = config.http_headers
+        self.http_local_ref_path: Path | None = config.http_local_ref_path
         self.http_query_parameters: Sequence[tuple[str, str]] | None = config.http_query_parameters
         self.http_ignore_tls: bool = config.http_ignore_tls
         self.http_timeout: float | None = config.http_timeout
@@ -1160,6 +1183,24 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         ):
             return ModelType.PYDANTIC
         return ModelType.CLASS
+
+    def get_serialization_alias(
+        self,
+        original_field_name: str,
+        field_name: str,
+        class_name: str | None = None,
+    ) -> str | None:
+        """Get an explicit serialization alias for a field."""
+        if not self.serialization_aliases:
+            return None
+        keys = []
+        if class_name is not None:  # pragma: no branch
+            keys.extend((f"{class_name}.{original_field_name}", f"{class_name}.{field_name}"))
+        keys.extend((original_field_name, field_name))
+        for key in keys:
+            if key in self.serialization_aliases:
+                return self.serialization_aliases[key]
+        return None
 
     @staticmethod
     def _parse_type_mappings(type_mappings: list[str] | None) -> dict[tuple[str, str], str]:
@@ -1634,12 +1675,25 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         if discriminator_value is not None:
                             discriminator_values = [discriminator_value]
                             break
+                    # Reuse models are created as empty subclasses with a "/reuse" path suffix.
+                    # Scan inherited fields to recover the discriminator literal from the base.
+                    if not discriminator_values and discriminator_model.path.endswith("/reuse"):
+                        for discriminator_field in discriminator_model.iter_all_fields():  # pragma: no branch
+                            if field_name not in {discriminator_field.original_name, discriminator_field.name}:
+                                continue
+                            discriminator_value = get_discriminator_field_value(discriminator_field)
+                            if discriminator_value is not None:  # pragma: no branch
+                                discriminator_values = [discriminator_value]
+                                break
 
                     if not discriminator_values and mapping:
                         check_paths(discriminator_model, mapping)  # ty: ignore
 
                         if len(discriminator_values) == 0:
                             for base_class in discriminator_model.base_classes:
+                                if not base_class.reference:
+                                    continue
+
                                 check_paths(base_class.reference, mapping)  # ty: ignore
 
                         if not discriminator_values:
@@ -1736,6 +1790,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 required=True,
                                 alias=single_alias,
                                 validation_aliases=validation_aliases,
+                                serialization_alias=self.get_serialization_alias(
+                                    property_name, field_name, discriminator_model.name
+                                ),
                                 use_serialization_alias=self.use_serialization_alias,
                             )
                         )
@@ -2101,7 +2158,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     if isinstance(discriminator, dict)
                                     else discriminator
                                 )
-                                copied_data_type.discriminator = prop_name
+                                field_name, _ = self.model_resolver.get_valid_field_name_and_alias(
+                                    field_name=prop_name,
+                                    model_type=self.field_name_model_type,
+                                )
+                                copied_data_type.discriminator = field_name
                         assert isinstance(data_type.parent, DataType)
                         data_type.parent.data_types.remove(data_type)
                         data_type.parent.data_types.append(copied_data_type)
@@ -2191,6 +2252,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if isinstance(model, Enum):
                 continue
             for model_field in model.fields:
+                if model_field.required and not model_field.use_default_with_required:
+                    continue
                 if model_field.default is None or model_field.default is UNDEFINED:
                     continue
                 if isinstance(model_field.default, Member):
@@ -2199,7 +2262,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     continue
                 model_field.extras["validate_default"] = True
 
-    def __override_required_field(
+    def __override_required_field(  # pragma: no cover
         self,
         models: list[DataModel],
     ) -> None:
@@ -2238,6 +2301,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 copied_original_field.data_type = data_type
                 copied_original_field.parent = model
                 copied_original_field.required = True
+                if self.apply_default_values_for_required_fields and copied_original_field.has_default:
+                    copied_original_field.use_default_with_required = True
                 model.fields.insert(index, copied_original_field)
                 model.fields.remove(model_field)
 

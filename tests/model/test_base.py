@@ -13,6 +13,7 @@ from datamodel_code_generator.model.base import (
     DataModelFieldBase,
     TemplateBase,
     escape_docstring,
+    format_docstring,
     get_module_path,
     sanitize_module_name,
 )
@@ -394,6 +395,37 @@ def test_escape_docstring(input_value: str | None, expected: str | None) -> None
     were not escaped, causing Python syntax errors and type checker warnings.
     """
     assert escape_docstring(input_value) == expected
+
+
+def test_format_docstring_uses_multiline_format_by_default() -> None:
+    """Test format_docstring preserves historical multi-line formatting by default."""
+    assert format_docstring("Description", 4) == '"""\n    Description\n    """'
+
+
+@pytest.mark.parametrize("empty_value", [None, "", "   "])
+def test_format_docstring_returns_empty_string_for_empty_values(empty_value: str | None) -> None:
+    """Test format_docstring returns an empty string for empty values."""
+    assert not format_docstring(empty_value, 4)
+
+
+def test_format_docstring_uses_single_line_when_enabled() -> None:
+    """Test format_docstring emits one-line docstrings when enabled."""
+    assert format_docstring("Description", 4, use_single_line_docstring=True) == '"""Description"""'
+
+
+def test_format_docstring_escapes_trailing_quote_without_changing_docstring() -> None:
+    """Test one-line docstrings ending with a quote preserve their value."""
+    assert format_docstring('Description"', 4, use_single_line_docstring=True) == r'"""Description\""""'
+
+
+def test_format_docstring_escapes_single_quote_docstring() -> None:
+    """Test a docstring consisting only of a quote is escaped."""
+    assert format_docstring('"', 4, use_single_line_docstring=True) == r'"""\""""'
+
+
+def test_format_docstring_keeps_escaped_triple_quotes_without_extra_escape() -> None:
+    """Test escaped triple quotes at the end are not double-escaped."""
+    assert format_docstring('Description """', 4, use_single_line_docstring=True) == r'"""Description \"\"\""""'
 
 
 def test_inline_field_docstring_escapes_special_chars() -> None:

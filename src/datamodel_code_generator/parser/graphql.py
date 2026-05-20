@@ -181,6 +181,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             use_annotated=self.use_annotated,
             required=False,
             alias="__typename",
+            serialization_alias=self.get_serialization_alias("__typename", "typename__", name),
             use_one_literal_as_default=True,
             use_default_kwarg=self.use_default_kwarg,
             has_default=True,
@@ -372,8 +373,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
 
-        if self.apply_default_values_for_required_fields and effective_has_default:
-            required = False
+        use_default_with_required = required and self.apply_default_values_for_required_fields and effective_has_default
 
         extras = {} if self.default_field_extras is None else self.default_field_extras.copy()
 
@@ -395,6 +395,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             extras=extras,
             alias=single_alias,
             validation_aliases=validation_aliases,
+            serialization_alias=self.get_serialization_alias(original_field_name, field_name, class_name),
             strip_default_none=self.strip_default_none,
             use_annotated=self.use_annotated,
             use_serialize_as_any=self.use_serialize_as_any,
@@ -405,6 +406,7 @@ class GraphQLParser(Parser["GraphQLParserConfig", "JsonSchemaFeatures"]):
             original_name=field_name,
             has_default=effective_has_default,
             use_serialization_alias=self.use_serialization_alias,
+            use_default_with_required=use_default_with_required,
         )
 
     def parse_object_like(

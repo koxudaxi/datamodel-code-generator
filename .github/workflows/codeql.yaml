@@ -38,6 +38,9 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           queries: +security-and-quality
+          config: |
+            paths-ignore:
+              - tests/data/expected/**
 
       - name: Autobuild
         uses: github/codeql-action/autobuild@ce64ddcb0d8d890d2df4a9d1c04ff297367dea2a # v3

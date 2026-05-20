@@ -1,6 +1,7 @@
 name: Sync Generated Docs
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -11,7 +12,10 @@ on:
       - 'scripts/build_prompt_data.py'
       - 'scripts/build_schema_docs.py'
       - 'scripts/build_llms_txt.py'
+      - 'scripts/update_generate_prompt_snapshots.py'
       - 'scripts/update_docs_version.py'
+      - 'tox.ini'
+      - '.github/workflows/generated-docs-sync.yaml'
       - 'docs/**/*.md'
       - 'CHANGELOG.md'
       - 'README.md'
@@ -38,45 +42,35 @@ jobs:
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5
       - name: Install tox
         run: uv tool install --python-preference only-managed --python 3.13 tox --with tox-uv
-      - name: Setup README environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e readme
+      - name: Setup generated docs environment
+        run: tox run -vv --notest --skip-missing-interpreters false -e generated-docs
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup CLI docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e cli-docs
+      - name: Update generated docs
+        run: tox run --skip-uv-sync --skip-pkg-install -e generated-docs
         env:
           UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup schema docs environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e schema-docs
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Setup llms.txt environment
-        run: tox run -vv --notest --skip-missing-interpreters false -e llms-txt
-        env:
-          UV_PYTHON_PREFERENCE: "only-managed"
-      - name: Update README
-        run: .tox/readme/bin/python scripts/update_command_help_on_markdown.py
-      - name: Collect CLI doc metadata
-        run: .tox/cli-docs/bin/pytest --collect-cli-docs -p no:xdist -q
-      - name: Build CLI docs
-        run: .tox/cli-docs/bin/python scripts/build_cli_docs.py
-      - name: Build prompt data
-        run: .tox/cli-docs/bin/python scripts/build_prompt_data.py
-      - name: Build schema docs
-        run: .tox/schema-docs/bin/python scripts/build_schema_docs.py
-      - name: Build llms.txt
-        run: .tox/llms-txt/bin/python scripts/build_llms_txt.py
       - name: Create generated docs patch
         id: patch
         env:
           PATCH_PATH: ${{ runner.temp }}/generated-docs.patch
         run: |
           set -euo pipefail
-          if git diff --quiet -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py; then
+          generated_paths=(
+            README.md
+            docs/index.md
+            docs/cli-reference/
+            docs/llms.txt
+            docs/llms-full.txt
+            docs/supported_formats.md
+            src/datamodel_code_generator/prompt_data.py
+            tests/data/expected/main_kr/generate_prompt/
+          )
+          if git diff --quiet -- "${generated_paths[@]}"; then
             echo "has_changes=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git diff --binary -- README.md docs/index.md docs/cli-reference/ docs/llms.txt docs/llms-full.txt docs/supported_formats.md src/datamodel_code_generator/prompt_data.py > "$PATCH_PATH"
+          git diff --binary -- "${generated_paths[@]}" > "$PATCH_PATH"
           echo "has_changes=true" >> "$GITHUB_OUTPUT"
       - name: Upload generated docs patch
         if: steps.patch.outputs.has_changes == 'true'
@@ -86,13 +80,12 @@ jobs:
           path: ${{ runner.temp }}/generated-docs.patch
           if-no-files-found: error
 
-  push:
+  create-sync-pr:
     needs: generate
+    if: needs.generate.outputs.has_changes == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-    outputs:
-      final_sha: ${{ steps.record_sha.outputs.final_sha }}
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -105,15 +98,21 @@ jobs:
         with:
           name: generated-docs-patch
           path: ${{ runner.temp }}
-      # Use GITHUB_TOKEN intentionally so this sync commit does not fan out into
-      # another push-triggered workflow run. Docs deployment is chained below.
-      - name: Commit generated docs
-        if: needs.generate.outputs.has_changes == 'true'
+      # Use a narrowly-scoped GitHub App token so branch/PR events run normal
+      # checks without granting the workflow permission to bypass main rules.
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@67018539274d69449ef7c02e8e71183d1719ab42 # v2.1.4
+        with:
+          app-id: ${{ secrets.GENERATED_DOCS_APP_ID }}
+          private-key: ${{ secrets.GENERATED_DOCS_APP_PRIVATE_KEY }}
+      - name: Create or update generated docs PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_REF: ${{ github.ref_name }}
           PATCH_PATH: ${{ runner.temp }}/generated-docs.patch
+          SYNC_BRANCH: docs/generated-docs-sync
         run: |
           set -euo pipefail
           git apply --index --whitespace=nowarn "$PATCH_PATH"
@@ -123,25 +122,55 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "docs: sync generated docs"
-          git fetch origin "${TARGET_REF}"
-          git rebase "origin/${TARGET_REF}"
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git" "HEAD:${TARGET_REF}"
-      - name: Record final revision
-        id: record_sha
-        env:
-          DEFAULT_SHA: ${{ github.sha }}
-        run: |
-          if [ "${{ needs.generate.outputs.has_changes }}" = "true" ]; then
-            echo "final_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+          remote_url="https://x-access-token:${GH_TOKEN}@github.com/${TARGET_REPO}.git"
+          remote_sha="$(git ls-remote --heads "$remote_url" "$SYNC_BRANCH" | awk '{print $1}')"
+          if [ -n "$remote_sha" ]; then
+            git push --force-with-lease="refs/heads/${SYNC_BRANCH}:${remote_sha}" \
+              "$remote_url" \
+              "HEAD:refs/heads/${SYNC_BRANCH}"
           else
-            echo "final_sha=${DEFAULT_SHA}" >> "$GITHUB_OUTPUT"
+            git push "$remote_url" "HEAD:refs/heads/${SYNC_BRANCH}"
+          fi
+
+          pr_body="$(mktemp)"
+          cat > "$pr_body" <<EOF
+          Generated docs are out of sync with main.
+
+          This PR was created automatically after a push to ${TARGET_REF} at ${GITHUB_SHA}.
+          EOF
+
+          target_owner="${TARGET_REPO%%/*}"
+          existing_pr="$(
+            gh pr list \
+              --repo "$TARGET_REPO" \
+              --base "$TARGET_REF" \
+              --head "${target_owner}:${SYNC_BRANCH}" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [ -n "$existing_pr" ]; then
+            gh pr edit "$existing_pr" \
+              --repo "$TARGET_REPO" \
+              --title "Sync generated docs" \
+              --body-file "$pr_body"
+          else
+            gh pr create \
+              --repo "$TARGET_REPO" \
+              --base "$TARGET_REF" \
+              --head "${target_owner}:${SYNC_BRANCH}" \
+              --title "Sync generated docs" \
+              --body-file "$pr_body"
           fi
 
   deploy-docs:
-    needs: push
+    needs: [generate, create-sync-pr]
+    if: always() && needs.generate.result == 'success' && needs.generate.outputs.has_changes == 'false'
     uses: ./.github/workflows/docs-deploy.yaml
     with:
-      checkout_ref: ${{ needs.push.outputs.final_sha }}
+      checkout_ref: ${{ github.sha }}
       deploy_branch: dev
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

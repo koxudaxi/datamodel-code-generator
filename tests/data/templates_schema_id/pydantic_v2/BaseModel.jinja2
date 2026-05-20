@@ -11,9 +11,7 @@ an alias for Bar: every pydantic model class consumes considerable memory. #}
 {% endfor -%}
 class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comment }}{% endif %}
 {%- if description %}
-    """
-    {{ description | escape_docstring | indent(4) }}
-    """
+    {{ description | format_docstring(4, use_single_line_docstring=use_single_line_docstring) }}
 {%- endif %}
 {%- if schema_id is defined and schema_id %}
     __schema_id__ = "{{ schema_id }}"
@@ -43,9 +41,7 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {%- endif -%}
     {%- endif %}
     {%- if field.docstring %}
-    """
-    {{ field.docstring | escape_docstring | indent(4) }}
-    """
+    {{ field.docstring | format_docstring(4, use_single_line_docstring=use_single_line_docstring) }}
 {%- if field.use_inline_field_description and not loop.last %}
 
 {% endif %}

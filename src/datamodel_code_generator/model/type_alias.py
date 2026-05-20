@@ -23,6 +23,8 @@ class TypeAliasBase(DataModel):
 
     IS_ALIAS: ClassVar[bool] = True
     SUPPORTS_GENERIC_BASE_CLASS: ClassVar[bool] = False
+    DOCSTRING_INDENT: ClassVar[int] = 0
+    FIELD_DOCSTRING_INDENT: ClassVar[int] = 0
 
     @property
     def imports(self) -> tuple[Import, ...]:
