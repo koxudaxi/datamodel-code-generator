@@ -1446,3 +1446,149 @@ def test_resolve_type_import_from_defs_exception_handling() -> None:
 
     result = parser._resolve_type_import_from_defs("SomeType")
     assert result is None
+
+
+def test_jsonschema_parser_edge_case_helpers() -> None:
+    """Cover helper branches for boolean schemas and complex JSON values."""
+    parser = JsonSchemaParser("", use_tuple_for_fixed_items=True)
+
+    assert not parser._is_fixed_length_tuple(
+        JsonSchemaObject.model_validate({
+            "type": "array",
+            "items": [{"type": "string"}, False],
+            "minItems": 2,
+            "maxItems": 2,
+        })
+    )
+    assert JsonSchemaParser._property_names_forbids_all_keys(JsonSchemaObject.model_validate({"type": ["integer"]}))
+    assert JsonSchemaParser._get_contains_count_constraints(JsonSchemaObject.model_validate({})) == (None, None)
+    assert JsonSchemaParser._get_array_items_constraints(
+        JsonSchemaObject.model_validate({"contains": True, "minContains": 1, "minItems": 2})
+    ) == {"minItems": 2}
+    assert parser._get_data_type_from_json_value(object()).type_hint == "Any"
+
+
+def test_json_schema_object_x_property_names_dict() -> None:
+    """Test OpenAPI x-propertyNames dict is normalized to propertyNames."""
+    obj = JsonSchemaObject.model_validate({"x-propertyNames": {"type": "string", "pattern": "^x-"}})
+    ignored = JsonSchemaObject.model_validate({"x-propertyNames": "ignored"})
+
+    assert isinstance(obj.propertyNames, JsonSchemaObject)
+    assert obj.propertyNames.pattern == "^x-"
+    assert "x-propertyNames" not in obj.extras
+    assert ignored.propertyNames is None
+    assert "x-propertyNames" not in ignored.extras
+
+
+def test_set_additional_properties_schema_allows_extra_without_typed_runtime() -> None:
+    """Test schema-valued additionalProperties allows extras without typed extra validation."""
+    parser = JsonSchemaParser("", use_closed_typed_dict=False)
+    parser.extra_template_data["#/Model"] = {}
+    parser.set_additional_properties(
+        "#/Model",
+        JsonSchemaObject.model_validate({"additionalProperties": {"type": "string"}}),
+    )
+    assert parser.extra_template_data["#/Model"] == {"additionalProperties": True}
+
+
+def test_set_additional_properties_schema_keeps_typed_dict_extra_items_metadata() -> None:
+    """Test schema-valued additionalProperties still feeds PEP 728 TypedDict metadata."""
+    parser = JsonSchemaParser("", use_closed_typed_dict=True)
+    parser.extra_template_data["#/Model"] = {}
+
+    parser.set_additional_properties(
+        "#/Model",
+        JsonSchemaObject.model_validate({"additionalProperties": {"type": "string"}}),
+    )
+
+    assert parser.extra_template_data["#/Model"] == {
+        "additionalProperties": True,
+        "additionalPropertiesType": "str",
+        "use_typeddict_backport": True,
+    }
+
+
+def test_set_unevaluated_properties_schema_allows_extra_without_typed_runtime() -> None:
+    """Test schema-valued unevaluatedProperties allows extras without typed extra validation."""
+    parser = JsonSchemaParser("")
+    parser.extra_template_data["#/Model"] = {}
+
+    parser.set_unevaluated_properties(
+        "#/Model",
+        JsonSchemaObject.model_validate({"unevaluatedProperties": {"type": "integer"}}),
+    )
+
+    assert parser.extra_template_data["#/Model"] == {"unevaluatedProperties": True}
+
+
+@pytest.mark.parametrize(
+    ("schema", "type_hint"),
+    [
+        ({"allOf": [True]}, "Any"),
+        ({"allOf": [True, {"type": "string"}]}, "str"),
+        ({"type": "array", "prefixItems": [{"type": "string"}], "items": True}, "List[Union[str, Any]]"),
+        ({"type": "array", "prefixItems": [{"type": "string"}, False], "items": {"type": "integer"}}, "List[str]"),
+        ({"type": "array", "prefixItems": [{"type": "string"}]}, "List[str]"),
+        (
+            {"type": "array", "prefixItems": [{"type": "string"}], "items": {"type": "integer"}},
+            "List[Union[str, int]]",
+        ),
+        (
+            {"type": "array", "prefixItems": [{"type": "string"}], "unevaluatedItems": {"type": "integer"}},
+            "List[Union[str, int]]",
+        ),
+        ({"type": "array", "prefixItems": [{"type": "string"}], "unevaluatedItems": True}, "List[Union[str, Any]]"),
+        ({"type": "array"}, "List[Any]"),
+        ({"type": "array", "unevaluatedItems": {"type": "integer"}}, "List[int]"),
+        ({"type": "array", "unevaluatedItems": True}, "List[Any]"),
+        ({"enum": ["x", {"a": 1}, None]}, "Optional[Union[Literal['x'], Dict[str, int]]]"),
+        ({"anyOf": [False, True]}, "Any"),
+    ],
+)
+def test_build_lightweight_type_edge_cases(schema: dict[str, Any], type_hint: str) -> None:
+    """Test lightweight type inference for boolean and complex schemas."""
+    parser = JsonSchemaParser("")
+    data_type = parser._build_lightweight_type(JsonSchemaObject.model_validate(schema))
+    assert data_type is not None
+    assert data_type.type_hint == type_hint
+
+
+def test_build_lightweight_type_allof_false() -> None:
+    """Test allOf false produces no lightweight type."""
+    parser = JsonSchemaParser("")
+    assert parser._build_lightweight_type(JsonSchemaObject.model_validate({"allOf": [False]})) is None
+    assert parser._build_lightweight_type(JsonSchemaObject.model_validate({"anyOf": [False]})) is None
+
+
+def test_parse_array_fields_with_prefix_and_unevaluated_schema() -> None:
+    """Test array field parsing combines prefix items with unevaluatedItems schema."""
+    parser = JsonSchemaParser("")
+    field = parser.parse_array_fields(
+        "Model",
+        JsonSchemaObject.model_validate({
+            "type": "array",
+            "prefixItems": [{"type": "string"}],
+            "unevaluatedItems": {"type": "integer"},
+        }),
+        ["#"],
+    )
+    assert field.data_type.type_hint == "List[Union[str, int]]"
+
+
+def test_parse_enum_as_literal_with_literal_and_complex_values() -> None:
+    """Test literal enum parsing keeps scalar literals and infers complex value types."""
+    parser = JsonSchemaParser("")
+    data_type = parser.parse_enum_as_literal(JsonSchemaObject.model_validate({"enum": ["x", {"a": 1}, None]}))
+    assert data_type.type_hint == "Optional[Union[Literal['x'], Dict[str, int]]]"
+
+
+def test_parse_combined_schema_all_false() -> None:
+    """Test combined schemas that only contain false fall back to Any."""
+    parser = JsonSchemaParser("")
+    data_types = parser.parse_combined_schema(
+        "Model",
+        JsonSchemaObject.model_validate({"anyOf": [False]}),
+        ["#"],
+        "anyOf",
+    )
+    assert [data_type.type_hint for data_type in data_types] == ["Any"]

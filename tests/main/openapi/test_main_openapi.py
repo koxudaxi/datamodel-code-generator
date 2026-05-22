@@ -5209,6 +5209,18 @@ def test_main_openapi_x_property_names_non_dict(output_file: Path) -> None:
     )
 
 
+def test_main_openapi_x_property_names_false(output_file: Path) -> None:
+    """Test boolean false x-propertyNames constrains OpenAPI 3.0 maps to empty keys."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names_false.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names_false.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 def test_query_parameters_with_model_config(output_file: Path) -> None:
     """Test that query parameter classes include model_config when config options are used.
 

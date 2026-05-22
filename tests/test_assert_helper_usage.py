@@ -6,6 +6,7 @@ import ast
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 import pytest
@@ -16,6 +17,7 @@ from tests.conftest import (
     assert_httpx_get_kwargs,
     create_httpx_get_mock,
 )
+from tests.main.conftest import assert_generated_model_json_invalid, assert_generated_model_json_validation
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -361,3 +363,55 @@ def test_mock_httpx_get_rejects_unregistered_url(mock_httpx_get: HttpxGetMockFac
 
     with pytest.raises(pytest.fail.Exception, match=r"Unexpected httpx\.get URL"):
         httpx.get("https://example.com/other.json")
+
+
+def test_assert_generated_model_json_validation_without_attribute_check(tmp_path: Path) -> None:
+    """Generated-model validation helper supports tests that only check rejection type."""
+    output_path = tmp_path / "generated_model.py"
+    output_path.write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    name: str\n",
+        encoding="utf-8",
+    )
+
+    assert_generated_model_json_validation(
+        output_path,
+        module_name="generated_model_without_attribute_check",
+        model_name="Model",
+        valid_json='{"name": "x"}',
+        invalid_json='{"name": 1}',
+        expected_error_type="string_type",
+    )
+
+
+def test_generated_model_json_helpers_restore_existing_module(tmp_path: Path) -> None:
+    """Generated-model validation helpers restore an existing sys.modules entry."""
+    output_path = tmp_path / "generated_model.py"
+    output_path.write_text(
+        "from pydantic import BaseModel\n\nclass Model(BaseModel):\n    value: int\n",
+        encoding="utf-8",
+    )
+    module_name = "preexisting_generated_model"
+    previous_module = ModuleType(module_name)
+    sys.modules[module_name] = previous_module
+
+    try:
+        assert_generated_model_json_validation(
+            output_path,
+            module_name=module_name,
+            model_name="Model",
+            valid_json='{"value": 1}',
+            invalid_json='{"value": "bad"}',
+            expected_error_type="int_parsing",
+        )
+        assert sys.modules[module_name] is previous_module
+
+        assert_generated_model_json_invalid(
+            output_path,
+            module_name=module_name,
+            model_name="Model",
+            invalid_json='{"value": "bad"}',
+            expected_error_type="int_parsing",
+        )
+        assert sys.modules[module_name] is previous_module
+    finally:
+        sys.modules.pop(module_name, None)

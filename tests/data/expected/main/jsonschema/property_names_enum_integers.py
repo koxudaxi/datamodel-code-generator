@@ -8,4 +8,4 @@ from pydantic import Field, RootModel
 
 
 class IntegerEnumKeys(RootModel[dict[str, str]]):
-    root: dict[str, str] = Field(..., title='IntegerEnumKeys')
+    root: dict[str, str] = Field(..., max_length=0, title='IntegerEnumKeys')

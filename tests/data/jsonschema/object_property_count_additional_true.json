@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ObjectPropertyCountAdditionalTrue",
+  "type": "object",
+  "minProperties": 1,
+  "maxProperties": 2,
+  "additionalProperties": true
+}

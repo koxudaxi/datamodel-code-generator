@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrefixItemsItemsSchema",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer"
+        }
+      ],
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

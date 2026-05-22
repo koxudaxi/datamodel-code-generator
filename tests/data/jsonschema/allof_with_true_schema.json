@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AllOfWithTrue",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        true,
+        {
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "required": [
+    "value"
+  ]
+}
