@@ -45,6 +45,8 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
+    assert_generated_model_json_invalid,
+    assert_generated_model_json_validation,
     run_generate_file_and_assert,
     run_main_and_assert,
     run_main_url_and_assert,
@@ -3631,13 +3633,14 @@ def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
 
 
 def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> None:
-    """Test unevaluatedProperties as JsonSchemaObject triggers traversal."""
+    """Test unevaluatedProperties schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_schema.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="unevaluated_properties_schema.py",
+        force_exec_validation=True,
     )
 
 
@@ -3780,6 +3783,92 @@ def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
         assert_func=assert_file_content,
         expected_file="oneof_const_enum_literal.py",
         extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_enum_complex_values_literal(output_file: Path) -> None:
+    """Test complex enum values with --enum-field-as-literal all use type-safe fallbacks."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "enum_complex_values_literal.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="enum_complex_values_literal.py",
+        extra_args=["--enum-field-as-literal", "all"],
+    )
+
+
+def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
+    """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_with_false_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_with_false_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
+    """Test false schemas inside oneOf are accepted and ignored as unreachable branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_with_false_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_with_false_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_oneof_with_true_schema(output_file: Path) -> None:
+    """Test a single true schema inside oneOf is accepted as an unconstrained branch."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_with_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_with_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_allof_with_true_schema(output_file: Path) -> None:
+    """Test true schemas inside allOf are accepted as neutral branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_with_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_with_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_ref_to_true_schema(output_file: Path) -> None:
+    """Test refs to boolean true schemas are accepted as unconstrained models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_to_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_to_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_allof_ref_true_schema(output_file: Path) -> None:
+    """Test allOf refs to boolean true schemas are accepted as unconstrained models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_ref_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_ref_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
     )
 
 
@@ -3994,6 +4083,7 @@ def test_main_jsonschema_pattern_properties_boolean(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
 
 
@@ -4009,17 +4099,33 @@ def test_main_jsonschema_pattern_properties_merge(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
 
 
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
-    """Test patternProperties with all false values are ignored."""
+    """Test patternProperties with all false values fall back to object type."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_all_false.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="pattern_properties_all_false.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_pattern_properties_all_false_closed(output_file: Path) -> None:
+    """Test all false patternProperties with additionalProperties false generates empty dict constraint."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_all_false_closed.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_all_false_closed.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
@@ -4073,6 +4179,340 @@ def test_main_jsonschema_property_names_enum(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_property_names_enum_mixed(output_file: Path) -> None:
+    """Test propertyNames enum ignores non-string values for JSON object keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_enum_mixed.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_enum_mixed.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_enum_mixed",
+        model_name="PropertyNamesEnumMixed",
+        valid_json='{"ok":"yes"}',
+        invalid_json='{"1":"bad"}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"ok": "yes"},
+    )
+
+
+def test_main_jsonschema_property_names_const(output_file: Path) -> None:
+    """Test propertyNames with const constraint generates dict with Literal key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_const.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_const.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_const_non_string(output_file: Path) -> None:
+    """Test non-string propertyNames const rejects every JSON object key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_const_non_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_const_non_string.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_true(output_file: Path) -> None:
+    """Test boolean true propertyNames is accepted as unconstrained keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_true.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_false(output_file: Path) -> None:
+    """Test boolean false propertyNames constrains dicts to empty keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_false.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_false.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_false_without_type(output_file: Path) -> None:
+    """Test boolean false propertyNames is not skipped when type is omitted."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_false_without_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_false_without_type.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_names_closed_object(output_file: Path) -> None:
+    """Test propertyNames with additionalProperties false rejects every undeclared key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_closed_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_closed_object.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_additional_properties_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties enum schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_enum_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_enum_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_const_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties const schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_const_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_const_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_object_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties object schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_object_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_object_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties array schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_array_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_array_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_additional_properties_ref_schema_with_properties(output_file: Path) -> None:
+    """Test additionalProperties ref schema allows extra keys without typed runtime validation."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_ref_schema_with_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_ref_schema_with_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_property_names_type_non_string(output_file: Path) -> None:
+    """Test non-string propertyNames type rejects every JSON object key."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_type_non_string.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_type_non_string.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_property_count_constraints(output_file: Path) -> None:
+    """Test minProperties/maxProperties generate dict length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_count_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
+def test_main_jsonschema_object_max_properties_zero(output_file: Path) -> None:
+    """Test empty object schemas with maxProperties generate dict length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_max_properties_zero.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_max_properties_zero.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_max_properties_zero",
+        model_name="ObjectMaxPropertiesZero",
+        valid_json="{}",
+        invalid_json='{"x":1}',
+        expected_error_type="too_long",
+        expected_attribute_path=("root",),
+        expected_attribute_value={},
+    )
+
+
+def test_main_jsonschema_object_property_count_additional_true(output_file: Path) -> None:
+    """Test object property counts with additionalProperties true generate dict length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_property_count_additional_true.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_property_count_additional_true.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_property_count_additional_true",
+        model_name="ObjectPropertyCountAdditionalTrue",
+        valid_json='{"a":1}',
+        invalid_json="{}",
+        expected_error_type="too_short",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_property_count_additional_true",
+        model_name="ObjectPropertyCountAdditionalTrue",
+        valid_json='{"a":1,"b":2}',
+        invalid_json='{"a":1,"b":2,"c":3}',
+        expected_error_type="too_long",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"a": 1, "b": 2},
+    )
+
+
+def test_main_jsonschema_object_impossible_property_count(output_file: Path) -> None:
+    """Test impossible object property count constraints reject both empty and populated objects."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_impossible_property_count.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_impossible_property_count.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="object_impossible_property_count",
+        model_name="ObjectImpossiblePropertyCount",
+        invalid_json="{}",
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="object_impossible_property_count",
+        model_name="ObjectImpossiblePropertyCount",
+        invalid_json='{"a":1}',
+        expected_error_type="too_long",
+    )
+
+
 def test_main_jsonschema_property_names_min_max_length(output_file: Path) -> None:
     """Test propertyNames with minLength/maxLength constraints generates dict with constr key."""
     run_main_and_assert(
@@ -4119,7 +4559,7 @@ def test_main_jsonschema_property_names_nested(output_file: Path) -> None:
 
 
 def test_main_jsonschema_property_names_enum_integers(output_file: Path) -> None:
-    """Test propertyNames with enum of integers only falls back to str key."""
+    """Test propertyNames with only non-string enum values rejects every JSON object key."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "property_names_enum_integers.json",
         output_path=output_file,
@@ -4396,6 +4836,26 @@ def test_main_null(output_file: Path) -> None:
     """Test null type handling."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_const_null(output_file: Path) -> None:
+    """Test null const handling."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "const_null.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+    )
+
+
+def test_main_const_complex_values(output_file: Path) -> None:
+    """Test const values beyond string, integer, and boolean literals."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "const_complex_values.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -6904,6 +7364,323 @@ def test_main_jsonschema_empty_items_array(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
+    )
+
+
+def test_main_jsonschema_items_false_array(output_file: Path) -> None:
+    """Test items false constrains arrays to zero elements."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_false_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="items_false_array.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_items_array_with_false_schema(output_file: Path) -> None:
+    """Test false schemas inside tuple-style items are accepted and constrain array length."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_array_with_false_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="items_array_with_false_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_items_array_with_true_schema(output_file: Path) -> None:
+    """Test true schemas inside tuple-style items are accepted as unconstrained item types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "items_array_with_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="items_array_with_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_additional_items_false_empty_tuple(output_file: Path) -> None:
+    """Test additionalItems false with empty tuple items constrains arrays to zero elements."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_items_false_empty_tuple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_items_false_empty_tuple.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_additional_items_schema_tuple(output_file: Path) -> None:
+    """Test additionalItems schema is included for tuple-style array item unions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_items_schema_tuple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_items_schema_tuple.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_prefix_items_with_true_schema(output_file: Path) -> None:
+    """Test true schemas inside prefixItems are accepted as unconstrained item types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_with_true_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="prefix_items_with_true_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_prefix_items_with_false_schema(output_file: Path) -> None:
+    """Test false schemas inside prefixItems are accepted and constrain array length."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_with_false_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="prefix_items_with_false_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_prefix_items_items_false(output_file: Path) -> None:
+    """Test prefixItems with items false constrains arrays to declared prefix length."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_items_false.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="prefix_items_items_false.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_unevaluated_items_false_prefix(output_file: Path) -> None:
+    """Test prefixItems with unevaluatedItems false constrains arrays to declared prefix length."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_items_false_prefix.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_items_false_prefix.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unevaluated_items_false_prefix",
+        model_name="UnevaluatedItemsFalsePrefix",
+        valid_json='{"values":[1,"ok"]}',
+        invalid_json='{"values":[1,"ok",false]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, "ok"],
+    )
+
+
+def test_main_jsonschema_unevaluated_items_false_array(output_file: Path) -> None:
+    """Test unevaluatedItems false without item schemas constrains arrays to empty."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_items_false_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_items_false_array.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unevaluated_items_false_array",
+        model_name="UnevaluatedItemsFalseArray",
+        valid_json='{"values":[]}',
+        invalid_json='{"values":[1]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[],
+    )
+
+
+def test_main_jsonschema_unevaluated_items_schema_array(output_file: Path) -> None:
+    """Test unevaluatedItems schema without item schemas applies to array items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_items_schema_array.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="unevaluated_items_schema_array.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unevaluated_items_schema_array",
+        model_name="UnevaluatedItemsSchemaArray",
+        valid_json='{"values":["a","b"]}',
+        invalid_json='{"values":["a",1]}',
+        expected_error_type="string_type",
+        expected_attribute_path=("values",),
+        expected_attribute_value=["a", "b"],
+    )
+
+
+def test_main_jsonschema_prefix_items_items_schema(output_file: Path) -> None:
+    """Test prefixItems with items schema generates prefix and tail item union."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_items_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="prefix_items_items_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_contains_true_max_contains_zero(output_file: Path) -> None:
+    """Test contains true with maxContains zero constrains arrays to empty."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_true_max_contains_zero.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_true_max_contains_zero.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_true_max_contains_zero",
+        model_name="ContainsTrueMaxContainsZero",
+        valid_json='{"values":[]}',
+        invalid_json='{"values":["x"]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[],
+    )
+
+
+def test_main_jsonschema_contains_true_count_constraints(output_file: Path) -> None:
+    """Test contains true count constraints are generated as array length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_true_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_true_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_true_count_constraints",
+        model_name="ContainsTrueCountConstraints",
+        valid_json='{"values":[1,2]}',
+        invalid_json='{"values":[1]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_true_count_constraints",
+        model_name="ContainsTrueCountConstraints",
+        valid_json='{"values":[1,2,3]}',
+        invalid_json='{"values":[1,2,3,4]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2, 3],
+    )
+
+
+def test_main_jsonschema_contains_empty_schema_count_constraints(output_file: Path) -> None:
+    """Test contains empty schema count constraints are generated as array length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_empty_schema_count_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_empty_schema_count_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_empty_schema_count_constraints",
+        model_name="ContainsEmptySchemaCountConstraints",
+        valid_json='{"values":[1,2]}',
+        invalid_json='{"values":[1]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_empty_schema_count_constraints",
+        model_name="ContainsEmptySchemaCountConstraints",
+        valid_json='{"values":[1,2,3]}',
+        invalid_json='{"values":[1,2,3,4]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2, 3],
+    )
+
+
+def test_main_jsonschema_contains_false_default(output_file: Path) -> None:
+    """Test contains false with default minContains rejects every array."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_false_default.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_false_default.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="contains_false_default",
+        model_name="ContainsFalseDefault",
+        invalid_json='{"values":[]}',
+        expected_error_type="too_short",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="contains_false_default",
+        model_name="ContainsFalseDefault",
+        invalid_json='{"values":[1]}',
+        expected_error_type="too_long",
+    )
+
+
+def test_main_jsonschema_contains_false_min_contains_zero(output_file: Path) -> None:
+    """Test contains false with minContains zero remains unconstrained."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_false_min_contains_zero.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_false_min_contains_zero.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_false_min_contains_zero",
+        model_name="ContainsFalseMinContainsZero",
+        valid_json='{"values":[1]}',
+        invalid_json='{"values":null}',
+        expected_error_type="list_type",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1],
     )
 
 

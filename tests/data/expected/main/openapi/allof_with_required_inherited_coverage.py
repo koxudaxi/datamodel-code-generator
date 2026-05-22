@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, RootModel, conint
 
@@ -167,4 +167,4 @@ class EdgeCasesCoverage(
     large_union: Any
     nested_allof_ref: SimpleString
     nested_indirect: Any
-    enum_field: Any
+    enum_field: Literal['a', 'b', 'c']

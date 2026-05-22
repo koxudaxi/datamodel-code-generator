@@ -263,6 +263,11 @@ class DataModelFieldBase(_BaseModel):
         const = self.extras["const"]
         self.const = True
         self.nullable = False
+        if const is None:
+            self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
+            return
+        if not isinstance(const, (bool, int, str)):
+            return
         self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
         if not self.default:
             self.default = const

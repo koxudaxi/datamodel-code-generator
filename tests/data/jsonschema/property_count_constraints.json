@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LimitedMap",
+  "type": "object",
+  "minProperties": 1,
+  "maxProperties": 2,
+  "additionalProperties": {
+    "type": "integer"
+  }
+}
