@@ -1564,7 +1564,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if enum_source:
             if self.use_enum_values_in_discriminator:
                 enum_class_name = enum_source.reference.short_name
-                enum_member_literals: list[tuple[str, DiscriminatorValue]] = []
+                enum_member_literals: list[tuple[str, str]] = []
                 for value in discriminator_values:
                     member = enum_source.find_member(value)
                     if member and member.field.name:
@@ -1575,23 +1575,27 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if enum_source.module_path != discriminator_model.module_path:  # pragma: no cover
                     imports.append(Import.from_full_path(enum_source.name))
             else:
-                # According to OpenAPI specification, mapping discriminators are always string values.
-                # However, if the mapped object is an enum, we want to use the real enum value instead of
-                # the string value.
-                # See: https://swagger.io/specification/#options-for-mapping-values-to-schemas
-                # Fix: https://github.com/koxudaxi/datamodel-code-generator/issues/3073
-                for i, value in enumerate(discriminator_values):
-                    if member := enum_source.find_member(value):
-                        match member.field.default:
-                            case str():
-                                discriminator_values[i] = member.field.default.strip("'\"")
-                            case _ if isinstance(member.field.default, DiscriminatorValue):
-                                discriminator_values[i] = member.field.default
-
-                data_type = self.data_type(literals=discriminator_values)
+                data_type = self.data_type(
+                    literals=[
+                        Parser._get_enum_discriminator_literal(enum_source, value) for value in discriminator_values
+                    ]
+                )
         else:
             data_type = self.data_type(literals=discriminator_values)
         return data_type
+
+    @staticmethod
+    def _get_enum_discriminator_literal(enum_source: Enum, value: DiscriminatorValue) -> DiscriminatorValue:
+        member = enum_source.find_member(value)
+        if not member:
+            return value
+
+        default = member.field.default
+        if isinstance(default, str):
+            return default.strip("'\"")
+        if isinstance(default, int | bool):
+            return default
+        return value
 
     def __apply_discriminator_type(  # noqa: PLR0912, PLR0914, PLR0915
         self,
@@ -1706,28 +1710,29 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         msg = f"Discriminator type is not found. {data_type.reference.path}"
                         raise RuntimeError(msg)
 
-                    enum_from_base: Enum | None = None
-                    for base_class in discriminator_model.base_classes:
-                        if not base_class.reference or not base_class.reference.source:  # pragma: no cover
-                            continue
-                        base_model = base_class.reference.source
-                        if not isinstance(  # pragma: no cover
-                            base_model,
-                            (
-                                pydantic_model_v2.BaseModel,
-                                dataclass_model.DataClass,
-                                msgspec_model.Struct,
-                            ),
-                        ):
-                            continue
-                        for base_field in base_model.fields:  # pragma: no branch
-                            if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+                    def get_enum_from_base(
+                        discriminator_model: DataModel = discriminator_model,
+                        field_name: str = field_name,
+                    ) -> Enum | None:
+                        for base_class in discriminator_model.base_classes:
+                            if not base_class.reference or not base_class.reference.source:  # pragma: no cover
                                 continue
-                            enum_from_base = base_field.data_type.find_source(Enum)
-                            if enum_from_base:  # pragma: no branch
-                                break
-                        if enum_from_base:  # pragma: no branch
-                            break
+                            base_model = base_class.reference.source
+                            if not isinstance(  # pragma: no cover
+                                base_model,
+                                (
+                                    pydantic_model_v2.BaseModel,
+                                    dataclass_model.DataClass,
+                                    msgspec_model.Struct,
+                                ),
+                            ):
+                                continue
+                            for base_field in base_model.fields:  # pragma: no branch
+                                if field_name not in {base_field.original_name, base_field.name}:  # pragma: no cover
+                                    continue
+                                if enum_from_base := base_field.data_type.find_source(Enum):  # pragma: no branch
+                                    return enum_from_base
+                        return None
 
                     has_one_literal = False
                     for discriminator_field in discriminator_model.fields:
@@ -1759,7 +1764,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             discriminator_field.extras["is_classvar"] = True
                             break
 
-                        enum_source = discriminator_field.data_type.find_source(Enum) or enum_from_base
+                        enum_source = discriminator_field.data_type.find_source(Enum)
+                        if self.use_enum_values_in_discriminator:
+                            enum_source = enum_source or get_enum_from_base()
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
@@ -1774,7 +1781,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         has_one_literal = True
                     if not has_one_literal:
                         new_data_type = self._create_discriminator_data_type(
-                            enum_from_base, discriminator_values, discriminator_model, imports
+                            get_enum_from_base(), discriminator_values, discriminator_model, imports
                         )
                         # Handle multiple aliases (Pydantic v2 AliasChoices)
                         single_alias: str | None = None
