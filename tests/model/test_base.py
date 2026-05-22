@@ -17,6 +17,7 @@ from datamodel_code_generator.model.base import (
     get_module_path,
     sanitize_module_name,
 )
+from datamodel_code_generator.model.pydantic_v2 import BaseModel
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType, Types
 
@@ -108,6 +109,30 @@ def test_data_model_exception() -> None:
             fields=[field],
             reference=Reference(path="abc", original_name="abc", name="abc"),
         )
+
+
+def test_replace_children_in_models_updates_matching_owner_references() -> None:
+    """Test replacing reference children for only the selected owner models."""
+    old_reference = Reference(path="Old", original_name="Old", name="Old")
+    new_reference = Reference(path="New", original_name="New", name="New")
+    target_model = BaseModel(fields=[], reference=old_reference)
+    selected_type = DataType(reference=old_reference)
+    selected_model = BaseModel(
+        fields=[DataModelFieldBase(data_type=selected_type)],
+        reference=Reference(path="Selected", original_name="Selected", name="Selected"),
+    )
+    other_type = DataType(reference=old_reference)
+    BaseModel(
+        fields=[DataModelFieldBase(data_type=other_type)],
+        reference=Reference(path="Other", original_name="Other", name="Other"),
+    )
+
+    target_model.replace_children_in_models([selected_model], new_reference)
+
+    assert selected_type.reference is new_reference
+    assert other_type.reference is old_reference
+    assert [child is selected_type for child in old_reference.children] == [False]
+    assert [child is selected_type for child in new_reference.children] == [True]
 
 
 def test_data_field() -> None:

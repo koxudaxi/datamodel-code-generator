@@ -116,8 +116,15 @@ def test_generation_index_combines_root_collapse_reference_usage() -> None:
     reference_wrapper = Reference(path="Wrapper", original_name="Wrapper", name="Wrapper")
     reference_direct = Reference(path="Direct", original_name="Direct", name="Direct")
     wrapper_type = DataType(reference=reference_inner)
+    duplicate_wrapper_type = DataType(reference=reference_inner)
     direct_type = DataType(reference=reference_inner)
-    wrapper_model = RootModel(fields=[DataModelField(data_type=wrapper_type)], reference=reference_wrapper)
+    wrapper_model = RootModel(
+        fields=[
+            DataModelField(data_type=wrapper_type),
+            DataModelField(data_type=duplicate_wrapper_type),
+        ],
+        reference=reference_wrapper,
+    )
     direct_model = BaseModel(fields=[DataModelField(data_type=direct_type)], reference=reference_direct)
     store = GenerationStore()
     store.register_model(wrapper_model)
@@ -357,7 +364,10 @@ def test_generation_index_exposes_root_collapse_helpers_independently() -> None:
     reference_base = Reference(path="Base", original_name="Base", name="Base")
     reference_unknown = Reference(path="Unknown", original_name="Unknown", name="Unknown")
     wrapper_model = RootModel(
-        fields=[DataModelField(data_type=DataType(reference=reference_inner))],
+        fields=[
+            DataModelField(data_type=DataType(reference=reference_inner)),
+            DataModelField(data_type=DataType(reference=reference_inner)),
+        ],
         reference=reference_wrapper,
     )
     direct_model = BaseModel(
@@ -376,7 +386,13 @@ def test_generation_index_exposes_root_collapse_helpers_independently() -> None:
         excluded_model=base_model,
         root_model_type=RootModel,
     )
-    missing_wrappers, missing_direct_refs = store.index.root_collapse_reference_usage(
+    missing_direct_refs = store.index.direct_non_root_refs_for_reference(
+        reference_unknown,
+        excluded_model=base_model,
+        root_model_type=RootModel,
+    )
+    missing_root_wrappers = store.index.root_model_wrappers_for_reference(reference_unknown, RootModel)
+    missing_wrappers, missing_collapse_direct_refs = store.index.root_collapse_reference_usage(
         reference_unknown,
         excluded_model=base_model,
         root_model_type=RootModel,
@@ -385,14 +401,18 @@ def test_generation_index_exposes_root_collapse_helpers_independently() -> None:
     assert {
         "wrappers": [model.reference.path for model in wrappers],
         "direct_refs": [fact.owner_field_index for fact in direct_refs],
-        "missing_wrappers": missing_wrappers,
         "missing_direct_refs": missing_direct_refs,
+        "missing_root_wrappers": missing_root_wrappers,
+        "missing_wrappers": missing_wrappers,
+        "missing_collapse_direct_refs": missing_collapse_direct_refs,
     } == snapshot(
         {
             "wrappers": ["Wrapper"],
             "direct_refs": [0],
-            "missing_wrappers": [],
             "missing_direct_refs": [],
+            "missing_root_wrappers": [],
+            "missing_wrappers": [],
+            "missing_collapse_direct_refs": [],
         },
     )
 
@@ -466,5 +486,49 @@ def test_generation_store_redirects_model_reference_users_by_owner() -> None:
             "new_children": [True],
             "owner_reference_classes": ["New"],
             "other_reference_classes": ["Target"],
+        },
+    )
+
+
+def test_generation_store_collapse_and_attach_reference_edges() -> None:
+    """Root collapse and first reference attachment should keep compatibility children aligned."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_outer = Reference(path="Outer", original_name="Outer", name="Outer")
+    reference_inner = Reference(path="Inner", original_name="Inner", name="Inner")
+    reference_attached = Reference(path="Attached", original_name="Attached", name="Attached")
+    root_type = DataType(reference=reference_outer)
+    unreferenced_root_type = DataType()
+    model = BaseModel(fields=[DataModelField(data_type=root_type)], reference=reference_model)
+    unattached_type = DataType()
+    detached_type = DataType()
+    store = GenerationStore()
+    store.register_model(model)
+
+    store.collapse_root_data_type(root_type, reference_inner)
+    store.collapse_root_data_type(unreferenced_root_type, reference_inner)
+    store.replace_data_type_ref(unattached_type, reference_attached)
+    store.detach_data_type_ref(detached_type)
+
+    assert {
+        "iter_paths": [tracked_model.reference.path for tracked_model in store],
+        "root_reference": root_type.reference.path if root_type.reference else None,
+        "unreferenced_root_reference": (
+            unreferenced_root_type.reference.path if unreferenced_root_type.reference else None
+        ),
+        "detached_reference": detached_type.reference.path if detached_type.reference else None,
+        "old_children": [child is root_type for child in reference_outer.children],
+        "inner_children": [child is root_type or child is unreferenced_root_type for child in reference_inner.children],
+        "attached_children": [child is unattached_type for child in reference_attached.children],
+        "reference_classes": sorted(store.index.reference_classes_for_model(model)),
+    } == snapshot(
+        {
+            "iter_paths": ["Model"],
+            "root_reference": "Inner",
+            "unreferenced_root_reference": "Inner",
+            "detached_reference": None,
+            "old_children": [],
+            "inner_children": [True, True],
+            "attached_children": [True],
+            "reference_classes": ["Inner"],
         },
     )

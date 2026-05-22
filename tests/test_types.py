@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import pytest
 
+from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import (
+    DataType,
     _remove_none_from_union,
     extract_qualified_names,
     get_optional_type,
@@ -186,6 +188,17 @@ def test_datatype_deepcopy_with_circular_references() -> None:
     # parent and children should be None in the copy (excluded from deepcopy)
     assert copied_parent.parent is None
     assert copied_parent.children is None
+
+
+def test_datatype_remove_reference_detaches_compatibility_child() -> None:
+    """Test removing a reference keeps the reference children list in sync."""
+    reference = Reference(path="Model", original_name="Model", name="Model")
+    data_type = DataType(reference=reference)
+
+    data_type.remove_reference()
+
+    assert data_type.reference is None
+    assert [child is data_type for child in reference.children] == []
 
 
 def test_datatype_deepcopy_with_nested_data_types() -> None:
