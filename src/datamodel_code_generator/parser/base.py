@@ -81,6 +81,7 @@ from datamodel_code_generator.model.type_alias import TypeAliasBase, TypeStateme
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
 from datamodel_code_generator.parser._graph import stable_toposort
 from datamodel_code_generator.parser._scc import find_circular_sccs, strongly_connected_components
+from datamodel_code_generator.parser.generation import GenerationIndex, GenerationStore, set_model_base_classes
 from datamodel_code_generator.reference import ModelResolver, ModelType, Reference
 from datamodel_code_generator.types import ANY, DataType, DataTypeManager
 from datamodel_code_generator.util import camel_to_snake
@@ -498,6 +499,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     sorted_data_models: SortedDataModels | None = None,
     require_update_action_models: list[str] | None = None,
     recursion_count: int = MAX_RECURSION_COUNT,
+    generation_index: GenerationIndex | None = None,
 ) -> tuple[list[DataModel], SortedDataModels, list[str]]:
     """Sort data models by dependency order for correct forward references."""
     if sorted_data_models is None:
@@ -505,22 +507,40 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
 
     if require_update_action_models is None:
         require_update_action_models = []
+    require_update_action_model_paths = set(require_update_action_models)
+
+    def add_require_update_action_model(model: DataModel) -> None:
+        if model.is_alias:
+            return
+        path = model.path
+        if path in require_update_action_model_paths:
+            return
+        require_update_action_models.append(path)
+        require_update_action_model_paths.add(path)
+
+    def get_reference_classes(model: DataModel) -> frozenset[str]:
+        if generation_index is None:
+            return model.reference_classes
+        return generation_index.reference_classes_for_model(model)
 
     sorted_model_count: int = len(sorted_data_models)
+    sorted_model_paths = set(sorted_data_models)
 
     unresolved_references: list[DataModel] = []
     for model in unsorted_data_models:
-        if not model.reference_classes:
+        reference_classes = get_reference_classes(model)
+        if not reference_classes:
             sorted_data_models[model.path] = model
-        elif model.path in model.reference_classes and len(model.reference_classes) == 1:  # only self-referencing
+            sorted_model_paths.add(model.path)
+        elif model.path in reference_classes and len(reference_classes) == 1:  # only self-referencing
             sorted_data_models[model.path] = model
-            add_model_path_to_list(require_update_action_models, model)
-        elif (
-            not model.reference_classes - {model.path} - sorted_data_models.keys()
-        ):  # reference classes have been resolved
+            sorted_model_paths.add(model.path)
+            add_require_update_action_model(model)
+        elif not reference_classes - {model.path} - sorted_model_paths:  # reference classes have been resolved
             sorted_data_models[model.path] = model
-            if model.path in model.reference_classes:
-                add_model_path_to_list(require_update_action_models, model)
+            sorted_model_paths.add(model.path)
+            if model.path in reference_classes:
+                add_require_update_action_model(model)
         else:
             unresolved_references.append(model)
 
@@ -532,6 +552,7 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
                     sorted_data_models,
                     require_update_action_models,
                     recursion_count - 1,
+                    generation_index,
                 )
             except RecursionError:  # pragma: no cover
                 pass
@@ -585,23 +606,26 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
         # circular reference
         unsorted_data_model_names = set(path_to_index.keys())
         for model in unresolved_references:
-            unresolved_model = model.reference_classes - {model.path} - sorted_data_models.keys()
+            reference_classes = get_reference_classes(model)
+            unresolved_model = reference_classes - {model.path} - sorted_model_paths
             base_models = [getattr(s.reference, "path", None) for s in model.base_classes]
-            update_action_parent = set(require_update_action_models).intersection(base_models)
+            update_action_parent = require_update_action_model_paths.intersection(base_models)
             if not unresolved_model:
                 sorted_data_models[model.path] = model
+                sorted_model_paths.add(model.path)
                 if update_action_parent:
-                    add_model_path_to_list(require_update_action_models, model)
+                    add_require_update_action_model(model)
                 continue
 
             if not unresolved_model - unsorted_data_model_names:
                 sorted_data_models[model.path] = model
-                add_model_path_to_list(require_update_action_models, model)
+                sorted_model_paths.add(model.path)
+                add_require_update_action_model(model)
                 continue
 
             # unresolved
             unresolved_classes = ", ".join(
-                f"[class: {item.path} references: {item.reference_classes}]" for item in unresolved_references
+                f"[class: {item.path} references: {get_reference_classes(item)}]" for item in unresolved_references
             )
             msg = f"A Parser can not resolve classes: {unresolved_classes}."
             raise Exception(msg)  # noqa: TRY002
@@ -609,7 +633,10 @@ def sort_data_models(  # noqa: PLR0912, PLR0914, PLR0915
     return unresolved_references, sorted_data_models, require_update_action_models
 
 
-def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
+def sort_base_classes_for_mro(
+    sorted_data_models: SortedDataModels,
+    generation_store: GenerationStore | None = None,
+) -> None:
     """Sort base classes in each model to ensure valid Python MRO.
 
     When a class inherits from multiple base classes where some bases inherit
@@ -671,7 +698,13 @@ def sort_base_classes_for_mro(sorted_data_models: SortedDataModels) -> None:
             return sum(1 for other_path in ancestor_map if path in ancestor_map.get(other_path, set()))
 
         # Use stable sort to preserve original order for elements with equal keys
-        model.base_classes = sorted(base_classes, key=sort_key)
+        sorted_base_classes = sorted(base_classes, key=sort_key)
+        if all(
+            sorted_base_class is base_class
+            for sorted_base_class, base_class in zip(sorted_base_classes, base_classes, strict=True)
+        ):
+            continue
+        set_model_base_classes(model, sorted_base_classes, generation_store)
 
 
 def relative(
@@ -991,7 +1024,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         self.base_class_map: dict[str, str | list[str]] | None = config.base_class_map
         self.target_python_version: PythonVersion = config.target_python_version
         self.builtin_names: frozenset[str] = _get_builtin_names_for_target(self.target_python_version)
-        self.results: list[DataModel] = []
+        self.generation_store, self.results = GenerationStore.create_with_results()
         self.dump_resolve_reference_action: Callable[[Iterable[str]], str] | None = config.dump_resolve_reference_action
         self.validation: bool = config.validation
         self.field_constraints: bool = config.field_constraints
@@ -1354,18 +1387,19 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     and root_data_type.reference.name
                     == self.model_resolver.get_class_name(model.reference.original_name, unique=False).name
                 ):
-                    model.reference.replace_children_references(root_data_type.reference)
+                    self.generation_store.redirect_reference_users(model.reference, root_data_type.reference)
                     models_to_remove.add(model)
-                    for data_type in model.all_data_types:
-                        if data_type.reference:
-                            data_type.remove_reference()
+                    self.generation_store.detach_model_data_type_refs(model)
                     continue
 
                 # Remove self from all DataModel children's base_classes
                 for child in model.reference.iter_data_model_children():
-                    child.base_classes = [bc for bc in child.base_classes if bc.reference != model.reference]
+                    self.generation_store.set_base_classes(
+                        child,
+                        [bc for bc in child.base_classes if bc.reference != model.reference],
+                    )
                     if not child.base_classes:  # pragma: no cover
-                        child.set_base_class()
+                        self.generation_store.reset_base_classes(child)
 
             class_name = model.duplicate_class_name or model.class_name
             if class_name in model_class_names:
@@ -1378,11 +1412,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             model_class_names[class_name] = model
         for model, duplicate_models in model_to_duplicate_models.items():
             for duplicate_model in duplicate_models:
-                duplicate_model.reference.replace_children_references(model.reference)
+                self.generation_store.redirect_reference_users(duplicate_model.reference, model.reference)
                 # Deduplicate base_classes in all DataModel children
                 for child in duplicate_model.reference.iter_data_model_children():
-                    child.base_classes = list(
-                        {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values()
+                    self.generation_store.set_base_classes(
+                        child,
+                        {f"{c.module_name}.{c.type_hint}": c for c in child.base_classes}.values(),
                     )
                 models_to_remove.add(duplicate_model)
 
@@ -1412,9 +1447,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     break
 
                 for canonical, duplicate in duplicates:
-                    duplicate.replace_children_in_models(models, canonical.reference)
+                    self.generation_store.redirect_model_reference_users(duplicate, models, canonical.reference)
                     for child in duplicate.reference.iter_data_model_children():  # pragma: no cover
-                        child.base_classes = list({c.reference: c for c in child.base_classes}.values())
+                        self.generation_store.set_base_classes(
+                            child,
+                            {c.reference: c for c in child.base_classes}.values(),
+                        )
                     models_to_remove.add(duplicate)
 
         # Batch removal: O(n) instead of O(n²)
@@ -1752,10 +1790,16 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                         for field_data_type in discriminator_field.data_type.all_data_types:
                             if field_data_type.reference:  # pragma: no cover
-                                field_data_type.remove_reference()
+                                self.generation_store.detach_data_type_ref(field_data_type)
 
-                        discriminator_field.data_type = self._create_discriminator_data_type(
-                            enum_source, discriminator_values, discriminator_model, imports
+                        self.generation_store.replace_field_type(
+                            discriminator_field,
+                            self._create_discriminator_data_type(
+                                enum_source,
+                                discriminator_values,
+                                discriminator_model,
+                                imports,
+                            ),
                         )
                         discriminator_field.data_type.parent = discriminator_field
                         discriminator_field.required = True
@@ -1772,7 +1816,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             validation_aliases = alias
                         else:
                             single_alias = alias
-                        discriminator_model.fields.append(
+                        self.generation_store.append_field(
+                            discriminator_model,
                             self.data_model_field_type(
                                 name=field_name,
                                 data_type=new_data_type,
@@ -1783,7 +1828,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                     property_name, field_name, discriminator_model.name
                                 ),
                                 use_serialization_alias=self.use_serialization_alias,
-                            )
+                            ),
                         )
             has_imported_literal = any(import_ == IMPORT_LITERAL for import_ in imports)
             if has_imported_literal:  # pragma: no cover
@@ -1825,7 +1870,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             # Skip both type and default conversion to keep consistency
                             continue
                         model_field.default = converted_default
-                    model_field.replace_data_type(set_data_type)
+                    self.generation_store.replace_field_type(model_field, set_data_type)
 
     @classmethod
     def __collect_set_item_references(cls, models: list[DataModel]) -> set[str]:
@@ -1878,11 +1923,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             cached_model_reference = model_cache.get(model_key)
             if cached_model_reference:
                 if isinstance(model, Enum) or self.collapse_reuse_models:
-                    model.replace_children_in_models(models, cached_model_reference)
+                    self.generation_store.redirect_model_reference_users(model, models, cached_model_reference)
                     duplicates.append(model)
                 else:
                     inherited_model = model.create_reuse_model(cached_model_reference)
-                    model.replace_children_in_models(models, inherited_model.reference)
+                    self.generation_store.redirect_model_reference_users(model, models, inherited_model.reference)
                     if cached_model_reference.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, model, inherited_model)
@@ -1947,7 +1992,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if canonical in canonical_models_seen:
                 continue
             canonical_models_seen.add(canonical)
-            canonical.file_path = Path(f"{shared_module}.py")
+            self.generation_store.update_model_reference(canonical, new_file_path=Path(f"{shared_module}.py"))
             canonical_to_shared_ref[canonical] = canonical.reference
             shared_models.append(canonical)
 
@@ -1975,11 +2020,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if module != duplicate_module:
                     continue
                 if isinstance(duplicate_model, Enum) or not supports_inheritance or self.collapse_reuse_models:
-                    duplicate_model.replace_children_in_models(models, shared_ref)
+                    self.generation_store.redirect_model_reference_users(duplicate_model, models, shared_ref)
                     models_to_remove[module].add(duplicate_model)
                 else:
                     inherited_model = duplicate_model.create_reuse_model(shared_ref)
-                    duplicate_model.replace_children_in_models(models, inherited_model.reference)
+                    self.generation_store.redirect_model_reference_users(
+                        duplicate_model,
+                        models,
+                        inherited_model.reference,
+                    )
                     if shared_ref.path in require_update_action_models:
                         add_model_path_to_list(require_update_action_models, inherited_model)
                     self._replace_model_in_list(models, duplicate_model, inherited_model)
@@ -2027,6 +2076,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         if not self.collapse_root_models:
             return
 
+        generation_store = self.generation_store
+        generation_index = generation_store.index
+
         for model in models:  # noqa: PLR1702
             for model_field in model.fields:
                 for data_type in model_field.data_type.all_data_types:
@@ -2056,13 +2108,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         inner_model = cast("DataModel", inner_reference.source)
 
                         if self.collapse_root_models_name_strategy == CollapseRootModelsNameStrategy.Parent:
-                            root_model_wrappers = [
-                                parent_model
-                                for child in inner_reference.children
-                                if isinstance(child, DataType)
-                                and (parent_model := get_most_of_parent(child, DataModel))
-                                and isinstance(parent_model, self.data_model_root_type)
-                            ]
+                            root_model_wrappers, direct_refs = generation_index.root_collapse_reference_usage(
+                                inner_reference,
+                                excluded_model=root_type_model,
+                                root_model_type=self.data_model_root_type,
+                            )
 
                             if len(root_model_wrappers) > 1:
                                 warn(
@@ -2073,15 +2123,6 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 )
                                 continue
 
-                            direct_refs = [
-                                c
-                                for c in inner_reference.children
-                                if isinstance(c, DataType)
-                                and (parent_model := get_most_of_parent(c, DataModel)) is not None
-                                and parent_model is not root_type_model
-                                and not isinstance(parent_model, self.data_model_root_type)
-                            ]
-
                             if direct_refs:
                                 warn(
                                     f"Cannot apply 'parent' strategy for '{inner_model.class_name}' - "
@@ -2090,23 +2131,23 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 )
                                 continue
 
-                            inner_model.class_name = root_type_model.class_name
-                            inner_model.reference.name = root_type_model.class_name
-                            inner_model.set_reference_path(root_type_model.reference.path)
+                            generation_store.update_model_reference(
+                                inner_model,
+                                class_name=root_type_model.class_name,
+                                reference_name=root_type_model.class_name,
+                                new_path=root_type_model.reference.path,
+                            )
 
                         assert isinstance(root_type_model, DataModel)
 
-                        root_type_model.reference.children = [
-                            c
-                            for c in root_type_model.reference.children
-                            if c is not data_type and getattr(c, "parent", None)
-                        ]
-
-                        data_type.reference = inner_reference
-                        inner_reference.children.append(data_type)
+                        has_remaining_root_references = generation_index.has_data_type_references_other_than(
+                            root_type_model.reference,
+                            data_type,
+                        )
+                        generation_store.collapse_root_data_type(data_type, inner_reference)
 
                         imports.remove_referenced_imports(root_type_model.path)
-                        if not root_type_model.reference.children:  # pragma: no branch
+                        if not has_remaining_root_references:
                             unused_models.append(root_type_model)
 
                         continue
@@ -2127,7 +2168,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 root_type_field.constraints, model_field.constraints
                             )
 
-                        data_type.parent.data_type = copied_data_type
+                        self.generation_store.replace_field_type(data_type.parent, copied_data_type)
 
                     elif isinstance(data_type.parent, DataType) and data_type.parent.is_list:
                         if self.field_constraints:
@@ -2153,15 +2194,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                                 )
                                 copied_data_type.discriminator = field_name
                         assert isinstance(data_type.parent, DataType)
-                        data_type.parent.data_types.remove(data_type)
-                        data_type.parent.data_types.append(copied_data_type)
+                        self.generation_store.replace_nested_data_type(data_type.parent, data_type, copied_data_type)
 
                     elif isinstance(data_type.parent, DataType):
                         # for data_type
-                        data_type_id = id(data_type)
-                        data_type.parent.data_types = [
-                            d for d in (*data_type.parent.data_types, copied_data_type) if id(d) != data_type_id
-                        ]
+                        self.generation_store.replace_nested_data_type(data_type.parent, data_type, copied_data_type)
                     else:  # pragma: no cover
                         continue
 
@@ -2195,15 +2232,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         field_imports = [i for i in original_field.imports if i not in excluded_imports]
                         imports.append(field_imports)
 
-                    data_type.remove_reference()
+                    generation_store.detach_data_type_ref(data_type)
 
                     assert isinstance(root_type_model, DataModel)
-                    root_type_model.reference.children = [
-                        c for c in root_type_model.reference.children if getattr(c, "parent", None)
-                    ]
 
                     imports.remove_referenced_imports(root_type_model.path)
-                    if not root_type_model.reference.children:
+                    if not generation_index.has_data_type_references(root_type_model.reference):
                         unused_models.append(root_type_model)
 
     def __set_default_enum_member(
@@ -2272,7 +2306,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
 
                 original_field = _find_field(model_field.original_name, _find_base_classes(model))
                 if not original_field:  # pragma: no cover
-                    model.fields.remove(model_field)
+                    self.generation_store.remove_field(model, model_field)
                     continue
                 copied_original_field = original_field.model_copy()
                 if original_field.data_type.reference:
@@ -2287,13 +2321,13 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 else:
                     data_type = original_field.data_type.model_copy()
                 data_type.parent = copied_original_field
-                copied_original_field.data_type = data_type
+                self.generation_store.replace_field_type(copied_original_field, data_type)
                 copied_original_field.parent = model
                 copied_original_field.required = True
                 if self.apply_default_values_for_required_fields and copied_original_field.has_default:
                     copied_original_field.use_default_with_required = True
-                model.fields.insert(index, copied_original_field)
-                model.fields.remove(model_field)
+                self.generation_store.insert_field(model, index, copied_original_field)
+                self.generation_store.remove_field(model, model_field)
 
     def __sort_models(
         self,
@@ -2396,7 +2430,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     category=UserWarning,
                     stacklevel=2,
                 )
-            model.fields = sorted(model.fields, key=dataclass_model.has_field_assignment)
+            self.generation_store.set_fields(model, sorted(model.fields, key=dataclass_model.has_field_assignment))
 
     @classmethod
     def __get_dataclass_inherited_info(cls, model: DataModel) -> tuple[set[str], bool] | None:
@@ -2466,12 +2500,12 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     # Apply model-level overrides to nested types
                     self._apply_override_to_data_type(field.data_type)
 
-    def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:  # noqa: PLR6301
+    def _apply_override_to_field(self, field: DataModelFieldBase, override_import: Import) -> None:
         """Apply override to entire field's data_type."""
         field.data_type.import_ = override_import
         field.data_type.alias = override_import.import_
-        field.data_type.reference = None
-        field.data_type.data_types = []  # Clear nested types
+        self.generation_store.detach_data_type_ref(field.data_type)
+        self.generation_store.set_nested_data_types(field.data_type, [])
 
     def _apply_override_to_data_type(self, data_type: DataType) -> None:
         """Recursively apply model-level overrides to a DataType."""
@@ -2479,7 +2513,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             override_import = self._type_override_imports[data_type.reference.name]
             data_type.import_ = override_import
             data_type.alias = override_import.import_
-            data_type.reference = None
+            self.generation_store.detach_data_type_ref(data_type)
         # Handle nested types (List[CustomType], Optional[CustomType], etc.)
         for nested in data_type.data_types:
             self._apply_override_to_data_type(nested)
@@ -2543,7 +2577,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 results.update({init_file: init_result})
         return results
 
-    def __change_imported_model_name(  # noqa: PLR6301
+    def __change_imported_model_name(
         self,
         models: list[DataModel],
         imports: Imports,
@@ -2558,12 +2592,15 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             if model.class_name not in imported_names:  # pragma: no cover
                 continue
 
-            model.reference.name = scoped_model_resolver.add(  # pragma: no cover
-                path=get_special_path("imported_name", model.path.split("/")),
-                original_name=model.reference.name,
-                unique=True,
-                class_name=True,
-            ).name
+            self.generation_store.update_model_reference(  # pragma: no cover
+                model,
+                reference_name=scoped_model_resolver.add(
+                    path=get_special_path("imported_name", model.path.split("/")),
+                    original_name=model.reference.name,
+                    unique=True,
+                    class_name=True,
+                ).name,
+            )
 
     def __alias_shadowed_imports(  # noqa: PLR6301
         self,
@@ -2673,9 +2710,9 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 if has_target_model_parent:
                     pass
                 elif parent_refs:  # pragma: no cover
-                    model.base_classes.insert(0, base_class_dt)
+                    self.generation_store.set_base_classes(model, [base_class_dt, *model.base_classes])
                 else:
-                    model.base_classes = [base_class_dt]
+                    self.generation_store.set_base_classes(model, [base_class_dt])
             if not is_first_root and original_import:
                 imports.remove(original_import)
                 from_ = relative(current_module_name, first_root_module_name)[0]
@@ -2906,7 +2943,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model_to_module[id(model)] = scc_module
         return all_models, model_to_module
 
-    def __rename_and_relocate_scc_models(  # noqa: PLR6301
+    def __rename_and_relocate_scc_models(
         self,
         all_scc_models: list[DataModel],
         model_to_original_module: dict[int, tuple[str, ...]],
@@ -2926,29 +2963,33 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         module_class_mappings: defaultdict[tuple[str, ...], list[tuple[str, str]]] = defaultdict(list)
         path_mapping: dict[str, str] = {}
 
-        for model in all_scc_models:
-            original_class_name = model.class_name
-            original_module = model_to_original_module[id(model)]
-            old_path = model.path  # Save old path before updating
+        with self.generation_store.defer_refresh():
+            for model in all_scc_models:
+                original_class_name = model.class_name
+                original_module = model_to_original_module[id(model)]
+                old_path = model.path  # Save old path before updating
 
-            if class_name_counts[original_class_name] > 1:
-                seen_count = class_name_seen.get(original_class_name, 0)
-                new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
-                class_name_seen[original_class_name] = seen_count + 1
-            else:
-                new_class_name = original_class_name
+                if class_name_counts[original_class_name] > 1:
+                    seen_count = class_name_seen.get(original_class_name, 0)
+                    new_class_name = f"{original_class_name}_{seen_count}" if seen_count > 0 else original_class_name
+                    class_name_seen[original_class_name] = seen_count + 1
+                else:
+                    new_class_name = original_class_name
 
-            model.reference.name = new_class_name
-            new_path = f"{internal_module_str}.{new_class_name}"
-            model.set_reference_path(new_path)
-            model.file_path = internal_path
+                new_path = f"{internal_module_str}.{new_class_name}"
+                self.generation_store.update_model_reference(
+                    model,
+                    reference_name=new_class_name,
+                    new_path=new_path,
+                    new_file_path=internal_path,
+                )
 
-            module_class_mappings[original_module].append((original_class_name, new_class_name))
-            path_mapping[old_path] = new_path
+                module_class_mappings[original_module].append((original_class_name, new_class_name))
+                path_mapping[old_path] = new_path
 
         return module_class_mappings, path_mapping
 
-    def __build_module_dependency_graph(  # noqa: PLR6301
+    def __build_module_dependency_graph(
         self,
         module_models_list: list[tuple[tuple[str, ...], list[DataModel]]],
     ) -> dict[tuple[str, ...], set[tuple[str, ...]]]:
@@ -2971,13 +3012,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             graph[module] = set()
 
             for model in models:
-                for data_type in model.all_data_types:
-                    if data_type.reference and data_type.reference.source:
-                        add_cross_module_edge(data_type.reference.path, module)
-
-                for base_class in model.base_classes:
-                    if base_class.reference and base_class.reference.source:
-                        add_cross_module_edge(base_class.reference.path, module)
+                for reference_path in self.generation_store.index.reference_classes_for_model(model):
+                    add_cross_module_edge(reference_path, module)
 
         return graph
 
@@ -3460,8 +3496,11 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             module_split_mode,
         )
 
-        _, sorted_data_models, require_update_action_models = sort_data_models(self.results)
-        sort_base_classes_for_mro(sorted_data_models)
+        _, sorted_data_models, require_update_action_models = sort_data_models(
+            self.results,
+            generation_index=self.generation_store.index,
+        )
+        sort_base_classes_for_mro(sorted_data_models, self.generation_store)
 
         (
             module_models,
