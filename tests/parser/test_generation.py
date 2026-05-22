@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from inline_snapshot import snapshot
 
+from datamodel_code_generator.model.base import BaseClassDataType
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
-from datamodel_code_generator.parser.generation import GenerationStore
+from datamodel_code_generator.parser.generation import GenerationStore, set_model_base_classes
 from datamodel_code_generator.reference import Reference
 from datamodel_code_generator.types import DataType
 
@@ -218,5 +221,250 @@ def test_generation_store_replaces_nested_data_types() -> None:
             "old_parent": None,
             "new_parent": True,
             "reference_classes": ["New"],
+        },
+    )
+
+
+def test_set_model_base_classes_supports_store_and_legacy_fallback() -> None:
+    """The helper keeps direct fallback compatibility while updating store facts when available."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_base = Reference(path="Base", original_name="Base", name="Base")
+    reference_legacy = Reference(path="Legacy", original_name="Legacy", name="Legacy")
+    model = BaseModel(fields=[], reference=reference_model)
+    store = GenerationStore()
+    store.register_model(model)
+
+    set_model_base_classes(model, [BaseClassDataType(reference=reference_base)], store)
+    store_reference_classes = sorted(store.index.reference_classes_for_model(model))
+    set_model_base_classes(model, [BaseClassDataType(reference=reference_legacy)], None)
+
+    assert {
+        "store_reference_classes": store_reference_classes,
+        "legacy_base_classes": [base_class.reference.path for base_class in model.base_classes if base_class.reference],
+    } == snapshot(
+        {
+            "store_reference_classes": ["Base"],
+            "legacy_base_classes": ["Legacy"],
+        },
+    )
+
+
+def test_generation_model_list_invalidates_for_list_compatible_mutations() -> None:
+    """The Parser.results-compatible list still invalidates store facts for every list mutation."""
+
+    def make_model(path: str) -> BaseModel:
+        return BaseModel(fields=[], reference=Reference(path=path, original_name=path, name=path))
+
+    model_a = make_model("A")
+    model_b = make_model("B")
+    model_c = make_model("C")
+    model_d = make_model("D")
+    model_e = make_model("E")
+    store = GenerationStore()
+
+    store.models.extend([model_a, model_b])
+    store.refresh()
+    version_after_extend = store.facts_version
+    store.models.insert(1, model_c)
+    store.models[0] = model_d
+    store.models[1:2] = [model_e]
+    del store.models[2:]
+    store.models.append(model_a)
+    popped = store.models.pop()
+    store.models.remove(model_e)
+    store.models.clear()
+
+    assert {
+        "version_after_extend": version_after_extend,
+        "dirty_after_mutations": store._dirty,
+        "popped": popped.reference.path,
+        "models": [model.reference.path for model in store.models],
+        "model_facts": list(store.model_facts.values()),
+    } == snapshot(
+        {
+            "version_after_extend": 1,
+            "dirty_after_mutations": True,
+            "popped": "A",
+            "models": [],
+            "model_facts": [],
+        },
+    )
+
+
+def test_generation_index_returns_empty_results_for_unknown_objects() -> None:
+    """Unknown references and objects should return explicit empty values, not stale facts."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_target = Reference(path="Target", original_name="Target", name="Target")
+    reference_unknown = Reference(path="Unknown", original_name="Unknown", name="Unknown")
+    data_type = DataType(reference=reference_target)
+    model = BaseModel(fields=[DataModelField(data_type=data_type)], reference=reference_model)
+    unknown_model = BaseModel(
+        fields=[DataModelField(data_type=DataType(reference=reference_unknown))],
+        reference=reference_unknown,
+    )
+    unknown_data_type = DataType(reference=reference_unknown)
+    store = GenerationStore()
+    store.register_model(model)
+
+    assert {
+        "unknown_model_fact": store.index.model_fact(unknown_model),
+        "known_model_id_for_reference": store.index.model_id_for_reference(reference_model),
+        "unknown_model_for_reference": store.index.model_for_reference(reference_unknown),
+        "unknown_data_type_facts_for_reference": store.index.data_type_facts_for_reference(reference_unknown),
+        "unknown_has_other_refs": store.index.has_data_type_references_other_than(reference_unknown, data_type),
+        "known_owner": store.index.owner_model_for_data_type(data_type) is model,
+        "unknown_owner": store.index.owner_model_for_data_type(unknown_data_type),
+        "unknown_reference_classes": sorted(store.index.reference_classes_for_model(unknown_model)),
+        "facts_property": store.facts is store.current_facts(),
+        "model_facts_property": len(store.model_facts),
+        "data_type_fact_by_object_property": id(data_type) in store.data_type_fact_by_object,
+        "model_by_path_property": dict(store.model_by_path),
+        "model_by_ref_id_property": sorted(store.model_by_ref_id.values()),
+        "data_types_by_model_property": {
+            model_id: list(data_type_ids) for model_id, data_type_ids in store.data_types_by_model.items()
+        },
+        "reverse_edges_property": [list(data_type_ids) for data_type_ids in store.reverse_edges.values()],
+    } == snapshot(
+        {
+            "unknown_model_fact": None,
+            "known_model_id_for_reference": 0,
+            "unknown_model_for_reference": None,
+            "unknown_data_type_facts_for_reference": (),
+            "unknown_has_other_refs": False,
+            "known_owner": True,
+            "unknown_owner": None,
+            "unknown_reference_classes": ["Unknown"],
+            "facts_property": True,
+            "model_facts_property": 1,
+            "data_type_fact_by_object_property": True,
+            "model_by_path_property": {"Model": 0},
+            "model_by_ref_id_property": [0],
+            "data_types_by_model_property": {0: [0, 1]},
+            "reverse_edges_property": [[0]],
+        },
+    )
+
+
+def test_generation_index_exposes_root_collapse_helpers_independently() -> None:
+    """Split root-collapse helpers should preserve the combined query's ordering."""
+
+    class RootModel(BaseModel):
+        pass
+
+    reference_inner = Reference(path="Inner", original_name="Inner", name="Inner")
+    reference_wrapper = Reference(path="Wrapper", original_name="Wrapper", name="Wrapper")
+    reference_direct = Reference(path="Direct", original_name="Direct", name="Direct")
+    reference_base = Reference(path="Base", original_name="Base", name="Base")
+    reference_unknown = Reference(path="Unknown", original_name="Unknown", name="Unknown")
+    wrapper_model = RootModel(
+        fields=[DataModelField(data_type=DataType(reference=reference_inner))],
+        reference=reference_wrapper,
+    )
+    direct_model = BaseModel(
+        fields=[DataModelField(data_type=DataType(reference=reference_inner))],
+        reference=reference_direct,
+    )
+    base_model = BaseModel(fields=[], base_classes=[reference_inner], reference=reference_base)
+    store = GenerationStore()
+    store.register_model(wrapper_model)
+    store.register_model(direct_model)
+    store.register_model(base_model)
+
+    wrappers = store.index.root_model_wrappers_for_reference(reference_inner, RootModel)
+    direct_refs = store.index.direct_non_root_refs_for_reference(
+        reference_inner,
+        excluded_model=base_model,
+        root_model_type=RootModel,
+    )
+    missing_wrappers, missing_direct_refs = store.index.root_collapse_reference_usage(
+        reference_unknown,
+        excluded_model=base_model,
+        root_model_type=RootModel,
+    )
+
+    assert {
+        "wrappers": [model.reference.path for model in wrappers],
+        "direct_refs": [fact.owner_field_index for fact in direct_refs],
+        "missing_wrappers": missing_wrappers,
+        "missing_direct_refs": missing_direct_refs,
+    } == snapshot(
+        {
+            "wrappers": ["Wrapper"],
+            "direct_refs": [0],
+            "missing_wrappers": [],
+            "missing_direct_refs": [],
+        },
+    )
+
+
+def test_generation_store_updates_model_and_field_metadata() -> None:
+    """Model metadata and field mutations should refresh dependent facts through store APIs."""
+    reference_model = Reference(path="Model", original_name="Model", name="Model")
+    reference_a = Reference(path="A", original_name="A", name="A")
+    reference_b = Reference(path="B", original_name="B", name="B")
+    model = BaseModel(fields=[], reference=reference_model)
+    field_a = DataModelField(data_type=DataType(reference=reference_a))
+    field_b = DataModelField(data_type=DataType(reference=reference_b))
+    store = GenerationStore()
+    store.register_model(model)
+
+    store.append_field(model, field_a)
+    store.insert_field(model, 0, field_b)
+    store.remove_field(model, field_a)
+    store.rename_model(model, class_name="RenamedModel", reference_name="Renamed")
+    store.move_model(model, new_path="pkg.Renamed", new_file_path=Path("pkg.py"))
+
+    assert {
+        "fields": [field.data_type.reference.path for field in model.fields if field.data_type.reference],
+        "class_name": model.class_name,
+        "reference_name": model.reference.name,
+        "path": model.path,
+        "file_path": model.file_path,
+        "reference_classes": sorted(store.index.reference_classes_for_model(model)),
+    } == snapshot(
+        {
+            "fields": ["B"],
+            "class_name": "Renamed",
+            "reference_name": "Renamed",
+            "path": "pkg.Renamed",
+            "file_path": Path("pkg.py"),
+            "reference_classes": ["B"],
+        },
+    )
+
+
+def test_generation_store_redirects_model_reference_users_by_owner() -> None:
+    """Reference redirection should only affect children owned by the requested models."""
+    reference_target = Reference(path="Target", original_name="Target", name="Target")
+    reference_owner = Reference(path="Owner", original_name="Owner", name="Owner")
+    reference_other = Reference(path="Other", original_name="Other", name="Other")
+    reference_new = Reference(path="New", original_name="New", name="New")
+    target_model = BaseModel(fields=[], reference=reference_target)
+    owner_type = DataType(reference=reference_target)
+    other_type = DataType(reference=reference_target)
+    owner_model = BaseModel(fields=[DataModelField(data_type=owner_type)], reference=reference_owner)
+    other_model = BaseModel(fields=[DataModelField(data_type=other_type)], reference=reference_other)
+    store = GenerationStore()
+    store.register_model(target_model)
+    store.register_model(owner_model)
+    store.register_model(other_model)
+
+    store.redirect_model_reference_users(target_model, [owner_model], reference_new)
+
+    assert {
+        "owner_reference": owner_type.reference.path if owner_type.reference else None,
+        "other_reference": other_type.reference.path if other_type.reference else None,
+        "old_children": [child is other_type for child in reference_target.children],
+        "new_children": [child is owner_type for child in reference_new.children],
+        "owner_reference_classes": sorted(store.index.reference_classes_for_model(owner_model)),
+        "other_reference_classes": sorted(store.index.reference_classes_for_model(other_model)),
+    } == snapshot(
+        {
+            "owner_reference": "New",
+            "other_reference": "Target",
+            "old_children": [True],
+            "new_children": [True],
+            "owner_reference_classes": ["New"],
+            "other_reference_classes": ["Target"],
         },
     )

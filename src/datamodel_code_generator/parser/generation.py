@@ -33,22 +33,23 @@ from __future__ import annotations
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Literal, SupportsIndex, TypeAlias, TypeVar, overload
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator, Iterable, Iterator
     from pathlib import Path
 
-    from datamodel_code_generator.model.base import BaseClassDataType, DataModel, DataModelFieldBase
-    from datamodel_code_generator.reference import Reference
-    from datamodel_code_generator.types import DataType
 
-
+BaseClassDataType: TypeAlias = Any
+DataModel: TypeAlias = Any
+DataModelFieldBase: TypeAlias = Any
+DataType: TypeAlias = Any
 ModelId: TypeAlias = int
 DataTypeId: TypeAlias = int
 DataTypeRole = Literal["field", "base", "nested", "dict_key"]
 _OrderedSetItem = TypeVar("_OrderedSetItem")
 OrderedSet: TypeAlias = dict[_OrderedSetItem, None]
+Reference: TypeAlias = Any
 
 GENERATION_STORE_MUTATION_METHODS: frozenset[str] = frozenset({
     "append_field",
@@ -84,6 +85,13 @@ def set_model_base_classes(
         model.base_classes = list(base_classes)
     else:
         generation_store.set_base_classes(model, base_classes)
+
+
+def _outermost_parent(value: object) -> object:
+    current = value
+    while (parent := getattr(current, "parent", None)) is not None:
+        current = parent
+    return current
 
 
 @dataclass(frozen=True)
@@ -145,38 +153,42 @@ class _GenerationModelList(list["DataModel"]):
         super().__init__()
         self._invalidate = invalidate
 
-    def append(self, item: DataModel) -> None:
+    def append(self, item: Any) -> None:  # ty: ignore[invalid-method-override]
         """Append a model and invalidate derived facts."""
         super().append(item)
         self._invalidate()
 
-    def extend(self, items: Iterable[DataModel]) -> None:
+    def extend(self, items: Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
         """Extend the model list and invalidate derived facts."""
         super().extend(items)
         self._invalidate()
 
-    def insert(self, index: int, item: DataModel) -> None:
+    def insert(self, index: SupportsIndex, item: Any) -> None:  # ty: ignore[invalid-method-override]
         """Insert a model and invalidate derived facts."""
         super().insert(index, item)
         self._invalidate()
 
     @overload
-    def __setitem__(self, index: int, item: DataModel) -> None: ...
+    def __setitem__(self, index: SupportsIndex, item: Any) -> None:  # pragma: no cover
+        pass
 
     @overload
-    def __setitem__(self, index: slice, item: Iterable[DataModel]) -> None: ...
+    def __setitem__(self, index: slice, item: Iterable[Any]) -> None:  # pragma: no cover
+        pass
 
-    def __setitem__(self, index: int | slice, item: DataModel | Iterable[DataModel]) -> None:
+    def __setitem__(self, index: SupportsIndex | slice, item: Any | Iterable[Any]) -> None:  # ty: ignore[invalid-method-override]
         super().__setitem__(index, item)  # type: ignore[arg-type]
         self._invalidate()
 
     @overload
-    def __delitem__(self, index: int) -> None: ...
+    def __delitem__(self, index: SupportsIndex) -> None:  # pragma: no cover
+        pass
 
     @overload
-    def __delitem__(self, index: slice) -> None: ...
+    def __delitem__(self, index: slice) -> None:  # pragma: no cover
+        pass
 
-    def __delitem__(self, index: int | slice) -> None:
+    def __delitem__(self, index: SupportsIndex | slice) -> None:  # ty: ignore[invalid-method-override]
         super().__delitem__(index)
         self._invalidate()
 
@@ -185,13 +197,13 @@ class _GenerationModelList(list["DataModel"]):
         super().clear()
         self._invalidate()
 
-    def pop(self, index: int = -1) -> DataModel:
+    def pop(self, index: SupportsIndex = -1) -> Any:
         """Remove and return a model while invalidating derived facts."""
         item = super().pop(index)
         self._invalidate()
         return item
 
-    def remove(self, item: DataModel) -> None:
+    def remove(self, item: Any) -> None:  # ty: ignore[invalid-method-override]
         """Remove a model and invalidate derived facts."""
         super().remove(item)
         self._invalidate()
@@ -414,9 +426,10 @@ class GenerationIndex:
         if (reference_classes := self._reference_classes_cache.get(model_id)) is not None:
             return reference_classes
         reference_classes = frozenset(
-            fact.reference.path
+            reference.path
             for data_type_id in facts.data_types_by_model.get(model_id, ())
-            if (fact := facts.data_type_facts[data_type_id]).reference and fact.role != "dict_key"
+            if (fact := facts.data_type_facts[data_type_id]).role != "dict_key"
+            and (reference := fact.reference) is not None
         )
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
@@ -717,12 +730,9 @@ class GenerationStore:  # noqa: PLR0904
         new_reference: Reference,
     ) -> None:
         """Redirect ``model`` reference users owned by ``models`` to ``new_reference``."""
-        from datamodel_code_generator.parser.base import get_most_of_parent  # noqa: PLC0415
-        from datamodel_code_generator.types import DataType  # noqa: PLC0415
-
         model_ids = {id(candidate) for candidate in models}
         for child in model.reference.children[:]:
-            if isinstance(child, DataType) and id(get_most_of_parent(child)) in model_ids:
+            if id(_outermost_parent(child)) in model_ids and hasattr(child, "replace_reference"):
                 child.replace_reference(new_reference)
         self._invalidate_after_mutation()
 
