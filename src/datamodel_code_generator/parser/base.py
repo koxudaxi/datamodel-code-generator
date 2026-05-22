@@ -1482,7 +1482,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 model.class_name = duplicate_name
                 model_names[duplicate_name] = model
 
-    def __change_from_import(  # noqa: PLR0913, PLR0914
+    def __change_from_import(  # noqa: PLR0912, PLR0913, PLR0914
         self,
         models: list[DataModel],
         imports: Imports,
@@ -1502,6 +1502,8 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             before_import = model.imports
             imports.append(before_import)
             current_module_name = model_path_to_module_name.get(model.path, model.module_name)
+            # Some imports are derived from type hints, so aliases can affect them.
+            import_sensitive_alias_changed = False
             for data_type in model.all_data_types:
                 if not data_type.reference or data_type.reference.path in model_paths:
                     continue
@@ -1556,6 +1558,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                 name = data_type.reference.short_name
                 if from_ and import_ and alias != name:
                     data_type.alias = alias if data_type.reference.short_name == import_ else f"{alias}.{name}"
+                    import_sensitive_alias_changed = True
 
                 if init and not target_full_name.startswith(current_module_name + "."):
                     from_ = "." + from_
@@ -1567,9 +1570,10 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                         reference_path=data_type.reference.path,
                     ),
                 )
-            after_import = model.imports
-            if before_import != after_import:  # pragma: no cover
-                imports.append(after_import)
+            if import_sensitive_alias_changed:  # pragma: no cover
+                after_import = model.imports
+                if before_import != after_import:
+                    imports.append(after_import)
 
     @classmethod
     def __extract_inherited_enum(cls, models: list[DataModel]) -> None:
