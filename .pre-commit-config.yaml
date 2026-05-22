@@ -55,7 +55,7 @@ repos:
     pass_filenames: false
   - id: generation-store-usage
     name: Check parser GenerationStore usage
-    entry: uv run python scripts/check_generation_store_usage.py
-    language: system
+    entry: python scripts/check_generation_store_usage.py
+    language: python
     files: ^src/datamodel_code_generator/parser/.*\.py$
     pass_filenames: false

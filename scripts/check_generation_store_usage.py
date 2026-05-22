@@ -10,11 +10,6 @@ from pathlib import Path
 from typing import TypeAlias
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
-from datamodel_code_generator.parser.generation import GENERATION_STORE_MUTATION_METHODS  # noqa: E402
 
 DEFAULT_TARGET = Path("src/datamodel_code_generator/parser")
 GENERATION_STORE_MODULE = Path("src/datamodel_code_generator/parser/generation.py")
@@ -37,6 +32,44 @@ REFERENCE_METHODS = frozenset(
 )
 SEQUENCE_MUTATORS = frozenset({"append", "clear", "extend", "insert", "pop", "remove"})
 SequenceOwner: TypeAlias = str
+
+
+def _literal_string_set(node: ast.AST) -> frozenset[str]:
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "frozenset" and node.args:
+        node = node.args[0]
+    if not isinstance(node, ast.Set):
+        msg = "GENERATION_STORE_MUTATION_METHODS must be a literal frozenset of strings"
+        raise TypeError(msg)
+
+    values: set[str] = set()
+    for item in node.elts:
+        if not isinstance(item, ast.Constant) or not isinstance(item.value, str):
+            msg = "GENERATION_STORE_MUTATION_METHODS must contain only literal strings"
+            raise TypeError(msg)
+        values.add(item.value)
+    return frozenset(values)
+
+
+def _load_generation_store_mutation_methods() -> frozenset[str]:
+    generation_store_module = ROOT / GENERATION_STORE_MODULE
+    tree = ast.parse(generation_store_module.read_text(), filename=str(generation_store_module))
+    for node in tree.body:
+        if (
+            isinstance(node, ast.AnnAssign)
+            and isinstance(node.target, ast.Name)
+            and node.target.id == "GENERATION_STORE_MUTATION_METHODS"
+            and node.value is not None
+        ):
+            return _literal_string_set(node.value)
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "GENERATION_STORE_MUTATION_METHODS":
+                    return _literal_string_set(node.value)
+    msg = "GENERATION_STORE_MUTATION_METHODS was not found"
+    raise RuntimeError(msg)
+
+
+GENERATION_STORE_MUTATION_METHODS = _load_generation_store_mutation_methods()
 
 
 @dataclass(frozen=True)
