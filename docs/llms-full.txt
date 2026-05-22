@@ -31312,6 +31312,37 @@ assertions are also rejected. Only use `@pytest.mark.allow_direct_assert` for
 cases that cannot reasonably be expressed with the shared helpers, such as
 mock setup internals or narrow intermediate-state checks.
 
+## Parser generation state
+
+Parser code must keep generated output, naming order, parse order, and
+canonical model selection compatible with existing releases. `ModelResolver`
+remains the only authority for names. Do not move name generation or parser
+dispatch into the generation index.
+
+Use `GenerationStore` for parser-side mutations that affect generation facts:
+
+- Register parsed models with `generation_store.register_model(model)`.
+- Replace references with `generation_store.replace_data_type_ref(...)` or
+  `generation_store.detach_data_type_ref(...)`.
+- Replace field or nested data types with `replace_field_type(...)`,
+  `replace_nested_data_type(...)`, or `set_nested_data_types(...)`.
+- Replace fields or base classes with `set_fields(...)`,
+  `append_field(...)`, `insert_field(...)`, `remove_field(...)`, or
+  `set_base_classes(...)`.
+- Move or rename generated models with `move_model(...)`,
+  `rename_model(...)`, or `update_model_reference(...)`.
+
+Parser code should not directly assign `data_type.reference`, `model.fields`,
+`model.base_classes`, `model.reference.name`, or call reference child mutation
+helpers. Read dependency information through `GenerationIndex` queries instead
+of using `Reference.children` as a reverse index.
+
+The local pre-commit hook `generation-store-usage` runs
+`scripts/check_generation_store_usage.py` and rejects common parser mutations
+that bypass the store. If a new mutation helper is needed, add the method to
+`GENERATION_STORE_MUTATION_METHODS` and update the checker tests so contributors
+get an actionable message.
+
 ## ➕ Adding a New CLI Option
 
 When adding a new CLI option to `datamodel-code-generator`, follow these steps:
