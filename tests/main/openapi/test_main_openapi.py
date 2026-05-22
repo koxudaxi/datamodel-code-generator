@@ -3165,6 +3165,28 @@ def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
+def test_main_openapi_serialize_as_any_module_import_alias_pydantic_v2(output_dir: Path) -> None:
+    """Test SerializeAsAny with modular output and dotted schema import aliases."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "serialize_as_any_module_import_alias" / "openapi.json",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "serialize_as_any_module_import_alias",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "--use-serialize-as-any",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )

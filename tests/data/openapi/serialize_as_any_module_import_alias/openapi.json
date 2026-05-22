@@ -1,0 +1,57 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "SerializeAsAny module import alias test",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Local.User": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Shared.User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        }
+      },
+      "Shared.AdminUser": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Shared.User"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer"
+              }
+            }
+          }
+        ]
+      },
+      "Local.Container": {
+        "type": "object",
+        "properties": {
+          "local_user": {
+            "$ref": "#/components/schemas/Local.User"
+          },
+          "shared_user": {
+            "$ref": "#/components/schemas/Shared.User"
+          }
+        },
+        "required": [
+          "shared_user"
+        ]
+      }
+    }
+  }
+}
