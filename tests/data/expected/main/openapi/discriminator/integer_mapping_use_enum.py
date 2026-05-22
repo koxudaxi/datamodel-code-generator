@@ -15,7 +15,7 @@ class Kind(IntEnum):
 
 
 class Foo(BaseModel):
-    kind: Literal[1]
+    kind: Literal[Kind.integer_1]
 
 
 class Kind1(IntEnum):
@@ -24,7 +24,7 @@ class Kind1(IntEnum):
 
 
 class Bar(BaseModel):
-    kind: Literal[2, 3]
+    kind: Literal[Kind1.integer_2, Kind1.integer_3]
 
 
 class Base(RootModel[Foo | Bar]):

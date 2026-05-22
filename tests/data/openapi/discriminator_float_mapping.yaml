@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Minimal Integer Discriminator
+  title: Float Discriminator Mapping
   version: 1.0.0
 paths: {}
 components:
@@ -12,25 +12,25 @@ components:
       discriminator:
         propertyName: kind
         mapping:
-          '1': '#/components/schemas/Foo'
-          '2': '#/components/schemas/Bar'
-          '3': '#/components/schemas/Bar'
+          '1.5': '#/components/schemas/Foo'
+          '3.5': '#/components/schemas/Bar'
     Foo:
       type: object
       properties:
         kind:
-          type: integer
+          type: number
           enum:
-            - 1
+            - 1.5
+            - 2.5
       required:
         - kind
     Bar:
       type: object
       properties:
         kind:
-          type: integer
+          type: number
           enum:
-            - 2
-            - 3
+            - 3.5
+            - 4.5
       required:
         - kind

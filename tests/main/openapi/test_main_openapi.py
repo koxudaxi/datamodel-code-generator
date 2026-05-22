@@ -182,6 +182,44 @@ def test_main_openapi_discriminator_integer_mapping(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_integer_mapping_use_enum(output_file: Path) -> None:
+    """Integer discriminator mapping preserves enum member literal values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_integer_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "integer_mapping_use_enum.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-enum-values-in-discriminator",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_float_mapping(output_file: Path) -> None:
+    """Unsupported discriminator enum values keep their mapping string values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_float_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "float_mapping.py",
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_integer_no_mapping(output_file: Path) -> None:
     """Integer discriminator without mapping preserves integer literal values."""
     run_main_and_assert(
