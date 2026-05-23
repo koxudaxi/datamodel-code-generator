@@ -44,6 +44,13 @@ def test_insert_info_version_constant_empty_body() -> None:
     assert parser._insert_info_version_constant("", "1.2.3") == "OPENAPI_INFO_VERSION = '1.2.3'"
 
 
+def test_insert_info_version_constant_blank_body() -> None:
+    """Insert OpenAPI info.version constant into a whitespace-only module."""
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+
+    assert parser._insert_info_version_constant("\n", "1.2.3") == "\nOPENAPI_INFO_VERSION = '1.2.3'\n\n"
+
+
 def test_insert_info_version_constant_after_multiline_import() -> None:
     """Insert OpenAPI info.version constant after a multi-line import block."""
     parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
