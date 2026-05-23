@@ -207,6 +207,34 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 DEFAULT_LINE_LENGTH = 88
 
 
+def _find_pyproject_toml(settings_path: Path) -> Path | None:
+    for path in (settings_path, *settings_path.parents):
+        pyproject_toml = path / "pyproject.toml"
+        if pyproject_toml.is_file():
+            return pyproject_toml
+    return None
+
+
+def _get_builtin_line_length(settings_path: Path) -> int:
+    pyproject_toml_path = _find_pyproject_toml(settings_path)
+    if pyproject_toml_path is None:
+        return DEFAULT_LINE_LENGTH
+
+    tool_config = load_toml(pyproject_toml_path).get("tool", {})
+    ruff_config = tool_config.get("ruff", {})
+    if isinstance(line_length := ruff_config.get("line-length"), int):
+        return line_length
+
+    black_config = tool_config.get("black", {})
+    if isinstance(line_length := black_config.get("line-length"), int):
+        return line_length
+
+    isort_config = tool_config.get("isort", {})
+    if isinstance(line_length := isort_config.get("line_length"), int):
+        return line_length
+    return DEFAULT_LINE_LENGTH
+
+
 def _format_alias(alias: ast.alias) -> str:
     if alias.asname:
         return f"{alias.name} as {alias.asname}"
@@ -281,8 +309,12 @@ def apply_builtin_formatter(code: str, *, line_length: int = DEFAULT_LINE_LENGTH
     leading = "\n".join(lines[: first_line - 1]).strip("\n")
     body = "\n".join(lines[last_line:]).strip("\n")
     import_block = _build_builtin_import_block(import_nodes, line_length)
-    parts = [part for part in (leading, import_block, body) if part]
-    return "\n\n".join(parts) + "\n"
+    parts = [part for part in (leading, import_block) if part]
+    formatted_code = "\n\n".join(parts)
+    if body:
+        separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ")) else "\n\n"
+        formatted_code = f"{formatted_code}{separator}{body}" if formatted_code else body
+    return f"{formatted_code}\n"
 
 
 def resolve_use_type_checking_imports(
@@ -346,8 +378,11 @@ class CodeFormatter:
         self.encoding = encoding
         self.use_type_checking_imports = use_type_checking_imports
 
+        use_builtin = Formatter.BUILTIN in formatters
         use_black = Formatter.BLACK in formatters
         use_isort = Formatter.ISORT in formatters
+
+        self.builtin_line_length = _get_builtin_line_length(settings_path) if use_builtin else DEFAULT_LINE_LENGTH
 
         if use_black:
             root = black_find_project_root((settings_path,))
@@ -442,7 +477,7 @@ class CodeFormatter:
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
         if Formatter.BUILTIN in self.formatters:
-            code = self.apply_builtin_formatter(code)
+            code = self.apply_builtin_formatter(code, line_length=self.builtin_line_length)
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
 
@@ -470,9 +505,9 @@ class CodeFormatter:
         )
 
     @staticmethod
-    def apply_builtin_formatter(code: str) -> str:
+    def apply_builtin_formatter(code: str, *, line_length: int = DEFAULT_LINE_LENGTH) -> str:
         """Format generated code without external formatter dependencies."""
-        return apply_builtin_formatter(code)
+        return apply_builtin_formatter(code, line_length=line_length)
 
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""

@@ -95,9 +95,31 @@ def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.Monke
         "\n"
         "from .models import Pet\n"
         "\n"
+        "\n"
         "class Model(BaseModel):\n"
         "    pet: Pet\n"
         "    name: str = Field(...)\n"
+    )
+
+
+def test_format_code_builtin_formatter_uses_ruff_line_length(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test built-in formatter uses Ruff line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.ruff]\nline-length = 140\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
     )
 
 
