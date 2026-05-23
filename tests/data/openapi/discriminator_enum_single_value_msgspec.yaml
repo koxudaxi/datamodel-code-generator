@@ -1,0 +1,31 @@
+openapi: 3.1.0
+info:
+  title: Repro
+  version: 0.0.1
+paths: {}
+components:
+  schemas:
+    Event:
+      discriminator:
+        propertyName: type
+      oneOf:
+        - $ref: '#/components/schemas/StartedEvent'
+        - $ref: '#/components/schemas/StoppedEvent'
+    StartedEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - started
+      required:
+        - type
+    StoppedEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - stopped
+      required:
+        - type
