@@ -2132,10 +2132,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         warn_on_ref_constraints: bool = True,  # noqa: FBT001, FBT002
     ) -> DataType | None:
         """Build a DataType from allOf schema items."""
-        if all(item is True for item in allof_items):
+        allof_effective_items = [item for item in allof_items if item is not True]
+        if not allof_effective_items:
             return DataType(type=ANY, import_=IMPORT_ANY)
-        if len(allof_items) == 1:
-            item = allof_items[0]
+        if len(allof_effective_items) == 1:
+            item = allof_effective_items[0]
             if item is False:
                 return None
             if item.ref:
@@ -2148,7 +2149,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         constraint_only_items: list[JsonSchemaObject] = []
         object_items: list[JsonSchemaObject] = []
 
-        for item in allof_items:
+        for item in allof_effective_items:
             if not isinstance(item, JsonSchemaObject):
                 continue
             if item.ref:
