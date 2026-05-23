@@ -15,7 +15,7 @@ from enum import Enum
 from functools import cached_property, lru_cache
 from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeGuard
 from warnings import warn
 
 from datamodel_code_generator.util import load_toml
@@ -266,8 +266,9 @@ def _import_category(module: str, level: int) -> int:
 
 
 def _has_inline_comment(lines: list[str], node: ast.AST) -> bool:
-    end_lineno = getattr(node, "end_lineno", None) or node.lineno
-    return any("#" in line for line in lines[node.lineno - 1 : end_lineno])
+    lineno = getattr(node, "lineno", 1)
+    end_lineno = getattr(node, "end_lineno", None) or lineno
+    return any("#" in line for line in lines[lineno - 1 : end_lineno])
 
 
 def _format_import_node_without_reordering(node: ast.Import | ast.ImportFrom, lines: list[str]) -> tuple[int, str]:
@@ -316,7 +317,7 @@ def _is_name_or_attr(node: ast.AST, name: str) -> bool:
     return isinstance(node, ast.Attribute) and node.attr == name
 
 
-def _is_type_checking_if(node: ast.AST) -> bool:
+def _is_type_checking_if(node: ast.AST) -> TypeGuard[ast.If]:
     return isinstance(node, ast.If) and _is_name_or_attr(node.test, "TYPE_CHECKING")
 
 
@@ -342,11 +343,11 @@ def _format_call(call: ast.Call, indent: str, line_length: int) -> str:
     return f"{call_name}(\n{argument_lines}\n{indent})"
 
 
-def _is_call(node: ast.AST | None, name: str) -> bool:
+def _is_call(node: ast.AST | None, name: str) -> TypeGuard[ast.Call]:
     return isinstance(node, ast.Call) and _is_name_or_attr(node.func, name)
 
 
-def _is_annotated(node: ast.AST) -> bool:
+def _is_annotated(node: ast.AST) -> TypeGuard[ast.Subscript]:
     return isinstance(node, ast.Subscript) and _is_name_or_attr(node.value, "Annotated")
 
 
@@ -397,11 +398,12 @@ def _format_generated_class_statement(statement: ast.stmt, line: str, line_lengt
 
 
 def _format_type_checking_block(node: ast.If, lines: list[str], line_length: int) -> str | None:
-    if not node.body or not all(isinstance(statement, (ast.Import, ast.ImportFrom)) for statement in node.body):
+    import_nodes = [statement for statement in node.body if isinstance(statement, (ast.Import, ast.ImportFrom))]
+    if not import_nodes or len(import_nodes) != len(node.body):
         return None
 
     indent = lines[node.lineno - 1][: len(lines[node.lineno - 1]) - len(lines[node.lineno - 1].lstrip())]
-    import_block = _build_builtin_import_block(node.body, line_length, lines)
+    import_block = _build_builtin_import_block(import_nodes, line_length, lines)
     indented_import_block = "\n".join(f"{indent}    {line}" if line else line for line in import_block.splitlines())
     return f"{indent}if TYPE_CHECKING:\n{indented_import_block}"
 
