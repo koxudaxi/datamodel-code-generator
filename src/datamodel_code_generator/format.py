@@ -140,7 +140,7 @@ class PythonVersion(Enum):
 
         PEP 728 is targeted for Python 3.15. Until then, typing_extensions is required.
         """
-        return False
+        return self.version_key >= (3, 15)
 
     @property
     def has_kw_only_dataclass(self) -> bool:

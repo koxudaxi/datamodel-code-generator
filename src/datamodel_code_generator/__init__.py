@@ -329,6 +329,25 @@ class InvalidClassNameError(Error):
         super().__init__(message=message)
 
 
+def _validate_output_datetime_class(
+    output_model_type: DataModelType, output_datetime_class: DatetimeClassType | None
+) -> None:
+    if output_datetime_class is None or output_datetime_class is DatetimeClassType.Datetime:
+        return
+    if output_model_type == DataModelType.DataclassesDataclass:
+        msg = (
+            '`--output-datetime-class` only allows "datetime" for '
+            f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
+        )
+        raise Error(msg)
+    if output_model_type == DataModelType.TypingTypedDict:
+        msg = (
+            '`--output-datetime-class` only allows "datetime" for '
+            f"`--output-model-type` {DataModelType.TypingTypedDict.value}"
+        )
+        raise Error(msg)
+
+
 class InvalidFileFormatError(Error):
     """Raised when the input file format is invalid or cannot be parsed."""
 
@@ -524,19 +543,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         GenerateConfig.model_rebuild(_types_namespace={"StrictTypes": StrictTypes, "UnionMode": UnionMode})
         config = GenerateConfig.model_validate(options)
 
-    if config.output_datetime_class is not None and config.output_datetime_class is not DatetimeClassType.Datetime:
-        if config.output_model_type == DataModelType.DataclassesDataclass:
-            msg = (
-                '`--output-datetime-class` only allows "datetime" for '
-                f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
-            )
-            raise Error(msg)
-        if config.output_model_type == DataModelType.TypingTypedDict:
-            msg = (
-                '`--output-datetime-class` only allows "datetime" for '
-                f"`--output-model-type` {DataModelType.TypingTypedDict.value}"
-            )
-            raise Error(msg)
+    _validate_output_datetime_class(config.output_model_type, config.output_datetime_class)
 
     # Variables that may be modified during processing
     input_filename = config.input_filename
