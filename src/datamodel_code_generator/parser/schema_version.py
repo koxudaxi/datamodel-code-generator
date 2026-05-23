@@ -142,7 +142,10 @@ class JsonSchemaFeatures:
         metadata=FeatureMetadata(
             introduced="Draft 6",
             doc_name="contains",
-            description="Array contains constraints for schemas that apply to every item",
+            description=(
+                "Count constraints are modeled when contains matches every item; "
+                "general schema-valued contains is not supported"
+            ),
             status="partial",
         ),
     )

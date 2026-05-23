@@ -112,7 +112,7 @@ The following features are tracked in the codebase with their implementation sta
 | `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
 | `const` | Draft 6 | ✅ Supported | Single constant value constraint |
 | `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
-| `contains` | Draft 6 | ⚠️ Partial | Array contains constraints for schemas that apply to every item |
+| `contains` | Draft 6 | ⚠️ Partial | Count constraints are modeled when contains matches every item; general schema-valued contains is not supported |
 | `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
 | `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
 | `contentMediaType/contentEncoding` | Draft 7 | ❌ Not Supported | Content type and encoding hints for strings |
