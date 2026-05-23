@@ -1345,6 +1345,25 @@ def test_timestamp_with_time_zone_format() -> None:
 
 
 @pytest.mark.parametrize(
+    "format_",
+    [
+        "idn-hostname",
+        "iri",
+        "iri-reference",
+        "uri-template",
+        "json-pointer",
+        "relative-json-pointer",
+        "regex",
+    ],
+)
+def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None:
+    """Test standard JSON Schema string formats without dedicated Python types."""
+    from datamodel_code_generator.parser.jsonschema import json_schema_data_formats
+
+    assert json_schema_data_formats["string"][format_] == Types.string
+
+
+@pytest.mark.parametrize(
     ("x_python_type", "expected"),
     [
         # Direct matches for special container types
