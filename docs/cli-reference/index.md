@@ -13,7 +13,7 @@ This documentation is auto-generated from test cases.
 | 🏷️ [Field Customization](field-customization.md) | 26 | Field naming and docstring behavior |
 | 🏗️ [Model Customization](model-customization.md) | 39 | Model generation behavior |
 | 🎨 [Template Customization](template-customization.md) | 21 | Output formatting and custom rendering |
-| 📘 [OpenAPI-only Options](openapi-only-options.md) | 7 | OpenAPI-specific features |
+| 📘 [OpenAPI-only Options](openapi-only-options.md) | 8 | OpenAPI-specific features |
 | 📋 [GraphQL-only Options](graphql-only-options.md) | 1 |  |
 | ⚙️ [General Options](general-options.md) | 17 | Utilities and meta options |
 | 📝 [Utility Options](utility-options.md) | 6 | Help, version, debug options |
@@ -144,6 +144,7 @@ This documentation is auto-generated from test cases.
 
 ### O {#o}
 
+- [`--openapi-include-info-version`](openapi-only-options.md#openapi-include-info-version)
 - [`--openapi-include-paths`](openapi-only-options.md#openapi-include-paths)
 - [`--openapi-scopes`](openapi-only-options.md#openapi-scopes)
 - [`--original-field-name-delimiter`](field-customization.md#original-field-name-delimiter)

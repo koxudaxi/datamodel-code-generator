@@ -187,6 +187,7 @@ class OpenAPIParserConfigDict(JSONSchemaParserConfigDict, closed=True):
     include_path_parameters: NotRequired[bool]
     use_status_code_in_response_name: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
+    openapi_include_info_version: NotRequired[bool]
     openapi_version: NotRequired[OpenAPIVersion | None]
 
 

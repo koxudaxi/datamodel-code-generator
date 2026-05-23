@@ -29,14 +29,24 @@ Below are the data types and features recognized by datamodel-code-generator for
 - password
 - email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
 - idn-email (requires [`email-validator`](https://github.com/JoshData/python-email-validator))
+- idn-hostname
 - path
 - uuid (uuid1/uuid2/uuid3/uuid4/uuid5)
 - ulid (requires [`python-ulid`](https://github.com/mdomke/python-ulid))
 - ipv4
+- ipv4-network
 - ipv6
+- ipv6-network
 - hostname
 - decimal
 - uri
+- uri-reference
+- uri-template
+- iri
+- iri-reference
+- json-pointer
+- relative-json-pointer
+- regex
 
 ### 🔗 Other schema
 - enum (as enum.Enum or typing.Literal)

@@ -1345,6 +1345,25 @@ def test_timestamp_with_time_zone_format() -> None:
 
 
 @pytest.mark.parametrize(
+    "format_",
+    [
+        "idn-hostname",
+        "iri",
+        "iri-reference",
+        "uri-template",
+        "json-pointer",
+        "relative-json-pointer",
+        "regex",
+    ],
+)
+def test_json_schema_standard_string_formats_map_to_string(format_: str) -> None:
+    """Test standard JSON Schema string formats without dedicated Python types."""
+    from datamodel_code_generator.parser.jsonschema import json_schema_data_formats
+
+    assert json_schema_data_formats["string"][format_] == Types.string
+
+
+@pytest.mark.parametrize(
     ("x_python_type", "expected"),
     [
         # Direct matches for special container types
@@ -1519,6 +1538,47 @@ def test_set_unevaluated_properties_schema_allows_extra_without_typed_runtime() 
     )
 
     assert parser.extra_template_data["#/Model"] == {"unevaluatedProperties": True}
+
+
+def test_standard_schema_metadata_is_included_in_field_extras() -> None:
+    """Test standard metadata keys are preserved as field extras by default."""
+    parser = JsonSchemaParser("")
+    obj = JsonSchemaObject.model_validate({
+        "type": "string",
+        "contentEncoding": "base64",
+        "contentMediaType": "application/json",
+        "contentSchema": {"type": "object"},
+        "externalDocs": {"url": "https://example.com/field"},
+        "xml": {"name": "field"},
+    })
+
+    assert parser.get_field_extras(obj) == {
+        "contentEncoding": "base64",
+        "contentMediaType": "application/json",
+        "contentSchema": {"type": "object"},
+        "externalDocs": {"url": "https://example.com/field"},
+        "xml": {"name": "field"},
+    }
+
+
+def test_standard_schema_metadata_is_included_in_model_extras() -> None:
+    """Test standard metadata keys are preserved as model extras by default."""
+    parser = JsonSchemaParser("")
+    parser.extra_template_data["#/Model"] = {}
+    obj = JsonSchemaObject.model_validate({
+        "type": "object",
+        "externalDocs": {"url": "https://example.com/model"},
+        "xml": {"name": "model"},
+    })
+
+    parser.set_schema_extensions("#/Model", obj)
+
+    assert parser.extra_template_data["#/Model"] == {
+        "model_extras": {
+            "externalDocs": {"url": "https://example.com/model"},
+            "xml": {"name": "model"},
+        }
+    }
 
 
 @pytest.mark.parametrize(

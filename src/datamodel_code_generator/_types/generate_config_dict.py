@@ -108,6 +108,7 @@ class GenerateConfigDict(TypedDict, closed=True):
     openapi_scopes: NotRequired[list[OpenAPIScope] | None]
     include_path_parameters: NotRequired[bool]
     openapi_include_paths: NotRequired[list[str] | None]
+    openapi_include_info_version: NotRequired[bool]
     graphql_scopes: NotRequired[list[GraphQLScope] | None]
     graphql_no_typename: NotRequired[bool]
     wrap_string_literal: NotRequired[bool | None]

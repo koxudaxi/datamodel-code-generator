@@ -9795,6 +9795,21 @@ def test_main_jsonschema_model_extras(output_model: str, expected_output: str, o
     )
 
 
+def test_main_jsonschema_standard_schema_metadata(output_file: Path) -> None:
+    """Preserve standard schema metadata in pydantic v2 json_schema_extra."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "schema_metadata.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="schema_metadata_v2.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+    )
+
+
 @pytest.mark.parametrize(
     ("output_model", "expected_output"),
     [

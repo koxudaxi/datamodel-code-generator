@@ -481,6 +481,7 @@ class Config(BaseModel):  # noqa: PLR0904
     openapi_scopes: Optional[list[OpenAPIScope]] = [OpenAPIScope.Schemas]  # noqa: UP045
     include_path_parameters: bool = False
     openapi_include_paths: Optional[list[str]] = None  # noqa: UP045
+    openapi_include_info_version: bool = False
     graphql_no_typename: bool = False
     wrap_string_literal: Optional[bool] = None  # noqa: UP045
     use_title_as_name: bool = False
@@ -937,6 +938,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         openapi_scopes=config.openapi_scopes,
         include_path_parameters=config.include_path_parameters,
         openapi_include_paths=config.openapi_include_paths,
+        openapi_include_info_version=config.openapi_include_info_version,
         graphql_no_typename=config.graphql_no_typename,
         wrap_string_literal=config.wrap_string_literal,
         use_title_as_name=config.use_title_as_name,

@@ -123,6 +123,7 @@ def _baseline_generate(
     openapi_scopes: list[OpenAPIScope] | None = None,
     include_path_parameters: bool = False,
     openapi_include_paths: list[str] | None = None,
+    openapi_include_info_version: bool = False,
     graphql_scopes: list[GraphQLScope] | None = None,
     graphql_no_typename: bool = False,
     wrap_string_literal: bool | None = None,

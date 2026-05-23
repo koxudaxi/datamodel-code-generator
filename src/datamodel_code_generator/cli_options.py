@@ -254,6 +254,9 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     ),
     "--include-path-parameters": CLIOptionMeta(name="--include-path-parameters", category=OptionCategory.OPENAPI),
     "--openapi-include-paths": CLIOptionMeta(name="--openapi-include-paths", category=OptionCategory.OPENAPI),
+    "--openapi-include-info-version": CLIOptionMeta(
+        name="--openapi-include-info-version", category=OptionCategory.OPENAPI
+    ),
     "--validation": CLIOptionMeta(
         name="--validation",
         category=OptionCategory.OPENAPI,
