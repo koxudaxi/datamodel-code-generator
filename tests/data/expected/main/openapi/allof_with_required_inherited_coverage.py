@@ -6,15 +6,15 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, RootModel, conint
+from pydantic import BaseModel, RootModel, conint, constr
 
 
 class ConstraintOnlyBase(BaseModel):
     field_with_constraints: Any | None = None
 
 
-class MultipleField(BaseModel):
-    pass
+class MultipleField(RootModel[conint(multiple_of=5)]):
+    root: conint(multiple_of=5)
 
 
 class MultipleOfBase(BaseModel):
@@ -27,6 +27,10 @@ class SimpleString(RootModel[str]):
 
 class NestedAnyOfWithRef(BaseModel):
     nested_anyof: SimpleString | int | None = None
+
+
+class CyclicNested1(BaseModel):
+    pass
 
 
 class L4(BaseModel):
@@ -107,32 +111,96 @@ class ChildOfNoProps(BaseWithNoProperties):
     some_field: Any
 
 
+class NestedAllofRef(RootModel[SimpleString]):
+    root: SimpleString
+
+
 class NestedAllOfRef(BaseModel):
-    nested_allof_ref: SimpleString | None = None
+    nested_allof_ref: NestedAllofRef | None = None
 
 
-class NestedIndirect1(BaseModel):
-    pass
-
-
-class NestedIndirect2(NestedIndirect1):
-    pass
-
-
-class NestedIndirect(RootModel[NestedIndirect2]):
-    root: NestedIndirect2
+class NestedIndirect(RootModel[SimpleString]):
+    root: SimpleString
 
 
 class NestedAllOfWithoutDirectRef(BaseModel):
     nested_indirect: NestedIndirect | None = None
 
 
-class EnumField(BaseModel):
-    pass
+class EnumField(RootModel[Literal['a', 'b', 'c']]):
+    root: Literal['a', 'b', 'c']
 
 
 class EnumInAllOf(BaseModel):
     enum_field: EnumField | None = None
+
+
+class ObjectWithMetadataAllOf(BaseModel):
+    kept_field: str | None = None
+
+
+class NestedObject1(BaseModel):
+    label: str | None = None
+
+
+class NestedObject2(BaseModel):
+    pass
+
+
+class NestedObject3(NestedObject1, NestedObject2):
+    pass
+
+
+class NestedObject(RootModel[NestedObject3]):
+    root: NestedObject3
+
+
+class NestedCombinatorObjectAllOf(BaseModel):
+    nested_object: NestedObject | None = None
+
+
+class NestedAllofObject(BaseModel):
+    label: str | None = None
+
+
+class NestedAllOfObjectAllOf(BaseModel):
+    nested_allof_object: NestedAllofObject | None = None
+
+
+class NestedOneofObject1(BaseModel):
+    label: str | None = None
+
+
+class NestedOneofObject2(BaseModel):
+    pass
+
+
+class NestedOneofObject3(NestedOneofObject1, NestedOneofObject2):
+    pass
+
+
+class NestedOneofObject(RootModel[NestedOneofObject3]):
+    root: NestedOneofObject3
+
+
+class NestedOneOfObjectAllOf(BaseModel):
+    nested_oneof_object: NestedOneofObject | None = None
+
+
+class TrueOnly(RootModel[Any]):
+    root: Any
+
+
+class TrueOnlyAllOf(BaseModel):
+    true_only: TrueOnly | None = None
+
+
+class ParentConstrained(RootModel[constr(min_length=2, max_length=5)]):
+    root: constr(min_length=2, max_length=5)
+
+
+class ParentConstrainedAllOf(BaseModel):
+    parent_constrained: ParentConstrained | None = None
 
 
 class RefWithPrimitiveBase(BaseModel):
@@ -168,3 +236,28 @@ class EdgeCasesCoverage(
     nested_allof_ref: SimpleString
     nested_indirect: SimpleString
     enum_field: Literal['a', 'b', 'c']
+
+
+class CyclicAliasA(RootModel["CyclicAliasB"]):
+    root: "CyclicAliasB"
+
+
+class CyclicAliasB(RootModel[CyclicAliasA]):
+    root: CyclicAliasA
+
+
+class NestedCombinatorWithCyclicRef(BaseModel):
+    cyclic_nested: CyclicNested | None = None
+
+
+class CyclicNested(RootModel["CyclicNested2"]):
+    root: "CyclicNested2"
+
+
+class CyclicNested2(CyclicNested1):
+    pass
+
+
+CyclicAliasA.model_rebuild()
+NestedCombinatorWithCyclicRef.model_rebuild()
+CyclicNested.model_rebuild()

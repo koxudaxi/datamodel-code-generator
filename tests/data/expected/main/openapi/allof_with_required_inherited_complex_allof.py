@@ -24,8 +24,8 @@ class ExtendedConfig(BaseModel):
     timeout: int | None = None
 
 
-class Score(BaseModel):
-    pass
+class Score(RootModel[confloat(ge=0.0, le=100.0)]):
+    root: confloat(ge=0.0, le=100.0)
 
 
 class Config(BaseConfig, ExtendedConfig):
