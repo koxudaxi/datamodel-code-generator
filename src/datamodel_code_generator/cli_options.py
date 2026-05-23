@@ -239,10 +239,6 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--enable-version-header": CLIOptionMeta(name="--enable-version-header", category=OptionCategory.TEMPLATE),
     "--enable-command-header": CLIOptionMeta(name="--enable-command-header", category=OptionCategory.TEMPLATE),
     "--formatters": CLIOptionMeta(name="--formatters", category=OptionCategory.TEMPLATE),
-    "--builtin-format-line-length": CLIOptionMeta(
-        name="--builtin-format-line-length",
-        category=OptionCategory.TEMPLATE,
-    ),
     "--custom-formatters": CLIOptionMeta(name="--custom-formatters", category=OptionCategory.TEMPLATE),
     "--custom-formatters-kwargs": CLIOptionMeta(name="--custom-formatters-kwargs", category=OptionCategory.TEMPLATE),
     # ==========================================================================

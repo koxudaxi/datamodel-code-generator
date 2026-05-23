@@ -555,7 +555,7 @@ class Config(BaseModel):  # noqa: PLR0904
 
     def merge_args(self, args: Namespace) -> None:
         """Merge command-line arguments into config."""
-        set_args = {f: getattr(args, f) for f in self.get_fields() if getattr(args, f) is not None}
+        set_args = {f: value for f in self.get_fields() if (value := getattr(args, f, None)) is not None}
         explicit_input_sources = {
             field_name for field_name in ("input", "url", "input_model") if field_name in set_args
         }

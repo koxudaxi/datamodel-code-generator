@@ -16,10 +16,6 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         to opt in without warning, or --no-allow-remote-refs
                         to block remote fetching. In a future version, remote
                         fetching will be disabled by default.
-  --builtin-format-line-length BUILTIN_FORMAT_LINE_LENGTH
-                        Line length used by the built-in formatter. Defaults
-                        to [tool.datamodel-codegen].builtin-format-line-
-                        length, then Ruff, Black, or isort config.
   --class-decorators CLASS_DECORATORS
                         Custom decorators for generated model classes
                         (delimited list input). For example

@@ -1,4 +1,4 @@
-<!-- related-cli-options: --formatters, --builtin-format-line-length -->
+<!-- related-cli-options: --formatters -->
 
 # Code Formatting
 
@@ -93,7 +93,7 @@ Formatters read their configuration from `pyproject.toml`. The effective search 
 
 The built-in formatter uses line length only for import wrapping. Its precedence is:
 
-1. `--builtin-format-line-length` or API `builtin_format_line_length`
+1. API `builtin_format_line_length`
 2. `[tool.datamodel-codegen].builtin-format-line-length`
 3. `[tool.ruff].line-length`
 4. `[tool.black].line-length`
@@ -146,7 +146,6 @@ You can create custom formatters for specialized formatting needs. See [Custom F
 
 - [Formatter Behavior](formatter-behavior.md) - Built-in formatter scope and configuration precedence
 - [CLI Reference: `--formatters`](cli-reference/template-customization.md#formatters) - Specify code formatters
-- [CLI Reference: `--builtin-format-line-length`](cli-reference/template-customization.md#builtin-format-line-length) - Configure built-in formatter line length
 - [CLI Reference: `--use-double-quotes`](cli-reference/template-customization.md#use-double-quotes) - Force double quotes
 - [Custom Formatters](custom-formatters.md) - Create your own formatters
 - [pyproject.toml Configuration](pyproject_toml.md) - Configure datamodel-codegen options

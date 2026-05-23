@@ -18,7 +18,6 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--allow-remote-refs": "Enable fetching of `$ref` targets over HTTP/HTTPS.",
     "--base-class": "Specify a custom base class for generated models.",
     "--base-class-map": "Specify different base classes for specific models via JSON mapping.",
-    "--builtin-format-line-length": "Set line length for the built-in formatter.",
     "--capitalize-enum-members": "Capitalize enum member names to UPPER_CASE format.",
     "--check": "Verify generated code matches existing output without modifying files.",
     "--class-decorators": "Add custom decorators to generated model classes.",

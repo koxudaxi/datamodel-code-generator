@@ -1,4 +1,4 @@
-<!-- related-cli-options: --formatters, --builtin-format-line-length -->
+<!-- related-cli-options: --formatters -->
 
 # Formatter behavior
 
@@ -61,17 +61,7 @@ For exact Black, isort, or Ruff behavior, continue to pass those formatters expl
 
 The built-in formatter uses line length only for wrapping `from ... import ...` statements.
 
-Set it directly with:
-
-```bash
-datamodel-codegen \
-    --input schema.yaml \
-    --output model.py \
-    --formatters builtin \
-    --builtin-format-line-length 100
-```
-
-The same value can be set in `pyproject.toml`:
+Set it in `pyproject.toml`:
 
 ```toml
 [tool.datamodel-codegen]
@@ -88,7 +78,7 @@ When `builtin-format-line-length` is not set, the built-in formatter reuses exis
 
 This fallback only reads configuration values. It does not require Ruff, Black, or isort to be installed.
 
-An explicit CLI or API value always wins over `pyproject.toml`.
+An explicit API value always wins over `pyproject.toml`.
 
 ## API usage
 
