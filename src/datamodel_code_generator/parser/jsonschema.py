@@ -1641,6 +1641,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             additional_props_type = self._build_lightweight_type(obj.additionalProperties)
             if additional_props_type:  # pragma: no branch
                 self.extra_template_data[path]["additionalPropertiesType"] = additional_props_type.type_hint
+                if reference_classes := {
+                    data_type.reference.path
+                    for data_type in additional_props_type.all_data_types
+                    if data_type.reference
+                }:
+                    self.extra_template_data[path]["additionalPropertiesReferenceClasses"] = reference_classes
                 if not self.target_python_version.has_typed_dict_closed:  # pragma: no branch
                     self.extra_template_data[path]["use_typeddict_backport"] = True
 

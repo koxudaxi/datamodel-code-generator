@@ -7,9 +7,9 @@ from __future__ import annotations
 from typing_extensions import NotRequired, TypedDict
 
 
-class AllOfExtraItems(TypedDict, extra_items=BaseExtra):
-    name: NotRequired[str]
-
-
 class BaseExtra(TypedDict):
     id: NotRequired[int]
+
+
+class AllOfExtraItems(TypedDict, extra_items=BaseExtra):
+    name: NotRequired[str]

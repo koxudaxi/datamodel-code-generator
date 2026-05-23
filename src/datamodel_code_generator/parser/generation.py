@@ -430,7 +430,7 @@ class GenerationIndex:
             for data_type_id in facts.data_types_by_model.get(model_id, ())
             if (fact := facts.data_type_facts[data_type_id]).role != "dict_key"
             and (reference := fact.reference) is not None
-        )
+        ) | frozenset(model.extra_template_data.get("additionalPropertiesReferenceClasses", ()))
         self._reference_classes_cache[model_id] = reference_classes
         return reference_classes
 
