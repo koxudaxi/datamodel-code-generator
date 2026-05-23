@@ -10,11 +10,11 @@ from datamodel_code_generator import load_yaml
 from tests.main.conftest import JSON_SCHEMA_DATA_PATH, OPEN_API_DATA_PATH
 
 from .constants import (
-    _EXCLUDED_CASES,
-    _EXCLUDED_FILES,
-    _JSON_SCHEMA_KEYS,
-    _PAYLOAD_CLASS_NAME,
-    _SCHEMA_FILE_SUFFIXES,
+    EXCLUDED_CASES,
+    EXCLUDED_FILES,
+    JSON_SCHEMA_KEYS,
+    PAYLOAD_CLASS_NAME,
+    SCHEMA_FILE_SUFFIXES,
 )
 from .models import SchemaCase
 from .schema import (
@@ -47,12 +47,12 @@ def _is_openapi_document(data: dict[str, Any]) -> bool:
 
 
 def _looks_like_json_schema(data: dict[str, Any]) -> bool:
-    return not _is_openapi_document(data) and bool(_JSON_SCHEMA_KEYS & data.keys())
+    return not _is_openapi_document(data) and bool(JSON_SCHEMA_KEYS & data.keys())
 
 
 def _iter_schema_files(base_path: Path) -> Iterator[Path]:
     for path in sorted(base_path.rglob("*")):
-        if path.suffix in _SCHEMA_FILE_SUFFIXES:
+        if path.suffix in SCHEMA_FILE_SUFFIXES:
             yield path
 
 
@@ -97,7 +97,7 @@ def _iter_media_type_schemas(prefix: str, container: dict[str, Any]) -> Iterator
 
 def _iter_schema_documents(base_path: Path) -> Iterator[tuple[Path, dict[str, Any]]]:
     for path in _iter_schema_files(base_path):
-        if _relative_case_path(path) not in _EXCLUDED_FILES:
+        if _relative_case_path(path) not in EXCLUDED_FILES:
             yield path, _load_mapping(path)
 
 
@@ -131,7 +131,7 @@ def _make_openapi_case(path: Path, document: dict[str, Any], candidate_name: str
         "paths": {},
         "components": {
             "schemas": {
-                _PAYLOAD_CLASS_NAME: schema,
+                PAYLOAD_CLASS_NAME: schema,
                 **referenced_components,
             }
         },
@@ -187,14 +187,14 @@ def _iter_case_candidates() -> Iterator[SchemaCase]:
 
 def _iter_cases() -> Iterator[SchemaCase]:
     for case in _iter_case_candidates():
-        if case.id not in _EXCLUDED_CASES:
+        if case.id not in EXCLUDED_CASES:
             yield case
 
 
 def discover_unaccounted_files(cases: list[SchemaCase]) -> list[str]:
     """Return schema fixture files that are runnable but neither tested nor excluded."""
-    accounted = {_relative_case_path(case.source_path) for case in cases} | set(_EXCLUDED_FILES)
-    excluded_case_files = {case_id.split("::", 1)[0] for case_id in _EXCLUDED_CASES}
+    accounted = {_relative_case_path(case.source_path) for case in cases} | set(EXCLUDED_FILES)
+    excluded_case_files = {case_id.split("::", 1)[0] for case_id in EXCLUDED_CASES}
     accounted.update(excluded_case_files)
     return sorted({
         case_path

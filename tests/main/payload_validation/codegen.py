@@ -14,7 +14,7 @@ from pydantic import TypeAdapter
 from datamodel_code_generator.__main__ import Exit
 from tests.main.conftest import run_main_with_args
 
-from .constants import _PAYLOAD_CLASS_NAME, _PAYLOAD_TARGET_PYTHON_VERSION
+from .constants import PAYLOAD_CLASS_NAME, PAYLOAD_TARGET_PYTHON_VERSION
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -57,9 +57,9 @@ def load_generated_payload_adapter(case: SchemaCase, generated_model_cache: dict
         "--output-model-type",
         "pydantic_v2.BaseModel",
         "--target-python-version",
-        _PAYLOAD_TARGET_PYTHON_VERSION,
+        PAYLOAD_TARGET_PYTHON_VERSION,
         "--class-name",
-        _PAYLOAD_CLASS_NAME,
+        PAYLOAD_CLASS_NAME,
         "--disable-timestamp",
     ]
     if case.input_file_type == "openapi":
@@ -75,7 +75,7 @@ def load_generated_payload_adapter(case: SchemaCase, generated_model_cache: dict
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
-    payload_type = getattr(module, _PAYLOAD_CLASS_NAME, None)
+    payload_type = getattr(module, PAYLOAD_CLASS_NAME, None)
     if payload_type is None:
         generated_types = [
             value
@@ -83,7 +83,7 @@ def load_generated_payload_adapter(case: SchemaCase, generated_model_cache: dict
             if isinstance(value, type) and getattr(value, "__module__", None) == module_name
         ]
         if len(generated_types) != 1:
-            pytest.fail(f"Generated module for {case.id} did not contain {_PAYLOAD_CLASS_NAME}")
+            pytest.fail(f"Generated module for {case.id} did not contain {PAYLOAD_CLASS_NAME}")
         payload_type = generated_types[0]
     adapter = TypeAdapter(payload_type)
     adapters[case.id] = adapter

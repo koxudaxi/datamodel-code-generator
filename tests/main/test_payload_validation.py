@@ -18,7 +18,7 @@ from .payload_validation import (
     validate_with_source_schema,
 )
 
-_MAX_EXAMPLES = 10
+MAX_EXAMPLES = 10
 
 
 @pytest.fixture(scope="session")
@@ -32,7 +32,7 @@ def test_payload_validation_cases_cover_discovered_schema_files() -> None:
     unaccounted = discover_unaccounted_files(SCHEMA_CASES)
     if unaccounted:  # pragma: no cover
         pytest.fail(
-            "Schema files must be covered by payload validation or added to _EXCLUDED_FILES with a reason:\n"
+            "Schema files must be covered by payload validation or added to EXCLUDED_FILES with a reason:\n"
             + "\n".join(unaccounted)
         )
 
@@ -42,7 +42,7 @@ def test_payload_validation_cases_cover_discovered_schema_files() -> None:
     database=None,
     deadline=None,
     derandomize=True,
-    max_examples=_MAX_EXAMPLES,
+    max_examples=MAX_EXAMPLES,
     suppress_health_check=[
         HealthCheck.filter_too_much,
         HealthCheck.function_scoped_fixture,

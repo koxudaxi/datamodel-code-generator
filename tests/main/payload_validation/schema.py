@@ -10,12 +10,12 @@ from typing import TYPE_CHECKING, Any
 from jsonschema import exceptions, validators
 
 from .constants import (
-    _ARRAY_SCHEMA_KEYWORDS,
-    _COMBINED_SCHEMA_KEYS,
-    _OBJECT_SCHEMA_KEYWORDS,
-    _PAYLOAD_FORMAT_ENUMS,
-    _SIMPLE_ALLOF_IGNORED_KEYS,
-    _SIMPLE_ALLOF_SUPPORTED_KEYS,
+    ARRAY_SCHEMA_KEYWORDS,
+    COMBINED_SCHEMA_KEYS,
+    OBJECT_SCHEMA_KEYWORDS,
+    PAYLOAD_FORMAT_ENUMS,
+    SIMPLE_ALLOF_IGNORED_KEYS,
+    SIMPLE_ALLOF_SUPPORTED_KEYS,
 )
 
 if TYPE_CHECKING:
@@ -183,12 +183,12 @@ def _has_default_on_combined_schema(value: Any) -> bool:
 def _has_object_keywords_without_object_type(value: Any) -> bool:
     return _any_schema_node(
         value,
-        lambda schema: "type" not in schema and bool(_OBJECT_SCHEMA_KEYWORDS & schema.keys()),
+        lambda schema: "type" not in schema and bool(OBJECT_SCHEMA_KEYWORDS & schema.keys()),
     )
 
 
 def _has_array_keywords_without_array_type(value: Any) -> bool:
-    return _any_schema_node(value, lambda schema: "type" not in schema and bool(_ARRAY_SCHEMA_KEYWORDS & schema.keys()))
+    return _any_schema_node(value, lambda schema: "type" not in schema and bool(ARRAY_SCHEMA_KEYWORDS & schema.keys()))
 
 
 def _has_unsatisfiable_contains_false(value: Any) -> bool:
@@ -283,7 +283,7 @@ def _set_default_openapi_object_type(schema: dict[str, Any]) -> None:
     if (
         "type" not in schema
         and any(key in schema for key in ("properties", "required", "additionalProperties"))
-        and not any(key in schema for key in (*_COMBINED_SCHEMA_KEYS, "$ref"))
+        and not any(key in schema for key in (*COMBINED_SCHEMA_KEYS, "$ref"))
     ):
         schema["type"] = "object"
 
@@ -529,17 +529,17 @@ def _merge_simple_allof_for_payload_generation(schema: dict[str, Any]) -> dict[s
         return schema
 
     constraint_schemas = [
-        {key: value for key, value in item.items() if key not in _SIMPLE_ALLOF_IGNORED_KEYS} for item in all_of
+        {key: value for key, value in item.items() if key not in SIMPLE_ALLOF_IGNORED_KEYS} for item in all_of
     ]
-    if any(set(item) - _SIMPLE_ALLOF_SUPPORTED_KEYS for item in constraint_schemas):
+    if any(set(item) - SIMPLE_ALLOF_SUPPORTED_KEYS for item in constraint_schemas):
         return schema
     if not any(constraint_schemas):
         return schema
 
     merged = {key: value for key, value in schema.items() if key != "allOf"}
-    if set(merged) - _SIMPLE_ALLOF_IGNORED_KEYS:
+    if set(merged) - SIMPLE_ALLOF_IGNORED_KEYS:
         return schema
-    merged = {key: value for key, value in merged.items() if key not in _SIMPLE_ALLOF_IGNORED_KEYS}
+    merged = {key: value for key, value in merged.items() if key not in SIMPLE_ALLOF_IGNORED_KEYS}
 
     is_mergeable = True
     for item in constraint_schemas:
@@ -585,7 +585,7 @@ def _rewrite_contains(schema: dict[str, Any]) -> None:
 
 def _set_payload_format_enum(schema: dict[str, Any]) -> None:
     if schema.get("type") == "string" and isinstance(
-        format_enum := _PAYLOAD_FORMAT_ENUMS.get(schema.get("format")),
+        format_enum := PAYLOAD_FORMAT_ENUMS.get(schema.get("format")),
         list,
     ):
         schema.setdefault("enum", format_enum)
