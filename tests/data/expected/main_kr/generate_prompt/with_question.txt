@@ -126,6 +126,7 @@ How do I convert enums to Literal types?
 
 ### Template Customization
 - `--additional-imports`: Add custom imports to generated output files.
+- `--builtin-format-line-length`: Set line length for the built-in formatter.
 - `--class-decorators`: Add custom decorators to generated model classes.
 - `--custom-file-header`: Add custom header text to the generated file.
 - `--custom-file-header-path`: Add custom header content from file to generated code.
@@ -200,6 +201,10 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
                         to opt in without warning, or --no-allow-remote-refs
                         to block remote fetching. In a future version, remote
                         fetching will be disabled by default.
+  --builtin-format-line-length BUILTIN_FORMAT_LINE_LENGTH
+                        Line length used by the built-in formatter. Defaults
+                        to [tool.datamodel-codegen].builtin-format-line-
+                        length, then Ruff, Black, or isort config.
   --class-decorators CLASS_DECORATORS
                         Custom decorators for generated model classes
                         (delimited list input). For example

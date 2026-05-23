@@ -959,6 +959,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             custom_formatters_kwargs=config.custom_formatters_kwargs,
             encoding=config.encoding,
             formatters=config.formatters,
+            builtin_format_line_length=config.builtin_format_line_length,
             use_type_checking_imports=effective_use_type_checking_imports,
             defer_formatting=True,
         )

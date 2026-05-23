@@ -240,6 +240,7 @@ class GenerateConfig(TypedDict, closed=True):
     use_frozen_field: NotRequired[bool]
     use_default_factory_for_optional_nested_models: NotRequired[bool]
     formatters: NotRequired[list[Formatter] | None]
+    builtin_format_line_length: NotRequired[int | None]
     settings_path: NotRequired[str | None]
     parent_scoped_naming: NotRequired[bool]
     naming_strategy: NotRequired[NamingStrategy | None]

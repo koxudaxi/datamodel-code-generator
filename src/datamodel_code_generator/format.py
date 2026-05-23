@@ -215,23 +215,28 @@ def _find_pyproject_toml(settings_path: Path) -> Path | None:
     return None
 
 
-def _get_builtin_line_length(settings_path: Path) -> int:
+def _get_builtin_line_length(settings_path: Path, explicit_line_length: int | None = None) -> int:
+    if explicit_line_length is not None:
+        return explicit_line_length
+
     pyproject_toml_path = _find_pyproject_toml(settings_path)
     if pyproject_toml_path is None:
         return DEFAULT_LINE_LENGTH
 
     tool_config = load_toml(pyproject_toml_path).get("tool", {})
+    datamodel_codegen_config = tool_config.get("datamodel-codegen", {})
     ruff_config = tool_config.get("ruff", {})
-    if isinstance(line_length := ruff_config.get("line-length"), int):
-        return line_length
-
     black_config = tool_config.get("black", {})
-    if isinstance(line_length := black_config.get("line-length"), int):
-        return line_length
-
     isort_config = tool_config.get("isort", {})
-    if isinstance(line_length := isort_config.get("line_length"), int):
-        return line_length
+    for line_length in (
+        datamodel_codegen_config.get("builtin-format-line-length"),
+        datamodel_codegen_config.get("builtin_format_line_length"),
+        ruff_config.get("line-length"),
+        black_config.get("line-length"),
+        isort_config.get("line_length"),
+    ):
+        if isinstance(line_length, int):
+            return line_length
     return DEFAULT_LINE_LENGTH
 
 
@@ -346,6 +351,7 @@ class CodeFormatter:
         custom_formatters_kwargs: dict[str, Any] | None = None,
         encoding: str = "utf-8",
         formatters: list[Formatter] | None = None,
+        builtin_format_line_length: int | None = None,
         use_type_checking_imports: bool = True,  # noqa: FBT001, FBT002
         defer_formatting: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
@@ -382,7 +388,9 @@ class CodeFormatter:
         use_black = Formatter.BLACK in formatters
         use_isort = Formatter.ISORT in formatters
 
-        self.builtin_line_length = _get_builtin_line_length(settings_path) if use_builtin else DEFAULT_LINE_LENGTH
+        self.builtin_line_length = (
+            _get_builtin_line_length(settings_path, builtin_format_line_length) if use_builtin else DEFAULT_LINE_LENGTH
+        )
 
         if use_black:
             root = black_find_project_root((settings_path,))

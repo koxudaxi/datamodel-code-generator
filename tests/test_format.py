@@ -102,8 +102,57 @@ def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.Monke
     )
 
 
-def test_format_code_builtin_formatter_uses_ruff_line_length(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Test built-in formatter uses Ruff line length configuration."""
+def test_format_code_builtin_formatter_uses_explicit_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter uses explicit line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.ruff]\nline-length = 88\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=140,
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
+    )
+
+
+def test_format_code_builtin_formatter_uses_datamodel_codegen_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter uses datamodel-codegen line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.datamodel-codegen]\nbuiltin-format-line-length = 140\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import AnotherLongGeneratedTypeName, ExtremelyLongGeneratedTypeName, "
+        "GeneratedTypeNameThatFitsWithinConfiguredLineLength, Zed\n"
+    )
+
+
+def test_format_code_builtin_formatter_falls_back_to_ruff_line_length(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter falls back to Ruff line length configuration."""
     pyproject = tmp_path / "pyproject.toml"
     pyproject.write_text("[tool.ruff]\nline-length = 140\n", encoding="utf-8")
     monkeypatch.chdir(tmp_path)

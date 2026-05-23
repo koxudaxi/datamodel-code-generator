@@ -1025,6 +1025,13 @@ base_options.add_argument(
     default=None,
 )
 base_options.add_argument(
+    "--builtin-format-line-length",
+    help="Line length used by the built-in formatter. "
+    "Defaults to [tool.datamodel-codegen].builtin-format-line-length, then Ruff, Black, or isort config.",
+    type=int,
+    default=None,
+)
+base_options.add_argument(
     "--custom-formatters",
     help="List of modules with custom formatter (delimited list input).",
     type=str,

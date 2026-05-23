@@ -186,6 +186,7 @@ class GenerateConfig(BaseModel):
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
+    builtin_format_line_length: int | None = None
     settings_path: Path | None = None
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None
@@ -323,6 +324,7 @@ class ParserConfig(BaseModel):
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
+    builtin_format_line_length: int | None = None
     defer_formatting: bool = False
     parent_scoped_naming: bool = False
     naming_strategy: NamingStrategy | None = None

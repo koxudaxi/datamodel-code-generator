@@ -1706,6 +1706,37 @@ def test_formatters_option(output_file: Path) -> None:
 
 
 @pytest.mark.cli_doc(
+    options=["--builtin-format-line-length"],
+    option_description="""Set line length for the built-in formatter.
+
+The `--builtin-format-line-length` flag controls import wrapping when using
+`--formatters builtin`. If omitted, the built-in formatter reads
+`[tool.datamodel-codegen].builtin-format-line-length`, then falls back to
+Ruff, Black, or isort line length settings, and finally 88.""",
+    input_schema="jsonschema/pet_simple.json",
+    cli_args=["--formatters", "builtin", "--builtin-format-line-length", "120"],
+    golden_output="main_kr/formatters/output.py",
+)
+@freeze_time("2019-07-26")
+def test_builtin_format_line_length_option(output_file: Path) -> None:
+    """Set line length for the built-in formatter.
+
+    The `--builtin-format-line-length` flag controls import wrapping when using
+    `--formatters builtin`. If omitted, the built-in formatter reads
+    `[tool.datamodel-codegen].builtin-format-line-length`, then falls back to
+    Ruff, Black, or isort line length settings, and finally 88.
+    """
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pet_simple.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_MAIN_KR_PATH / "formatters" / "output.py",
+        extra_args=["--formatters", "builtin", "--builtin-format-line-length", "120"],
+    )
+
+
+@pytest.mark.cli_doc(
     options=["--custom-formatters-kwargs"],
     option_description="""Pass custom arguments to custom formatters via JSON file.
 

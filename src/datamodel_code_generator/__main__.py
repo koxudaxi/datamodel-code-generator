@@ -533,6 +533,7 @@ class Config(BaseModel):  # noqa: PLR0904
     use_frozen_field: bool = False
     use_default_factory_for_optional_nested_models: bool = False
     formatters: list[Formatter] | None = None
+    builtin_format_line_length: Optional[int] = None  # noqa: UP045
     parent_scoped_naming: bool = False
     naming_strategy: Optional[NamingStrategy] = None  # noqa: UP045
     duplicate_name_suffix: Optional[dict[str, str]] = None  # noqa: UP045
@@ -989,6 +990,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         use_frozen_field=config.use_frozen_field,
         use_default_factory_for_optional_nested_models=config.use_default_factory_for_optional_nested_models,
         formatters=config.formatters,
+        builtin_format_line_length=config.builtin_format_line_length,
         settings_path=settings_path,
         parent_scoped_naming=config.parent_scoped_naming,
         naming_strategy=config.naming_strategy,

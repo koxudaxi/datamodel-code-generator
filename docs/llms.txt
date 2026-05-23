@@ -56,7 +56,8 @@
 
 - [Custom Templates](https://datamodel-code-generator.koxudaxi.dev/custom_template/): One of the powerful features of datamodel-code-generator is the ability to use custom templates with the `--custom-template-dir` option. This allow...
 - [Custom Code Formatters](https://datamodel-code-generator.koxudaxi.dev/custom-formatters/): Create your own custom code formatters for specialized formatting needs.
-- [Code Formatting](https://datamodel-code-generator.koxudaxi.dev/formatting/): Generated code is automatically formatted using code formatters. The dependency-free `builtin` formatter is available for generated code...
+- [Code Formatting](https://datamodel-code-generator.koxudaxi.dev/formatting/): Generated code is automatically formatted using code formatters. By default, `black` and `isort` are used to produce consistent, well-formatted out...
+- [Formatter behavior](https://datamodel-code-generator.koxudaxi.dev/formatter-behavior/): `datamodel-codegen` formats generated Python code after model generation. The default formatter list is currently `black` and `isort`.
 
 ### Integration
 
