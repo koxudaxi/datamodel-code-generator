@@ -142,8 +142,11 @@ class JsonSchemaFeatures:
         metadata=FeatureMetadata(
             introduced="Draft 6",
             doc_name="contains",
-            description="Array contains at least one matching item",
-            status="not_supported",
+            description=(
+                "Count constraints are modeled when contains matches every item; "
+                "general schema-valued contains is not supported"
+            ),
+            status="partial",
         ),
     )
     deprecated_keyword: bool = field(
@@ -198,7 +201,7 @@ class JsonSchemaFeatures:
             introduced="2019-09",
             doc_name="unevaluatedProperties",
             description="Additional properties not evaluated by subschemas",
-            status="not_supported",
+            status="partial",
         ),
     )
     unevaluated_items: bool = field(
@@ -207,7 +210,7 @@ class JsonSchemaFeatures:
             introduced="2019-09",
             doc_name="unevaluatedItems",
             description="Additional items not evaluated by subschemas",
-            status="not_supported",
+            status="partial",
         ),
     )
     dependent_required: bool = field(
