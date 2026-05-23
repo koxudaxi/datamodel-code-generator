@@ -500,12 +500,13 @@ class DataTypeManager(_PydanticDataTypeManager):
             __base__=PydanticV2DataType,
         )
 
-    def type_map_factory(
+    def type_map_factory(  # noqa: PLR0913, PLR0917
         self,
         data_type: type[DataType],
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None = None,
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_date_class: DateClassType | None = None,
     ) -> dict[Types, DataType]:
         """Create type mapping with Pydantic v2 specific types and datetime classes."""
@@ -516,7 +517,7 @@ class DataTypeManager(_PydanticDataTypeManager):
                 strict_types,
                 pattern_key,
                 target_datetime_class or DatetimeClassType.Datetime,
-                self.use_object_type,
+                use_object_type or self.use_object_type,
             ),
             Types.hostname: self.data_type.from_import(
                 IMPORT_CONSTR,

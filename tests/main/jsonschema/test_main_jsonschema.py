@@ -3440,6 +3440,24 @@ def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) 
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--use-object-type"],
+    option_description="""Use object instead of Any for unspecified object and array values.
+
+The `--use-object-type` flag configures the code generation to use `object`
+instead of `Any` when JSON Schema does not define object properties or array
+item schemas. This helps generate stricter type hints for unstructured values.""",
+    input_schema="jsonschema/use_object_type.json",
+    cli_args=[
+        "--output-model-type",
+        "typing.TypedDict",
+        "--target-python-version",
+        "3.11",
+        "--use-object-type",
+    ],
+    golden_output="jsonschema/use_object_type_typed_dict.py",
+    related_options=["--output-model-type", "--target-python-version"],
+)
 def test_jsonschema_use_object_type_typed_dict(output_file: Path) -> None:
     """Test using object instead of Any for unspecified object and array values."""
     run_main_and_assert(
