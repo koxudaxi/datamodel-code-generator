@@ -851,7 +851,11 @@ dev = [
     { name = "covdefaults" },
     { name = "coverage", extra = ["toml"], marker = "(extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort6') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort7') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort8') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort7') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort8') or (extra != 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-isort7' and extra == 'group-24-datamodel-code-generator-isort8') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort6') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort7') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort8') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort7') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort8') or (extra != 'group-24-datamodel-code-generator-black22' and extra != 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-isort7' and extra == 'group-24-datamodel-code-generator-isort8')" },
     { name = "diff-cover" },
+    { name = "email-validator" },
+    { name = "hypothesis" },
+    { name = "hypothesis-jsonschema" },
     { name = "inline-snapshot" },
+    { name = "jsonschema" },
     { name = "msgspec" },
     { name = "prek" },
     { name = "pytest" },
@@ -897,7 +901,11 @@ test = [
     { name = "covdefaults" },
     { name = "coverage", extra = ["toml"] },
     { name = "diff-cover" },
+    { name = "email-validator" },
+    { name = "hypothesis" },
+    { name = "hypothesis-jsonschema" },
     { name = "inline-snapshot" },
+    { name = "jsonschema" },
     { name = "msgspec" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -911,7 +919,11 @@ type = [
     { name = "covdefaults" },
     { name = "coverage", extra = ["toml"] },
     { name = "diff-cover" },
+    { name = "email-validator" },
+    { name = "hypothesis" },
+    { name = "hypothesis-jsonschema" },
     { name = "inline-snapshot" },
+    { name = "jsonschema" },
     { name = "msgspec" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -975,7 +987,11 @@ dev = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=9.7.2" },
+    { name = "email-validator", specifier = ">=2.2.0" },
+    { name = "hypothesis", specifier = ">=6.136.6" },
+    { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "jsonschema", specifier = ">=4.24.0" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "prek", specifier = ">=0.2.22" },
     { name = "pytest", specifier = ">=8.3.4" },
@@ -1009,7 +1025,11 @@ test = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=9.7.2" },
+    { name = "email-validator", specifier = ">=2.2.0" },
+    { name = "hypothesis", specifier = ">=6.136.6" },
+    { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "jsonschema", specifier = ">=4.24.0" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=5" },
@@ -1023,7 +1043,11 @@ type = [
     { name = "covdefaults", specifier = ">=2.3" },
     { name = "coverage", extras = ["toml"], specifier = ">=7.6.1" },
     { name = "diff-cover", specifier = ">=9.7.2" },
+    { name = "email-validator", specifier = ">=2.2.0" },
+    { name = "hypothesis", specifier = ">=6.136.6" },
+    { name = "hypothesis-jsonschema", specifier = ">=0.23.1" },
     { name = "inline-snapshot", specifier = ">=0.31.1" },
+    { name = "jsonschema", specifier = ">=4.24.0" },
     { name = "msgspec", specifier = ">=0.18" },
     { name = "pytest", specifier = ">=8.3.4" },
     { name = "pytest-cov", specifier = ">=5" },
@@ -1064,12 +1088,34 @@ wheels = [
 ]
 
 [[package]]
+name = "dnspython"
+version = "2.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/57666417c0f90f08bcafa776861060426765fdb422eb10212086fb811d26/dnspython-2.8.0.tar.gz", hash = "sha256:181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f", size = 368251, upload-time = "2025-09-07T18:58:00.022Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl", hash = "sha256:01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af", size = 331094, upload-time = "2025-09-07T18:57:58.071Z" },
+]
+
+[[package]]
 name = "docutils"
 version = "0.22.4"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/ae/b6/03bb70946330e88ffec97aefd3ea75ba575cb2e762061e0e62a213befee8/docutils-0.22.4.tar.gz", hash = "sha256:4db53b1fde9abecbb74d91230d32ab626d94f6badfc575d6db9194a49df29968", size = 2291750, upload-time = "2025-12-18T19:00:26.443Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/02/10/5da547df7a391dcde17f59520a231527b8571e6f46fc8efb02ccb370ab12/docutils-0.22.4-py3-none-any.whl", hash = "sha256:d0013f540772d1420576855455d050a2180186c91c15779301ac2ccb3eeb68de", size = 633196, upload-time = "2025-12-18T19:00:18.077Z" },
+]
+
+[[package]]
+name = "email-validator"
+version = "2.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "dnspython" },
+    { name = "idna" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f5/22/900cb125c76b7aaa450ce02fd727f452243f2e91a61af068b40adba60ea9/email_validator-2.3.0.tar.gz", hash = "sha256:9fc05c37f2f6cf439ff414f8fc46d917929974a82244c20eb10231ba60c54426", size = 51238, upload-time = "2025-08-26T13:09:06.831Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/de/15/545e2b6cf2e3be84bc1ed85613edd75b8aea69807a71c26f4ca6a9258e82/email_validator-2.3.0-py3-none-any.whl", hash = "sha256:80f13f623413e6b197ae73bb10bf4eb0908faf509ad8362c5edeb0be7fd450b4", size = 35604, upload-time = "2025-08-26T13:09:05.858Z" },
 ]
 
 [[package]]
@@ -1276,6 +1322,32 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc", size = 141406, upload-time = "2024-12-06T15:37:23.222Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad", size = 73517, upload-time = "2024-12-06T15:37:21.509Z" },
+]
+
+[[package]]
+name = "hypothesis"
+version = "6.152.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black23') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black22' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-black24') or (extra == 'group-24-datamodel-code-generator-black23' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-black24' and extra == 'group-24-datamodel-code-generator-dev') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort5') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-dev' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort6') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort5' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort7') or (extra == 'group-24-datamodel-code-generator-isort6' and extra == 'group-24-datamodel-code-generator-isort8') or (extra == 'group-24-datamodel-code-generator-isort7' and extra == 'group-24-datamodel-code-generator-isort8')" },
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3b/fb/a5651eb0cd03ecee644e8f4d8cd2027b40a08bf1488f46201e794aebe9b5/hypothesis-6.152.9.tar.gz", hash = "sha256:de4711d69ce3a18009047c3b44882810fd0c0348c1558e920a4b0d2c45f59e1e", size = 472009, upload-time = "2026-05-19T17:10:19.586Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/d9/40ef7ed22f0c45c2316467edb9afb8fc172cd089cb329c0ee6da6b74416c/hypothesis-6.152.9-py3-none-any.whl", hash = "sha256:9c4fdccb1eac0b12ec740c12290d0e6a0bea3526a3f0bf812b7643bb563c2d8b", size = 538148, upload-time = "2026-05-19T17:10:16.131Z" },
+]
+
+[[package]]
+name = "hypothesis-jsonschema"
+version = "0.23.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "hypothesis" },
+    { name = "jsonschema" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4f/ad/2073dd29d8463a92c243d0c298370e50e0d4082bc67f156dc613634d0ec4/hypothesis-jsonschema-0.23.1.tar.gz", hash = "sha256:f4ac032024342a4149a10253984f5a5736b82b3fe2afb0888f3834a31153f215", size = 42896, upload-time = "2024-02-28T20:33:50.209Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/44/635a8d2add845c9a2d99a93a379df77f7e70829f0a1d7d5a6998b61f9d01/hypothesis_jsonschema-0.23.1-py3-none-any.whl", hash = "sha256:a4d74d9516dd2784fbbae82e009f62486c9104ac6f4e3397091d98a1d5ee94a2", size = 29200, upload-time = "2024-02-28T20:33:48.744Z" },
 ]
 
 [[package]]
@@ -2834,6 +2906,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "sortedcontainers"
+version = "2.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e8/c4/ba2f8066cceb6f23394729afe52f3bf7adec04bf9ed2c820b39e19299111/sortedcontainers-2.4.0.tar.gz", hash = "sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88", size = 30594, upload-time = "2021-05-16T22:03:42.897Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/32/46/9cb0e58b2deb7f82b84065f37f3bffeb12413f947f9388e4cac22c4621ce/sortedcontainers-2.4.0-py2.py3-none-any.whl", hash = "sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0", size = 29575, upload-time = "2021-05-16T22:03:41.177Z" },
 ]
 
 [[package]]

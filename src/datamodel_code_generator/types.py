@@ -659,6 +659,9 @@ class DataType(_BaseModel):
             if data_type.reference or data_type.data_types:
                 data_type.parent = self
 
+        if self.dict_key and (self.dict_key.reference or self.dict_key.data_types):
+            self.dict_key.parent = self
+
         if self.reference:
             self.reference.children.append(self)
 

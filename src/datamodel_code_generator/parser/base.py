@@ -2540,6 +2540,14 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
         for nested in data_type.data_types:
             self._apply_override_to_data_type(nested)
 
+    @staticmethod
+    def __disable_union_operator_for_forward_ref_parents(data_type: DataType) -> None:
+        parent = data_type.parent
+        while isinstance(parent, DataType):
+            if parent.is_union:
+                parent.use_union_operator = False
+            parent = parent.parent
+
     @classmethod
     def __update_type_aliases(cls, models: list[DataModel]) -> None:
         """Update type aliases and RootModels to properly handle forward references per PEP 484."""
@@ -2567,6 +2575,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                     source_index = model_index.get(name)
                     if source_index is not None and source_index >= i:
                         data_type.alias = f'"{name}"'
+                        cls.__disable_union_operator_for_forward_ref_parents(data_type)
                         has_forward_ref = True
 
             if has_forward_ref:

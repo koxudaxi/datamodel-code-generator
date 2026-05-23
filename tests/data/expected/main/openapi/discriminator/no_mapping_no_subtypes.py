@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 class BaseItem(BaseModel):
@@ -16,4 +16,4 @@ class FooItem(BaseModel):
 
 
 class ItemContainer(BaseModel):
-    item: BaseItem = Field(..., discriminator='itemType')
+    item: BaseItem

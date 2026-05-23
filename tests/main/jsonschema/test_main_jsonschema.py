@@ -2498,7 +2498,7 @@ def test_main_hostname_root_type_pydantic_v2(output_file: Path) -> None:
 
 
 def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
-    """Test hostname format with multiple types uses Field(pattern=) with --field-constraints."""
+    """Test hostname format with multiple types constrains only the string branch."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "hostname_multiple_types.json",
         output_path=output_file,

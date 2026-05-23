@@ -319,7 +319,10 @@ class OpenAPIParser(JsonSchemaParser):
                 and field.ref
                 and (discriminator := self._discriminator_schemas.get(field.ref))
             ):
-                new_field_type = self._get_discriminator_union_type(field.ref) or field_obj.data_type
+                new_field_type = self._get_discriminator_union_type(field.ref)
+                if new_field_type is None:
+                    result_fields.append(field_obj)
+                    continue
                 normalized_discriminator = self._normalize_discriminator(discriminator)
                 field_obj = self.data_model_field_type(**{  # noqa: PLW2901  # ty: ignore
                     **field_obj.__dict__,
