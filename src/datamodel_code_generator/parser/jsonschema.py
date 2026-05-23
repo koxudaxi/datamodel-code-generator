@@ -13,7 +13,9 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable
 from contextlib import contextmanager, suppress
+from fractions import Fraction
 from functools import cached_property, lru_cache
+from math import gcd, lcm
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
 from urllib.parse import ParseResult, unquote, urlparse
@@ -2109,6 +2111,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
     @staticmethod
+    def _intersect_multiple_of(val1: object, val2: object) -> object:
+        """Return the least common multiple for JSON Schema multipleOf values."""
+        with suppress(TypeError, ValueError, ZeroDivisionError):
+            multiple_1 = Fraction(str(val1))
+            multiple_2 = Fraction(str(val2))
+            merged = Fraction(
+                lcm(multiple_1.numerator, multiple_2.numerator),
+                gcd(multiple_1.denominator, multiple_2.denominator),
+            )
+            return merged.numerator if merged.denominator == 1 else float(merged)
+        return val1  # pragma: no cover
+
+    @staticmethod
     def _intersect_constraint(field: str, val1: Any, val2: Any) -> Any:  # noqa: PLR0911
         """Compute the intersection of two constraint values."""
         v1: float | None = None
@@ -2129,7 +2144,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return f"(?={val1})(?={val2})" if val1 != val2 else val1
         if field == "uniqueItems":
             return val1 or val2
-        return val1
+        if field == "multipleOf":
+            return JsonSchemaParser._intersect_multiple_of(val1, val2)
+        return val1  # pragma: no cover
 
     def _build_allof_type(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915, PLR0917
         self,
