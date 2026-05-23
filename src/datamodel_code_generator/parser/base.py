@@ -1006,6 +1006,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
             use_union_operator=config.use_union_operator,
             use_pendulum=config.use_pendulum,
             use_standard_primitive_types=config.use_standard_primitive_types,
+            use_object_type=config.use_object_type,
             target_datetime_class=config.target_datetime_class,
             target_date_class=config.target_date_class,
             treat_dot_as_module=config.treat_dot_as_module or False,

@@ -758,6 +758,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         "set_default_enum_member": (
             True if config.output_model_type == DataModelType.DataclassesDataclass else config.set_default_enum_member
         ),
+        "use_object_type": config.use_object_type,
     }
 
     # Convert schema_version string to appropriate enum based on input type

@@ -226,6 +226,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType = DatetimeClassType.Datetime,
         target_date_class: DateClassType | None = None,  # noqa: ARG002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -242,6 +243,7 @@ class DataTypeManager(_DataTypeManager):
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
             use_standard_primitive_types=use_standard_primitive_types,
+            use_object_type=use_object_type,
             target_datetime_class=target_datetime_class,
             treat_dot_as_module=treat_dot_as_module,
             use_serialize_as_any=use_serialize_as_any,
@@ -263,7 +265,7 @@ class DataTypeManager(_DataTypeManager):
         )
 
         self.type_map: dict[Types, DataType] = {
-            **type_map_factory(self.data_type),
+            **type_map_factory(self.data_type, use_object_type=use_object_type),
             **datetime_map,
             **standard_primitive_map,
         }

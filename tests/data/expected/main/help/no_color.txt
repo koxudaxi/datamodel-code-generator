@@ -168,6 +168,8 @@ Typing customization:
   --use-non-positive-negative-number-constrained-types
                         Use the Non{Positive,Negative}{FloatInt} types instead
                         of the corresponding con* constrained types.
+  --use-object-type     Use object instead of Any for unspecified JSON Schema
+                        object and array values
   --use-one-literal-as-default
                         Use one literal as default value for one literal field
   --use-root-model-type-alias

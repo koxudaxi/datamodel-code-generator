@@ -196,6 +196,7 @@ CLI_OPTION_META: dict[str, CLIOptionMeta] = {
     "--use-standard-primitive-types": CLIOptionMeta(
         name="--use-standard-primitive-types", category=OptionCategory.TYPING
     ),
+    "--use-object-type": CLIOptionMeta(name="--use-object-type", category=OptionCategory.TYPING),
     "--use-type-checking-imports": CLIOptionMeta(name="--use-type-checking-imports", category=OptionCategory.TEMPLATE),
     "--no-use-type-checking-imports": CLIOptionMeta(
         name="--no-use-type-checking-imports", category=OptionCategory.TEMPLATE
