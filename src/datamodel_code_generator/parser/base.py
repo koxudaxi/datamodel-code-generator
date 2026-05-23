@@ -1794,7 +1794,7 @@ class Parser(ABC, Generic[ParserConfigT, SchemaFeaturesT]):
                             has_one_literal = True
                             if isinstance(discriminator_model, msgspec_model.Struct):  # pragma: no cover
                                 discriminator_model.add_base_class_kwarg("tag_field", f"'{field_name}'")
-                                discriminator_model.add_base_class_kwarg("tag", discriminator_field.represented_default)
+                                discriminator_model.add_base_class_kwarg("tag", repr(expected_value))
                                 discriminator_field.extras["is_classvar"] = True
                             # Found the discriminator field, no need to keep looking
                             break
