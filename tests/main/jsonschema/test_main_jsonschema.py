@@ -5061,6 +5061,79 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
     )
 
 
+def test_main_typed_dict_datetime_default_uses_str(output_file: Path) -> None:
+    """Test that TypedDict output uses str for datetime fields by default."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "datetime.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_datetime_default_uses_str.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+        ],
+    )
+
+
+def test_main_typed_dict_with_datetime_class_uses_datetime(output_file: Path) -> None:
+    """Test that TypedDict output uses datetime.datetime when requested."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "datetime.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_datetime_with_datetime_class.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output-datetime-class",
+            "datetime",
+        ],
+    )
+
+
+def test_main_typed_dict_with_non_datetime_class_raises_error(capsys: pytest.CaptureFixture, output_file: Path) -> None:
+    """Test that CLI TypedDict output rejects pydantic-specific datetime types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "datetime.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--output-datetime-class",
+            "AwareDatetime",
+        ],
+        capsys=capsys,
+        expected_stderr_contains=(
+            '`--output-datetime-class` only allows "datetime" for `--output-model-type` typing.TypedDict'
+        ),
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_mixed_closed_no_duplicate_imports(output_file: Path) -> None:
+    """Test that mixing closed and open TypedDicts in the same file does not produce duplicate TypedDict imports."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_mixed_closed.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_mixed_closed.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
 @pytest.mark.cli_doc(
     options=["--no-use-closed-typed-dict"],
     option_description="""Disable PEP 728 TypedDict closed/extra_items generation.

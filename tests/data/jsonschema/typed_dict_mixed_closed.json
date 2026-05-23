@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "ClosedModel": {
+      "type": "object",
+      "title": "ClosedModel",
+      "properties": {
+        "name": {"type": "string"}
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "OpenModel": {
+      "type": "object",
+      "title": "OpenModel",
+      "properties": {
+        "value": {"type": "string"}
+      }
+    }
+  }
+}

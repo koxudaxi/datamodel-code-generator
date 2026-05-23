@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Literal, TypeAlias, TypedDict
+from typing import Any, Literal, TypeAlias
 
 from datamodel_code_generator.enums import StrictTypes
 from datamodel_code_generator.validators import ModelValidators
