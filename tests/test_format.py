@@ -14,6 +14,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    apply_builtin_formatter,
     resolve_use_type_checking_imports,
 )
 
@@ -172,6 +173,43 @@ def test_format_code_builtin_formatter_falls_back_to_ruff_line_length(
     )
 
 
+def test_format_code_builtin_formatter_ignores_non_integer_line_lengths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter ignores non-integer line length configuration."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text(
+        "[tool.datamodel-codegen]\n"
+        'builtin-format-line-length = "140"\n'
+        "[tool.ruff]\n"
+        'line-length = "140"\n'
+        "[tool.black]\n"
+        'line-length = "140"\n'
+        "[tool.isort]\n"
+        'line_length = "140"\n',
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import (\n"
+        "    AnotherLongGeneratedTypeName,\n"
+        "    ExtremelyLongGeneratedTypeName,\n"
+        "    GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength,\n"
+        "    Zed,\n"
+        ")\n"
+    )
+
+
 def test_format_code_builtin_formatter_wraps_long_imports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test built-in formatter wraps import lines that exceed the default line length."""
     monkeypatch.chdir(tmp_path)
@@ -193,6 +231,20 @@ def test_format_code_builtin_formatter_wraps_long_imports(tmp_path: Path, monkey
         "    Zed,\n"
         ")\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_code"),
+    [
+        ("", ""),
+        ("class Model:\n    pass", "class Model:\n    pass\n"),
+        ("if", "if\n"),
+        ("import typing as t", "import typing as t\n"),
+    ],
+)
+def test_apply_builtin_formatter_handles_simple_edge_cases(code: str, expected_code: str) -> None:
+    """Test built-in formatter behavior when no import block can be rewritten."""
+    assert apply_builtin_formatter(code) == expected_code
 
 
 def test_format_code_un_exist_custom_formatter() -> None:
