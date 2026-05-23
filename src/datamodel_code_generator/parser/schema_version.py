@@ -142,8 +142,11 @@ class JsonSchemaFeatures:
         metadata=FeatureMetadata(
             introduced="Draft 6",
             doc_name="contains",
-            description="Array contains at least one matching item",
-            status="not_supported",
+            description=(
+                "Count constraints are modeled when contains matches every item; "
+                "general schema-valued contains is not supported"
+            ),
+            status="partial",
         ),
     )
     deprecated_keyword: bool = field(
@@ -207,7 +210,7 @@ class JsonSchemaFeatures:
             introduced="2019-09",
             doc_name="unevaluatedProperties",
             description="Additional properties not evaluated by subschemas",
-            status="not_supported",
+            status="partial",
         ),
     )
     unevaluated_items: bool = field(
@@ -216,7 +219,7 @@ class JsonSchemaFeatures:
             introduced="2019-09",
             doc_name="unevaluatedItems",
             description="Additional items not evaluated by subschemas",
-            status="not_supported",
+            status="partial",
         ),
     )
     dependent_required: bool = field(
@@ -554,6 +557,9 @@ def _get_common_data_formats() -> DataFormatMapping:
             "path": Types.path,
             "email": Types.email,
             "idn-email": Types.email,
+            "idn-hostname": Types.string,
+            "iri": Types.string,
+            "iri-reference": Types.string,
             "uuid": Types.uuid,
             "uuid1": Types.uuid1,
             "uuid2": Types.uuid2,
@@ -562,6 +568,10 @@ def _get_common_data_formats() -> DataFormatMapping:
             "uuid5": Types.uuid5,
             "uri": Types.uri,
             "uri-reference": Types.string,
+            "uri-template": Types.string,
+            "json-pointer": Types.string,
+            "relative-json-pointer": Types.string,
+            "regex": Types.string,
             "hostname": Types.hostname,
             "ipv4": Types.ipv4,
             "ipv4-network": Types.ipv4_network,

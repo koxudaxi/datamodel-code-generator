@@ -790,6 +790,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
             "include_path_parameters": config.include_path_parameters,
             "use_status_code_in_response_name": config.use_status_code_in_response_name,
             "openapi_include_paths": config.openapi_include_paths,
+            "openapi_include_info_version": config.openapi_include_info_version,
             "openapi_version": openapi_version,
             **additional_options,
         }

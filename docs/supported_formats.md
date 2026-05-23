@@ -112,15 +112,15 @@ The following features are tracked in the codebase with their implementation sta
 | `readOnly/writeOnly` | Draft 7 | ✅ Supported | Field visibility hints for read-only and write-only properties |
 | `const` | Draft 6 | ✅ Supported | Single constant value constraint |
 | `propertyNames` | Draft 6 | ✅ Supported | Dict key type constraints via pattern, enum, or $ref |
-| `contains` | Draft 6 | ❌ Not Supported | Array contains at least one matching item |
+| `contains` | Draft 6 | ⚠️ Partial | Count constraints are modeled when contains matches every item; general schema-valued contains is not supported |
 | `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
 | `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
 | `contentMediaType/contentEncoding` | Draft 7 | ⚠️ Partial | Content type and encoding hints for strings |
 | `contentSchema` | 2019-09 | ⚠️ Partial | Schema for decoded string content |
 | `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
 | `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
-| `unevaluatedProperties` | 2019-09 | ❌ Not Supported | Additional properties not evaluated by subschemas |
-| `unevaluatedItems` | 2019-09 | ❌ Not Supported | Additional items not evaluated by subschemas |
+| `unevaluatedProperties` | 2019-09 | ⚠️ Partial | Additional properties not evaluated by subschemas |
+| `unevaluatedItems` | 2019-09 | ⚠️ Partial | Additional items not evaluated by subschemas |
 | `dependentRequired` | 2019-09 | ❌ Not Supported | Conditional property requirements |
 | `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
 | `$recursiveRef/$recursiveAnchor` | 2019-09 | ✅ Supported | Recursive reference resolution via anchors |
@@ -157,12 +157,23 @@ The following features are tracked in the codebase with their implementation sta
 | string | time | `time` |
 | string | duration | `timedelta` |
 | string | email | `EmailStr` |
+| string | idn-email | `EmailStr` |
+| string | idn-hostname | `str` |
 | string | uri | `AnyUrl` |
+| string | uri-reference | `str` |
+| string | uri-template | `str` |
+| string | iri | `str` |
+| string | iri-reference | `str` |
 | string | uuid | `UUID` |
 | string | byte | `bytes` (base64) |
 | string | ipv4 | `IPv4Address` |
+| string | ipv4-network | `IPv4Network` |
 | string | ipv6 | `IPv6Address` |
+| string | ipv6-network | `IPv6Network` |
 | string | hostname | `str` |
+| string | json-pointer | `str` |
+| string | relative-json-pointer | `str` |
+| string | regex | `str` |
 
 ### OpenAPI-Only Formats
 
@@ -178,8 +189,9 @@ The following features are tracked in the codebase with their implementation sta
 | Feature | Introduced | Status | Notes |
 |---------|------------|--------|-------|
 | `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
-| `unevaluatedProperties` | 2019-09 | ❌ Not supported | Use `additionalProperties` instead |
-| `unevaluatedItems` | 2019-09 | ❌ Not supported | Use `additionalItems` instead |
+| `contains` | Draft 6 | ⚠️ Partial | Count constraints are modeled when `contains` matches every item |
+| `unevaluatedProperties` | 2019-09 | ⚠️ Partial | Boolean values and schema-valued extra allowance are modeled |
+| `unevaluatedItems` | 2019-09 | ⚠️ Partial | Boolean values and schema-valued array item types are modeled |
 | `contentMediaType` | Draft 7 | ⚠️ Partial | Preserved as schema metadata |
 | `contentEncoding` | Draft 7 | ⚠️ Partial | Preserved as schema metadata |
 | `contentSchema` | 2019-09 | ⚠️ Partial | Preserved as schema metadata |

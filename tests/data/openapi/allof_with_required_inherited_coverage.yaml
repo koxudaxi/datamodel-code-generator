@@ -22,6 +22,11 @@ components:
             - type: integer
               multipleOf: 5
             - multipleOf: 10
+        decimal_multiple_field:
+          allOf:
+            - type: number
+              multipleOf: 0.2
+            - multipleOf: 0.3
 
     # For testing warning when $ref combined with primitives
     RefWithPrimitiveBase:
