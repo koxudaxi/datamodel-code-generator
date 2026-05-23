@@ -87,11 +87,13 @@ def type_map_factory(
     strict_types: Sequence[StrictTypes],
     pattern_key: str,
     use_pendulum: bool,  # noqa: FBT001
+    use_object_type: bool = False,  # noqa: FBT001, FBT002
 ) -> dict[Types, DataType]:
     """Create a mapping of schema types to Pydantic data types."""
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
     data_type_str = data_type(type="str")
+    object_data_type = data_type(type="object") if use_object_type else data_type.from_import(IMPORT_ANY)
     result = {
         Types.integer: data_type_int,
         Types.int32: data_type_int,
@@ -134,9 +136,9 @@ def type_map_factory(
         Types.ipv4_network: data_type.from_import(IMPORT_IPV4NETWORKS),
         Types.ipv6_network: data_type.from_import(IMPORT_IPV6NETWORKS),
         Types.boolean: data_type(type="bool"),
-        Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
+        Types.object: data_type(data_types=[object_data_type], is_dict=True),
         Types.null: data_type(type="None"),
-        Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
+        Types.array: data_type(data_types=[object_data_type], is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
     }
     if use_pendulum:
@@ -213,6 +215,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002, ARG002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         target_date_class: DateClassType | None = None,  # noqa: ARG002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -228,6 +231,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            use_object_type=use_object_type,
             target_datetime_class=target_datetime_class,
             treat_dot_as_module=treat_dot_as_module,
             use_serialize_as_any=use_serialize_as_any,
@@ -262,6 +266,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
         strict_types: Sequence[StrictTypes],
         pattern_key: str,
         target_datetime_class: DatetimeClassType | None,  # noqa: ARG002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
     ) -> dict[Types, DataType]:
         """Create type mapping with Pydantic specific types."""
         return type_map_factory(
@@ -269,6 +274,7 @@ class _PydanticDataTypeManager(_DataTypeManagerBase):
             strict_types,
             pattern_key,
             self.use_pendulum,
+            use_object_type,
         )
 
     def transform_kwargs(self, kwargs: dict[str, Any], filter_: set[str]) -> dict[str, str]:
@@ -456,6 +462,7 @@ class DataTypeManager(_PydanticDataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002, ARG002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         target_date_class: DateClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -472,6 +479,7 @@ class DataTypeManager(_PydanticDataTypeManager):
             use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            use_object_type=use_object_type,
             target_datetime_class=target_datetime_class,
             target_date_class=target_date_class,
             treat_dot_as_module=treat_dot_as_module,
@@ -508,6 +516,7 @@ class DataTypeManager(_PydanticDataTypeManager):
                 strict_types,
                 pattern_key,
                 target_datetime_class or DatetimeClassType.Datetime,
+                self.use_object_type,
             ),
             Types.hostname: self.data_type.from_import(
                 IMPORT_CONSTR,

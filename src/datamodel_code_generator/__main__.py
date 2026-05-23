@@ -517,6 +517,7 @@ class Config(BaseModel):  # noqa: PLR0904
     custom_formatters_kwargs: Optional[TextIOBase] = None  # noqa: UP045
     use_pendulum: bool = False
     use_standard_primitive_types: bool = False
+    use_object_type: bool = False
     http_query_parameters: Optional[Sequence[tuple[str, str]]] = None  # noqa: UP045
     treat_dot_as_module: Optional[bool] = None  # noqa: UP045
     use_exact_imports: bool = False
@@ -973,6 +974,7 @@ def run_generate_from_config(  # noqa: PLR0913, PLR0917
         custom_formatters_kwargs=custom_formatters_kwargs,
         use_pendulum=config.use_pendulum,
         use_standard_primitive_types=config.use_standard_primitive_types,
+        use_object_type=config.use_object_type,
         http_query_parameters=config.http_query_parameters,
         treat_dot_as_module=config.treat_dot_as_module,
         use_exact_imports=config.use_exact_imports,

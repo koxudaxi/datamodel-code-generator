@@ -976,6 +976,7 @@ class DataTypeManager(ABC):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002, ARG002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         target_date_class: DateClassType | None = None,
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -992,6 +993,7 @@ class DataTypeManager(ABC):
         self.use_decimal_for_multiple_of: bool = use_decimal_for_multiple_of
         self.use_union_operator: bool = use_union_operator
         self.use_pendulum: bool = use_pendulum
+        self.use_object_type: bool = use_object_type
         self.target_datetime_class: DatetimeClassType | None = target_datetime_class
         self.target_date_class: DateClassType | None = target_date_class
         self.treat_dot_as_module: bool = treat_dot_as_module or False

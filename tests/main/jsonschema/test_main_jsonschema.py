@@ -3440,6 +3440,24 @@ def test_jsonschema_use_title_as_name_nested_titles_pydantic(output_file: Path) 
     )
 
 
+def test_jsonschema_use_object_type_typed_dict(output_file: Path) -> None:
+    """Test using object instead of Any for unspecified object and array values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "use_object_type.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="use_object_type_typed_dict.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.11",
+            "--use-object-type",
+        ],
+    )
+
+
 def test_main_jsonschema_has_default_value(output_file: Path) -> None:
     """Test default value handling."""
     run_main_and_assert(

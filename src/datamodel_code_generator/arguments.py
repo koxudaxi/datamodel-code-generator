@@ -646,6 +646,12 @@ typing_options.add_argument(
     default=None,
 )
 typing_options.add_argument(
+    "--use-object-type",
+    help="Use object instead of Any for unspecified JSON Schema object and array values",
+    action="store_true",
+    default=None,
+)
+typing_options.add_argument(
     "--use-subclass-enum",
     help="Define generic Enum class as subclass with field type when enum has type (int, float, bytes, str)",
     action="store_true",

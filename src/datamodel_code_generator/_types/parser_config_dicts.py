@@ -142,6 +142,7 @@ class ParserConfigDict(TypedDict):
     custom_formatters_kwargs: NotRequired[dict[str, Any] | None]
     use_pendulum: NotRequired[bool]
     use_standard_primitive_types: NotRequired[bool]
+    use_object_type: NotRequired[bool]
     http_query_parameters: NotRequired[Sequence[tuple[str, str]] | None]
     treat_dot_as_module: NotRequired[bool | None]
     use_exact_imports: NotRequired[bool]
