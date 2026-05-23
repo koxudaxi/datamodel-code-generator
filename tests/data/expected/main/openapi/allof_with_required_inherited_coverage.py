@@ -166,5 +166,5 @@ class EdgeCasesCoverage(
     object_allof: dict[str, Any]
     large_union: Any
     nested_allof_ref: SimpleString
-    nested_indirect: Any
+    nested_indirect: SimpleString
     enum_field: Literal['a', 'b', 'c']

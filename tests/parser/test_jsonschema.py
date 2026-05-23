@@ -1580,15 +1580,3 @@ def test_parse_enum_as_literal_with_literal_and_complex_values() -> None:
     parser = JsonSchemaParser("")
     data_type = parser.parse_enum_as_literal(JsonSchemaObject.model_validate({"enum": ["x", {"a": 1}, None]}))
     assert data_type.type_hint == "Optional[Union[Literal['x'], Dict[str, int]]]"
-
-
-def test_parse_combined_schema_all_false() -> None:
-    """Test combined schemas that only contain false fall back to Any."""
-    parser = JsonSchemaParser("")
-    data_types = parser.parse_combined_schema(
-        "Model",
-        JsonSchemaObject.model_validate({"anyOf": [False]}),
-        ["#"],
-        "anyOf",
-    )
-    assert [data_type.type_hint for data_type in data_types] == ["Any"]

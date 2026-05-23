@@ -294,28 +294,10 @@ class DataModelFieldBase(_BaseModel):
             return False
         return self.data_type.use_union_operator
 
-    def _build_union_type_hint(self) -> str | None:
-        """Build Union[] type hint from data_type.data_types if forward reference requires it."""
-        if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
-            return None
-        parts = dict.fromkeys(dt.type_hint for dt in self.data_type.data_types if dt.type_hint).keys()
-        if len(parts) > 1:
-            return f"Union[{', '.join(parts)}]"
-        return None  # pragma: no cover
-
-    def _build_base_union_type_hint(self) -> str | None:  # pragma: no cover
-        """Build Union[] base type hint from data_type.data_types if forward reference requires it."""
-        if not (self._use_union_operator != self.data_type.use_union_operator and self.data_type.is_union):
-            return None
-        parts = dict.fromkeys(dt.base_type_hint for dt in self.data_type.data_types if dt.base_type_hint).keys()
-        if len(parts) > 1:
-            return f"Union[{', '.join(parts)}]"
-        return None
-
     @property
     def type_hint(self) -> str:  # noqa: PLR0911
         """Get the type hint string for this field, including nullability."""
-        type_hint = self._build_union_type_hint() or self.data_type.type_hint
+        type_hint = self.data_type.type_hint
 
         if not type_hint:
             return NONE
@@ -340,7 +322,7 @@ class DataModelFieldBase(_BaseModel):
         This returns the type without kwargs (e.g., 'str' instead of 'constr(pattern=...)').
         Used in RootModel generics when regex_engine config is needed for lookaround patterns.
         """
-        base_hint = self._build_base_union_type_hint() or self.data_type.base_type_hint
+        base_hint = self.data_type.base_type_hint
 
         if not base_hint:  # pragma: no cover
             return NONE

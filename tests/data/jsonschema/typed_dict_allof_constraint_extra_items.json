@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AllOfConstraintExtraItems",
+  "type": "object",
+  "$defs": {
+    "BaseExtra": {
+      "type": "string"
+    }
+  },
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": {
+    "allOf": [
+      {
+        "$ref": "#/$defs/BaseExtra"
+      },
+      {
+        "type": "string",
+        "minLength": 1
+      }
+    ]
+  }
+}

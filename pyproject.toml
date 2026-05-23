@@ -84,7 +84,11 @@ dev = [
   { include-group = "type" },
 ]
 test = [
+  "email-validator>=2.2",
+  "hypothesis>=6.136.6",
+  "hypothesis-jsonschema>=0.23.1",
   "inline-snapshot>=0.31.1",
+  "jsonschema>=4.24",
   "msgspec>=0.18",
   "pytest>=8.3.4",
   "pytest-cov>=5",
@@ -226,7 +230,7 @@ filterwarnings = [
   "ignore:^.*is empty or not a dict. Skipping this file.*:UserWarning",
   "ignore:^.*The default formatters.*:FutureWarning",
 ]
-norecursedirs = [ "tests/data/*", ".tox" ]
+norecursedirs = [ "tests/data/*", ".hypothesis", ".tox" ]
 verbosity_assertions = 2
 markers = [
   "perf: marks tests as performance tests (excluded from CI benchmarks)",
@@ -250,7 +254,13 @@ paths.other = [
   "*\\datamodel-code-generator",
 ]
 run.dynamic_context = "none"
-run.omit = [ "tests/data/*", "tests/main/test_performance.py", "*/_types/*", "tests/cli_doc/*" ]
+run.omit = [
+  "*/_types/*",
+  "tests/cli_doc/*",
+  "tests/data/*",
+  "tests/main/payload_validation/*",
+  "tests/main/test_performance.py",
+]
 report.fail_under = 0
 run.parallel = true
 run.plugins = [

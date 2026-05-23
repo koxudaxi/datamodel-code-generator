@@ -99,6 +99,29 @@ class B(BaseModel):
     monkeypatch.syspath_prepend(str(base_dir))
 
 
+def _run_jsonschema_dict(
+    schema: dict[str, object],
+    output_file: Path,
+    *,
+    expected_exit: Exit = Exit.OK,
+    expected_output: str | None = None,
+    extra_args: list[str] | None = None,
+    force_exec_validation: bool = False,
+) -> None:
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(json.dumps(schema), encoding="utf-8")
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=expected_exit,
+        expected_output=expected_output,
+        extra_args=["--disable-timestamp", *(extra_args or [])],
+        ignore_whitespace=expected_output is not None,
+        force_exec_validation=force_exec_validation,
+    )
+
+
 @pytest.mark.benchmark
 def test_main_inheritance_forward_ref(output_file: Path, tmp_path: Path) -> None:
     """Test inheritance with forward references."""
@@ -2498,13 +2521,25 @@ def test_main_hostname_root_type_pydantic_v2(output_file: Path) -> None:
 
 
 def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
-    """Test hostname format with multiple types uses Field(pattern=) with --field-constraints."""
+    """Test hostname format with multiple types constrains only the string branch."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "hostname_multiple_types.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="hostname_multiple_types_pydantic_v2.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
+def test_main_root_multiple_primitive_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test root constraints are skipped when multiple primitive types are allowed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_multiple_primitive_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_multiple_primitive_constraints.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
     )
 
@@ -3822,6 +3857,124 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "schema",
+    [
+        pytest.param({"title": "Payload", "anyOf": [False, False]}, id="anyof-only-false"),
+        pytest.param(
+            {
+                "title": "Payload",
+                "allOf": [False, {"type": "object", "properties": {"name": {"type": "string"}}}],
+            },
+            id="allof-direct-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "$defs": {
+                    "A": {"type": "object", "properties": {"id": {"type": "string"}}},
+                    "B": {"type": "object", "properties": {"id": {"type": "integer"}}},
+                },
+                "allOf": [{"$ref": "#/$defs/A"}, {"$ref": "#/$defs/B"}, False],
+            },
+            id="merged-allof-direct-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "$defs": {
+                    "A": {"type": "object", "properties": {"id": {"type": "string"}}},
+                    "Never": False,
+                },
+                "allOf": [{"$ref": "#/$defs/A"}, {"$ref": "#/$defs/Never"}],
+            },
+            id="merged-allof-ref-false",
+        ),
+        pytest.param(
+            {"title": "Payload", "$defs": {"Never": False}, "allOf": [{"$ref": "#/$defs/Never"}]},
+            id="single-allof-ref-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "$defs": {"Never": False},
+                "allOf": [{"$ref": "#/$defs/Never"}, {"type": "object", "properties": {"name": {"type": "string"}}}],
+            },
+            id="allof-item-ref-false",
+        ),
+        pytest.param({"title": "Payload", "allOf": [{"allOf": [False]}]}, id="nested-allof-direct-false"),
+        pytest.param(
+            {"title": "Payload", "type": "object", "properties": {"value": {"allOf": [False]}}},
+            id="property-allof-direct-false",
+        ),
+    ],
+)
+def test_main_jsonschema_false_schema_errors(schema: dict[str, object], output_file: Path) -> None:
+    """Test boolean false branches are rejected whenever they make a schema unsatisfiable."""
+    _run_jsonschema_dict(
+        schema,
+        output_file,
+        expected_exit=Exit.ERROR,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_anyof_ref_false_schema(output_file: Path) -> None:
+    """Test anyOf skips local $ref branches that resolve to boolean false schemas."""
+    expected = (
+        "# generated by datamodel-codegen:\n"
+        "#   filename:  output.json\n\n"
+        "from __future__ import annotations\n\n"
+        "from typing import Any\n\n"
+        "from pydantic import Field, RootModel\n\n\n"
+        "class Payload(RootModel[str]):\n"
+        "    root: str = Field(..., title='Payload')\n\n\n"
+        "class Never(RootModel[Any]):\n"
+        "    root: Any\n"
+    )
+    _run_jsonschema_dict(
+        {
+            "title": "Payload",
+            "$defs": {"Never": False},
+            "anyOf": [{"$ref": "#/$defs/Never"}, {"type": "string"}],
+        },
+        output_file,
+        expected_output=expected,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_empty_anyof_uses_any(output_file: Path) -> None:
+    """Test empty anyOf remains an unconstrained root type."""
+    expected = (
+        "# generated by datamodel-codegen:\n"
+        "#   filename:  output.json\n\n"
+        "from __future__ import annotations\n\n"
+        "from typing import Any\n\n"
+        "from pydantic import Field, RootModel\n\n\n"
+        "class Payload(RootModel[Any]):\n"
+        "    root: Any = Field(..., title='Payload')\n"
+    )
+    _run_jsonschema_dict(
+        {"title": "Payload", "anyOf": []},
+        output_file,
+        expected_output=expected,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_discriminated_oneof_allof_cycle_use_union_operator(output_file: Path) -> None:
+    """Test forward refs in RootModel unions fall back to Union[] when PEP 604 would fail."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "jsonschema_discriminated_oneof_allof_cycle.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="jsonschema_discriminated_oneof_allof_cycle.py",
+        extra_args=["--use-union-operator"],
+    )
+
+
 def test_main_jsonschema_oneof_with_true_schema(output_file: Path) -> None:
     """Test a single true schema inside oneOf is accepted as an unconstrained branch."""
     run_main_and_assert(
@@ -5052,6 +5205,123 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="typed_dict_extra_items.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_allof_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items can infer an allOf reference type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_allof_extra_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_allof_extra_items.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_allof_constraint_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items warns when allOf constraints are ignored."""
+    with pytest.warns(UserWarning, match=r"allOf combines \$ref with 1 constraint"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_allof_constraint_extra_items.json",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file="typed_dict_allof_constraint_extra_items.py",
+            extra_args=[
+                "--output-model-type",
+                "typing.TypedDict",
+                "--target-python-version",
+                "3.10",
+            ],
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_nested_allof_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items keeps dependencies from nested allOf refs."""
+    expected = (
+        "# generated by datamodel-codegen:\n"
+        "#   filename:  output.json\n\n"
+        "from __future__ import annotations\n\n"
+        "from typing_extensions import NotRequired, TypedDict\n\n\n"
+        "class BaseExtra(TypedDict):\n"
+        "    id: NotRequired[int]\n\n\n"
+        "class Payload(TypedDict, extra_items=BaseExtra):\n"
+        "    name: NotRequired[str]\n"
+    )
+    _run_jsonschema_dict(
+        {
+            "title": "Payload",
+            "type": "object",
+            "$defs": {
+                "BaseExtra": {
+                    "type": "object",
+                    "properties": {"id": {"type": "integer"}},
+                },
+            },
+            "properties": {"name": {"type": "string"}},
+            "additionalProperties": {
+                "allOf": [
+                    {
+                        "allOf": [
+                            {"$ref": "#/$defs/BaseExtra"},
+                        ],
+                    },
+                    {
+                        "allOf": [
+                            {"$ref": "#/$defs/BaseExtra"},
+                        ],
+                    },
+                ],
+            },
+        },
+        output_file,
+        expected_output=expected,
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_false_allof_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items ignores unsatisfiable allOf schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_false_allof_extra_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_false_allof_extra_items.py",
         extra_args=[
             "--output-model-type",
             "typing.TypedDict",

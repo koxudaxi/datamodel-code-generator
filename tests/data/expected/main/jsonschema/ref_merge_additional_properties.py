@@ -13,8 +13,8 @@ class ConstrainedString(RootModel[str]):
     root: Annotated[str, Field(max_length=100, min_length=1)]
 
 
-class DictModel(RootModel[Literal['fixed']]):
-    root: Annotated[Literal['fixed'], Field(max_length=100, min_length=1)]
+class DictModel(RootModel[dict[str, Literal['fixed']]]):
+    root: dict[str, Literal['fixed']]
 
 
 class Model(BaseModel):

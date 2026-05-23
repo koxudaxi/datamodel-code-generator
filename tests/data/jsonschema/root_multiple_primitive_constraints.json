@@ -1,0 +1,10 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PrimitiveUnionConstraints",
+  "type": [
+    "string",
+    "integer"
+  ],
+  "minLength": 1,
+  "minimum": 0
+}
