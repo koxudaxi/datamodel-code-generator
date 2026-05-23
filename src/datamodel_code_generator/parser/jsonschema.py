@@ -2738,8 +2738,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         resolved_items: list[JsonSchemaObject] = []
         property_signatures: dict[str, set[str | bool]] = {}
         for item in obj.allOf:
-            if self._is_false_schema_item(item):
-                self._raise_unsatisfiable_schema([], "allOf")
             if not isinstance(item, JsonSchemaObject):  # pragma: no cover
                 continue
             resolved_item = self._load_ref_schema_object(item.ref) if item.ref else item
@@ -2763,7 +2761,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("allOf", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def parse_combined_schema(  # noqa: PLR0912
+    def parse_combined_schema(
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -2774,10 +2772,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         base_object = obj.model_dump(exclude={target_attribute_name, "title"}, exclude_unset=True, by_alias=True)
         combined_schemas: list[JsonSchemaObject] = []
         refs = []
-        has_false_branch = False
         for index, target_attribute in enumerate(getattr(obj, target_attribute_name, [])):
             if self._is_false_schema_item(target_attribute):
-                has_false_branch = True
                 continue
             if target_attribute is True:
                 combined_schemas.append(self.SCHEMA_OBJECT_TYPE.model_validate(base_object))
@@ -2786,7 +2782,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if target_attribute.ref_type == JSONReference.LOCAL:
                     ref_schema = self._load_ref_schema_object(target_attribute.ref)
                     if ref_schema.is_boolean_schema_false:
-                        has_false_branch = True
                         continue
                 if target_attribute.has_ref_with_schema_keywords and not target_attribute.is_ref_with_nullable_only:
                     merged_attr = self._merge_ref_with_schema(target_attribute)
@@ -2822,9 +2817,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             singular_name=False,
         )
         if not parsed_schemas:
-            if has_false_branch:
-                self._raise_unsatisfiable_schema(path, target_attribute_name)
-            return [self.data_type_manager.get_data_type(Types.any)]
+            self._raise_unsatisfiable_schema(path, target_attribute_name)
         common_path_keyword = f"{target_attribute_name}Common"
         return [
             self._parse_object_common_part(

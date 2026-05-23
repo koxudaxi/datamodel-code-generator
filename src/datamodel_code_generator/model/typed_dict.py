@@ -153,13 +153,6 @@ class TypedDict(DataModel):
         return tuple(base_imports)
 
     @property
-    def reference_classes(self) -> frozenset[str]:
-        """Get class references used by fields and TypedDict class keyword arguments."""
-        return super().reference_classes | frozenset(
-            self.extra_template_data.get("additionalPropertiesReferenceClasses", ())
-        )
-
-    @property
     def is_functional_syntax(self) -> bool:
         """Check if TypedDict requires functional syntax."""
         return any(not _is_valid_field_name(f) for f in self.fields)
