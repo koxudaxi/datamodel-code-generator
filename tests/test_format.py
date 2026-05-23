@@ -233,6 +233,188 @@ def test_format_code_builtin_formatter_wraps_long_imports(tmp_path: Path, monkey
     )
 
 
+def test_format_code_builtin_formatter_preserves_commented_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter keeps import comments attached to their import line."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from pydantic import Field, BaseModel  # noqa: F401\n"
+        "import sys\n"
+        "from __future__ import annotations\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    name: str\n"
+    )
+
+    assert (
+        formatted_code == "from __future__ import annotations\n"
+        "\n"
+        "import sys\n"
+        "\n"
+        "from pydantic import Field, BaseModel  # noqa: F401\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    name: str\n"
+    )
+
+
+def test_format_code_builtin_formatter_sorts_type_checking_imports(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter sorts imports inside a generated TYPE_CHECKING block."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import TYPE_CHECKING\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    from .models import Zebra, Antelope\n"
+        "    import os\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Antelope\n"
+    )
+
+    assert (
+        formatted_code == "from typing import TYPE_CHECKING\n"
+        "\n"
+        "from pydantic import BaseModel\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    import os\n"
+        "\n"
+        "    from .models import Antelope, Zebra\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Antelope\n"
+    )
+
+
+def test_format_code_builtin_formatter_wraps_generated_model_statements(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test built-in formatter wraps generated model statements that Black would split."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from typing import Annotated\n"
+        "from pydantic import BaseModel, ConfigDict, Field\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    model_config = ConfigDict(extra='forbid', populate_by_name=True, json_schema_extra={'x-one': 'two'})\n"
+        "    name: str = Field(None, examples=['dog', 'cat'], description='description', "
+        "title='Long Title That makes it exceed line length maybe')\n"
+        "    pet: Annotated[VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength, "
+        "Field(description='x', title='y')]\n"
+    )
+
+    assert (
+        formatted_code == "from typing import Annotated\n"
+        "\n"
+        "from pydantic import BaseModel, ConfigDict, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    model_config = ConfigDict(\n"
+        "        extra='forbid', populate_by_name=True, json_schema_extra={'x-one': 'two'}\n"
+        "    )\n"
+        "    name: str = Field(\n"
+        "        None,\n"
+        "        examples=['dog', 'cat'],\n"
+        "        description='description',\n"
+        "        title='Long Title That makes it exceed line length maybe',\n"
+        "    )\n"
+        "    pet: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheDefaultLineLength,\n"
+        "        Field(description='x', title='y'),\n"
+        "    ]\n"
+    )
+
+
+def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Test less common generated model formatting branches."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+        builtin_format_line_length=72,
+    )
+
+    formatted_code = formatter.format_code(
+        "import sys  # noqa: F401\n"
+        "from typing import TYPE_CHECKING\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    VALUE = 1\n"
+        "\n"
+        "class Model:\n"
+        "    model_config_with_an_extremely_long_name_to_force_formatting = ConfigDict()\n"
+        "    model_config = ConfigDict(**CONFIG_WITH_A_LONG_NAME_TO_FORCE_FORMATTING)\n"
+        "    alias: str = pydantic.Field(None, description='uses attribute field call')\n"
+        "    plain_value = 'this line is long enough to be inspected but is not a generated formatter target'\n"
+        "    existing: str = Field(\n"
+        "        None,\n"
+        "        description='already wrapped',\n"
+        "    )\n"
+        "    metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength]\n"
+        "    defaulted_metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
+        "Field(description='kept as-is because it already has a default')] = None\n"
+        "    nested: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
+        "Field(description='This nested field is long enough to wrap inside Annotated')]\n"
+    )
+
+    assert (
+        formatted_code == "from typing import TYPE_CHECKING\n"
+        "import sys  # noqa: F401\n"
+        "\n"
+        "if TYPE_CHECKING:\n"
+        "    VALUE = 1\n"
+        "\n"
+        "class Model:\n"
+        "    model_config_with_an_extremely_long_name_to_force_formatting = ConfigDict()\n"
+        "    model_config = ConfigDict(\n"
+        "        **CONFIG_WITH_A_LONG_NAME_TO_FORCE_FORMATTING\n"
+        "    )\n"
+        "    alias: str = pydantic.Field(\n"
+        "        None, description='uses attribute field call'\n"
+        "    )\n"
+        "    plain_value = 'this line is long enough to be inspected but is not a generated formatter target'\n"
+        "    existing: str = Field(\n"
+        "        None,\n"
+        "        description='already wrapped',\n"
+        "    )\n"
+        "    metadata: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "    ]\n"
+        "    defaulted_metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
+        "Field(description='kept as-is because it already has a default')] = None\n"
+        "    nested: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "        Field(\n"
+        "            description='This nested field is long enough to wrap inside Annotated',\n"
+        "        ),\n"
+        "    ]\n"
+    )
+
+
 @pytest.mark.parametrize(
     ("code", "expected_code"),
     [

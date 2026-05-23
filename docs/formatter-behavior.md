@@ -42,24 +42,28 @@ It covers the generated-code patterns that matter for model modules:
 - Groups imports in this order: `__future__`, standard library, third-party, relative imports.
 - Sorts `from ... import ...` names and merges imports from the same module.
 - Wraps long `from ... import ...` statements with parentheses when they exceed the configured line length.
+- Leaves commented import lines in place instead of dropping comments while sorting imports.
+- Sorts imports inside a top-level `if TYPE_CHECKING:` block when that block contains only imports.
 - Keeps two blank lines before a top-level `class`, `def`, or `async def` after the import block.
+- Wraps generated model statements for common long `Field(...)`, `Annotated[...]`, and `ConfigDict(...)` lines.
 
 If the generated code cannot be parsed as Python, the built-in formatter only applies whitespace cleanup and returns the code.
 
 The built-in formatter does not currently format:
 
-- Expressions inside classes or functions.
-- `Field(...)`, `Annotated[...]`, list, dict, tuple, or call argument layout.
+- General expressions inside classes or functions.
+- List, dict, tuple, or arbitrary call argument layout outside the generated model patterns listed above.
 - Quote style.
 - String wrapping.
-- Comments.
+- Comment placement beyond preserving commented import lines.
 - Import section rules beyond the simple groups listed above.
 
 For exact Black, isort, or Ruff behavior, continue to pass those formatters explicitly.
 
 ## Line length
 
-The built-in formatter uses line length only for wrapping `from ... import ...` statements.
+The built-in formatter uses line length for wrapping `from ... import ...` statements and the generated model
+statements listed above.
 
 Set it in `pyproject.toml`:
 
