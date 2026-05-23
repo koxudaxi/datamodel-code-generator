@@ -134,6 +134,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--use-generic-container-types": "Use generic container types (Sequence, Mapping) for type hinting.",
     "--use-inline-field-description": "Add field descriptions as inline comments.",
     "--use-non-positive-negative-number-constrained-types": "Use NonPositive/NonNegative types for number constraints.",
+    "--use-object-type": "Use object instead of Any for unspecified object and array values.",
     "--use-one-literal-as-default": "Use single literal value as default when enum has only one option.",
     "--use-operation-id-as-name": "Use OpenAPI operationId as the generated function/class name.",
     "--use-pendulum": "Use pendulum types for date, time, and duration fields.",

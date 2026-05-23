@@ -4000,7 +4000,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 singular_name=singular_name,
             )
         else:
-            item_data_types = [self.data_type_manager.get_data_type(Types.any)]
+            item_data_types = [
+                self.data_type_manager.data_type(type="object")
+                if self.data_type_manager.use_object_type
+                else self.data_type_manager.get_data_type(Types.any)
+            ]
 
         python_type_flags = self._get_python_type_flags(obj)
         container_flags: dict[str, bool] = {}

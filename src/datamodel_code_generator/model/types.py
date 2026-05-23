@@ -34,11 +34,12 @@ HOSTNAME_REGEX = (
 )
 
 
-def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
+def type_map_factory(data_type: type[DataType], *, use_object_type: bool = False) -> dict[Types, DataType]:
     """Create type mapping for common schema types to Python types."""
     data_type_int = data_type(type="int")
     data_type_float = data_type(type="float")
     data_type_str = data_type(type="str")
+    object_data_type = data_type(type="object") if use_object_type else data_type.from_import(IMPORT_ANY)
     return {
         # TODO: Should we support a special type such UUID?
         Types.integer: data_type_int,
@@ -74,9 +75,9 @@ def type_map_factory(data_type: type[DataType]) -> dict[Types, DataType]:
         Types.ipv6_network: data_type_str,
         Types.path: data_type_str,
         Types.boolean: data_type(type="bool"),
-        Types.object: data_type.from_import(IMPORT_ANY, is_dict=True),
+        Types.object: data_type(data_types=[object_data_type], is_dict=True),
         Types.null: data_type(type="None"),
-        Types.array: data_type.from_import(IMPORT_ANY, is_list=True),
+        Types.array: data_type(data_types=[object_data_type], is_list=True),
         Types.any: data_type.from_import(IMPORT_ANY),
     }
 
@@ -119,6 +120,7 @@ class DataTypeManager(_DataTypeManager):
         use_union_operator: bool = False,  # noqa: FBT001, FBT002
         use_pendulum: bool = False,  # noqa: FBT001, FBT002
         use_standard_primitive_types: bool = False,  # noqa: FBT001, FBT002
+        use_object_type: bool = False,  # noqa: FBT001, FBT002
         target_datetime_class: DatetimeClassType | None = None,
         target_date_class: DateClassType | None = None,  # noqa: ARG002
         treat_dot_as_module: bool | None = None,  # noqa: FBT001
@@ -134,6 +136,7 @@ class DataTypeManager(_DataTypeManager):
             use_decimal_for_multiple_of=use_decimal_for_multiple_of,
             use_union_operator=use_union_operator,
             use_pendulum=use_pendulum,
+            use_object_type=use_object_type,
             target_datetime_class=target_datetime_class,
             treat_dot_as_module=treat_dot_as_module,
             use_serialize_as_any=use_serialize_as_any,
@@ -155,7 +158,7 @@ class DataTypeManager(_DataTypeManager):
         )
 
         self.type_map: dict[Types, DataType] = {
-            **type_map_factory(self.data_type),
+            **type_map_factory(self.data_type, use_object_type=use_object_type),
             **datetime_map,
             **standard_primitive_map,
         }
