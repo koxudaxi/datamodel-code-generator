@@ -13,8 +13,12 @@ class ConstraintOnlyBase(BaseModel):
     field_with_constraints: Any | None = None
 
 
+class MultipleField(BaseModel):
+    pass
+
+
 class MultipleOfBase(BaseModel):
-    multiple_field: conint(multiple_of=5) | None = None
+    multiple_field: MultipleField | None = None
 
 
 class SimpleString(RootModel[str]):
@@ -107,12 +111,28 @@ class NestedAllOfRef(BaseModel):
     nested_allof_ref: SimpleString | None = None
 
 
+class NestedIndirect1(BaseModel):
+    pass
+
+
+class NestedIndirect2(NestedIndirect1):
+    pass
+
+
+class NestedIndirect(RootModel[NestedIndirect2]):
+    root: NestedIndirect2
+
+
 class NestedAllOfWithoutDirectRef(BaseModel):
-    nested_indirect: SimpleString | None = None
+    nested_indirect: NestedIndirect | None = None
+
+
+class EnumField(BaseModel):
+    pass
 
 
 class EnumInAllOf(BaseModel):
-    enum_field: Literal['a', 'b', 'c'] | None = None
+    enum_field: EnumField | None = None
 
 
 class RefWithPrimitiveBase(BaseModel):

@@ -75,6 +75,29 @@ Future work:
   change that is correct for Pydantic may not be correct for dataclasses,
   TypedDict, msgspec, or other output types.
 
+## Compatibility-Sensitive Generator Gaps
+
+The following cases produce schema-valid payloads that the generated Pydantic v2
+model does not accept, but fixing them changes existing default output shapes:
+
+- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.EnumInAllOf`
+- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase`
+
+For these OpenAPI `allOf` primitive cases, payloads such as `"a"` or `0` are valid
+for the source schema. The current class-oriented output can emit an intermediate
+model for the property-level `allOf`, so Pydantic expects a dictionary/object
+instead of the primitive value.
+
+Future work:
+
+- Fix these only with focused generator changes and expected-output updates that
+  document the compatibility impact.
+- Preserve existing default output where possible. If preserving it is not
+  possible, consider a schema-faithful or strict-validation mode before changing
+  default behavior.
+- Add payload-validation coverage for each case at the same time the generator
+  behavior is changed, then remove the corresponding `_EXCLUDED_CASES` entry.
+
 ## Top-Level Nullable Object Components
 
 The following case is excluded:

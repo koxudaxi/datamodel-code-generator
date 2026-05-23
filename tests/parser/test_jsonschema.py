@@ -11,7 +11,7 @@ import pydantic
 import pytest
 import yaml
 
-from datamodel_code_generator import AllOfMergeMode, Error
+from datamodel_code_generator import AllOfMergeMode, Error, SchemaParseError
 from datamodel_code_generator.imports import Import
 from datamodel_code_generator.model import DataModelFieldBase
 from datamodel_code_generator.model.dataclass import DataClass
@@ -1583,12 +1583,12 @@ def test_parse_enum_as_literal_with_literal_and_complex_values() -> None:
 
 
 def test_parse_combined_schema_all_false() -> None:
-    """Test combined schemas that only contain false fall back to Any."""
+    """Test combined schemas that only contain false are rejected."""
     parser = JsonSchemaParser("")
-    data_types = parser.parse_combined_schema(
-        "Model",
-        JsonSchemaObject.model_validate({"anyOf": [False]}),
-        ["#"],
-        "anyOf",
-    )
-    assert [data_type.type_hint for data_type in data_types] == ["Any"]
+    with pytest.raises(SchemaParseError):
+        parser.parse_combined_schema(
+            "Model",
+            JsonSchemaObject.model_validate({"anyOf": [False]}),
+            ["#"],
+            "anyOf",
+        )

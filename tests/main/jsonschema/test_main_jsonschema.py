@@ -3822,6 +3822,41 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_anyof_only_false_schema_errors(output_file: Path) -> None:
+    """Test anyOf with only false schemas is rejected instead of widened to Any."""
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(
+        json.dumps({"title": "Payload", "anyOf": [False, False]}),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_jsonschema_allof_with_false_schema_errors(output_file: Path) -> None:
+    """Test allOf with false schema is rejected instead of dropping the false branch."""
+    input_file = output_file.with_suffix(".json")
+    input_file.write_text(
+        json.dumps({
+            "title": "Payload",
+            "allOf": [False, {"type": "object", "properties": {"name": {"type": "string"}}}],
+        }),
+        encoding="utf-8",
+    )
+    run_main_and_assert(
+        input_path=input_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        expected_exit=Exit.ERROR,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
 def test_main_jsonschema_oneof_with_true_schema(output_file: Path) -> None:
     """Test a single true schema inside oneOf is accepted as an unconstrained branch."""
     run_main_and_assert(
