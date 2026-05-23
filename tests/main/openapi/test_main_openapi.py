@@ -331,6 +331,28 @@ def test_main_openapi_discriminator_enum_single_value_anyof_use_enum(output_file
     )
 
 
+def test_main_openapi_discriminator_enum_single_value_msgspec(output_file: Path) -> None:
+    """Single-value enum discriminator is used as the msgspec tag."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_enum_single_value_msgspec.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "enum_single_value_msgspec.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "msgspec.Struct",
+            "--enum-field-as-literal",
+            "all",
+            "--use-one-literal-as-default",
+            "--disable-warnings",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_openapi_discriminator_with_properties(output_file: Path) -> None:
     """Test OpenAPI generation with discriminator properties."""
     run_main_and_assert(

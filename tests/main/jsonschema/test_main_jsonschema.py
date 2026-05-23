@@ -4985,6 +4985,23 @@ def test_main_all_of_one_of(output_dir: Path) -> None:
     )
 
 
+def test_main_top_level_allof_oneof(output_dir: Path) -> None:
+    """Test top-level oneOf is preserved when sibling allOf is present."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "top_level_allof_oneof",
+        output_path=output_dir,
+        expected_directory=EXPECTED_JSON_SCHEMA_PATH / "top_level_allof_oneof",
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--target-python-version",
+            "3.10",
+        ],
+        force_exec_validation=True,
+    )
+
+
 def test_main_null(output_file: Path) -> None:
     """Test null type handling."""
     run_main_and_assert(

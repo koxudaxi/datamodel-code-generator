@@ -4924,6 +4924,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         if obj.is_array:
             self.parse_array(name, obj, path)
+        elif obj.allOf and (obj.oneOf or obj.anyOf):
+            self.parse_root_type(name, obj, path)
         elif obj.allOf:
             self.parse_all_of(name, obj, path)
         elif obj.oneOf or obj.anyOf:
