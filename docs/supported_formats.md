@@ -156,12 +156,23 @@ The following features are tracked in the codebase with their implementation sta
 | string | time | `time` |
 | string | duration | `timedelta` |
 | string | email | `EmailStr` |
+| string | idn-email | `EmailStr` |
+| string | idn-hostname | `str` |
 | string | uri | `AnyUrl` |
+| string | uri-reference | `str` |
+| string | uri-template | `str` |
+| string | iri | `str` |
+| string | iri-reference | `str` |
 | string | uuid | `UUID` |
 | string | byte | `bytes` (base64) |
 | string | ipv4 | `IPv4Address` |
+| string | ipv4-network | `IPv4Network` |
 | string | ipv6 | `IPv6Address` |
+| string | ipv6-network | `IPv6Network` |
 | string | hostname | `str` |
+| string | json-pointer | `str` |
+| string | relative-json-pointer | `str` |
+| string | regex | `str` |
 
 ### OpenAPI-Only Formats
 
