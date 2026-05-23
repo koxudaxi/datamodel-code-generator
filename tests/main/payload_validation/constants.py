@@ -103,14 +103,6 @@ EXCLUDED_CASES: dict[str, str] = {
     "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.EdgeCasesCoverage": (
         "hypothesis-jsonschema generates this inherited allOf coverage schema inconsistently"
     ),
-    "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.EnumInAllOf": (
-        "primitive enum allOf fields need a compatibility-sensitive generator fix; "
-        "see payload_validation_future_work.md"
-    ),
-    "openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase": (
-        "primitive multipleOf allOf fields need a compatibility-sensitive generator fix; "
-        "see payload_validation_future_work.md"
-    ),
     "openapi/allof_with_required_inherited_edge_cases.yaml::components.schemas.EdgeCases": (
         "hypothesis-jsonschema generates this inherited allOf edge-case schema inconsistently"
     ),

@@ -1,9 +1,10 @@
 # Schema-Derived Payload Validation Future Work
 
 This file tracks schemas that the payload-validation e2e test intentionally does not
-run yet. These cases are not simple fixture omissions. They need either better
-payload generation, an explicit backend compatibility policy, or a careful
-generator change that avoids surprising existing users.
+run yet, plus compatibility-sensitive generator gaps identified by that coverage.
+These cases are not simple fixture omissions. They need either better payload
+generation, an explicit backend compatibility policy, or a careful generator
+change that avoids surprising existing users.
 
 ## Payload Generator Limitations
 
@@ -33,6 +34,33 @@ Future work:
   source-schema validation step.
 - Re-enable excluded cases one by one when deterministic valid payload generation
   is available.
+
+## Compatibility-Sensitive Generator Gaps
+
+The following cases used to produce schema-valid payloads that the generated
+Pydantic v2 model did not accept, but fixing them changes existing default
+output shapes:
+
+- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.EnumInAllOf`
+- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase`
+
+For these OpenAPI `allOf` primitive cases, payloads such as `"a"` or `0` are valid
+for the source schema. The previous class-oriented output emitted an intermediate
+model for the property-level `allOf`, so Pydantic expected a dictionary/object
+instead of the primitive value.
+
+Status:
+
+- Fixed by a focused generator change that keeps the intermediate model names
+  but emits RootModel wrappers around the schema-faithful primitive/constrained
+  payload type.
+- Updated expected outputs document the remaining compatibility impact.
+- Payload-validation e2e coverage is enabled for both cases, and the
+  corresponding `_EXCLUDED_CASES` entries were removed.
+
+This intentionally avoids deleting the intermediate models in the default
+output while fixing the payload shape, and it does not introduce a new runtime
+validation mechanism.
 
 ## OpenAPI Discriminator Compatibility Policy
 
@@ -74,29 +102,6 @@ Future work:
 - Add backend-specific tests when enabling any excluded discriminator case. A
   change that is correct for Pydantic may not be correct for dataclasses,
   TypedDict, msgspec, or other output types.
-
-## Compatibility-Sensitive Generator Gaps
-
-The following cases produce schema-valid payloads that the generated Pydantic v2
-model does not accept, but fixing them changes existing default output shapes:
-
-- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.EnumInAllOf`
-- `openapi/allof_with_required_inherited_coverage.yaml::components.schemas.MultipleOfBase`
-
-For these OpenAPI `allOf` primitive cases, payloads such as `"a"` or `0` are valid
-for the source schema. The current class-oriented output can emit an intermediate
-model for the property-level `allOf`, so Pydantic expects a dictionary/object
-instead of the primitive value.
-
-Future work:
-
-- Fix these only with focused generator changes and expected-output updates that
-  document the compatibility impact.
-- Preserve existing default output where possible. If preserving it is not
-  possible, consider a schema-faithful or strict-validation mode before changing
-  default behavior.
-- Add payload-validation coverage for each case at the same time the generator
-  behavior is changed, then remove the corresponding `_EXCLUDED_CASES` entry.
 
 ## Top-Level Nullable Object Components
 

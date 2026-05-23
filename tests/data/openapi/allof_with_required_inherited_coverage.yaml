@@ -45,6 +45,21 @@ components:
             - $ref: '#/components/schemas/SimpleString'
             - type: integer
 
+    # For testing nested combinator $ref cycle detection
+    CyclicAliasA:
+      $ref: '#/components/schemas/CyclicAliasB'
+
+    CyclicAliasB:
+      $ref: '#/components/schemas/CyclicAliasA'
+
+    NestedCombinatorWithCyclicRef:
+      type: object
+      properties:
+        cyclic_nested:
+          allOf:
+            - anyOf:
+                - $ref: '#/components/schemas/CyclicAliasA'
+
     # For testing array items falling back to Any
     DeepNestedArray:
       type: object
@@ -187,6 +202,71 @@ components:
           allOf:
             - enum: ["a", "b", "c"]
             - description: "enum with description"
+
+    # For testing parent object fields are preserved with metadata-only allOf
+    ObjectWithMetadataAllOf:
+      type: object
+      allOf:
+        - description: "metadata-only allOf member"
+      properties:
+        kept_field:
+          type: string
+
+    # For testing model-shaped schemas nested inside allOf combinators
+    NestedCombinatorObjectAllOf:
+      type: object
+      properties:
+        nested_object:
+          allOf:
+            - anyOf:
+                - type: object
+                  properties:
+                    label:
+                      type: string
+
+    # For testing model-shaped schemas nested inside nested allOf combinators
+    NestedAllOfObjectAllOf:
+      type: object
+      properties:
+        nested_allof_object:
+          allOf:
+            - allOf:
+                - type: object
+                  properties:
+                    label:
+                      type: string
+
+    # For testing model-shaped schemas nested inside oneOf combinators
+    NestedOneOfObjectAllOf:
+      type: object
+      properties:
+        nested_oneof_object:
+          allOf:
+            - oneOf:
+                - type: object
+                  properties:
+                    label:
+                      type: string
+
+    # For testing boolean true allOf items are skipped as neutral schemas
+    TrueOnlyAllOf:
+      type: object
+      properties:
+        true_only:
+          allOf:
+            - true
+            - true
+
+    # For testing parent primitive constraints are preserved with allOf members
+    ParentConstrainedAllOf:
+      type: object
+      properties:
+        parent_constrained:
+          type: string
+          minLength: 2
+          allOf:
+            - type: string
+              maxLength: 5
 
     # Main test schema that inherits all edge cases
     EdgeCasesCoverage:

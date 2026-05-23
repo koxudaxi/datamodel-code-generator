@@ -2343,12 +2343,17 @@ def test_main_openapi_allof_with_required_inherited_complex_allof(output_file: P
 
 def test_main_openapi_allof_with_required_inherited_comprehensive(output_file: Path) -> None:
     """Test OpenAPI generation with allOf covering all type inheritance scenarios."""
+    expected_file = (
+        "allof_with_required_inherited_comprehensive_black_lt_24.py"
+        if version.parse(black.__version__) < version.parse("24.0.0")
+        else "allof_with_required_inherited_comprehensive.py"
+    )
     run_main_and_assert(
         input_path=OPEN_API_DATA_PATH / "allof_with_required_inherited_comprehensive.yaml",
         output_path=output_file,
         input_file_type="openapi",
         assert_func=assert_file_content,
-        expected_file="allof_with_required_inherited_comprehensive.py",
+        expected_file=expected_file,
     )
 
 

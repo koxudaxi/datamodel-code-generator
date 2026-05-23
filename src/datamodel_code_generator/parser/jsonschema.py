@@ -2290,6 +2290,87 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _contains_false_schema(self, items: Iterable[JsonSchemaObject | bool]) -> bool:
         return any(self._is_false_schema_item(item) for item in items)
 
+    def _schema_requires_model_type(
+        self,
+        item: JsonSchemaObject,
+        *,
+        resolve_ref: bool = False,
+        visited_refs: frozenset[str] | None = None,
+    ) -> bool:
+        """Return whether a schema describes a model-shaped object."""
+        if item.ref:
+            if not resolve_ref:
+                return True
+            if visited_refs is None:
+                visited_refs = frozenset()
+            if item.ref in visited_refs:
+                return True
+            return self._schema_requires_model_type(
+                self._load_ref_schema_object(item.ref),
+                resolve_ref=True,
+                visited_refs=visited_refs | {item.ref},
+            )
+        return bool(
+            item.properties is not None
+            or item.patternProperties is not None
+            or item.propertyNames is not None
+            or item.additionalProperties is not None
+            or item.unevaluatedProperties is not None
+            or item.required
+            or item.minProperties is not None
+            or item.maxProperties is not None
+            or item.type == "object"
+            or (isinstance(item.type, list) and "object" in item.type)
+        )
+
+    def _allof_requires_model_type(
+        self,
+        items: Iterable[JsonSchemaObject | bool],
+        *,
+        resolve_ref: bool = False,
+        visited_refs: frozenset[str] | None = None,
+    ) -> bool:
+        """Return whether allOf members describe a model-shaped schema."""
+        for item in items:
+            if not isinstance(item, JsonSchemaObject):
+                continue
+            if self._schema_requires_model_type(item, resolve_ref=resolve_ref, visited_refs=visited_refs):
+                return True
+            if item.allOf and self._allof_requires_model_type(item.allOf, resolve_ref=True, visited_refs=visited_refs):
+                return True
+            if item.anyOf and self._allof_requires_model_type(item.anyOf, resolve_ref=True, visited_refs=visited_refs):
+                return True
+            if item.oneOf and self._allof_requires_model_type(item.oneOf, resolve_ref=True, visited_refs=visited_refs):
+                return True
+        return False
+
+    def _schema_has_own_value_keywords(self, schema: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        return bool(schema.type or schema.format or schema.enum or schema.has_constraint or "const" in schema.extras)
+
+    def _without_allof_keywords(self, schema: JsonSchemaObject) -> JsonSchemaObject:
+        schema_dict = schema.model_dump(exclude_unset=True, by_alias=True)
+        schema_dict.pop("allOf", None)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(schema_dict)
+
+    def _build_lightweight_allof_type(
+        self,
+        schema: JsonSchemaObject,
+        depth: int,
+        visited: frozenset[int],
+        max_depth: int,
+        max_union_elements: int,
+    ) -> DataType | None:
+        allof_items: Sequence[JsonSchemaObject | bool] = schema.allOf or []
+        if self._schema_has_own_value_keywords(schema):
+            allof_items = [self._without_allof_keywords(schema), *allof_items]
+        return self._build_allof_type(
+            allof_items,
+            depth,
+            visited,
+            max_depth,
+            max_union_elements,
+        )
+
     def _raise_unsatisfiable_schema(self, path: list[str], keyword: str) -> None:  # noqa: PLR6301
         raise SchemaParseError(
             message=f"{keyword} contains a boolean false schema that makes the schema unsatisfiable",
@@ -2340,6 +2421,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if schema.is_array:
             return self._build_lightweight_array_type(schema, depth, visited, max_depth, max_union_elements)
 
+        if schema.allOf:
+            return self._build_lightweight_allof_type(schema, depth, visited, max_depth, max_union_elements)
+
         if schema.type and not isinstance(schema.type, list) and schema.type != "object":
             return self.get_data_type(schema)
         if isinstance(schema.type, list):
@@ -2370,15 +2454,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if len(data_types) == 1:  # pragma: no cover
                 return data_types[0]
             return self.data_type(data_types=data_types)
-
-        if schema.allOf:
-            return self._build_allof_type(
-                schema.allOf,
-                depth,
-                visited,
-                max_depth,
-                max_union_elements,
-            )
 
         if isinstance(schema.additionalProperties, JsonSchemaObject):  # pragma: no cover
             value_type = self._build_lightweight_type(
@@ -3735,6 +3810,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             all_of_items = [sub_item for sub_item in item.allOf if isinstance(sub_item, JsonSchemaObject)]
             if len(all_of_items) == 1 and len(all_of_items) != len(item.allOf) and not item.properties:
                 return self.parse_item(name, all_of_items[0], path, singular_name=singular_name, parent=parent)
+            if not self._schema_requires_model_type(item) and not self._allof_requires_model_type(item.allOf):
+                all_of_path = get_special_path("allOf", path)
+                all_of_path = [self.model_resolver.resolve_ref(all_of_path)]
+                root_model_name = self.model_resolver.add(
+                    all_of_path, name, singular_name=singular_name, class_name=True
+                ).name
+                return self.parse_root_type(root_model_name, item, all_of_path)
             if len(item.allOf) == 1 and not item.properties:
                 single_item = item.allOf[0]
                 if isinstance(single_item, JsonSchemaObject) and single_item.ref:
@@ -4013,6 +4095,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     return EmptyDataType()
                 else:  # pragma: no cover
                     data_type = data_types[0]
+        elif obj.allOf:
+            data_type = self._build_lightweight_type(obj)
+            if data_type is None:  # pragma: no cover
+                data_type = self.data_type_manager.get_data_type(Types.any)
         elif obj.patternProperties:
             data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
         elif obj.propertyNames is not None:

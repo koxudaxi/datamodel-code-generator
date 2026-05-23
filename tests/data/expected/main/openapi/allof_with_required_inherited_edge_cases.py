@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, conint
+from pydantic import BaseModel, RootModel, conint
 
 
 class BaseRef(BaseModel):
@@ -19,24 +19,24 @@ class StatusEnum(Enum):
     inactive = 'inactive'
 
 
-class SingleAllofPrimitive(BaseModel):
-    pass
+class SingleAllofPrimitive(RootModel[str]):
+    root: str
 
 
-class AllofNestedAnyof(BaseModel):
-    pass
+class AllofNestedAnyof(RootModel[str | int]):
+    root: str | int
 
 
-class AllofConstraintOnly(BaseModel):
-    pass
+class AllofConstraintOnly(RootModel[Any]):
+    root: Any
 
 
-class AllofMaxConstraints(BaseModel):
-    pass
+class AllofMaxConstraints(RootModel[conint(le=50)]):
+    root: conint(le=50)
 
 
-class AllofUniqueItems(BaseModel):
-    pass
+class AllofUniqueItems(RootModel[list[str]]):
+    root: list[str]
 
 
 class ObjectWithoutAdditional(BaseModel):
