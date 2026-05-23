@@ -1071,6 +1071,12 @@ openapi_options.add_argument(
     default=None,
 )
 openapi_options.add_argument(
+    "--openapi-include-info-version",
+    help="Emit OpenAPI info.version as OPENAPI_INFO_VERSION in generated models",
+    action="store_true",
+    default=None,
+)
+openapi_options.add_argument(
     "--validation",
     help="Deprecated: Enable validation (Only OpenAPI). this option is deprecated. it will be removed in future "
     "releases",

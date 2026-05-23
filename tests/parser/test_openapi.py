@@ -16,8 +16,8 @@ from datamodel_code_generator import DataModelType, OpenAPIScope, PythonVersionM
 from datamodel_code_generator.format import Formatter
 from datamodel_code_generator.model import DataModelFieldBase, get_data_model_types
 from datamodel_code_generator.model.pydantic_v2 import DataModelField
-from datamodel_code_generator.parser.base import dump_templates
-from datamodel_code_generator.parser.jsonschema import JsonSchemaObject
+from datamodel_code_generator.parser.base import Result, dump_templates
+from datamodel_code_generator.parser.jsonschema import JsonSchemaObject, JsonSchemaParser
 from datamodel_code_generator.parser.openapi import (
     MediaObject,
     OpenAPIParser,
@@ -35,6 +35,68 @@ from tests.conftest import (
 DATA_PATH: Path = Path(__file__).parents[1] / "data" / "openapi"
 
 EXPECTED_OPEN_API_PATH = Path(__file__).parents[1] / "data" / "expected" / "parser" / "openapi"
+
+
+def test_insert_info_version_constant_empty_body() -> None:
+    """Insert OpenAPI info.version constant into an otherwise empty module."""
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+
+    assert parser._insert_info_version_constant("", "1.2.3") == "OPENAPI_INFO_VERSION = '1.2.3'"
+
+
+def test_insert_info_version_constant_blank_body() -> None:
+    """Insert OpenAPI info.version constant into a whitespace-only module."""
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+
+    assert parser._insert_info_version_constant("\n", "1.2.3") == "\nOPENAPI_INFO_VERSION = '1.2.3'\n\n"
+
+
+def test_insert_info_version_constant_after_multiline_import() -> None:
+    """Insert OpenAPI info.version constant after a multi-line import block."""
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+    body = "from typing import (\n    Any,\n)\n\n\nclass Model:\n    pass"
+
+    assert parser._insert_info_version_constant(body, "1.2.3") == (
+        "from typing import (\n    Any,\n)\n\nOPENAPI_INFO_VERSION = '1.2.3'\n\n\nclass Model:\n    pass"
+    )
+
+
+def test_update_openapi_info_version_warns_when_missing() -> None:
+    """Warn when OpenAPI info.version is missing while the option is enabled."""
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n", openapi_include_info_version=True)
+
+    with pytest.warns(UserWarning, match="info.version was not found"):
+        parser._update_openapi_info_version({"info": {"title": "Test"}})
+
+
+def test_parse_skips_info_version_when_option_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Leave parser output unchanged when OpenAPI info.version output is disabled."""
+
+    def parse_without_info_version(*args: Any, **kwargs: Any) -> str:  # noqa: ARG001
+        return "class Model:\n    pass"
+
+    monkeypatch.setattr(JsonSchemaParser, "parse", parse_without_info_version)
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+
+    assert parser.parse() == "class Model:\n    pass"
+
+
+def test_parse_adds_info_version_to_created_root_module(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Create root __init__.py when modular output has no root module."""
+
+    def parse_without_root_init(*args: Any, **kwargs: Any) -> dict[tuple[str, ...], Result]:  # noqa: ARG001
+        parser = args[0]
+        parser.openapi_info_version = "1.2.3"
+        return {("models.py",): Result(body="class Model:\n    pass")}
+
+    monkeypatch.setattr(JsonSchemaParser, "parse", parse_without_root_init)
+    parser = OpenAPIParser("openapi: 3.0.0\ninfo:\n  title: Test\n  version: 1.2.3\n")
+    parser.openapi_include_info_version = True
+
+    result = parser.parse()
+
+    assert isinstance(result, dict)
+    assert result["__init__.py",].body == "OPENAPI_INFO_VERSION = '1.2.3'"
 
 
 def get_expected_file(

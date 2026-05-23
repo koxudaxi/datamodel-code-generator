@@ -86,6 +86,7 @@ OPTION_DESCRIPTIONS: dict[str, str] = {
     "--no-use-standard-collections": "Use typing.Dict/List instead of built-in dict/list for container types.",
     "--no-use-type-checking-imports": "Keep generated model imports available at runtime when using Ruff fixes.",
     "--no-use-union-operator": "Use Union[X, Y] / Optional[X] instead of X | Y union operator.",
+    "--openapi-include-info-version": "Emit OpenAPI info.version as a generated constant.",
     "--openapi-include-paths": "Filter OpenAPI paths to include in model generation.",
     "--openapi-scopes": "Specify OpenAPI scopes to generate (schemas, paths, parameters).",
     "--original-field-name-delimiter": "Specify delimiter for original field names when using snake-case conversion.",

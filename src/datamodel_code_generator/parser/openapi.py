@@ -28,7 +28,7 @@ from datamodel_code_generator import (
     snooper_to_methods,
 )
 from datamodel_code_generator.enums import OpenAPIVersion, VersionMode
-from datamodel_code_generator.parser.base import get_special_path
+from datamodel_code_generator.parser.base import Result, get_special_path
 from datamodel_code_generator.parser.jsonschema import (
     JsonSchemaObject,
     JsonSchemaParser,
@@ -201,6 +201,8 @@ class OpenAPIParser(JsonSchemaParser):
         self.include_path_parameters: bool = self.config.include_path_parameters  # ty: ignore
         self.use_status_code_in_response_name: bool = self.config.use_status_code_in_response_name  # ty: ignore
         self.openapi_include_paths: list[str] | None = self.config.openapi_include_paths  # ty: ignore
+        self.openapi_include_info_version: bool = self.config.openapi_include_info_version  # ty: ignore
+        self.openapi_info_version: str | None = None
         if self.openapi_include_paths and OpenAPIScope.Paths not in self.open_api_scopes:
             warn(
                 "--openapi-include-paths has no effect without --openapi-scopes paths",
@@ -214,6 +216,61 @@ class OpenAPIParser(JsonSchemaParser):
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)
         ref_body = self._get_ref_body(ref_file) if ref_file else self.raw_obj
         return get_model_by_path(ref_body, ref_path.split("/")[1:])
+
+    def _insert_info_version_constant(self, body: str, info_version: str) -> str:  # noqa: PLR6301
+        constant = f"OPENAPI_INFO_VERSION = {info_version!r}"
+        if not body:
+            return constant
+
+        lines = body.splitlines()
+        insert_line = 0
+        while insert_line < len(lines):
+            stripped = lines[insert_line].strip()
+            if not stripped:
+                insert_line += 1
+                continue
+            if not stripped.startswith(("import ", "from ")):
+                break
+
+            paren_balance = stripped.count("(") - stripped.count(")")
+            insert_line += 1
+            while paren_balance > 0 and insert_line < len(lines):
+                stripped = lines[insert_line].strip()
+                paren_balance += stripped.count("(") - stripped.count(")")
+                insert_line += 1
+
+        prefix = lines[:insert_line]
+        while prefix and not prefix[-1].strip():
+            prefix.pop()
+        return "\n".join([*prefix, "", constant, "", "", *lines[insert_line:]])
+
+    def _update_openapi_info_version(self, specification: dict[str, Any]) -> None:
+        info = specification.get("info")
+        if isinstance(info, dict) and info.get("version") is not None:
+            self.openapi_info_version = str(info["version"])
+            return
+
+        warn(
+            "--openapi-include-info-version was specified, but info.version was not found",
+            stacklevel=2,
+        )
+
+    def parse(self, *args: Any, **kwargs: Any) -> str | dict[tuple[str, ...], Result]:
+        """Parse OpenAPI schema and optionally emit the info.version constant."""
+        result = super().parse(*args, **kwargs)
+        if not self.openapi_include_info_version or self.openapi_info_version is None:
+            return result
+
+        if isinstance(result, str):
+            return self._insert_info_version_constant(result, self.openapi_info_version)
+
+        root_init = ("__init__.py",)
+        root_result = result.get(root_init)
+        if root_result is None:
+            result[root_init] = Result(body=self._insert_info_version_constant("", self.openapi_info_version))
+        else:
+            root_result.body = self._insert_info_version_constant(root_result.body, self.openapi_info_version)
+        return result
 
     def get_data_type(self, obj: JsonSchemaObject) -> DataType:
         """Get data type from JSON schema object, handling OpenAPI nullable semantics.
@@ -755,6 +812,8 @@ class OpenAPIParser(JsonSchemaParser):
                 dict(source.raw_data) if source.raw_data is not None else load_data(source.text)
             )
             self.raw_obj = specification
+            if self.openapi_include_info_version:
+                self._update_openapi_info_version(specification)
             self._collect_discriminator_schemas()
             schemas: dict[str, Any] = specification.get("components", {}).get("schemas", {})
             paths: dict[str, Any] = specification.get("paths", {})

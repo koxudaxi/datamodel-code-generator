@@ -150,6 +150,7 @@ What other options should I use?
 
 ### OpenAPI-only Options
 - `--include-path-parameters`: Include OpenAPI path parameters in generated parameter models.
+- `--openapi-include-info-version`: Emit OpenAPI info.version as a generated constant.
 - `--openapi-include-paths`: Filter OpenAPI paths to include in model generation.
 - `--openapi-scopes`: Specify OpenAPI scopes to generate (schemas, paths, parameters).
 - `--read-only-write-only-model-type`: Generate separate request and response models for readOnly/writeOnly fields.
@@ -664,6 +665,9 @@ For detailed usage, see: https://datamodel-code-generator.koxudaxi.dev
   --include-path-parameters
                         Include path parameters in generated parameter models
                         in addition to query parameters (Only OpenAPI)
+  --openapi-include-info-version
+                        Emit OpenAPI info.version as OPENAPI_INFO_VERSION in
+                        generated models
   --openapi-include-paths PATTERN [PATTERN ...]
                         Include only OpenAPI paths matching fnmatch patterns.
                         Use wildcards: '*' matches any chars, '?' matches
