@@ -1755,6 +1755,27 @@ class Model(BaseModel):
     )
 
 
+def test_builtin_formatter_does_not_validate_black_support(output_file: Path, mocker: MockerFixture) -> None:
+    """Test dependency-free formatter path does not require Black target support checks."""
+    mocker.patch("datamodel_code_generator.__main__.is_supported_in_black", side_effect=AssertionError)
+
+    run_main_with_args(
+        [
+            "--input",
+            str(JSON_SCHEMA_DATA_PATH / "simple_string.json"),
+            "--output",
+            str(output_file),
+            "--input-file-type",
+            "jsonschema",
+            "--formatters",
+            "builtin",
+            "--disable-timestamp",
+        ],
+    )
+
+    assert output_file.read_text(encoding="utf-8")
+
+
 def test_ruff_batch_formatting_directory(output_dir: Path) -> None:
     """Test ruff batch formatting for directory output (multiple files)."""
     run_main_and_assert(

@@ -6,9 +6,11 @@ along with PythonVersion enum and DatetimeClassType for output configuration.
 
 from __future__ import annotations
 
+import ast
 import shutil
 import subprocess  # noqa: S404
 import sys
+from collections import defaultdict
 from enum import Enum
 from functools import cached_property, lru_cache
 from importlib import import_module
@@ -194,6 +196,7 @@ def black_find_project_root(sources: Sequence[Path]) -> Path:
 class Formatter(Enum):
     """Available code formatters for generated output."""
 
+    BUILTIN = "builtin"
     BLACK = "black"
     ISORT = "isort"
     RUFF_CHECK = "ruff-check"
@@ -201,6 +204,85 @@ class Formatter(Enum):
 
 
 DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
+DEFAULT_LINE_LENGTH = 88
+
+
+def _format_alias(alias: ast.alias) -> str:
+    if alias.asname:
+        return f"{alias.name} as {alias.asname}"
+    return alias.name
+
+
+def _format_from_import(module: str, aliases: list[str], line_length: int) -> str:
+    line = f"from {module} import {', '.join(aliases)}"
+    if len(line) <= line_length and "*" not in aliases:
+        return line
+    imports = "\n".join(f"    {alias}," for alias in aliases)
+    return f"from {module} import (\n{imports}\n)"
+
+
+def _import_category(module: str, level: int) -> int:
+    if module == "__future__":
+        return 0
+    if level:
+        return 3
+    top_level_module = module.split(".", 1)[0]
+    if top_level_module in sys.stdlib_module_names:
+        return 1
+    return 2
+
+
+def _build_builtin_import_block(import_nodes: list[ast.Import | ast.ImportFrom], line_length: int) -> str:
+    categorized_lines: defaultdict[int, set[str]] = defaultdict(set)
+    grouped_from_imports: defaultdict[tuple[int, int, str], set[str]] = defaultdict(set)
+
+    for node in import_nodes:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                line = f"import {_format_alias(alias)}"
+                categorized_lines[_import_category(alias.name, 0)].add(line)
+            continue
+
+        module = "." * node.level + (node.module or "")
+        category = _import_category(node.module or "", node.level)
+        for alias in node.names:
+            grouped_from_imports[category, node.level, module].add(_format_alias(alias))
+
+    for (category, _level, module), aliases in grouped_from_imports.items():
+        categorized_lines[category].add(_format_from_import(module, sorted(aliases), line_length))
+
+    groups = ["\n".join(sorted(categorized_lines[category])) for category in sorted(categorized_lines)]
+    return "\n\n".join(group for group in groups if group)
+
+
+def apply_builtin_formatter(code: str, *, line_length: int = DEFAULT_LINE_LENGTH) -> str:
+    """Apply dependency-free formatting for generated Python code."""
+    lines = [line.rstrip() for line in code.splitlines()]
+    code = "\n".join(lines).strip("\n")
+    if not code:
+        return ""
+
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return f"{code}\n"
+
+    import_nodes: list[ast.Import | ast.ImportFrom] = []
+    for node in tree.body:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            break
+        import_nodes.append(node)
+
+    if not import_nodes:
+        return f"{code}\n"
+
+    first_line = import_nodes[0].lineno
+    last_line = import_nodes[-1].end_lineno or import_nodes[-1].lineno
+    leading = "\n".join(lines[: first_line - 1]).strip("\n")
+    body = "\n".join(lines[last_line:]).strip("\n")
+    import_block = _build_builtin_import_block(import_nodes, line_length)
+    parts = [part for part in (leading, import_block, body) if part]
+    return "\n\n".join(parts) + "\n"
 
 
 def resolve_use_type_checking_imports(
@@ -238,10 +320,9 @@ class CodeFormatter:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if formatters is None:
             warn(
-                "The default formatters (black, isort) will be replaced by ruff in a future version. "
-                "To prepare for this change, consider using: formatters=[Formatter.RUFF_FORMAT, Formatter.RUFF_CHECK]. "
-                "Install ruff with: pip install 'datamodel-code-generator[ruff]'. "
-                "To suppress this warning, specify formatters explicitly.",
+                "The default external formatters (black, isort) will become opt-in in a future version. "
+                "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
+                "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN].",
                 FutureWarning,
                 stacklevel=2,
             )
@@ -360,6 +441,8 @@ class CodeFormatter:
         """Apply all configured formatters to the code string."""
         if Formatter.ISORT in self.formatters:
             code = self.apply_isort(code)
+        if Formatter.BUILTIN in self.formatters:
+            code = self.apply_builtin_formatter(code)
         if Formatter.BLACK in self.formatters:
             code = self.apply_black(code)
 
@@ -385,6 +468,11 @@ class CodeFormatter:
             code,
             mode=self.black_mode,
         )
+
+    @staticmethod
+    def apply_builtin_formatter(code: str) -> str:
+        """Format generated code without external formatter dependencies."""
+        return apply_builtin_formatter(code)
 
     def apply_ruff_lint(self, code: str) -> str:
         """Run ruff check with auto-fix on code."""

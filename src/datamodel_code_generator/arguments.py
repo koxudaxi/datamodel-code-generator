@@ -1019,7 +1019,7 @@ base_options.add_argument(
 )
 base_options.add_argument(
     "--formatters",
-    help="Formatters for output (default: [black, isort])",
+    help="Formatters for output (default: [black, isort]; use builtin for dependency-free formatting)",
     choices=[f.value for f in Formatter],
     nargs="+",
     default=None,

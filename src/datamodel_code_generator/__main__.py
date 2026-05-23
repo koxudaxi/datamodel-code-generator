@@ -1125,7 +1125,8 @@ def main(args: Sequence[str] | None = None) -> Exit:  # noqa: PLR0911, PLR0912, 
         )
         return Exit.ERROR
 
-    if not is_supported_in_black(config.target_python_version):  # pragma: no cover
+    uses_black_formatter = config.formatters is None or Formatter.BLACK in config.formatters
+    if uses_black_formatter and not is_supported_in_black(config.target_python_version):  # pragma: no cover
         print(  # noqa: T201
             f"Installed black doesn't support Python version {config.target_python_version.value}.\n"
             f"You have to install a newer black.\n"

@@ -67,6 +67,63 @@ def test_format_code_with_skip_string_normalization(
     assert formatted_code == expected_output + "\n"
 
 
+def test_format_code_builtin_formatter(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test dependency-free built-in formatting."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from pydantic import Field, BaseModel\n"
+        "import sys\n"
+        "from __future__ import annotations\n"
+        "from .models import Pet\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Pet\n"
+        "    name: str = Field(...)\n"
+    )
+
+    assert (
+        formatted_code == "from __future__ import annotations\n"
+        "\n"
+        "import sys\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "from .models import Pet\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    pet: Pet\n"
+        "    name: str = Field(...)\n"
+    )
+
+
+def test_format_code_builtin_formatter_wraps_long_imports(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test built-in formatter wraps import lines that exceed the default line length."""
+    monkeypatch.chdir(tmp_path)
+    formatter = CodeFormatter(
+        PythonVersionMin,
+        formatters=[Formatter.BUILTIN],
+    )
+
+    formatted_code = formatter.format_code(
+        "from module import Zed, ExtremelyLongGeneratedTypeName, AnotherLongGeneratedTypeName, "
+        "GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength\n"
+    )
+
+    assert (
+        formatted_code == "from module import (\n"
+        "    AnotherLongGeneratedTypeName,\n"
+        "    ExtremelyLongGeneratedTypeName,\n"
+        "    GeneratedTypeNameThatPushesTheImportPastTheDefaultLineLength,\n"
+        "    Zed,\n"
+        ")\n"
+    )
+
+
 def test_format_code_un_exist_custom_formatter() -> None:
     """Test error when custom formatter module doesn't exist."""
     with pytest.raises(ModuleNotFoundError):
@@ -611,7 +668,7 @@ def test_generate_with_ruff_batch_formatting_and_explicit_type_checking_imports(
 def test_code_formatter_warns_when_formatters_is_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Test that FutureWarning is emitted when formatters is None (default)."""
     monkeypatch.chdir(tmp_path)
-    with pytest.warns(FutureWarning, match="default formatters"):
+    with pytest.warns(FutureWarning, match="external formatters"):
         CodeFormatter(PythonVersionMin)
 
 
