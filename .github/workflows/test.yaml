@@ -28,6 +28,8 @@ jobs:
         os: [ubuntu-24.04, windows-latest, macos-latest]
         tox_env: ['']
         include:
+          - tox_env: py312-blacklatest-parallel
+            name: py312-black-latest
           - tox_env: py312-black24-parallel
             name: py312-black24
           - tox_env: py312-black23-parallel

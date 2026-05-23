@@ -117,6 +117,7 @@ benchmark = [
 black22 = [ "black==22.1" ]
 black23 = [ "black==23.12" ]
 black24 = [ "black==24.1" ]
+blacklatest = [ "black" ]
 isort5 = [ "isort>=5,<6" ]
 isort6 = [ "isort>=6,<7" ]
 isort7 = [ "isort>=7,<8; python_version>='3.10'" ]
@@ -140,6 +141,7 @@ version.source = "vcs"
 [tool.uv]
 conflicts = [
   [
+    { group = "blacklatest" },
     { group = "black24" },
     { group = "black22" },
     { group = "black23" },
