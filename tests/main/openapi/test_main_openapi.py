@@ -73,6 +73,42 @@ def test_main(output_file: Path) -> None:
     )
 
 
+@pytest.mark.cli_doc(
+    options=["--openapi-include-info-version"],
+    option_description="""Emit OpenAPI info.version as a generated constant.
+
+The `--openapi-include-info-version` flag adds `OPENAPI_INFO_VERSION` to the
+generated module so applications can check the source OpenAPI document version
+at build time or runtime.""",
+    input_schema="openapi/api.yaml",
+    cli_args=["--openapi-include-info-version"],
+    golden_output="openapi/info_version.py",
+)
+def test_main_openapi_include_info_version(output_file: Path) -> None:
+    """Emit OpenAPI info.version as a generated constant."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "api.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="info_version.py",
+        extra_args=["--openapi-include-info-version"],
+    )
+
+
+def test_main_openapi_include_info_version_modular(output_file: Path) -> None:
+    """Emit OpenAPI info.version in the root module for modular output."""
+    output_dir = output_file.parent / "output"
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "modular.yaml",
+        output_path=output_dir,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        output_to_expected=[("__init__.py", EXPECTED_OPENAPI_PATH / "modular_info_version" / "__init__.py")],
+        extra_args=["--openapi-include-info-version"],
+    )
+
+
 @pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
