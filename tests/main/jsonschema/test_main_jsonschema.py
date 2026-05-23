@@ -3452,7 +3452,7 @@ item schemas. This helps generate stricter type hints for unstructured values.""
         "--output-model-type",
         "typing.TypedDict",
         "--target-python-version",
-        "3.11",
+        "3.10",
         "--use-object-type",
     ],
     golden_output="jsonschema/use_object_type_typed_dict.py",
@@ -3470,7 +3470,7 @@ def test_jsonschema_use_object_type_typed_dict(output_file: Path) -> None:
             "--output-model-type",
             "typing.TypedDict",
             "--target-python-version",
-            "3.11",
+            "3.10",
             "--use-object-type",
         ],
     )
