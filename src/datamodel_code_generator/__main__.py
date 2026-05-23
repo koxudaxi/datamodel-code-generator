@@ -70,6 +70,7 @@ from datamodel_code_generator import (
     ReuseScope,
     TargetPydanticVersion,
     VersionMode,
+    _validate_output_datetime_class,
     enable_debug_message,
     generate,
 )
@@ -326,11 +327,6 @@ class Config(BaseModel):  # noqa: PLR0904
             values["external_ref_mapping"] = mapping
         return values
 
-    __validate_output_datetime_class_err: ClassVar[str] = (
-        '`--output-datetime-class` only allows "datetime" for '
-        f"`--output-model-type` {DataModelType.DataclassesDataclass.value}"
-    )
-
     __validate_original_field_name_delimiter_err: ClassVar[str] = (
         "`--original-field-name-delimiter` can not be used without `--snake-case-field`."
     )
@@ -349,13 +345,7 @@ class Config(BaseModel):  # noqa: PLR0904
     @model_validator(mode="after")  # ty: ignore
     def validate_output_datetime_class(self: Self) -> Self:  # ty: ignore
         """Validate output datetime class compatibility."""
-        datetime_class_type: DatetimeClassType | None = self.output_datetime_class
-        if (
-            datetime_class_type
-            and datetime_class_type is not DatetimeClassType.Datetime
-            and self.output_model_type == DataModelType.DataclassesDataclass
-        ):
-            raise Error(self.__validate_output_datetime_class_err)
+        _validate_output_datetime_class(self.output_model_type, self.output_datetime_class)
         return self
 
     @model_validator(mode="after")  # ty: ignore
