@@ -15,6 +15,7 @@ from typing import Any, Literal
 import black
 import pytest
 from packaging import version
+from pydantic import ValidationError
 
 from datamodel_code_generator import InputFileType, generate
 from datamodel_code_generator.__main__ import Exit, main
@@ -666,6 +667,95 @@ def _import_package(output_path: Path) -> None:
             sys.path.remove(str(parent_directory))
         for module_name in imported_modules:
             sys.modules.pop(module_name, None)
+
+
+def assert_generated_model_json_validation(
+    output_path: Path,
+    *,
+    module_name: str,
+    model_name: str,
+    valid_json: str,
+    invalid_json: str,
+    expected_error_type: str,
+    expected_attribute_path: Sequence[str] = (),
+    expected_attribute_value: Any = None,
+) -> None:
+    """Import a generated module and validate JSON data through a generated Pydantic model."""
+    spec = importlib.util.spec_from_file_location(module_name, output_path)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_path}", pytrace=False)
+
+    module = importlib.util.module_from_spec(spec)
+    previous_module = sys.modules.get(spec.name)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+        model = getattr(module, model_name)
+        parsed = model.model_validate_json(valid_json)
+
+        if expected_attribute_path:
+            actual: Any = parsed
+            for attribute in expected_attribute_path:
+                actual = getattr(actual, attribute)
+            if actual != expected_attribute_value:  # pragma: no cover
+                pytest.fail(
+                    f"Expected {'.'.join(expected_attribute_path)} to be {expected_attribute_value!r}, got {actual!r}",
+                    pytrace=False,
+                )
+
+        with pytest.raises(ValidationError) as exc_info:
+            model.model_validate_json(invalid_json)
+        errors = exc_info.value.errors()
+        if not errors:  # pragma: no cover
+            pytest.fail("Expected validation error but got an empty errors list", pytrace=False)
+        actual_error_type = errors[0]["type"]
+        if actual_error_type != expected_error_type:  # pragma: no cover
+            pytest.fail(
+                f"Expected validation error {expected_error_type!r}, got {actual_error_type!r}",
+                pytrace=False,
+            )
+    finally:
+        if previous_module is None:
+            sys.modules.pop(spec.name, None)
+        else:
+            sys.modules[spec.name] = previous_module
+
+
+def assert_generated_model_json_invalid(
+    output_path: Path,
+    *,
+    module_name: str,
+    model_name: str,
+    invalid_json: str,
+    expected_error_type: str,
+) -> None:
+    """Import a generated module and assert JSON data is rejected by a generated Pydantic model."""
+    spec = importlib.util.spec_from_file_location(module_name, output_path)
+    if spec is None or spec.loader is None:  # pragma: no cover
+        pytest.fail(f"Unable to load generated module from {output_path}", pytrace=False)
+
+    module = importlib.util.module_from_spec(spec)
+    previous_module = sys.modules.get(spec.name)
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+        model = getattr(module, model_name)
+        with pytest.raises(ValidationError) as exc_info:
+            model.model_validate_json(invalid_json)
+        errors = exc_info.value.errors()
+        if not errors:  # pragma: no cover
+            pytest.fail("Expected validation error but got an empty errors list", pytrace=False)
+        actual_error_type = errors[0]["type"]
+        if actual_error_type != expected_error_type:  # pragma: no cover
+            pytest.fail(
+                f"Expected validation error {expected_error_type!r}, got {actual_error_type!r}",
+                pytrace=False,
+            )
+    finally:
+        if previous_module is None:
+            sys.modules.pop(spec.name, None)
+        else:
+            sys.modules[spec.name] = previous_module
 
 
 def run_main_url_and_assert(

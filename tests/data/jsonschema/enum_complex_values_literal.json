@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EnumComplexValuesLiteral",
+  "type": "object",
+  "properties": {
+    "ratio": {
+      "enum": [1.5]
+    },
+    "settings": {
+      "enum": [
+        {
+          "enabled": true,
+          "limit": 3
+        }
+      ]
+    },
+    "choices": {
+      "enum": [[1, "two"]]
+    }
+  },
+  "required": ["ratio", "settings", "choices"]
+}

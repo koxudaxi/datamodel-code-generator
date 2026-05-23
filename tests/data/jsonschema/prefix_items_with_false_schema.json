@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PrefixItemsWithFalseSchema",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string"
+        },
+        false
+      ]
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

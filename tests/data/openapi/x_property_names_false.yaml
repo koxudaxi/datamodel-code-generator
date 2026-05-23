@@ -1,0 +1,12 @@
+openapi: "3.0.3"
+info:
+  title: x-propertyNames False Test
+  version: "1.0.0"
+paths: {}
+components:
+  schemas:
+    NoKeys:
+      type: object
+      x-propertyNames: false
+      additionalProperties:
+        type: string

@@ -182,6 +182,44 @@ def test_main_openapi_discriminator_integer_mapping(output_file: Path) -> None:
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
+def test_main_openapi_discriminator_integer_mapping_use_enum(output_file: Path) -> None:
+    """Integer discriminator mapping preserves enum member literal values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_integer_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "integer_mapping_use_enum.py",
+        extra_args=[
+            "--target-python-version",
+            "3.10",
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--use-enum-values-in-discriminator",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
+def test_main_openapi_discriminator_float_mapping(output_file: Path) -> None:
+    """Unsupported discriminator enum values keep their mapping string values."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "discriminator_float_mapping.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file=EXPECTED_OPENAPI_PATH / "discriminator" / "float_mapping.py",
+        extra_args=["--target-python-version", "3.10", "--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "19",
+    reason="Installed black doesn't support the old style",
+)
 def test_main_openapi_discriminator_integer_no_mapping(output_file: Path) -> None:
     """Integer discriminator without mapping preserves integer literal values."""
     run_main_and_assert(
@@ -3165,6 +3203,28 @@ def test_main_openapi_serialize_as_any_pydantic_v2(output_file: Path) -> None:
 
 
 @pytest.mark.skipif(
+    version.parse(pydantic.VERSION) < version.parse("2.0.0"),
+    reason="Require Pydantic version 2.0.0 or later",
+)
+def test_main_openapi_serialize_as_any_module_import_alias_pydantic_v2(output_dir: Path) -> None:
+    """Test SerializeAsAny with modular output and dotted schema import aliases."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "serialize_as_any_module_import_alias" / "openapi.json",
+        output_path=output_dir,
+        expected_directory=EXPECTED_OPENAPI_PATH / "serialize_as_any_module_import_alias",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--openapi-scopes",
+            "schemas",
+            "--use-serialize-as-any",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
     black.__version__.split(".")[0] == "19",
     reason="Installed black doesn't support the old style",
 )
@@ -5145,6 +5205,18 @@ def test_main_openapi_x_property_names_non_dict(output_file: Path) -> None:
         input_file_type="openapi",
         assert_func=assert_file_content,
         expected_file="x_property_names_non_dict.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+    )
+
+
+def test_main_openapi_x_property_names_false(output_file: Path) -> None:
+    """Test boolean false x-propertyNames constrains OpenAPI 3.0 maps to empty keys."""
+    run_main_and_assert(
+        input_path=OPEN_API_DATA_PATH / "x_property_names_false.yaml",
+        output_path=output_file,
+        input_file_type="openapi",
+        assert_func=assert_file_content,
+        expected_file="x_property_names_false.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
     )
 

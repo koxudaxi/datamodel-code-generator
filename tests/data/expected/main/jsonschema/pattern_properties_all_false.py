@@ -4,8 +4,10 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import RootModel
 
 
-class Model(RootModel[None]):
-    root: None
+class Model(RootModel[dict[str, Any]]):
+    root: dict[str, Any]

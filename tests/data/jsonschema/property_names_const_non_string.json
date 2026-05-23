@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NonStringConstKey",
+  "type": "object",
+  "propertyNames": {
+    "const": 1
+  },
+  "additionalProperties": {
+    "type": "integer"
+  }
+}

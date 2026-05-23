@@ -143,6 +143,91 @@ class Pet(TypedDict):
 - Static type checking without runtime overhead
 - Gradual typing of existing dict-based code
 
+### Boundary payloads and partial updates
+
+TypedDict is a good fit for data at an HTTP boundary. A PATCH payload can
+distinguish three cases:
+
+- the key is missing, so the existing value should stay unchanged
+- the key is present with `null`, so the value should be cleared
+- the key is present with a value, so the value should be replaced
+
+Use `--strict-nullable` when the difference between a missing key and a
+nullable value matters:
+
+```bash
+datamodel-codegen --input user-patch.schema.json \
+  --output-model-type typing.TypedDict \
+  --strict-nullable \
+  --target-python-version 3.13 \
+  --output model.py
+```
+
+```json
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UserPatch",
+  "type": "object",
+  "required": ["id"],
+  "properties": {
+    "id": {"type": "string", "readOnly": true},
+    "nickname": {"type": ["string", "null"]},
+    "bio": {"type": "string"}
+  },
+  "additionalProperties": false
+}
+```
+
+```python
+from typing import NotRequired
+from typing_extensions import TypedDict
+
+class UserPatch(TypedDict, closed=True):
+    id: str
+    nickname: NotRequired[str | None]
+    bio: NotRequired[str]
+```
+
+Here `nickname: NotRequired[str | None]` means the key may be omitted, and
+`None` is still a real value when the key is present. This follows
+[PEP 655](https://peps.python.org/pep-0655/), which added `Required` and
+`NotRequired` for per-key presence in TypedDict.
+
+If the schema marks response-only fields with `readOnly`, combine this with
+`--use-frozen-field` to generate `ReadOnly` for TypedDict output:
+
+```bash
+datamodel-codegen --input user-patch.schema.json \
+  --output-model-type typing.TypedDict \
+  --strict-nullable \
+  --use-frozen-field \
+  --target-python-version 3.13 \
+  --output model.py
+```
+
+```python
+from typing import NotRequired, ReadOnly
+from typing_extensions import TypedDict
+
+class UserPatch(TypedDict, closed=True):
+    id: ReadOnly[str]
+    nickname: NotRequired[str | None]
+    bio: NotRequired[str]
+```
+
+`ReadOnly` comes from [PEP 705](https://peps.python.org/pep-0705/). The
+`closed=True` output comes from [PEP 728](https://peps.python.org/pep-0728/)
+and represents `additionalProperties: false` for type checkers that understand
+closed TypedDicts.
+
+!!! note "Background"
+    The distinction between missing keys, `None`, and unset update arguments is
+    covered in Koudai Aono's PyCon US 2026 talk
+    [Beyond Optional in Real-World Projects](https://github.com/koxudaxi/pyconus_2026/blob/main/slides.md).
+    In datamodel-code-generator today, TypedDict and msgspec preserve that
+    boundary shape most directly. Pydantic models and dataclasses are usually a
+    better fit after the boundary has been normalized into application data.
+
 ---
 
 ## msgspec
@@ -202,6 +287,8 @@ graph TD
 ## See Also
 
 - [CLI Reference: `--output-model-type`](cli-reference/model-customization.md#output-model-type)
+- [CLI Reference: `--strict-nullable`](cli-reference/model-customization.md#strict-nullable)
+- [CLI Reference: `--use-frozen-field`](cli-reference/model-customization.md#use-frozen-field)
 - [CLI Reference: Model Customization](cli-reference/model-customization.md)
 - [Pydantic Documentation](https://docs.pydantic.dev/)
 - [msgspec Documentation](https://jcristharif.com/msgspec/)

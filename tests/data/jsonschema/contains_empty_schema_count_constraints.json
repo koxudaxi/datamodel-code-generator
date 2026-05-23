@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContainsEmptySchemaCountConstraints",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "contains": {},
+      "minContains": 2,
+      "maxContains": 3
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

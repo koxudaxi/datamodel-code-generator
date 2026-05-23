@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContainsFalseDefault",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "contains": false
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Float Discriminator Mapping
+  version: 1.0.0
+paths: {}
+components:
+  schemas:
+    Base:
+      oneOf:
+        - $ref: '#/components/schemas/Foo'
+        - $ref: '#/components/schemas/Bar'
+      discriminator:
+        propertyName: kind
+        mapping:
+          '1.5': '#/components/schemas/Foo'
+          '3.5': '#/components/schemas/Bar'
+    Foo:
+      type: object
+      properties:
+        kind:
+          type: number
+          enum:
+            - 1.5
+            - 2.5
+      required:
+        - kind
+    Bar:
+      type: object
+      properties:
+        kind:
+          type: number
+          enum:
+            - 3.5
+            - 4.5
+      required:
+        - kind

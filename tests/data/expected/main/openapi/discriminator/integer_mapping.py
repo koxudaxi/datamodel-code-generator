@@ -20,10 +20,11 @@ class Foo(BaseModel):
 
 class Kind1(IntEnum):
     integer_2 = 2
+    integer_3 = 3
 
 
 class Bar(BaseModel):
-    kind: Literal[2]
+    kind: Literal[2, 3]
 
 
 class Base(RootModel[Foo | Bar]):

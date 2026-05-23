@@ -4,16 +4,18 @@ from __future__ import annotations
 
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock
 
 import pytest
 
+from datamodel_code_generator.enums import CollapseRootModelsNameStrategy
+from datamodel_code_generator.imports import Imports
 from datamodel_code_generator.model import DataModel, DataModelFieldBase
 
 if TYPE_CHECKING:
     from datamodel_code_generator.parser.schema_version import JsonSchemaFeatures
 
 from datamodel_code_generator.model.pydantic_v2 import BaseModel, DataModelField
+from datamodel_code_generator.model.pydantic_v2.root_model import RootModel
 from datamodel_code_generator.model.type_alias import TypeAlias, TypeAliasTypeBackport, TypeStatement
 from datamodel_code_generator.parser.base import (
     Parser,
@@ -146,6 +148,9 @@ def test_sort_data_models() -> None:
     assert resolved == expected
     assert unresolved == []
     assert require_update_action_models == ["B", "A"]
+
+    _, _, seeded_require_update_action_models = sort_data_models(reference, require_update_action_models=["B"])
+    assert seeded_require_update_action_models == ["B", "A"]
 
 
 def test_sort_data_models_unresolved() -> None:
@@ -630,17 +635,12 @@ def test_compute_internal_module_path(
 
 def test_build_module_dependency_graph_with_missing_ref(parser_fixture: C) -> None:
     """Test __build_module_dependency_graph when reference path is not in path_to_module."""
-    ref_source = MagicMock()
-    ref_source.source = True
-    ref_source.path = "nonexistent.Model"
-
-    data_type = MagicMock()
-    data_type.reference = ref_source
-
-    model1 = MagicMock()
-    model1.path = "pkg.Model1"
-    model1.all_data_types = [data_type]
-    model1.base_classes = []
+    missing_reference = Reference(path="nonexistent.Model", original_name="Missing", name="Missing")
+    model1 = BaseModel(
+        fields=[DataModelField(data_type=DataType(reference=missing_reference))],
+        reference=Reference(path="pkg.Model1", original_name="Model1", name="Model1"),
+    )
+    parser_fixture.generation_store.register_model(model1)
 
     module_models_list = [
         (("pkg",), [model1]),
@@ -649,6 +649,44 @@ def test_build_module_dependency_graph_with_missing_ref(parser_fixture: C) -> No
     graph = parser_fixture._Parser__build_module_dependency_graph(module_models_list)
 
     assert graph == {("pkg",): set()}
+
+
+def test_collapse_root_models_preserves_root_model_used_by_other_modules() -> None:
+    """Root collapse should not mark a root model unused while another model still references it."""
+    parser = C(
+        data_model_type=BaseModel,
+        data_model_root_type=RootModel,
+        data_model_field_type=DataModelField,
+        base_class="Base",
+        source="",
+    )
+    parser.collapse_root_models = True
+    parser.collapse_root_models_name_strategy = CollapseRootModelsNameStrategy.Child
+    root_reference = Reference(path="Root", original_name="Root", name="Root")
+    inner_reference = Reference(path="Inner", original_name="Inner", name="Inner")
+    root_model = RootModel(
+        fields=[DataModelField(data_type=DataType(reference=inner_reference))],
+        reference=root_reference,
+    )
+    local_type = DataType(reference=root_reference)
+    local_model = BaseModel(
+        fields=[DataModelField(data_type=local_type)],
+        reference=Reference(path="pkg.Local", original_name="Local", name="Local"),
+    )
+    external_type = DataType(reference=root_reference)
+    external_model = BaseModel(
+        fields=[DataModelField(data_type=external_type)],
+        reference=Reference(path="other.External", original_name="External", name="External"),
+    )
+    for model in (root_model, local_model, external_model):
+        parser.generation_store.register_model(model)
+    unused_models: list[DataModel] = []
+
+    parser._Parser__collapse_root_models([local_model], unused_models, Imports(), parser.model_resolver)
+
+    assert local_type.reference is inner_reference
+    assert external_type.reference is root_reference
+    assert unused_models == []
 
 
 def test_unwrap_type_alias_stops_on_recursive_alias() -> None:

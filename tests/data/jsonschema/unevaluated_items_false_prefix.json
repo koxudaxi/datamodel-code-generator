@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UnevaluatedItemsFalsePrefix",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "unevaluatedItems": false
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

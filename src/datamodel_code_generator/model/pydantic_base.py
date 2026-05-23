@@ -105,6 +105,38 @@ class DataModelField(DataModelFieldBase):
             return None
         return result
 
+    def _has_field_statement(self) -> bool:
+        """Return whether rendering this field will require a Field() call."""
+        if self.is_class_var:
+            self.__dict__["_computed_default_factory"] = None
+            return False
+
+        has_field_metadata = (
+            self.extras
+            or self.alias
+            or self.const
+            or self.constraints is not None
+            or (self.use_frozen_field and self.read_only)
+            or self.validation_aliases
+            or self.serialization_alias is not None
+            or self.use_serialization_alias
+        )
+        needs_required_nullable_field = self.nullable and self.required and not self.use_default_with_required
+        needs_optional_nested_factory = (
+            self.use_default_factory_for_optional_nested_models
+            and not self.required
+            and (self.default is None or self.default is UNDEFINED)
+        )
+        if not has_field_metadata and not needs_required_nullable_field and not needs_optional_nested_factory:
+            self.__dict__["_computed_default_factory"] = None
+            return False
+
+        data, default_factory = self._get_field_data_and_default_factory()
+
+        if default_factory or any(v is not None for v in data.values()):
+            return True
+        return bool(self.nullable and self.required and not self.use_default_with_required)
+
     def _get_strict_field_constraint_value(self, constraint: str, value: Any) -> Any:
         if value is None or constraint not in self._COMPARE_EXPRESSIONS:
             return value
@@ -147,8 +179,8 @@ class DataModelField(DataModelFieldBase):
     def _process_annotated_field_arguments(self, field_arguments: list[str]) -> list[str]:  # noqa: PLR6301  # pragma: no cover
         return field_arguments
 
-    def __str__(self) -> str:  # noqa: PLR0912
-        """Return Field() call with all constraints and metadata."""
+    def _get_field_data_and_default_factory(self) -> tuple[dict[str, Any], Any]:
+        """Build Field() keyword data and the effective default_factory."""
         data: dict[str, Any] = {k: v for k, v in self.extras.items() if k not in self._EXCLUDE_FIELD_KEYS}
         if self.alias:
             data["alias"] = self.alias
@@ -199,6 +231,12 @@ class DataModelField(DataModelFieldBase):
 
         self.__dict__["_computed_default_factory"] = default_factory
 
+        return data, default_factory
+
+    def __str__(self) -> str:
+        """Return Field() call with all constraints and metadata."""
+        data, default_factory = self._get_field_data_and_default_factory()
+
         field_arguments = sorted(f"{k}={v!r}" for k, v in data.items() if v is not None)
 
         if not field_arguments and not default_factory:
@@ -244,14 +282,15 @@ class DataModelField(DataModelFieldBase):
     @property
     def annotated(self) -> str | None:
         """Get the Annotated type hint if use_annotated is enabled."""
-        if not self.use_annotated or not str(self) or self.is_class_var:
+        field = str(self)
+        if not self.use_annotated or not field or self.is_class_var:
             return None
-        return f"Annotated[{self.type_hint}, {self!s}]"
+        return f"Annotated[{self.type_hint}, {field}]"
 
     @property
     def imports(self) -> tuple[Import, ...]:
         """Get all required imports including Field if needed."""
-        if self.field:
+        if self._has_field_statement():
             return chain_as_tuple(super().imports, (IMPORT_FIELD,))
         return super().imports
 

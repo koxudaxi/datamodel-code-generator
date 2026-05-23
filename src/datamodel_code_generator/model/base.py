@@ -118,14 +118,20 @@ def format_docstring(value: str | None, indent_spaces: int = 0, *, use_single_li
 class _RenderedDataModelField:
     """Proxy a field with a pre-rendered docstring for built-in templates."""
 
-    __slots__ = ("_field", "docstring")
+    __slots__ = ("_cache", "_field", "docstring")
 
     def __init__(self, field: DataModelFieldBase, docstring: str) -> None:
         self._field = field
+        self._cache: dict[str, Any] = {}
         self.docstring = docstring
 
     def __getattr__(self, name: str) -> Any:
-        return getattr(self._field, name)
+        try:
+            return self._cache[name]
+        except KeyError:
+            value = getattr(self._field, name)
+            self._cache[name] = value
+            return value
 
 
 ALL_MODEL: str = "#all#"
@@ -257,6 +263,11 @@ class DataModelFieldBase(_BaseModel):
         const = self.extras["const"]
         self.const = True
         self.nullable = False
+        if const is None:
+            self.replace_data_type(self.data_type.__class__(type=NONE), clear_old_parent=False)
+            return
+        if not isinstance(const, (bool, int, str)):
+            return
         self.replace_data_type(self.data_type.__class__(literals=[const]), clear_old_parent=False)
         if not self.default:
             self.default = const

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NoKeys",
+  "type": "object",
+  "patternProperties": {
+    "^x-": false,
+    "^internal-": false
+  },
+  "additionalProperties": false
+}
