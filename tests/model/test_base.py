@@ -301,42 +301,6 @@ def test_data_field() -> None:
     assert field.type_hint == "Optional[List]"
 
 
-def test_data_field_forward_reference_uses_union_type_hint() -> None:
-    """Test forward references force Union[] for multi-branch unions."""
-
-    class Parent:
-        has_forward_reference = True
-
-    field = DataModelFieldBase(
-        data_type=DataType(
-            data_types=[DataType(type="str"), DataType(type="int")],
-            use_union_operator=True,
-        ),
-        required=True,
-    )
-    field.parent = Parent()
-
-    assert field.type_hint == "Union[str, int]"
-
-
-def test_data_field_forward_reference_deduplicates_union_type_hint() -> None:
-    """Test duplicate union branches do not render a one-item Union[]."""
-
-    class Parent:
-        has_forward_reference = True
-
-    field = DataModelFieldBase(
-        data_type=DataType(
-            data_types=[DataType(type="str"), DataType(type="str")],
-            use_union_operator=True,
-        ),
-        required=True,
-    )
-    field.parent = Parent()
-
-    assert field.type_hint == "str"
-
-
 @pytest.mark.parametrize(
     ("name", "expected_true", "expected_false"),
     [

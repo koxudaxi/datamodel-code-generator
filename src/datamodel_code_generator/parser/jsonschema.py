@@ -2132,13 +2132,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         warn_on_ref_constraints: bool = True,  # noqa: FBT001, FBT002
     ) -> DataType | None:
         """Build a DataType from allOf schema items."""
-        allof_effective_items = [item for item in allof_items if item is not True]
+        if any(self._is_false_schema_item(item) for item in allof_items):
+            return None
+        allof_effective_items = [item for item in allof_items if isinstance(item, JsonSchemaObject)]
         if not allof_effective_items:
             return DataType(type=ANY, import_=IMPORT_ANY)
         if len(allof_effective_items) == 1:
             item = allof_effective_items[0]
-            if item is False:
-                return None
             if item.ref:
                 return self.get_ref_data_type(item.ref)
             return self._build_lightweight_type(item, depth + 1, visited, max_depth, max_union_elements)
@@ -2150,8 +2150,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         object_items: list[JsonSchemaObject] = []
 
         for item in allof_effective_items:
-            if not isinstance(item, JsonSchemaObject):
-                continue
             if item.ref:
                 ref_items.append(item)
             elif item.type and item.type != "object" and not isinstance(item.type, list):
@@ -2364,9 +2362,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return data_types[0]
             return self.data_type(data_types=data_types)
 
-        if schema.allOf:  # pragma: no cover
-            if self._contains_false_schema(schema.allOf):
-                return None
+        if schema.allOf:
             return self._build_allof_type(
                 schema.allOf,
                 depth,
@@ -4142,8 +4138,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}
-        elif self.field_constraints and obj.format == "hostname":
-            constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[

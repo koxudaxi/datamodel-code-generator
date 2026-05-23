@@ -2509,6 +2509,18 @@ def test_main_hostname_multiple_types_pydantic_v2(output_file: Path) -> None:
     )
 
 
+def test_main_root_multiple_primitive_constraints_pydantic_v2(output_file: Path) -> None:
+    """Test root constraints are skipped when multiple primitive types are allowed."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_multiple_primitive_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_multiple_primitive_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--field-constraints"],
+    )
+
+
 def test_main_jsonschema_special_enum(output_file: Path) -> None:
     """Test special enum handling."""
     run_main_and_assert(
@@ -5087,6 +5099,70 @@ def test_main_typed_dict_extra_items(output_file: Path) -> None:
         input_file_type=None,
         assert_func=assert_file_content,
         expected_file="typed_dict_extra_items.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_allof_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items can infer an allOf reference type."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_allof_extra_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_allof_extra_items.py",
+        extra_args=[
+            "--output-model-type",
+            "typing.TypedDict",
+            "--target-python-version",
+            "3.10",
+        ],
+    )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_allof_constraint_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items warns when allOf constraints are ignored."""
+    with pytest.warns(UserWarning, match=r"allOf combines \$ref with 1 constraint"):
+        run_main_and_assert(
+            input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_allof_constraint_extra_items.json",
+            output_path=output_file,
+            input_file_type=None,
+            assert_func=assert_file_content,
+            expected_file="typed_dict_allof_constraint_extra_items.py",
+            extra_args=[
+                "--output-model-type",
+                "typing.TypedDict",
+                "--target-python-version",
+                "3.10",
+            ],
+        )
+
+
+@pytest.mark.skipif(
+    black.__version__.split(".")[0] == "22",
+    reason="Installed black doesn't support Python version 3.10",
+)
+def test_main_typed_dict_false_allof_extra_items(output_file: Path) -> None:
+    """Test TypedDict extra_items ignores unsatisfiable allOf schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "typed_dict_false_allof_extra_items.json",
+        output_path=output_file,
+        input_file_type=None,
+        assert_func=assert_file_content,
+        expected_file="typed_dict_false_allof_extra_items.py",
         extra_args=[
             "--output-model-type",
             "typing.TypedDict",
