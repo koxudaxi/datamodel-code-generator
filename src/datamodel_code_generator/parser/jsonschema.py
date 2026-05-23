@@ -2136,8 +2136,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return DataType(type=ANY, import_=IMPORT_ANY)
         if len(allof_items) == 1:
             item = allof_items[0]
-            if item is True:
-                return DataType(type=ANY, import_=IMPORT_ANY)
             if item is False:
                 return None
             if item.ref:

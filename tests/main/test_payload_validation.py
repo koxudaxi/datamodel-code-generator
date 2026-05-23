@@ -30,7 +30,7 @@ def generated_model_cache(tmp_path_factory: pytest.TempPathFactory) -> Generated
 def test_payload_validation_cases_cover_discovered_schema_files() -> None:
     """Every discovered schema fixture must be validated or explicitly excluded."""
     unaccounted = discover_unaccounted_files(SCHEMA_CASES)
-    if unaccounted:
+    if unaccounted:  # pragma: no cover
         pytest.fail(
             "Schema files must be covered by payload validation or added to _EXCLUDED_FILES with a reason:\n"
             + "\n".join(unaccounted)

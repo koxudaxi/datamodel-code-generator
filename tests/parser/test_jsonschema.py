@@ -1592,3 +1592,118 @@ def test_parse_combined_schema_all_false() -> None:
             ["#"],
             "anyOf",
         )
+
+
+def test_parse_combined_schema_empty_anyof_falls_back_to_any() -> None:
+    """Test empty anyOf keeps the existing permissive fallback."""
+    parser = JsonSchemaParser("")
+    data_types = parser.parse_combined_schema(
+        "Model",
+        JsonSchemaObject.model_validate({"anyOf": []}),
+        ["#"],
+        "anyOf",
+    )
+    assert [data_type.type_hint for data_type in data_types] == ["Any"]
+
+
+def test_parse_combined_schema_local_false_ref_branch_is_skipped() -> None:
+    """Test local refs to false schemas are dropped from anyOf branches."""
+    schema = {"$defs": {"Never": False}, "anyOf": [{"$ref": "#/$defs/Never"}, {"type": "string"}]}
+    parser = JsonSchemaParser(json.dumps(schema))
+    parser.raw_obj = schema
+    data_types = parser.parse_combined_schema(
+        "Model",
+        JsonSchemaObject.model_validate(schema),
+        ["#"],
+        "anyOf",
+    )
+    assert [data_type.type_hint for data_type in data_types] == ["str"]
+
+
+def test_parse_all_of_boolean_false_ref_errors() -> None:
+    """Test allOf refs to false schemas are rejected."""
+    schema = {"$defs": {"Never": False}, "allOf": [{"$ref": "#/$defs/Never"}]}
+    parser = JsonSchemaParser(json.dumps(schema))
+    parser.raw_obj = schema
+    with pytest.raises(SchemaParseError):
+        parser.parse_all_of("Model", JsonSchemaObject.model_validate(schema), ["#"])
+
+
+def test_parse_all_of_item_boolean_false_errors() -> None:
+    """Test allOf item parsing rejects direct false branches."""
+    parser = JsonSchemaParser("")
+    with pytest.raises(SchemaParseError):
+        parser._parse_all_of_item(
+            "Model",
+            JsonSchemaObject.model_validate({"allOf": [False]}),
+            ["#"],
+            [],
+            [],
+            [],
+            [],
+        )
+
+
+def test_parse_all_of_item_boolean_false_ref_errors() -> None:
+    """Test allOf item parsing rejects refs to false schemas."""
+    schema = {"$defs": {"Never": False}, "allOf": [{"$ref": "#/$defs/Never"}]}
+    parser = JsonSchemaParser(json.dumps(schema))
+    parser.raw_obj = schema
+    with pytest.raises(SchemaParseError):
+        parser._parse_all_of_item("Model", JsonSchemaObject.model_validate(schema), ["#"], [], [], [], [])
+
+
+def test_merge_all_of_object_boolean_false_errors() -> None:
+    """Test allOf object merging rejects direct false branches."""
+    parser = JsonSchemaParser("")
+    with pytest.raises(SchemaParseError):
+        parser._merge_all_of_object(JsonSchemaObject.model_validate({"allOf": [False, {"type": "object"}]}))
+
+
+def test_merge_all_of_object_boolean_false_ref_errors() -> None:
+    """Test allOf object merging rejects refs to false schemas."""
+    schema = {
+        "$defs": {
+            "Never": False,
+            "Payload": {"type": "object", "properties": {"name": {"type": "string"}}},
+        },
+        "allOf": [{"$ref": "#/$defs/Never"}, {"$ref": "#/$defs/Payload"}],
+    }
+    parser = JsonSchemaParser(json.dumps(schema))
+    parser.raw_obj = schema
+    with pytest.raises(SchemaParseError):
+        parser._merge_all_of_object(JsonSchemaObject.model_validate(schema))
+
+
+def test_parse_item_allof_boolean_false_errors() -> None:
+    """Test parse_item rejects false schemas nested in allOf."""
+    parser = JsonSchemaParser("")
+    with pytest.raises(SchemaParseError):
+        parser.parse_item("Model", JsonSchemaObject.model_validate({"allOf": [False]}), ["#"])
+
+
+def test_validate_schema_object_false_preserves_boolean_false_marker() -> None:
+    """Test raw false schemas keep an explicit unsatisfiable marker."""
+    parser = JsonSchemaParser("")
+    assert parser._validate_schema_object(False, ["#"]).is_boolean_schema_false
+
+
+def test_build_allof_type_returns_nested_reference_type() -> None:
+    """Test nested allOf lightweight refs are preserved."""
+    parser = JsonSchemaParser("")
+    reference = Reference(path="Nested", name="Nested")
+    data_type = parser.data_type(reference=reference)
+    parser._build_lightweight_type = lambda *_args, **_kwargs: data_type  # type: ignore[method-assign]
+
+    result = parser._build_allof_type(
+        [
+            JsonSchemaObject.model_validate({"anyOf": [{"type": "string"}]}),
+            JsonSchemaObject.model_validate({"description": "metadata only"}),
+        ],
+        depth=0,
+        visited=frozenset(),
+        max_depth=8,
+        max_union_elements=8,
+    )
+
+    assert result is data_type
