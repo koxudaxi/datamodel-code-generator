@@ -6,19 +6,24 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, RootModel, conint, constr
+from pydantic import BaseModel, RootModel, confloat, conint, constr
 
 
 class ConstraintOnlyBase(BaseModel):
     field_with_constraints: Any | None = None
 
 
-class MultipleField(RootModel[conint(multiple_of=5)]):
-    root: conint(multiple_of=5)
+class MultipleField(RootModel[conint(multiple_of=10)]):
+    root: conint(multiple_of=10)
+
+
+class DecimalMultipleField(RootModel[confloat(multiple_of=0.6)]):
+    root: confloat(multiple_of=0.6)
 
 
 class MultipleOfBase(BaseModel):
     multiple_field: MultipleField | None = None
+    decimal_multiple_field: DecimalMultipleField | None = None
 
 
 class SimpleString(RootModel[str]):
@@ -224,7 +229,7 @@ class EdgeCasesCoverage(
 ):
     local_field: str | None = None
     field_with_constraints: Any
-    multiple_field: conint(multiple_of=5)
+    multiple_field: conint(multiple_of=10)
     ref_and_primitive: SimpleString
     nested_anyof: SimpleString | int
     deep_array: list[dict[str, Any]]
