@@ -115,7 +115,8 @@ The following features are tracked in the codebase with their implementation sta
 | `contains` | Draft 6 | ❌ Not Supported | Array contains at least one matching item |
 | `deprecated` | 2019-09 | ⚠️ Partial | Marks schema elements as deprecated |
 | `if/then/else` | Draft 7 | ❌ Not Supported | Conditional schema validation |
-| `contentMediaType/contentEncoding` | Draft 7 | ❌ Not Supported | Content type and encoding hints for strings |
+| `contentMediaType/contentEncoding` | Draft 7 | ⚠️ Partial | Content type and encoding hints for strings |
+| `contentSchema` | 2019-09 | ⚠️ Partial | Schema for decoded string content |
 | `$anchor` | 2019-09 | ❌ Not Supported | Location-independent schema references |
 | `$vocabulary` | 2019-09 | ❌ Not Supported | Vocabulary declarations for meta-schemas |
 | `unevaluatedProperties` | 2019-09 | ❌ Not Supported | Additional properties not evaluated by subschemas |
@@ -133,8 +134,8 @@ The following features are tracked in the codebase with their implementation sta
 | `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
 | `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
 | `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
-| `xml` | OAS 3.0 | ❌ Not Supported | XML serialization metadata (name, namespace, prefix) |
-| `externalDocs` | OAS 3.0 | ❌ Not Supported | Reference to external documentation |
+| `xml` | OAS 3.0 | ⚠️ Partial | XML serialization metadata (name, namespace, prefix) |
+| `externalDocs` | OAS 3.0 | ⚠️ Partial | Reference to external documentation |
 | `links` | OAS 3.0 | ❌ Not Supported | Links between operations |
 | `callbacks` | OAS 3.0 | ❌ Not Supported | Callback definitions for webhooks |
 | `securitySchemes` | OAS 3.0 | ❌ Not Supported | API security mechanism definitions |
@@ -179,9 +180,9 @@ The following features are tracked in the codebase with their implementation sta
 | `$anchor` | 2019-09 | ❌ Not supported | Use `$ref` with `$id` instead |
 | `unevaluatedProperties` | 2019-09 | ❌ Not supported | Use `additionalProperties` instead |
 | `unevaluatedItems` | 2019-09 | ❌ Not supported | Use `additionalItems` instead |
-| `contentMediaType` | Draft 7 | ❌ Not supported | Content type hints ignored |
-| `contentEncoding` | Draft 7 | ❌ Not supported | Encoding hints ignored |
-| `contentSchema` | 2019-09 | ❌ Not supported | Nested content schema ignored |
+| `contentMediaType` | Draft 7 | ⚠️ Partial | Preserved as schema metadata |
+| `contentEncoding` | Draft 7 | ⚠️ Partial | Preserved as schema metadata |
+| `contentSchema` | 2019-09 | ⚠️ Partial | Preserved as schema metadata |
 | `$vocabulary` | 2019-09 | ❌ Not supported | Vocabulary declarations ignored |
 | `$comment` | Draft 7 | ⚠️ Ignored | Comments not preserved in output |
 | `deprecated` | 2019-09 | ⚠️ Partial | Recognized but not enforced |
@@ -199,11 +200,11 @@ The following features are tracked in the codebase with their implementation sta
 | `$ref` sibling keywords | OAS 3.0 | ❌ Not supported | 3.0 spec limitation (fixed in 3.1) |
 | `links` | OAS 3.0 | ❌ Not supported | Runtime linking not applicable |
 | `callbacks` | OAS 3.0 | ❌ Not supported | Webhook callbacks ignored |
-| `webhooks` | OAS 3.1 | ❌ Not supported | Top-level webhooks ignored |
+| `webhooks` | OAS 3.1 | ✅ Supported | Generated when included in `--openapi-scopes` |
 | `security` definitions | OAS 2.0+ | ❌ Not supported | Security schemes not generated |
 | `servers` | OAS 3.0 | ❌ Not supported | Server configuration ignored |
-| `externalDocs` | OAS 2.0+ | ❌ Not supported | External documentation links ignored |
-| `xml` | OAS 2.0+ | ❌ Not supported | XML serialization hints ignored |
+| `externalDocs` | OAS 2.0+ | ⚠️ Partial | Preserved as schema metadata |
+| `xml` | OAS 2.0+ | ⚠️ Partial | Preserved as schema metadata |
 | Request body `required` | OAS 3.0 | ⚠️ Partial | Affects field optionality |
 | Header/Cookie parameters | OAS 3.0 | ⚠️ Partial | Generated but not validated |
 

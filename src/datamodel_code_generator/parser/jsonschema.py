@@ -236,6 +236,11 @@ class JsonSchemaObject(BaseModel):
         "readOnly",
         "writeOnly",
         "deprecated",
+        "contentEncoding",
+        "contentMediaType",
+        "contentSchema",
+        "externalDocs",
+        "xml",
         "$recursiveRef",
         "recursiveRef",
         "$recursiveAnchor",
@@ -539,6 +544,19 @@ DEFAULT_FIELD_KEYS: set[str] = {
     "const",
     "default_factory",
     "deprecated",
+    "contentEncoding",
+    "contentMediaType",
+    "contentSchema",
+    "externalDocs",
+    "xml",
+}
+
+DEFAULT_MODEL_EXTRA_KEYS: set[str] = {
+    "contentEncoding",
+    "contentMediaType",
+    "contentSchema",
+    "externalDocs",
+    "xml",
 }
 
 EXCLUDE_FIELD_KEYS_IN_JSON_SCHEMA: set[str] = {
@@ -1695,17 +1713,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.extras.get("x-is-base-class"):
             self.extra_template_data[path]["is_base_class"] = True
 
-        # Process model_extra_keys for json_schema_extra in ConfigDict
+        # Process model-level metadata and model_extra_keys for json_schema_extra in ConfigDict
+        model_extras: dict[str, Any] = {k: v for k, v in obj.extras.items() if k in DEFAULT_MODEL_EXTRA_KEYS}
         if self.model_extra_keys or self.model_extra_keys_without_x_prefix:
-            model_extras: dict[str, Any] = {}
             for k, v in obj.extras.items():
                 if self.model_extra_keys and k in self.model_extra_keys:
                     model_extras[k] = v
                 elif self.model_extra_keys_without_x_prefix and k in self.model_extra_keys_without_x_prefix:
                     # Strip the x- prefix
                     model_extras[k.lstrip("x-")] = v
-            if model_extras:
-                self.extra_template_data[path]["model_extras"] = model_extras
+        if model_extras:
+            self.extra_template_data[path]["model_extras"] = model_extras
 
     def _get_python_type_flags(self, obj: JsonSchemaObject) -> dict[str, bool]:  # noqa: PLR6301
         """Get container type flags from x-python-type extension.

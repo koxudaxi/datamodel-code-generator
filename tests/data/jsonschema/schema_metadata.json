@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SchemaMetadata",
+  "type": "object",
+  "externalDocs": {
+    "url": "https://example.com/schema",
+    "description": "Schema documentation"
+  },
+  "xml": {
+    "name": "schemaMetadata"
+  },
+  "properties": {
+    "payload": {
+      "type": "string",
+      "contentEncoding": "base64",
+      "contentMediaType": "application/json",
+      "contentSchema": {
+        "type": "object"
+      }
+    }
+  }
+}

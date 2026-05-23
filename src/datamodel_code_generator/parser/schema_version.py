@@ -171,7 +171,16 @@ class JsonSchemaFeatures:
             introduced="Draft 7",
             doc_name="contentMediaType/contentEncoding",
             description="Content type and encoding hints for strings",
-            status="not_supported",
+            status="partial",
+        ),
+    )
+    content_schema: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="contentSchema",
+            description="Schema for decoded string content",
+            status="partial",
         ),
     )
     anchor: bool = field(
@@ -367,7 +376,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
             introduced="OAS 3.0",
             doc_name="xml",
             description="XML serialization metadata (name, namespace, prefix)",
-            status="not_supported",
+            status="partial",
         ),
     )
     external_docs: bool = field(
@@ -376,7 +385,7 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
             introduced="OAS 3.0",
             doc_name="externalDocs",
             description="Reference to external documentation",
-            status="not_supported",
+            status="partial",
         ),
     )
     links: bool = field(
