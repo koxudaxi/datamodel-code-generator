@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import math
 import warnings
+from fractions import Fraction
 from typing import TYPE_CHECKING, Any
 
 from jsonschema import exceptions, validators
@@ -279,6 +280,67 @@ def _has_unsatisfiable_closed_tuple_contains_max(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_closed_tuple_contains_max)
 
 
+def _fraction_value(value: Any) -> Fraction | None:
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return Fraction(str(value))
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def _effective_numeric_bound(
+    schema: dict[str, Any], inclusive_key: str, exclusive_key: str, *, lower: bool
+) -> (
+    tuple[
+        Fraction,
+        bool,
+    ]
+    | None
+):
+    inclusive_value = _fraction_value(schema.get(inclusive_key))
+    exclusive_value = _fraction_value(schema.get(exclusive_key))
+    if inclusive_value is None:
+        return (exclusive_value, True) if exclusive_value is not None else None
+    if exclusive_value is None:
+        return inclusive_value, False
+    if inclusive_value == exclusive_value:
+        return inclusive_value, True
+    if lower:
+        return (exclusive_value, True) if exclusive_value > inclusive_value else (inclusive_value, False)
+    return (exclusive_value, True) if exclusive_value < inclusive_value else (inclusive_value, False)
+
+
+def _has_unsatisfiable_numeric_multiple_bounds(value: Any) -> bool:
+    def has_unsatisfiable_numeric_multiple_bounds(schema: dict[str, Any]) -> bool:
+        multiple = _fraction_value(schema.get("multipleOf"))
+        if multiple is None or multiple <= 0:
+            return False
+        type_values = _type_values(schema.get("type"))
+        if type_values is None or not type_values <= {"integer", "number"}:
+            return False
+        lower_bound = _effective_numeric_bound(schema, "minimum", "exclusiveMinimum", lower=True)
+        upper_bound = _effective_numeric_bound(schema, "maximum", "exclusiveMaximum", lower=False)
+        if lower_bound is None or upper_bound is None:
+            return False
+
+        step = multiple if "number" in type_values else Fraction(abs(multiple.numerator), 1)
+        lower_value, lower_exclusive = lower_bound
+        upper_value, upper_exclusive = upper_bound
+
+        min_factor = math.ceil(lower_value / step)
+        if lower_exclusive and min_factor * step == lower_value:
+            min_factor += 1
+
+        max_factor = math.floor(upper_value / step)
+        if upper_exclusive and max_factor * step == upper_value:
+            max_factor -= 1
+
+        return min_factor > max_factor
+
+    return _any_schema_node(value, has_unsatisfiable_numeric_multiple_bounds)
+
+
 def _has_unsatisfiable_array_length(value: Any) -> bool:
     def max_item_counts(schema: dict[str, Any]) -> list[int]:
         counts: list[int] = []
@@ -368,6 +430,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "contains minContains/maxContains bounds have no valid array payloads"
     if _has_unsatisfiable_closed_tuple_contains_max(schema):
         return "closed tuple contains maxContains bounds have no valid array payloads"
+    if _has_unsatisfiable_numeric_multiple_bounds(schema):
+        return "numeric multipleOf bounds have no valid payloads"
     if _has_unsatisfiable_array_length(schema):
         return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):

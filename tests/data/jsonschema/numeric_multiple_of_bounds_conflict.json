@@ -1,0 +1,13 @@
+{
+  "title": "NumericMultipleOfBoundsConflict",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3,
+      "multipleOf": 5
+    }
+  },
+  "required": ["value"]
+}

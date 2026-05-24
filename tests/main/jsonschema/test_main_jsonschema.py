@@ -4899,6 +4899,23 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "properties": {"value": {"type": "integer", "minimum": 1, "maximum": 3, "multipleOf": 5}},
+                "required": ["value"],
+            },
+            id="property-integer-multiple-of-bounds-disjoint",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "number", "minimum": 0.1, "maximum": 0.4, "multipleOf": 0.5},
+            id="number-multiple-of-bounds-disjoint",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "integer", "exclusiveMinimum": 1, "exclusiveMaximum": 2, "multipleOf": 1},
+            id="integer-exclusive-multiple-of-bounds-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"value": {"enum": ["a"], "minLength": 2}},
                 "required": ["value"],
             },
@@ -10209,6 +10226,50 @@ def test_main_jsonschema_contains_tuple_max_contains_intersection(output_file: P
     """Test required tuple items that imply contains cannot exceed maxContains."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "contains_tuple_max_contains_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_numeric_multiple_of_bounds(output_file: Path) -> None:
+    """Test multipleOf and numeric bounds keep only satisfiable constrained values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "numeric_multiple_of_bounds.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="numeric_multiple_of_bounds.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="numeric_multiple_of_bounds",
+        model_name="NumericMultipleOfBounds",
+        valid_json='{"evenSmall":2,"halfStep":1.0}',
+        invalid_json='{"evenSmall":3,"halfStep":1.0}',
+        expected_error_type="multiple_of",
+        expected_attribute_path=("evenSmall",),
+        expected_attribute_value=2,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="numeric_multiple_of_bounds",
+        model_name="NumericMultipleOfBounds",
+        valid_json='{"evenSmall":4,"halfStep":1.5}',
+        invalid_json='{"evenSmall":4,"halfStep":1.2}',
+        expected_error_type="multiple_of",
+        expected_attribute_path=("halfStep",),
+        expected_attribute_value=1.5,
+    )
+
+
+def test_main_jsonschema_numeric_multiple_of_bounds_conflict(output_file: Path) -> None:
+    """Test multipleOf and numeric bounds with no matching value are rejected statically."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "numeric_multiple_of_bounds_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

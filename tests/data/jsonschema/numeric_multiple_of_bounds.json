@@ -1,0 +1,19 @@
+{
+  "title": "NumericMultipleOfBounds",
+  "type": "object",
+  "properties": {
+    "evenSmall": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 4,
+      "multipleOf": 2
+    },
+    "halfStep": {
+      "type": "number",
+      "minimum": 0.5,
+      "maximum": 1.5,
+      "multipleOf": 0.5
+    }
+  },
+  "required": ["evenSmall", "halfStep"]
+}
