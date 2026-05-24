@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:other="https://example.com/other"
+  xmlns:dup="https://example.com/one"
+>
+  <xs:simpleType name="EmptyRestriction">
+    <xs:restriction>
+      <other:ignored value="ignored"/>
+      <xs:minLength value="bad"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="not-a-python-type"/>
+
+  <xs:group name="optionalGroup">
+    <xs:sequence>
+      <xs:element name="optionalGrouped" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
+
+  <xs:complexType name="NoSimpleChild">
+    <xs:simpleContent/>
+  </xs:complexType>
+
+  <xs:complexType name="Loose">
+    <xs:group>
+      <xs:sequence>
+        <xs:element name="inlineGroupElement" type="xs:string" fixed="v">
+          <xs:annotation xmlns:dup="https://example.com/two">
+            <xs:documentation>Element docs</xs:documentation>
+            <xs:documentation> </xs:documentation>
+            <xs:documentation>More element docs</xs:documentation>
+          </xs:annotation>
+        </xs:element>
+      </xs:sequence>
+    </xs:group>
+    <xs:sequence minOccurs="0">
+      <xs:group ref="optionalGroup"/>
+    </xs:sequence>
+    <xs:sequence>
+      <xs:annotation/>
+      <xs:element/>
+      <xs:element name="not-a-python-name" type="xs:string"/>
+      <xs:element name="unboundedItem" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="badOccurs" type="xs:string" maxOccurs="bad"/>
+      <xs:element name="empty"/>
+      <xs:group ref="missingGroup"/>
+      <xs:any/>
+      <xs:element name="unknownNamespace" type="other:Thing"/>
+      <xs:element name="badDecimalDefault" type="xs:decimal" default="bad"/>
+      <xs:element name="badIntDefault" type="xs:int" default="bad"/>
+    </xs:sequence>
+    <xs:attributeGroup>
+      <xs:attribute name="localGrouped">
+        <xs:annotation>
+          <xs:documentation>Grouped attr</xs:documentation>
+        </xs:annotation>
+      </xs:attribute>
+    </xs:attributeGroup>
+    <xs:attributeGroup ref="missingGroup"/>
+    <xs:attribute/>
+  </xs:complexType>
+
+  <xs:attributeGroup name="topAttributes">
+    <xs:attribute name="topAttribute" type="xs:string"/>
+  </xs:attributeGroup>
+  <plain name="ignored"/>
+  <other:named name="ignored"/>
+  <xs:simpleType name="AfterTopAttributes"/>
+  <xs:simpleType name="DuplicateName"/>
+  <xs:complexType name="DuplicateName">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+
+  <xs:element name="plain" type="xs:string"/>
+  <xs:element name="loose" type="Loose"/>
+</xs:schema>

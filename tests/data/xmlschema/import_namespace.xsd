@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:ext="https://example.com/external"
+  targetNamespace="https://example.com/main"
+>
+  <xs:import namespace="https://example.com/external" schemaLocation="import_external.xsd"/>
+  <xs:element name="code" type="ext:ImportedCode"/>
+</xs:schema>

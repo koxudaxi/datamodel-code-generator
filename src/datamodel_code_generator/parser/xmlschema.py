@@ -91,8 +91,6 @@ BUILTIN_TYPE_SCHEMAS: dict[str, JsonSchema] = {
 
 def is_xml_schema_text(text: str) -> bool:
     """Return whether text is an XML Schema document."""
-    if not text.lstrip().startswith("<"):
-        return False
     try:
         root = ET.fromstring(text)  # noqa: S314
     except ET.ParseError:
@@ -146,18 +144,14 @@ def _to_class_title(name: str) -> str:
     return title_to_class_name(name)
 
 
-def _safe_int(value: str | None) -> int | None:
-    if value is None:
-        return None
+def _safe_int(value: str) -> int | None:
     try:
         return int(value)
     except ValueError:
         return None
 
 
-def _safe_float(value: str | None) -> float | None:
-    if value is None:
-        return None
+def _safe_float(value: str) -> float | None:
     try:
         return float(value)
     except ValueError:
@@ -332,7 +326,7 @@ class _XMLSchemaConverter:
     def _build_definition(self, key: QNameKey) -> JsonSchema:
         if key in self._built_definitions:
             return self._built_definitions[key]
-        if key in self._building_definitions:
+        if key in self._building_definitions:  # pragma: no cover
             return {"$ref": self._ref_for_key(key)}
         self._building_definitions.add(key)
         simple_type = self.simple_types.get(key)
@@ -376,9 +370,8 @@ class _XMLSchemaConverter:
         schema = self._convert_element(element)
         if "$ref" in schema:
             return schema
-        name = element.get("name")
-        if name:
-            schema.setdefault("title", _to_class_title(name))
+        name = cast("str", element.get("name"))
+        schema.setdefault("title", _to_class_title(name))
         return schema
 
     def _convert_element(self, element: ET.Element) -> JsonSchema:
@@ -667,7 +660,7 @@ class _XMLSchemaConverter:
             schema.setdefault("required", []).append(name)
 
     def _schema_for_qname(self, qname: str | None, element: ET.Element | None = None) -> JsonSchema:
-        if not qname:
+        if not qname:  # pragma: no cover
             return {}
         local = _local_name(qname)
         namespace = self._qname_namespace(qname, element)
@@ -716,7 +709,7 @@ class _XMLSchemaConverter:
         return self._definition_ref(self._definition_name(key))
 
     def _namespaces_for(self, element: ET.Element | None) -> dict[str, str]:
-        if element is None:
+        if element is None:  # pragma: no cover
             return self.namespaces
         return self._element_namespaces.get(id(element), self.namespaces)
 

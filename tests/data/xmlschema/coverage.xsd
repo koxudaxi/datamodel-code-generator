@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema
+  xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns:tns="https://example.com/xsd"
+  targetNamespace="https://example.com/xsd"
+>
+  <xs:include/>
+  <xs:include schemaLocation="missing.xsd"/>
+  <xs:include schemaLocation="coverage_included.xsd"/>
+  <xs:include schemaLocation="coverage_included.xsd"/>
+
+  <xs:simpleType name="TextAlias">
+    <xs:annotation>
+      <xs:documentation> Text alias docs </xs:documentation>
+    </xs:annotation>
+  </xs:simpleType>
+
+  <xs:simpleType name="TokenList">
+    <xs:list itemType="xs:token"/>
+  </xs:simpleType>
+
+  <xs:simpleType name="InlineTokenList">
+    <xs:list>
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:enumeration value="a"/>
+          <xs:enumeration value="b"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:list>
+  </xs:simpleType>
+
+  <xs:simpleType name="MixedUnion">
+    <xs:union memberTypes="xs:string tns:TokenList">
+      <xs:simpleType>
+        <xs:restriction>
+          <xs:simpleType>
+            <xs:restriction base="xs:int"/>
+          </xs:simpleType>
+          <xs:minInclusive value="1"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:union>
+  </xs:simpleType>
+
+  <xs:simpleType name="NumericFacet">
+    <xs:restriction base="xs:decimal">
+      <xs:enumeration value="1.5"/>
+      <xs:minInclusive value="1"/>
+      <xs:maxInclusive value="9"/>
+      <xs:minExclusive value="0"/>
+      <xs:maxExclusive value="10"/>
+      <xs:totalDigits value="3"/>
+      <xs:fractionDigits value="1"/>
+      <xs:whiteSpace value="collapse"/>
+      <xs:pattern value="[0-9.]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="BooleanFacet">
+    <xs:restriction base="xs:boolean">
+      <xs:enumeration value="true"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ArrayFacet">
+    <xs:restriction base="tns:TokenList">
+      <xs:minLength value="1"/>
+      <xs:maxLength value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:element name="sharedElement" type="xs:string"/>
+
+  <xs:complexType name="BaseType">
+    <xs:annotation>
+      <xs:documentation>Base docs</xs:documentation>
+    </xs:annotation>
+    <xs:sequence minOccurs="0">
+      <xs:element ref="tns:sharedElement" minOccurs="0" maxOccurs="2" nillable="true" default="x"/>
+      <xs:choice>
+        <xs:element name="left" type="xs:string"/>
+        <xs:element name="right" type="xs:string"/>
+      </xs:choice>
+      <xs:group ref="tns:namedGroup"/>
+      <xs:any/>
+    </xs:sequence>
+    <xs:attribute name="localNumber" type="xs:int" default="1"/>
+    <xs:attribute name="inlineAttribute">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:maxLength value="8"/>
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute ref="tns:globalFlag" use="required"/>
+    <xs:attribute use="prohibited" name="blocked"/>
+    <xs:attributeGroup ref="tns:namedAttributes"/>
+    <xs:anyAttribute/>
+  </xs:complexType>
+
+  <xs:complexType name="ExtendedType">
+    <xs:complexContent>
+      <xs:extension base="tns:BaseType">
+        <xs:sequence>
+          <xs:element name="extra" type="xs:unknown" minOccurs="0" maxOccurs="3"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="RestrictedType">
+    <xs:complexContent>
+      <xs:restriction>
+        <xs:sequence>
+          <xs:element name="only" type="xs:string"/>
+        </xs:sequence>
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <xs:complexType name="FallbackContent">
+    <xs:complexContent/>
+  </xs:complexType>
+
+  <xs:complexType name="Amount">
+    <xs:simpleContent>
+      <xs:restriction base="xs:int">
+        <xs:minInclusive value="1"/>
+        <xs:attribute name="unit" type="xs:string"/>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="TextWithAttrs">
+    <xs:simpleContent>
+      <xs:extension>
+        <xs:attribute name="kind" fixed="plain"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:element name="first" type="tns:ExtendedType"/>
+  <xs:element name="second">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="inlineChild">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:minLength value="2"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
