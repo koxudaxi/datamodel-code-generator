@@ -1,0 +1,96 @@
+{
+  "title": "object context model value validators",
+  "type": "object",
+  "properties": {
+    "trigger": {
+      "type": "boolean"
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "mode",
+        "quota"
+      ],
+      "properties": {
+        "mode": {
+          "type": "string"
+        },
+        "quota": {
+          "type": "integer"
+        },
+        "token": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "dependentSchemas": {
+    "trigger": {
+      "required": [
+        "profile"
+      ],
+      "properties": {
+        "profile": {
+          "type": "object",
+          "required": [
+            "quota"
+          ],
+          "properties": {
+            "quota": {
+              "type": "integer",
+              "minimum": 2
+            }
+          }
+        }
+      }
+    }
+  },
+  "if": {
+    "required": [
+      "profile"
+    ],
+    "properties": {
+      "profile": {
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "const": "secure"
+          }
+        }
+      }
+    }
+  },
+  "then": {
+    "properties": {
+      "profile": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 5
+          }
+        }
+      }
+    }
+  },
+  "else": {
+    "properties": {
+      "profile": {
+        "type": "object",
+        "not": {
+          "required": [
+            "token"
+          ]
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

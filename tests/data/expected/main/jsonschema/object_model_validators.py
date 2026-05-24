@@ -18,6 +18,11 @@ class ObjectModelValidators(BaseModel):
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         field_count = len(self.model_fields_set)
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         field_count += len(extra_values)
@@ -33,10 +38,17 @@ class ObjectModelValidators(BaseModel):
             'billing_address': 'billing-address',
         }
         model_data = {
-            field_original_names.get(field_name, field_name): getattr(self, field_name)
+            field_original_names.get(field_name, field_name): json_schema_runtime_value(
+                getattr(self, field_name)
+            )
             for field_name in self.model_fields_set
         }
-        model_data.update(extra_values)
+        model_data.update(
+            {
+                key: json_schema_runtime_value(value)
+                for key, value in extra_values.items()
+            }
+        )
         if 'credit_card' in provided_keys:
             missing = {'billing_address'} - provided_keys
             if missing:

@@ -48,10 +48,15 @@ class NestedArrayUniqueItemsValidators(BaseModel):
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
         model_data = {
-            field_name: getattr(self, field_name)
+            field_name: json_schema_runtime_value(getattr(self, field_name))
             for field_name in self.model_fields_set
         }
-        model_data.update(extra_values)
+        model_data.update(
+            {
+                key: json_schema_runtime_value(value)
+                for key, value in extra_values.items()
+            }
+        )
         if 'trigger' in provided_keys:
             missing = {'groups'} - provided_keys
             if missing:

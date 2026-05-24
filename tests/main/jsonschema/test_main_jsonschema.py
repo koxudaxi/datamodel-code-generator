@@ -5205,6 +5205,36 @@ def test_main_jsonschema_object_boolean_context_validators(output_file: Path) ->
         )
 
 
+def test_main_jsonschema_object_context_model_value_validators(output_file: Path) -> None:
+    """Test object-context validators inspect Pydantic-converted model field values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_model_value_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_model_value_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"trigger":true,"profile":{"mode":"secure","quota":2,"token":"abcde"}}'
+    for invalid_json in [
+        '{"trigger":true,"profile":{"mode":"secure","quota":1,"token":"abcde"}}',
+        '{"trigger":true,"profile":{"mode":"secure","quota":2,"token":"abc"}}',
+        '{"profile":{"mode":"public","quota":1,"token":"abcde"}}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_model_value_validators",
+            model_name="ObjectContextModelValueValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_conditional_boolean_branch_validators(output_file: Path) -> None:
     """Test boolean then/else schemas generate runtime conditional validators."""
     run_main_and_assert(

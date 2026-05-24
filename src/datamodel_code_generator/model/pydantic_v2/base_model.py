@@ -432,13 +432,24 @@ class BaseModel(BaseModelBase):
             lines.extend([
                 f"field_original_names = {field_original_names!r}",
                 "model_data = {",
-                "    field_original_names.get(field_name, field_name): getattr(self, field_name)",
+                "    field_original_names.get(field_name, field_name): json_schema_runtime_value(",
+                "        getattr(self, field_name)",
+                "    )",
                 "    for field_name in self.model_fields_set",
                 "}",
             ])
         else:
-            lines.append("model_data = {field_name: getattr(self, field_name) for field_name in self.model_fields_set}")
-        lines.append("model_data.update(extra_values)")
+            lines.extend([
+                "model_data = {",
+                "    field_name: json_schema_runtime_value(getattr(self, field_name))",
+                "    for field_name in self.model_fields_set",
+                "}",
+            ])
+        lines.extend([
+            "model_data.update(",
+            "    {key: json_schema_runtime_value(value) for key, value in extra_values.items()}",
+            ")",
+        ])
         return lines
 
     @staticmethod
@@ -485,7 +496,7 @@ class BaseModel(BaseModelBase):
                 continue
             lines.extend([
                 f"if {trigger!r} in provided_keys and {field_name!r} in provided_keys:",
-                f"    {value_name} = self.{field_name}",
+                f"    {value_name} = json_schema_runtime_value(self.{field_name})",
                 f"    if not ({predicate}):",
                 "        raise ValueError(",
                 f"            {trigger!r} + ' requires {field_name}' + ' to match dependent schema'",
@@ -527,7 +538,7 @@ class BaseModel(BaseModelBase):
                     continue
                 lines.extend([
                     f"if {field_name!r} in provided_keys:",
-                    f"    {value_name} = self.{field_name}",
+                    f"    {value_name} = json_schema_runtime_value(self.{field_name})",
                     f"    if not ({predicate}):",
                     "        raise ValueError(",
                     f"            '{branch_name} schema requires {field_name}' + ' to match schema'",

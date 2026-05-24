@@ -19,15 +19,27 @@ class ConditionalBooleanBranchValidators(BaseModel):
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
         field_original_names = {'fallback_code': 'fallback-code'}
         model_data = {
-            field_original_names.get(field_name, field_name): getattr(self, field_name)
+            field_original_names.get(field_name, field_name): json_schema_runtime_value(
+                getattr(self, field_name)
+            )
             for field_name in self.model_fields_set
         }
-        model_data.update(extra_values)
+        model_data.update(
+            {
+                key: json_schema_runtime_value(value)
+                for key, value in extra_values.items()
+            }
+        )
 
         if ((not isinstance(model_data, dict) or {'mode'}.issubset(model_data))) and (
             (
