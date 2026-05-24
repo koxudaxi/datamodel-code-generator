@@ -4313,6 +4313,42 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "minProperties": 1,
+                "allOf": [
+                    {"additionalProperties": False},
+                    {"additionalProperties": {"type": "string"}},
+                ],
+            },
+            id="allof-additional-properties-false-schema-min-properties-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "minProperties": 1,
+                "allOf": [
+                    {"propertyNames": False},
+                    {"propertyNames": {"type": "string"}},
+                ],
+            },
+            id="allof-property-names-false-schema-min-properties-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "minItems": 1,
+                "allOf": [
+                    {"items": False},
+                    {"items": {"type": "string"}},
+                ],
+            },
+            id="allof-items-false-schema-min-items-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
                 "additionalProperties": False,
@@ -7374,6 +7410,29 @@ def test_main_jsonschema_allof_map_constraint_intersection(output_file: Path) ->
         expected_error_type="greater_than_equal",
         expected_attribute_path=("root",),
         expected_attribute_value={"a": 1},
+    )
+
+
+def test_main_jsonschema_allof_schema_boolean_intersection(output_file: Path) -> None:
+    """Test allOf schema-valued keywords preserve boolean false intersections."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_schema_boolean_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_schema_boolean_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_schema_boolean_intersection",
+        model_name="AllofSchemaBooleanIntersection",
+        valid_json="{}",
+        invalid_json='{"extra":"value"}',
+        expected_error_type="too_long",
+        expected_attribute_path=("root",),
+        expected_attribute_value={},
     )
 
 

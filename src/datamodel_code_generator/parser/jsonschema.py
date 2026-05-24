@@ -2019,6 +2019,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._normalize_literal_constraints(result)
         self._normalize_literal_constraints(result)
         JsonSchemaParser._validate_allof_intersected_constraints(result)
+        JsonSchemaParser._validate_raw_object_constraints(result)
+        JsonSchemaParser._validate_raw_array_constraints(result)
         return result
 
     def _merge_allof_shared_keyword(self, result: dict[Any, Any], key: Any, value: Any) -> bool:
@@ -2038,6 +2040,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             result[key] is not None and value is not None
         ):
             result[key] = JsonSchemaParser._intersect_constraint(key, result[key], value)
+        elif (
+            key in JsonSchemaParser._allof_schema_valued_keywords()
+            and isinstance(result[key], (bool, dict))
+            and isinstance(value, (bool, dict))
+        ):
+            result[key] = JsonSchemaParser._merge_raw_schema_intersection(result[key], value)
         elif isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = self._deep_merge_allof_schema(result[key], value)
         elif isinstance(result[key], list) and isinstance(value, list):
@@ -2045,6 +2053,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         else:
             handled = False
         return handled
+
+    @staticmethod
+    def _allof_schema_valued_keywords() -> set[str]:
+        return {
+            "additionalProperties",
+            "contains",
+            "contentSchema",
+            "items",
+            "propertyNames",
+            "unevaluatedItems",
+            "unevaluatedProperties",
+        }
 
     def _merge_allof_type_keyword(self, result: dict[Any, Any], value: Any) -> bool:
         left_types = JsonSchemaParser._type_values(result["type"])
