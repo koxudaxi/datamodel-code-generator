@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, RootModel, conint
+from pydantic import BaseModel, Field, RootModel, conint
 
 
 class BaseRef(BaseModel):
@@ -24,7 +24,7 @@ class SingleAllofPrimitive(RootModel[str]):
 
 
 class AllofNestedAnyof(RootModel[str | int]):
-    root: str | int
+    root: str | int = Field(..., description='nested anyOf')
 
 
 class AllofConstraintOnly(RootModel[Any]):

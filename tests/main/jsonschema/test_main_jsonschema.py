@@ -5959,6 +5959,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_root_map_values.json", "allof_root_map_values.py"),
         ("allof_property_value_schemas.json", "allof_property_value_schemas.py"),
         ("allof_ref_value_schemas.json", "allof_ref_value_schemas.py"),
+        ("allof_nested_value_schemas.json", "allof_nested_value_schemas.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(
@@ -5975,6 +5976,50 @@ def test_main_jsonschema_allof_value_schemas(
         expected_file=expected_file,
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
         force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_allof_nested_value_schema_container_constraints(output_file: Path) -> None:
+    """Test allOf nested anyOf/oneOf value schemas keep container constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_nested_value_schemas.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_nested_value_schemas.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"arrayChoice":["a"],"mapChoice":{"x":"a"},"oneOfArrayChoice":[1]}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_nested_value_schemas",
+        model_name="AllofNestedValueSchemas",
+        valid_json=valid_json,
+        invalid_json='{"arrayChoice":[],"mapChoice":{"x":"a"},"oneOfArrayChoice":[1]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("arrayChoice", "root", "root"),
+        expected_attribute_value=["a"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_nested_value_schemas",
+        model_name="AllofNestedValueSchemas",
+        valid_json=valid_json,
+        invalid_json='{"arrayChoice":["a"],"mapChoice":{},"oneOfArrayChoice":[1]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("mapChoice", "root"),
+        expected_attribute_value={"x": "a"},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_nested_value_schemas",
+        model_name="AllofNestedValueSchemas",
+        valid_json=valid_json,
+        invalid_json='{"arrayChoice":["a"],"mapChoice":{"x":"a"},"oneOfArrayChoice":[]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("oneOfArrayChoice", "root", "root"),
+        expected_attribute_value=[1],
     )
 
 

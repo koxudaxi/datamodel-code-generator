@@ -1,0 +1,77 @@
+{
+  "title": "AllofNestedValueSchemas",
+  "type": "object",
+  "properties": {
+    "arrayChoice": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          ]
+        },
+        {
+          "minItems": 1,
+          "maxItems": 3
+        }
+      ]
+    },
+    "mapChoice": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer"
+              }
+            }
+          ]
+        },
+        {
+          "minProperties": 1,
+          "maxProperties": 3
+        }
+      ]
+    },
+    "oneOfArrayChoice": {
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            }
+          ]
+        },
+        {
+          "minItems": 1
+        }
+      ]
+    }
+  }
+}

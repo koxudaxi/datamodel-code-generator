@@ -2887,6 +2887,48 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or item.maxProperties is not None
         )
 
+    def _allof_item_is_combined_value_schema(self, item: JsonSchemaObject) -> bool:
+        combined_items = item.anyOf or item.oneOf
+        if not combined_items:
+            return False
+
+        has_value_item = False
+        for combined_item in combined_items:
+            if self._is_false_schema_item(combined_item):
+                continue
+            if combined_item is True:
+                return False
+            if not isinstance(combined_item, JsonSchemaObject):  # pragma: no cover
+                continue
+
+            resolved_item = self._load_ref_schema_object(combined_item.ref) if combined_item.ref else combined_item
+            if not (
+                self._allof_item_is_map_root_schema(resolved_item) or self._allof_item_has_value_shape(resolved_item)
+            ):
+                return False
+            has_value_item = True
+
+        return has_value_item
+
+    def _allof_item_is_root_value_schema(self, item: JsonSchemaObject) -> bool:
+        return bool(
+            self._allof_item_is_map_root_schema(item)
+            or self._allof_item_has_value_shape(item)
+            or self._allof_item_is_combined_value_schema(item)
+        )
+
+    def _allof_item_is_constraint_only(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        return bool(
+            not item.ref
+            and not item.type
+            and not item.anyOf
+            and not item.oneOf
+            and not item.allOf
+            and not item.enum
+            and "const" not in item.extras
+            and (item.has_constraint or item.minProperties is not None or item.maxProperties is not None)
+        )
+
     def _allof_schema_types_are_compatible(  # noqa: PLR6301
         self,
         left: str | list[str] | None,
@@ -2953,7 +2995,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         merged_schema.pop("$ref", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-    def _get_allof_root_value_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+    def _get_direct_allof_root_value_schema(
+        self,
+        obj: JsonSchemaObject,
+        effective_items: list[JsonSchemaObject],
+    ) -> JsonSchemaObject | None:
+        value_items = [
+            item
+            for item in effective_items
+            if self._allof_item_is_root_value_schema(item) and not self._allof_item_is_constraint_only(item)
+        ]
+        if len(value_items) != 1 or not self._allof_item_is_combined_value_schema(value_items[0]):
+            return None
+
+        constraint_items = [item for item in effective_items if item not in value_items]
+        if any(self._allof_item_blocks_ref_value_schema_merge(item) for item in constraint_items):
+            return None
+
+        merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merged_schema = self._deep_merge(
+            merged_schema,
+            value_items[0].model_dump(exclude_unset=True, by_alias=True),
+        )
+        for item in constraint_items:
+            merged_schema = self._deep_merge(merged_schema, item.model_dump(exclude_unset=True, by_alias=True))
+        return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
+
+    def _get_allof_root_value_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR0911
         if obj.properties or obj.required:
             return None
 
@@ -2964,6 +3032,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self._raise_unsatisfiable_schema([], "allOf")
         if any(item.ref for item in effective_items):
             return self._get_ref_allof_root_value_schema(obj, effective_items)
+
+        direct_value_schema = self._get_direct_allof_root_value_schema(obj, effective_items)
+        if direct_value_schema is not None:
+            return direct_value_schema
 
         if all(self._allof_item_is_map_root_schema(item) for item in effective_items):
             merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
@@ -2976,7 +3048,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged_schema.pop("allOf", None)
             return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
-        if any(self._allof_item_has_value_shape(item) for item in effective_items):
+        if any(self._allof_item_is_root_value_schema(item) for item in effective_items):
             return obj
 
         return None
@@ -4294,6 +4366,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 else:  # pragma: no cover
                     data_type = data_types[0]
         elif obj.allOf:
+            root_value_obj = self._get_allof_root_value_schema(obj)
+            if root_value_obj is not None and not root_value_obj.allOf:
+                return self.parse_root_type(name, root_value_obj, path)
             data_type = self._build_lightweight_type(obj)
             if data_type is None:  # pragma: no cover
                 data_type = self.data_type_manager.get_data_type(Types.any)
@@ -4360,9 +4435,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and len(container_type.data_types) == 1
         ):
             container_type = container_type.data_types[0]
-        if container_type.is_dict or container_type.is_mapping:
+        container_is_dict = bool(
+            container_type.is_dict
+            or container_type.is_mapping
+            or (
+                container_type.data_types
+                and all(data_type.is_dict or data_type.is_mapping for data_type in container_type.data_types)
+            )
+        )
+        container_is_list = bool(
+            container_type.is_list
+            or (container_type.data_types and all(data_type.is_list for data_type in container_type.data_types))
+        )
+        if container_is_dict:
             constraints.update(self._get_property_count_constraints(obj))
-        if container_type.is_list:
+        if container_is_list:
             if obj.minItems is not None:
                 constraints["minItems"] = obj.minItems
             if obj.maxItems is not None:
