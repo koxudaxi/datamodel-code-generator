@@ -4646,6 +4646,62 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators.append({"field": field_name, "value": value_name, "predicate": predicate})
         return validators
 
+    def _property_raw_value_needs_runtime_validator(self, field_schema: JsonSchemaObject) -> bool:
+        if field_schema.discriminator or field_schema.custom_type_path or self._schema_contains_ref(field_schema):
+            return False
+        combined_schemas = [*field_schema.oneOf]
+        return bool(
+            any(self._schema_needs_raw_value_validator(schema) for schema in combined_schemas)
+            or (
+                self._schema_needs_raw_value_validator(field_schema)
+                and (
+                    self._collect_conditional_validators(field_schema.extras)
+                    or self._collect_not_validators(field_schema.extras)
+                )
+            )
+        )
+
+    def _collect_raw_property_value_validators(
+        self,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        if not obj.properties:
+            return []
+
+        field_names = self._field_name_mapping(fields)
+        validators: list[dict[str, str]] = []
+        for property_name, field_schema in obj.properties.items():
+            if not isinstance(field_schema, JsonSchemaObject):
+                continue
+            field_name = field_names.get(property_name)
+            if not field_name or not self._property_raw_value_needs_runtime_validator(field_schema):
+                continue
+            value_name = f"{field_name}_raw_value"
+            predicate = self._schema_runtime_value_predicate(field_schema, value_name)
+            if not predicate or predicate == "True":
+                continue
+            if field_schema.nullable or field_schema.type_has_null:
+                predicate = f"{value_name} is None or ({predicate})"
+            validators.append({
+                "field": field_name,
+                "raw_field": property_name,
+                "value": value_name,
+                "predicate": predicate,
+                "message": "does not match schema",
+            })
+        return validators
+
+    def _set_object_raw_property_value_validators(
+        self,
+        validators: dict[str, Any],
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> None:
+        raw_property_values = self._collect_raw_property_value_validators(obj, fields)
+        if raw_property_values:
+            validators["raw_property_values"] = raw_property_values
+
     def _collect_property_names_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
         if obj.propertyNames is None:
             return []
@@ -5036,6 +5092,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 validators["dependent_required"] = mapped_dependent_required
 
         self._set_object_array_validators(validators, obj, fields)
+        self._set_object_raw_property_value_validators(validators, obj, fields)
 
         property_values = self._collect_property_value_validators(obj, fields)
         if property_values:

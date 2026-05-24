@@ -801,6 +801,34 @@ class BaseModel(BaseModelBase):
         ]
 
     @staticmethod
+    def _get_raw_property_value_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            field_name = validator.get("field")
+            raw_field_name = validator.get("raw_field")
+            value_name = validator.get("value")
+            predicate = validator.get("predicate")
+            message = validator.get("message", "does not match schema")
+            if not all(isinstance(value, str) for value in (field_name, raw_field_name, value_name, predicate)):
+                continue
+            if not isinstance(message, str):
+                continue
+            if not lines:
+                lines.append("if isinstance(data, dict):")
+            lines.extend([
+                f"    if {raw_field_name!r} in data:",
+                f"        {value_name} = data[{raw_field_name!r}]",
+                f"        if not ({predicate}):",
+                f"            raise ValueError({field_name!r} + ' {message}')",
+            ])
+        return lines
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -938,8 +966,11 @@ class BaseModel(BaseModelBase):
             lines = [*BaseModel._get_json_schema_unique_key_lines(), "", *lines]
         return lines
 
-    def _get_prepared_root_raw_value_validator(self, validators: dict[str, Any]) -> dict[str, Any] | None:
-        lines = self._get_root_raw_value_validator_lines(validators.get("root_raw_value"))
+    def _get_prepared_raw_value_validator(self, validators: dict[str, Any]) -> dict[str, Any] | None:
+        lines = [
+            *self._get_root_raw_value_validator_lines(validators.get("root_raw_value")),
+            *self._get_raw_property_value_validator_lines(validators.get("raw_property_values")),
+        ]
         if not lines:
             return None
         lines = self._with_json_schema_helper_lines(lines)
@@ -960,7 +991,7 @@ class BaseModel(BaseModelBase):
             return
 
         prepared_model_validators = [
-            validator for validator in [self._get_prepared_root_raw_value_validator(validators)] if validator
+            validator for validator in [self._get_prepared_raw_value_validator(validators)] if validator
         ]
 
         lines: list[str] = []
