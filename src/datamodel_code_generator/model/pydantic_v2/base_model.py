@@ -482,13 +482,16 @@ class BaseModel(BaseModelBase):
             field_name = validator.get("field")
             value_name = validator.get("value")
             predicate = validator.get("predicate")
+            message = validator.get("message", "does not match const value")
             if not all(isinstance(value, str) for value in (field_name, value_name, predicate)):
+                continue
+            if not isinstance(message, str):
                 continue
             lines.extend([
                 f"if {field_name!r} in provided_keys:",
                 f"    {value_name} = json_schema_runtime_value(self.{field_name})",
                 f"    if not ({predicate}):",
-                f"        raise ValueError({field_name!r} + ' does not match const value')",
+                f"        raise ValueError({field_name!r} + ' {message}')",
             ])
         return lines
 

@@ -4203,6 +4203,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if array_unique_items:
             validators["array_unique_items"] = array_unique_items
 
+    def _schema_type_includes(self, schema: Any, schema_type: str) -> bool:  # noqa: PLR6301
+        if not isinstance(schema, JsonSchemaObject):
+            return False
+        schema_types = schema.type if isinstance(schema.type, list) else [schema.type]
+        return schema_type in schema_types
+
+    def _one_of_needs_property_value_validator(self, schema: JsonSchemaObject) -> bool:
+        if len(schema.oneOf) > 1 and any(item is True for item in schema.oneOf):
+            return True
+        return any(self._schema_type_includes(item, "integer") for item in schema.oneOf) and any(
+            self._schema_type_includes(item, "number") for item in schema.oneOf
+        )
+
     def _collect_property_value_validators(
         self,
         obj: JsonSchemaObject,
@@ -4234,6 +4247,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     [self._json_value_predicate(enum_value, value_name) for enum_value in field_schema.enum],
                     "or",
                 )
+            elif field_schema.oneOf and self._one_of_needs_property_value_validator(field_schema):
+                predicate = self._schema_value_predicate_from_value(field_schema, value_name)
+                if not predicate or predicate == "True":
+                    continue
+                validators.append({
+                    "field": field_name,
+                    "value": value_name,
+                    "predicate": predicate,
+                    "message": "does not match oneOf schema",
+                })
+                continue
             else:
                 continue
             validators.append({"field": field_name, "value": value_name, "predicate": predicate})

@@ -4068,6 +4068,35 @@ def test_main_jsonschema_oneof_with_true_schema(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_object_oneof_runtime_validators(output_file: Path) -> None:
+    """Test object property oneOf validators enforce exact branch counts at runtime."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_oneof_runtime_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_oneof_runtime_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"anything_except_string":1,"number_not_integer":1.5}'
+    for invalid_json in [
+        '{"anything_except_string":"bad","number_not_integer":1.5}',
+        '{"anything_except_string":1,"number_not_integer":1}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_oneof_runtime_validators",
+            model_name="ObjectOneofRuntimeValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_allof_with_true_schema(output_file: Path) -> None:
     """Test true schemas inside allOf are accepted as neutral branches."""
     run_main_and_assert(
