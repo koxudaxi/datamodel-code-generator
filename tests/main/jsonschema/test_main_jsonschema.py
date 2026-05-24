@@ -5958,6 +5958,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_root_array_values.json", "allof_root_array_values.py"),
         ("allof_root_map_values.json", "allof_root_map_values.py"),
         ("allof_property_value_schemas.json", "allof_property_value_schemas.py"),
+        ("allof_ref_value_schemas.json", "allof_ref_value_schemas.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(

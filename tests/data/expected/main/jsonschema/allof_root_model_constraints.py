@@ -51,8 +51,10 @@ class MultiRefAllOf(BaseModel):
     pass
 
 
-class NoConstraintAllOf(BaseModel):
-    pass
+class NoConstraintAllOf(RootModel[constr(pattern=r'^\S(.*\S)?$')]):
+    root: constr(pattern=r'^\S(.*\S)?$') = Field(
+        ..., description='No constraints added.'
+    )
 
 
 class IncompatibleTypeAllOf(BaseModel):
@@ -83,8 +85,8 @@ class ArrayDatatype(RootModel[list[str]]):
     root: list[str]
 
 
-class RefToArrayAllOf(BaseModel):
-    pass
+class RefToArrayAllOf(RootModel[list[str]]):
+    root: list[str] = Field(..., description='Ref to array - not a root model.')
 
 
 class ObjectNoPropsDatatype(BaseModel):
@@ -99,16 +101,20 @@ class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
     root: dict[constr(pattern=r'^S_'), str]
 
 
-class RefToPatternPropsAllOf(BaseModel):
-    pass
+class RefToPatternPropsAllOf(RootModel[dict[constr(pattern=r'^S_'), str]]):
+    root: dict[constr(pattern=r'^S_'), str] = Field(
+        ..., description='Ref to patternProperties - not a root model.'
+    )
 
 
 class NestedAllOfDatatype(RootModel[constr(min_length=1)]):
     root: constr(min_length=1)
 
 
-class RefToNestedAllOfAllOf(BaseModel):
-    pass
+class RefToNestedAllOfAllOf(RootModel[constr(min_length=1, max_length=100)]):
+    root: constr(min_length=1, max_length=100) = Field(
+        ..., description='Ref to nested allOf - not a root model.'
+    )
 
 
 class ConstraintsOnlyDatatype(RootModel[Any]):

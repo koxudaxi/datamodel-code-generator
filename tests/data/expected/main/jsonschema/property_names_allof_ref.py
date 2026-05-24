@@ -4,12 +4,12 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, RootModel, constr
+from pydantic import Field, RootModel, constr
+
+
+class Model(RootModel[dict[constr(pattern=r'^[a-z]+$'), str]]):
+    root: dict[constr(pattern=r'^[a-z]+$'), str] = Field(..., title='Model')
 
 
 class DictWithPropertyNames(RootModel[dict[constr(pattern=r'^[a-z]+$'), str]]):
     root: dict[constr(pattern=r'^[a-z]+$'), str]
-
-
-class Model(BaseModel):
-    pass

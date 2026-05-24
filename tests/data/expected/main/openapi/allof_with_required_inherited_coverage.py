@@ -26,6 +26,14 @@ class MultipleOfBase(BaseModel):
     decimal_multiple_field: DecimalMultipleField | None = None
 
 
+class RefAndPrimitive(RootModel[constr(min_length=1)]):
+    root: constr(min_length=1)
+
+
+class RefWithPrimitiveBase(BaseModel):
+    ref_and_primitive: RefAndPrimitive | None = None
+
+
 class SimpleString(RootModel[str]):
     root: str
 
@@ -206,10 +214,6 @@ class ParentConstrained(RootModel[constr(min_length=2, max_length=5)]):
 
 class ParentConstrainedAllOf(BaseModel):
     parent_constrained: ParentConstrained | None = None
-
-
-class RefWithPrimitiveBase(BaseModel):
-    ref_and_primitive: SimpleString | None = None
 
 
 class EdgeCasesCoverage(

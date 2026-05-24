@@ -2837,8 +2837,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.parse_root_type(name, merged_schema, path)
 
-    @staticmethod
-    def _allof_item_is_map_root_schema(item: JsonSchemaObject) -> bool:
+    def _allof_item_is_map_root_schema(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
         if item.ref:
             return False
         return (
@@ -2859,12 +2858,98 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             item.is_array
             or (item.anyOf and not self._allof_requires_model_type(item.anyOf, resolve_ref=True))
             or (item.oneOf and not self._allof_requires_model_type(item.oneOf, resolve_ref=True))
+            or (item.allOf and not self._allof_requires_model_type(item.allOf, resolve_ref=True))
             or item.enum
             or "const" in item.extras
             or (isinstance(item.type, str) and item.type != "object")
             or (isinstance(item.type, list) and any(type_ not in {"object", "null"} for type_ in item.type))
             or (item.has_constraint and item.type != "object")
         )
+
+    def _allof_item_blocks_ref_value_schema_merge(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        return bool(
+            item.properties
+            or item.items
+            or item.prefixItems
+            or item.additionalProperties is not None
+            or item.unevaluatedProperties is not None
+            or item.patternProperties is not None
+            or item.propertyNames is not None
+        )
+
+    def _allof_item_affects_ref_value_schema(self, item: JsonSchemaObject) -> bool:
+        return bool(
+            self._allof_item_blocks_ref_value_schema_merge(item)
+            or self._allof_item_is_map_root_schema(item)
+            or self._allof_item_has_value_shape(item)
+            or item.format
+        )
+
+    def _allof_schema_types_are_compatible(  # noqa: PLR6301
+        self,
+        left: str | list[str] | None,
+        right: str | list[str] | None,
+    ) -> bool:
+        if not left or not right:
+            return True
+
+        left_types = {left} if isinstance(left, str) else set(left)
+        right_types = {right} if isinstance(right, str) else set(right)
+        if left_types & right_types:
+            return True
+
+        compatible_type_pairs = {
+            ("integer", "number"),
+            ("number", "integer"),
+        }
+        return any(
+            (left_type, right_type) in compatible_type_pairs for left_type in left_types for right_type in right_types
+        )
+
+    def _allof_item_conflicts_with_ref_value_schema(self, ref_schema: JsonSchemaObject, item: JsonSchemaObject) -> bool:
+        return bool(
+            not self._allof_schema_types_are_compatible(ref_schema.type, item.type)
+            or (ref_schema.format and item.format and ref_schema.format != item.format)
+        )
+
+    def _get_ref_allof_root_value_schema(  # noqa: PLR0911
+        self,
+        obj: JsonSchemaObject,
+        effective_items: list[JsonSchemaObject],
+    ) -> JsonSchemaObject | None:
+        ref_items = [item for item in effective_items if item.ref]
+        if len(ref_items) != 1:
+            return None
+
+        constraint_items = [
+            item for item in effective_items if not item.ref and self._allof_item_affects_ref_value_schema(item)
+        ]
+        if any(self._allof_item_blocks_ref_value_schema_merge(item) for item in constraint_items):
+            return None
+
+        ref_item = ref_items[0]
+        if ref_item.has_ref_with_schema_keywords and not ref_item.is_ref_with_nullable_only:
+            ref_schema = self._merge_ref_with_schema(ref_item)
+        else:
+            ref_schema = self._load_ref_schema_object(ref_item.ref or "")
+        if ref_schema.enum:
+            return None
+        if ref_schema.allOf and any(isinstance(item, JsonSchemaObject) and item.ref for item in ref_schema.allOf):
+            return None
+        if any(self._allof_item_conflicts_with_ref_value_schema(ref_schema, item) for item in constraint_items):
+            return None
+
+        if not (self._allof_item_is_map_root_schema(ref_schema) or self._allof_item_has_value_shape(ref_schema)):
+            return None
+
+        merged_schema: dict[str, Any] = ref_schema.model_dump(exclude_unset=True, by_alias=True)
+        for item in constraint_items:
+            merged_schema = self._deep_merge(merged_schema, item.model_dump(exclude_unset=True, by_alias=True))
+
+        obj_schema = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+        merged_schema = self._deep_merge(merged_schema, obj_schema)
+        merged_schema.pop("$ref", None)
+        return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
     def _get_allof_root_value_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         if obj.properties or obj.required:
@@ -2873,8 +2958,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         effective_items = [item for item in obj.allOf if isinstance(item, JsonSchemaObject)]
         if not effective_items:
             return None
+        if any(item.allOf and self._contains_false_schema(item.allOf) for item in effective_items):
+            self._raise_unsatisfiable_schema([], "allOf")
         if any(item.ref for item in effective_items):
-            return None
+            return self._get_ref_allof_root_value_schema(obj, effective_items)
 
         if all(self._allof_item_is_map_root_schema(item) for item in effective_items):
             merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
@@ -3920,7 +4007,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.parse_root_type(root_model_name, item, all_of_path)
             if len(item.allOf) == 1 and not item.properties:
                 single_item = item.allOf[0]
-                if isinstance(single_item, JsonSchemaObject) and single_item.ref:
+                if (
+                    isinstance(single_item, JsonSchemaObject)
+                    and single_item.ref
+                    and not (single_item.has_ref_with_schema_keywords and not single_item.is_ref_with_nullable_only)
+                ):
                     return self.get_ref_data_type(single_item.ref)
             all_of_path = get_special_path("allOf", path)
             all_of_path = [self.model_resolver.resolve_ref(all_of_path)]

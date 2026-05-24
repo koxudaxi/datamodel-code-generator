@@ -24,6 +24,10 @@ class ExtendedConfig(BaseModel):
     timeout: int | None = None
 
 
+class Code(RootModel[constr(min_length=1, max_length=10)]):
+    root: constr(min_length=1, max_length=10)
+
+
 class Score(RootModel[confloat(ge=0.0, le=100.0)]):
     root: confloat(ge=0.0, le=100.0)
 
@@ -38,7 +42,7 @@ class Metadata(RootModel[dict[str, constr(min_length=1)]]):
 
 class ProjectedItem(BaseModel):
     id: int | None = None
-    code: StringConstraint | None = None
+    code: Code | None = None
     score: Score | None = None
     config: Config | None = None
     metadata: Metadata | None = None

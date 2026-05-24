@@ -1,0 +1,71 @@
+{
+  "title": "AllofRefValueSchemas",
+  "$defs": {
+    "Tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "PrefixedMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x_"
+      },
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "ShortCode": {
+      "allOf": [
+        {
+          "type": "string"
+        },
+        {
+          "minLength": 2
+        }
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "tags": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Tags"
+        },
+        {
+          "minItems": 1
+        }
+      ]
+    },
+    "inlineCode": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ShortCode",
+          "maxLength": 8
+        }
+      ]
+    },
+    "metadata": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/PrefixedMap"
+        },
+        {
+          "minProperties": 1
+        }
+      ]
+    },
+    "code": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ShortCode"
+        },
+        {
+          "maxLength": 8
+        }
+      ]
+    }
+  }
+}
