@@ -4127,6 +4127,34 @@ def test_main_jsonschema_object_oneof_runtime_validators(output_file: Path) -> N
         )
 
 
+def test_main_jsonschema_root_logical_runtime_validators(output_file: Path) -> None:
+    """Test root oneOf exact-match and not validators run after Pydantic conversion."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_logical_runtime_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_logical_runtime_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        '"bad"',
+        "null",
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_logical_runtime_validators",
+            model_name="RootLogicalRuntimeValidators",
+            valid_json="1",
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_allof_with_true_schema(output_file: Path) -> None:
     """Test true schemas inside allOf are accepted as neutral branches."""
     run_main_and_assert(

@@ -4776,6 +4776,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
             validators["root_object"] = {"predicate": predicate}
 
+    def _root_value_needs_runtime_validator(self, obj: JsonSchemaObject) -> bool:
+        return bool(
+            (obj.oneOf and self._one_of_needs_property_value_validator(obj))
+            or self._collect_conditional_validators(obj.extras)
+            or self._collect_not_validators(obj.extras)
+        )
+
+    def _set_root_value_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
+        if not self._supports_root_json_schema_validators() or not self._root_value_needs_runtime_validator(obj):
+            return
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if not predicate or predicate == "True":
+            return
+        if obj.nullable or obj.type_has_null:
+            predicate = f"root_value is None or ({predicate})"
+
+        validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+        root_validator = validators.setdefault("root_object", {})
+        if not isinstance(root_validator, dict):
+            validators["root_object"] = {"predicate": predicate}
+            return
+        existing_predicate = root_validator.get("predicate")
+        if isinstance(existing_predicate, str) and existing_predicate != predicate:
+            root_validator["predicate"] = f"({existing_predicate}) and ({predicate})"
+        else:
+            root_validator["predicate"] = predicate
+
     def _is_array_schema(self, schema: JsonSchemaObject, visited_refs: frozenset[str] | None = None) -> bool:
         if schema.ref:
             if visited_refs is None:
@@ -5750,6 +5777,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self._set_root_array_model_validators(reference.path, obj)
         self._set_root_pattern_properties_model_validators(reference.path, obj)
         self._set_root_allof_array_model_validators(reference.path, obj)
+        self._set_root_value_model_validators(reference.path, obj)
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}

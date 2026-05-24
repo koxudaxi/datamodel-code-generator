@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Union
 
-from pydantic import BaseModel, RootModel
+from pydantic import BaseModel, RootModel, model_validator
 
 
 class File(BaseModel):
@@ -21,6 +21,43 @@ class Folder(BaseModel):
 
 class ElementaryType(RootModel[bool | str | int | float | None]):
     root: bool | str | int | float | None = None
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            root_value is None
+            or (
+                sum(
+                    1
+                    for matched in (
+                        isinstance(root_value, bool),
+                        isinstance(root_value, str),
+                        isinstance(root_value, int)
+                        and not isinstance(root_value, bool),
+                        isinstance(root_value, (int, float))
+                        and not isinstance(root_value, bool),
+                    )
+                    if matched
+                )
+                == 1
+            )
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class JsonType(
