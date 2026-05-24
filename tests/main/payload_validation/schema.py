@@ -542,10 +542,22 @@ def _has_unsatisfiable_array_length(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_array_length)
 
 
-def _schema_accepts_every_property_name(schema: Any) -> bool:
+def _schema_accepts_every_property_name(schema: Any) -> bool:  # noqa: PLR0911
     if schema is True or schema == {}:
         return True
     if not isinstance(schema, dict):
+        return False
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list) and not any(_schema_accepts_every_property_name(item) for item in any_of):
+        return False
+    all_of = schema.get("allOf")
+    if isinstance(all_of, list) and not all(_schema_accepts_every_property_name(item) for item in all_of):
+        return False
+    one_of = schema.get("oneOf")
+    if isinstance(one_of, list) and not _oneof_property_names_accepts_all_names(one_of):
+        return False
+    not_schema = schema.get("not")
+    if not_schema is not None and not _property_names_forbids_all_names(not_schema):
         return False
     metadata_keys = {
         "$comment",
@@ -555,7 +567,7 @@ def _schema_accepts_every_property_name(schema: Any) -> bool:
         "examples",
         "title",
     }
-    supported_keys = metadata_keys | {"minLength", "type"}
+    supported_keys = metadata_keys | {"allOf", "anyOf", "minLength", "not", "oneOf", "type"}
     if not set(schema) <= supported_keys:
         return False
     type_values = _type_values(schema.get("type"))
@@ -563,6 +575,12 @@ def _schema_accepts_every_property_name(schema: Any) -> bool:
         return False
     min_length = schema.get("minLength")
     return not isinstance(min_length, int) or min_length <= 0
+
+
+def _oneof_property_names_accepts_all_names(one_of: list[Any]) -> bool:
+    return sum(_schema_accepts_every_property_name(item) for item in one_of) == 1 and all(
+        _schema_accepts_every_property_name(item) or _property_names_forbids_all_names(item) for item in one_of
+    )
 
 
 def _property_names_forbids_all_names(property_names: Any) -> bool:  # noqa: PLR0911

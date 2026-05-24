@@ -4225,10 +4225,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
     @classmethod
-    def _raw_schema_accepts_every_property_name(cls, schema: Any) -> bool:
+    def _raw_schema_accepts_every_property_name(cls, schema: Any) -> bool:  # noqa: PLR0911
         if schema is True or schema == {}:
             return True
         if not isinstance(schema, dict):
+            return False
+        any_of = schema.get("anyOf")
+        if isinstance(any_of, list) and not any(cls._raw_schema_accepts_every_property_name(item) for item in any_of):
+            return False
+        all_of = schema.get("allOf")
+        if isinstance(all_of, list) and not all(cls._raw_schema_accepts_every_property_name(item) for item in all_of):
+            return False
+        one_of = schema.get("oneOf")
+        if isinstance(one_of, list) and not cls._raw_oneof_property_names_accepts_all_names(one_of):
+            return False
+        not_schema = schema.get("not")
+        if not_schema is not None and not cls._raw_property_names_forbids_all_names(not_schema):
             return False
         metadata_keys = {
             "$comment",
@@ -4238,11 +4250,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "examples",
             "title",
         }
-        supported_keys = metadata_keys | {"minLength", "type"}
+        supported_keys = metadata_keys | {"allOf", "anyOf", "minLength", "not", "oneOf", "type"}
         if not set(schema) <= supported_keys or not cls._raw_type_accepts_string(schema.get("type")):
             return False
         min_length = cls._number_constraint_value(schema.get("minLength"))
         return min_length is None or min_length <= 0
+
+    @classmethod
+    def _raw_oneof_property_names_accepts_all_names(cls, one_of: list[Any]) -> bool:
+        return sum(cls._raw_schema_accepts_every_property_name(item) for item in one_of) == 1 and all(
+            cls._raw_schema_accepts_every_property_name(item) or cls._raw_property_names_forbids_all_names(item)
+            for item in one_of
+        )
 
     @classmethod
     def _raw_property_name_accepts_name(cls, property_names: Any, name: str) -> bool:

@@ -4049,6 +4049,39 @@ def test_main_jsonschema_property_names_oneof_always_match_count_conflict(output
     )
 
 
+def test_main_jsonschema_property_names_not_anyof_always_match_count_conflict(output_file: Path) -> None:
+    """Test propertyNames not anyOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_not_anyof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_property_names_not_allof_always_match_count_conflict(output_file: Path) -> None:
+    """Test propertyNames not allOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_not_allof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_property_names_not_oneof_always_match_count_conflict(output_file: Path) -> None:
+    """Test propertyNames not oneOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_not_oneof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_allof_wrapped_not_property_names_count_conflict(output_file: Path) -> None:
     """Test not allOf branches can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -5588,6 +5621,33 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "minProperties": 1,
             },
             id="object-property-names-oneof-always-match-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"not": {"anyOf": [True, False]}},
+                "minProperties": 1,
+            },
+            id="object-property-names-not-anyof-always-match-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"not": {"allOf": [True, {"minLength": 0}]}},
+                "minProperties": 1,
+            },
+            id="object-property-names-not-allof-always-match-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"not": {"oneOf": [True, False]}},
+                "minProperties": 1,
+            },
+            id="object-property-names-not-oneof-always-match-min-properties",
         ),
         pytest.param(
             {
@@ -8645,6 +8705,17 @@ def test_main_jsonschema_allof_property_names_oneof_always_match_count_conflict(
     """Test allOf propertyNames oneOf branches that all names match reject every name."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_property_names_oneof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_property_names_not_anyof_always_match_count_conflict(output_file: Path) -> None:
+    """Test allOf propertyNames not anyOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_property_names_not_anyof_always_match_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

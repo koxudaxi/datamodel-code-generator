@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyNamesNotAllofAlwaysMatchCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "not": {
+      "allOf": [
+        true,
+        {
+          "minLength": 0
+        }
+      ]
+    }
+  },
+  "minProperties": 1,
+  "additionalProperties": {
+    "type": "string"
+  }
+}
