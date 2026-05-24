@@ -197,6 +197,8 @@ def _has_array_keywords_without_array_type(value: Any) -> bool:
 
 def _has_unsatisfiable_contains_false(value: Any) -> bool:
     def has_unsatisfiable_contains_false(schema: dict[str, Any]) -> bool:
+        if not _type_is_array_only(schema.get("type")):
+            return False
         min_contains = schema.get("minContains", 1)
         return schema.get("contains") is False and (not isinstance(min_contains, int) or min_contains > 0)
 
@@ -205,6 +207,8 @@ def _has_unsatisfiable_contains_false(value: Any) -> bool:
 
 def _has_unsatisfiable_contains_bounds(value: Any) -> bool:
     def has_unsatisfiable_contains_bounds(schema: dict[str, Any]) -> bool:
+        if not _type_is_array_only(schema.get("type")):
+            return False
         min_contains = schema.get("minContains", 1)
         max_contains = schema.get("maxContains")
         return (
@@ -225,6 +229,10 @@ def _type_values(type_value: Any) -> set[str] | None:
     if isinstance(type_value, list):
         return {value for value in type_value if isinstance(value, str)}
     return None
+
+
+def _type_is_array_only(type_value: Any) -> bool:
+    return _type_values(type_value) == {"array"}
 
 
 def _type_intersection(left: set[str], right: set[str]) -> set[str]:
@@ -263,7 +271,7 @@ def _has_unsatisfiable_closed_tuple_contains_max(value: Any) -> bool:
         return items if isinstance(items, list) and schema.get("additionalItems") is False else None
 
     def has_unsatisfiable_closed_tuple_contains_max(schema: dict[str, Any]) -> bool:
-        if schema.get("type") != "array":
+        if not _type_is_array_only(schema.get("type")):
             return False
         contains = schema.get("contains")
         max_contains = schema.get("maxContains")
@@ -526,7 +534,7 @@ def _has_unsatisfiable_array_length(value: Any) -> bool:
         return counts
 
     def has_unsatisfiable_array_length(schema: dict[str, Any]) -> bool:
-        if schema.get("type") != "array":
+        if not _type_is_array_only(schema.get("type")):
             return False
         min_items = schema.get("minItems")
         contains = schema.get("contains")

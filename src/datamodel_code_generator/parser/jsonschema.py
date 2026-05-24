@@ -2979,7 +2979,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_contains_item_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "array" or "contains" not in schema_dict:
+        if not cls._raw_type_is_array_only(schema_dict.get("type")) or "contains" not in schema_dict:
             return
 
         contains_schema = schema_dict.get("contains")
@@ -3084,7 +3084,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _validate_raw_array_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "array":
+        if not cls._raw_type_is_array_only(schema_dict.get("type")):
             return
 
         cls._validate_raw_contains_count_constraints(schema_dict)
@@ -4385,6 +4385,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _raw_type_is_object_only(cls, type_value: Any) -> bool:
         return cls._type_values(type_value) == {"object"}
+
+    @classmethod
+    def _raw_type_is_array_only(cls, type_value: Any) -> bool:
+        return cls._type_values(type_value) == {"array"}
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TypeArrayArrayContainsFalseConflict",
+  "type": ["array"],
+  "contains": false,
+  "items": {
+    "type": "string"
+  }
+}

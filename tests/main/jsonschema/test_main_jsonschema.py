@@ -4060,6 +4060,39 @@ def test_main_jsonschema_type_array_object_required_property_names_conflict(outp
     )
 
 
+def test_main_jsonschema_type_array_array_contains_false_conflict(output_file: Path) -> None:
+    """Test type arrays containing only array still reject impossible contains false."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_array_contains_false_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_type_array_array_closed_items_count_conflict(output_file: Path) -> None:
+    """Test type arrays containing only array still reject closed item count conflicts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_array_closed_items_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_type_array_array_contains_bounds_conflict(output_file: Path) -> None:
+    """Test type arrays containing only array still reject contains count conflicts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_array_contains_bounds_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_property_names_oneof_always_match_count_conflict(output_file: Path) -> None:
     """Test propertyNames oneOf branches that all names match reject every name."""
     run_main_and_assert(
@@ -4752,6 +4785,16 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": ["array"],
+                "prefixItems": [{"type": "integer"}],
+                "items": False,
+                "minItems": 2,
+            },
+            id="type-array-array-items-false-min-items-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "array",
                 "contains": True,
                 "maxContains": 0,
@@ -4765,6 +4808,14 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "contains": False,
             },
             id="array-contains-false-default-min-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": ["array"],
+                "contains": False,
+            },
+            id="type-array-array-contains-false-default-min-contains-disjoint",
         ),
         pytest.param(
             {
@@ -4784,6 +4835,16 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "maxContains": 1,
             },
             id="array-contains-schema-min-max-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": ["array"],
+                "contains": True,
+                "minContains": 2,
+                "maxContains": 1,
+            },
+            id="type-array-array-contains-min-max-contains-disjoint",
         ),
         pytest.param(
             {
