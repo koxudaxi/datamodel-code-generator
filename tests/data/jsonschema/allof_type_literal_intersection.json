@@ -1,0 +1,35 @@
+{
+  "title": "AllOfTypeLiteralIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "enum": [
+            1,
+            1.2,
+            2,
+            true
+          ]
+        }
+      ]
+    },
+    "same": {
+      "allOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "const": 1
+        }
+      ]
+    }
+  },
+  "required": [
+    "value",
+    "same"
+  ]
+}

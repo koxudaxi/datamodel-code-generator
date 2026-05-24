@@ -4003,6 +4003,36 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             },
             id="property-allof-type-disjoint",
         ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "integer"},
+                            {"enum": [1.2, True]},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-type-enum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "integer"},
+                            {"const": 1.2},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-type-const-disjoint",
+        ),
     ],
 )
 def test_main_jsonschema_false_schema_errors(schema: dict[str, object], output_file: Path) -> None:
@@ -6291,6 +6321,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_enum_intersection.json", "allof_enum_intersection.py"),
         ("allof_const_enum_intersection.json", "allof_const_enum_intersection.py"),
         ("allof_type_intersection.json", "allof_type_intersection.py"),
+        ("allof_type_literal_intersection.json", "allof_type_literal_intersection.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(
@@ -6375,6 +6406,29 @@ def test_main_jsonschema_allof_type_intersection(output_file: Path) -> None:
         invalid_json='{"intNumber":1.2,"nullableString":"x","listValue":1}',
         expected_error_type="int_from_float",
         expected_attribute_path=("listValue", "root"),
+        expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_allof_type_literal_intersection(output_file: Path) -> None:
+    """Test allOf type branches filter enum and const literal values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_type_literal_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_type_literal_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_type_literal_intersection",
+        model_name="AllOfTypeLiteralIntersection",
+        valid_json='{"value":1,"same":1}',
+        invalid_json='{"value":1.2,"same":1}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("value", "root"),
         expected_attribute_value=1,
     )
 

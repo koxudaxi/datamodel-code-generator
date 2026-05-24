@@ -2012,35 +2012,49 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Deep merge allOf schemas while intersecting shared constraints."""
         result = dict1.copy()
         for key, value in dict2.items():
-            if key in result:
-                if key == "const":
-                    if not JsonSchemaParser._json_schema_values_equal(result[key], value):
-                        JsonSchemaParser._raise_allof_literal_conflict()
-                    continue
-                if key == "enum" and isinstance(result[key], list) and isinstance(value, list):
-                    result[key] = self._intersect_enum_values(result[key], value)
-                    if not result[key]:
-                        JsonSchemaParser._raise_allof_literal_conflict()
-                    JsonSchemaParser._drop_enum_metadata(result)
-                    self._normalize_literal_constraints(result)
-                    continue
-                allof_constraint_fields = JsonSchemaObject.__constraint_fields__ | {
-                    "minProperties",
-                    "maxProperties",
-                }
-                if key in allof_constraint_fields and result[key] is not None and value is not None:
-                    result[key] = JsonSchemaParser._intersect_constraint(key, result[key], value)
-                    continue
-                if isinstance(result[key], dict) and isinstance(value, dict):
-                    result[key] = self._deep_merge_allof_schema(result[key], value)
-                    continue
-                if isinstance(result[key], list) and isinstance(value, list):
-                    result[key] = result[key] + value  # noqa: PLR6104
-                    continue
+            if key in result and self._merge_allof_shared_keyword(result, key, value):
+                continue
             result[key] = value
-            if key in {"const", "enum"}:
+            if key in {"const", "enum", "type"}:
                 self._normalize_literal_constraints(result)
         return result
+
+    def _merge_allof_shared_keyword(self, result: dict[Any, Any], key: Any, value: Any) -> bool:
+        handled = True
+        if key == "const":
+            if not JsonSchemaParser._json_schema_values_equal(result[key], value):
+                JsonSchemaParser._raise_allof_literal_conflict()
+        elif key == "enum" and isinstance(result[key], list) and isinstance(value, list):
+            result[key] = self._intersect_enum_values(result[key], value)
+            if not result[key]:
+                JsonSchemaParser._raise_allof_literal_conflict()
+            JsonSchemaParser._drop_enum_metadata(result)
+            self._normalize_literal_constraints(result)
+        elif key == "type":
+            handled = self._merge_allof_type_keyword(result, value)
+        elif key in (JsonSchemaObject.__constraint_fields__ | {"minProperties", "maxProperties"}) and (
+            result[key] is not None and value is not None
+        ):
+            result[key] = JsonSchemaParser._intersect_constraint(key, result[key], value)
+        elif isinstance(result[key], dict) and isinstance(value, dict):
+            result[key] = self._deep_merge_allof_schema(result[key], value)
+        elif isinstance(result[key], list) and isinstance(value, list):
+            result[key] = result[key] + value  # noqa: PLR6104
+        else:
+            handled = False
+        return handled
+
+    def _merge_allof_type_keyword(self, result: dict[Any, Any], value: Any) -> bool:
+        left_types = JsonSchemaParser._type_values(result["type"])
+        right_types = JsonSchemaParser._type_values(value)
+        if left_types is None or right_types is None:
+            return False
+        merged_type_values = JsonSchemaParser._intersect_type_values(left_types, right_types)
+        if not merged_type_values:
+            JsonSchemaParser._raise_allof_type_conflict()
+        result["type"] = next(iter(merged_type_values)) if len(merged_type_values) == 1 else sorted(merged_type_values)
+        self._normalize_literal_constraints(result)
+        return True
 
     @staticmethod
     def _raise_allof_literal_conflict() -> None:
@@ -2093,13 +2107,57 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if "const" not in schema_dict or not isinstance(schema_dict.get("enum"), list):
+        if "const" in schema_dict and isinstance(schema_dict.get("enum"), list):
+            const_value = schema_dict["const"]
+            if not any(cls._json_schema_values_equal(const_value, enum_value) for enum_value in schema_dict["enum"]):
+                cls._raise_allof_literal_conflict()
+            schema_dict["enum"] = [const_value]
+            cls._drop_enum_metadata(schema_dict)
+        cls._filter_literal_constraints_for_type(schema_dict)
+
+    @staticmethod
+    def _json_value_matches_type(value: Any, type_name: str) -> bool:  # noqa: PLR0911
+        if type_name == "null":
+            return value is None
+        if type_name == "boolean":
+            return isinstance(value, bool)
+        if type_name == "string":
+            return isinstance(value, str)
+        if type_name == "integer":
+            return (not isinstance(value, bool) and isinstance(value, int)) or (
+                isinstance(value, float) and value.is_integer()
+            )
+        if type_name == "number":
+            return not isinstance(value, bool) and isinstance(value, (int, float))
+        if type_name == "array":
+            return isinstance(value, list)
+        if type_name == "object":
+            return isinstance(value, dict)
+        return True
+
+    @classmethod
+    def _json_value_matches_type_constraint(cls, value: Any, type_value: str | list[str] | None) -> bool:
+        type_values = cls._type_values(type_value)
+        return type_values is None or any(cls._json_value_matches_type(value, type_name) for type_name in type_values)
+
+    @classmethod
+    def _filter_literal_constraints_for_type(cls, schema_dict: dict[Any, Any]) -> None:
+        type_value = schema_dict.get("type")
+        if type_value is None:
             return
-        const_value = schema_dict["const"]
-        if not any(cls._json_schema_values_equal(const_value, enum_value) for enum_value in schema_dict["enum"]):
+        if "const" in schema_dict and not cls._json_value_matches_type_constraint(schema_dict["const"], type_value):
             cls._raise_allof_literal_conflict()
-        schema_dict["enum"] = [const_value]
-        cls._drop_enum_metadata(schema_dict)
+        if isinstance(schema_dict.get("enum"), list):
+            filtered_enum = [
+                enum_value
+                for enum_value in schema_dict["enum"]
+                if cls._json_value_matches_type_constraint(enum_value, type_value)
+            ]
+            if not filtered_enum:
+                cls._raise_allof_literal_conflict()
+            if len(filtered_enum) != len(schema_dict["enum"]):
+                schema_dict["enum"] = filtered_enum
+                cls._drop_enum_metadata(schema_dict)
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]
