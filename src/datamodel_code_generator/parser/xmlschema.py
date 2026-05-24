@@ -515,7 +515,8 @@ class _XMLSchemaConverter:
                 return number if (number := _safe_float(value)) is not None else value
             case "boolean":
                 return value in {"true", "1"}
-        return value
+            case _:
+                return value
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | str:  # noqa: PLR6301
         if schema.get("type") == "integer":
