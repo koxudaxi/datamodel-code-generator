@@ -4174,6 +4174,17 @@ def test_main_jsonschema_conditional_property_names_count_conflict(output_file: 
     )
 
 
+def test_main_jsonschema_anyof_property_names_count_conflict(output_file: Path) -> None:
+    """Test anyOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> None:
     """Test statically active dependent schemas intersect generated property constraints."""
     run_main_and_assert(
@@ -4730,6 +4741,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "minProperties": 1,
+                "allOf": [
+                    {"propertyNames": {"enum": ["allowed"]}},
+                    {"anyOf": [{"required": ["blocked"]}, {"maxProperties": 0}]},
+                ],
+            },
+            id="allof-property-names-anyof-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "allOf": [
                     {"properties": {"kind": {"type": "string"}}, "required": ["kind"]},
                     {"dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}}},
@@ -5274,6 +5297,16 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "not": {"required": ["blocked"]},
             },
             id="object-property-names-not-required-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["allowed"]},
+                "minProperties": 1,
+                "anyOf": [{"required": ["blocked"]}, {"maxProperties": 0}],
+            },
+            id="object-property-names-anyof-min-properties",
         ),
         pytest.param(
             {
@@ -8323,6 +8356,17 @@ def test_main_jsonschema_allof_not_property_names_count_conflict(output_file: Pa
     """Test allOf sibling not required can make finite propertyNames counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_not_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_anyof_property_names_count_conflict(output_file: Path) -> None:
+    """Test allOf sibling anyOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_anyof_property_names_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

@@ -872,6 +872,27 @@ def _property_name_set_satisfies_not_schemas(selected_names: set[str], not_schem
     return True
 
 
+def _property_name_set_satisfies_anyof_schema(selected_names: set[str], any_of: list[Any]) -> bool:
+    known_branch_results: list[bool] = []
+    for branch in any_of:
+        if branch is True or branch == {}:
+            return True
+        if branch is False:
+            known_branch_results.append(False)
+            continue
+        if not isinstance(branch, dict) or not _property_name_set_not_schema_is_key_only(branch):
+            return True
+        known_branch_results.append(_property_name_set_satisfies_object_schema(selected_names, branch))
+    return any(known_branch_results)
+
+
+def _property_name_set_satisfies_anyof_schemas(
+    selected_names: set[str],
+    anyof_schemas: list[list[Any]],
+) -> bool:
+    return all(_property_name_set_satisfies_anyof_schema(selected_names, any_of) for any_of in anyof_schemas)
+
+
 def _max_dependency_satisfiable_property_count(
     schema: dict[str, Any],
     property_name_values: set[str],
@@ -889,11 +910,15 @@ def _max_dependency_satisfiable_property_count(
         if "if" in item
     ]
     not_schemas = [item["not"] for item in _iter_allof_object_schemas(schema) if "not" in item]
+    anyof_schemas = [
+        item["anyOf"] for item in _iter_allof_object_schemas(schema) if isinstance(item.get("anyOf"), list)
+    ]
     for count in range(len(names), -1, -1):
         if any(
             _property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
             and _property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
             and _property_name_set_satisfies_not_schemas(set(candidate_names), not_schemas)
+            and _property_name_set_satisfies_anyof_schemas(set(candidate_names), anyof_schemas)
             for candidate_names in combinations(names, count)
         ):
             return count

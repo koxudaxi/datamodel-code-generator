@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllofAnyofPropertyNamesCountConflict",
+  "type": "object",
+  "minProperties": 1,
+  "allOf": [
+    {
+      "propertyNames": {
+        "enum": ["allowed"]
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    {
+      "anyOf": [
+        {
+          "required": ["blocked"]
+        },
+        {
+          "maxProperties": 0
+        }
+      ]
+    }
+  ]
+}

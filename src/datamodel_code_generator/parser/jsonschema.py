@@ -3824,11 +3824,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if "if" in item
         ]
         not_schemas = [item["not"] for item in cls._iter_raw_allof_object_schemas(schema_dict) if "not" in item]
+        anyof_schemas = [
+            item["anyOf"]
+            for item in cls._iter_raw_allof_object_schemas(schema_dict)
+            if isinstance(item.get("anyOf"), list)
+        ]
         for count in range(len(names), -1, -1):
             if any(
                 cls._raw_property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
                 and cls._raw_property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
                 and cls._raw_property_name_set_satisfies_not_schemas(set(candidate_names), not_schemas)
+                and cls._raw_property_name_set_satisfies_anyof_schemas(set(candidate_names), anyof_schemas)
                 for candidate_names in combinations(names, count)
             ):
                 return count
@@ -3955,6 +3961,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "type",
         }
         return set(schema) <= metadata_keys | key_only_keys
+
+    @classmethod
+    def _raw_property_name_set_satisfies_anyof_schemas(
+        cls,
+        selected_names: set[str],
+        anyof_schemas: list[list[Any]],
+    ) -> bool:
+        for any_of in anyof_schemas:
+            if not cls._raw_property_name_set_satisfies_anyof_schema(selected_names, any_of):
+                return False
+        return True
+
+    @classmethod
+    def _raw_property_name_set_satisfies_anyof_schema(cls, selected_names: set[str], any_of: list[Any]) -> bool:
+        known_branch_results: list[bool] = []
+        for branch in any_of:
+            if branch is True or branch == {}:
+                return True
+            if branch is False:
+                known_branch_results.append(False)
+                continue
+            if not isinstance(branch, dict) or not cls._raw_property_name_set_not_schema_is_key_only(branch):
+                return True
+            known_branch_results.append(cls._raw_property_name_set_satisfies_object_schema(selected_names, branch))
+        return any(known_branch_results)
 
     @classmethod
     def _raw_dependency_allowed_property_name_values(
