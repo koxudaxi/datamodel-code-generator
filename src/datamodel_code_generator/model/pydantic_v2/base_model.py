@@ -403,24 +403,27 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
-    def _get_dependent_required_validator_lines(
-        dependent_required: dict[str, Any],
-        property_count: Any,
-        *,
-        has_prior_lines: bool,
-    ) -> list[str]:
+    def _property_count_uses_extra_values(property_count: Any) -> bool:
+        return isinstance(property_count, dict) and (
+            property_count.get("min") is not None or property_count.get("max") is not None
+        )
+
+    @classmethod
+    def _get_provided_keys_validator_lines(cls, property_count: Any, *, has_prior_lines: bool) -> list[str]:
         lines: list[str] = []
         if has_prior_lines:
             lines.append("")
-        elif not (
-            isinstance(property_count, dict)
-            and (property_count.get("min") is not None or property_count.get("max") is not None)
-        ):
+        elif not cls._property_count_uses_extra_values(property_count):
             lines.append("extra_values = getattr(self, '__pydantic_extra__', None) or {}")
         lines.extend([
             "provided_keys = set(self.model_fields_set)",
             "provided_keys.update(extra_values)",
         ])
+        return lines
+
+    @staticmethod
+    def _get_dependent_required_validator_lines(dependent_required: dict[str, Any]) -> list[str]:
+        lines: list[str] = []
         for field_name, required_names in dependent_required.items():
             if not required_names:
                 continue
@@ -430,6 +433,28 @@ class BaseModel(BaseModelBase):
                 f"    missing = {required_set} - provided_keys",
                 "    if missing:",
                 f"        raise ValueError({field_name!r} + ' requires properties: ' + ', '.join(sorted(missing)))",
+            ])
+        return lines
+
+    @staticmethod
+    def _get_dependent_schema_property_validator_lines(validators: list[Any]) -> list[str]:
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            trigger = validator.get("trigger")
+            field_name = validator.get("field")
+            value_name = validator.get("value")
+            predicate = validator.get("predicate")
+            if not all(isinstance(value, str) for value in (trigger, field_name, value_name, predicate)):
+                continue
+            lines.extend([
+                f"if {trigger!r} in provided_keys and {field_name!r} in provided_keys:",
+                f"    {value_name} = self.{field_name}",
+                f"    if not ({predicate}):",
+                "        raise ValueError(",
+                f"            {trigger!r} + ' requires {field_name}' + ' to match dependent schema'",
+                "        )",
             ])
         return lines
 
@@ -489,14 +514,18 @@ class BaseModel(BaseModelBase):
             lines.extend(self._get_property_count_validator_lines(property_count))
 
         dependent_required = validators.get("dependent_required")
+        dependent_schema_properties = validators.get("dependent_schema_properties")
+        needs_provided_keys = (isinstance(dependent_required, dict) and dependent_required) or (
+            isinstance(dependent_schema_properties, list) and dependent_schema_properties
+        )
+        if needs_provided_keys:
+            lines.extend(self._get_provided_keys_validator_lines(property_count, has_prior_lines=bool(lines)))
+
         if isinstance(dependent_required, dict) and dependent_required:
-            lines.extend(
-                self._get_dependent_required_validator_lines(
-                    dependent_required,
-                    property_count,
-                    has_prior_lines=bool(lines),
-                )
-            )
+            lines.extend(self._get_dependent_required_validator_lines(dependent_required))
+
+        if isinstance(dependent_schema_properties, list) and dependent_schema_properties:
+            lines.extend(self._get_dependent_schema_property_validator_lines(dependent_schema_properties))
 
         array_contains = validators.get("array_contains")
         if isinstance(array_contains, list):

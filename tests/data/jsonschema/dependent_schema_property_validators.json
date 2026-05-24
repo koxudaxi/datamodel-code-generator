@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "dependent schema property validators",
+  "type": "object",
+  "properties": {
+    "plan": {
+      "type": "string"
+    },
+    "quota": {
+      "type": "integer"
+    },
+    "region": {
+      "type": "string"
+    },
+    "zone": {
+      "type": "string"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "legacy": {
+      "type": "boolean"
+    }
+  },
+  "dependentSchemas": {
+    "plan": {
+      "required": ["quota"],
+      "properties": {
+        "quota": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "region": {
+          "enum": ["us", "eu"]
+        }
+      }
+    },
+    "zone": {
+      "properties": {
+        "tags": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 3
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "legacy": {
+      "required": ["region"],
+      "properties": {
+        "region": {
+          "const": "legacy"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

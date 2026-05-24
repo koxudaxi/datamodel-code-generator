@@ -11,7 +11,7 @@ import importlib
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from fractions import Fraction
 from functools import cached_property, lru_cache
@@ -3466,7 +3466,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         return fields
 
-    def _collect_dependent_required(self, extras: dict[str, Any]) -> dict[str, list[str]]:  # noqa: PLR6301
+    def _collect_dependent_required(self, extras: dict[str, Any]) -> dict[str, list[str]]:
         dependent_required: dict[str, list[str]] = {}
         for keyword in ("dependentRequired", "dependencies"):
             raw_dependent_required = extras.get(keyword)
@@ -3477,30 +3477,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     if isinstance(property_name, str) and isinstance(required_names, list)
                 })
 
-        dependent_schemas = extras.get("dependentSchemas")
-        if isinstance(dependent_schemas, dict):
-            dependent_required.update({
-                property_name: [required_name for required_name in required_names if isinstance(required_name, str)]
-                for property_name, dependent_schema in dependent_schemas.items()
-                if isinstance(property_name, str)
-                and isinstance(dependent_schema, dict)
-                and isinstance(required_names := dependent_schema.get("required"), list)
-            })
+        for property_name, dependent_schema in self._iter_dependent_schema_objects(extras):
+            required_names = dependent_schema.required
+            if required_names:
+                dependent_required.update({
+                    property_name: [required_name for required_name in required_names if isinstance(required_name, str)]
+                })
         return dependent_required
 
     def _field_name_mapping(self, fields: list[DataModelFieldBase]) -> dict[str, str]:  # noqa: PLR6301
         return {field.original_name or field.name: field.name for field in fields if field.name}
 
-    def _json_value_predicate(self, value: Any) -> str:  # noqa: PLR6301
+    def _json_value_predicate(self, value: Any, variable_name: str = "item") -> str:  # noqa: PLR6301
         if value is None:
-            return "item is None"
+            return f"{variable_name} is None"
         if isinstance(value, bool):
-            return f"item is {value}"
+            return f"{variable_name} is {value}"
         if isinstance(value, int):
-            return f"item == {value!r} and isinstance(item, int) and not isinstance(item, bool)"
+            return (
+                f"{variable_name} == {value!r} "
+                f"and isinstance({variable_name}, int) "
+                f"and not isinstance({variable_name}, bool)"
+            )
         if isinstance(value, float):
-            return f"item == {value!r} and isinstance(item, (int, float)) and not isinstance(item, bool)"
-        return f"item == {value!r}"
+            return (
+                f"{variable_name} == {value!r} "
+                f"and isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool)"
+            )
+        return f"{variable_name} == {value!r}"
 
     def _join_contains_predicates(self, predicates: list[str], operator: str) -> str:  # noqa: PLR6301
         if "False" in predicates and operator == "and":
@@ -3545,24 +3550,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return self._one_of_contains_predicate(predicates)
         return self._join_contains_predicates(predicates, "and" if operator == "allOf" else "or")
 
-    def _contains_type_predicate(self, schema: JsonSchemaObject) -> str | None:
+    def _json_type_predicate(self, schema_type: str | None, variable_name: str) -> str | None:  # noqa: PLR6301
+        return {
+            "string": f"isinstance({variable_name}, str)",
+            "integer": f"isinstance({variable_name}, int) and not isinstance({variable_name}, bool)",
+            "number": f"isinstance({variable_name}, (int, float)) and not isinstance({variable_name}, bool)",
+            "boolean": f"isinstance({variable_name}, bool)",
+            "null": f"{variable_name} is None",
+            "array": f"isinstance({variable_name}, list)",
+            "object": f"isinstance({variable_name}, dict)",
+        }.get(schema_type)
+
+    def _schema_type_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
         schema_types = schema.type if isinstance(schema.type, list) else [schema.type]
-        predicates: list[str] = []
-        for schema_type in schema_types:
-            if schema_type == "string":
-                predicates.append("isinstance(item, str)")
-            elif schema_type == "integer":
-                predicates.append("isinstance(item, int) and not isinstance(item, bool)")
-            elif schema_type == "number":
-                predicates.append("isinstance(item, (int, float)) and not isinstance(item, bool)")
-            elif schema_type == "boolean":
-                predicates.append("isinstance(item, bool)")
-            elif schema_type == "null":
-                predicates.append("item is None")
-            elif schema_type == "array":
-                predicates.append("isinstance(item, list)")
-            elif schema_type == "object":
-                predicates.append("isinstance(item, dict)")
+        predicates = [
+            predicate
+            for schema_type in schema_types
+            if (predicate := self._json_type_predicate(schema_type, variable_name))
+        ]
         return self._join_contains_predicates(predicates, "or") if predicates else None
 
     def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
@@ -3573,7 +3578,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             predicates.append(
                 self._join_contains_predicates([self._json_value_predicate(value) for value in schema.enum], "or")
             )
-        if type_predicate := self._contains_type_predicate(schema):
+        if type_predicate := self._schema_type_predicate(schema, "item"):
             predicates.append(type_predicate)
         if schema.anyOf and (predicate := self._contains_combined_predicate(schema.anyOf, "anyOf")):
             predicates.append(predicate)
@@ -3582,6 +3587,68 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if schema.allOf and (predicate := self._contains_combined_predicate(schema.allOf, "allOf")):
             predicates.append(predicate)
         return self._join_contains_predicates(predicates, "and") if predicates else None
+
+    def _schema_number_range_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates: list[str] = []
+        if schema.minimum is not None:
+            minimum = self._number_literal(schema.minimum)
+            predicates.append(
+                f"isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool) "
+                f"and {variable_name} >= {minimum!r}"
+            )
+        if schema.maximum is not None:
+            maximum = self._number_literal(schema.maximum)
+            predicates.append(
+                f"isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool) "
+                f"and {variable_name} <= {maximum!r}"
+            )
+        if isinstance(schema.exclusiveMinimum, (int, float)) and not isinstance(schema.exclusiveMinimum, bool):
+            predicates.append(
+                f"isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool) "
+                f"and {variable_name} > {schema.exclusiveMinimum!r}"
+            )
+        if isinstance(schema.exclusiveMaximum, (int, float)) and not isinstance(schema.exclusiveMaximum, bool):
+            predicates.append(
+                f"isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool) "
+                f"and {variable_name} < {schema.exclusiveMaximum!r}"
+            )
+        return predicates
+
+    def _schema_size_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:  # noqa: PLR6301
+        predicates: list[str] = []
+        if schema.minLength is not None:
+            predicates.append(f"isinstance({variable_name}, str) and len({variable_name}) >= {schema.minLength}")
+        if schema.maxLength is not None:
+            predicates.append(f"isinstance({variable_name}, str) and len({variable_name}) <= {schema.maxLength}")
+        if schema.minItems is not None:
+            predicates.append(f"isinstance({variable_name}, list) and len({variable_name}) >= {schema.minItems}")
+        if schema.maxItems is not None:
+            predicates.append(f"isinstance({variable_name}, list) and len({variable_name}) <= {schema.maxItems}")
+        return predicates
+
+    def _schema_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
+        predicates: list[str] = []
+        if "const" in schema.extras:
+            predicates.append(self._json_value_predicate(schema.extras["const"], variable_name))
+        if schema.enum:
+            predicates.append(
+                self._join_contains_predicates(
+                    [self._json_value_predicate(value, variable_name) for value in schema.enum],
+                    "or",
+                )
+            )
+        if type_predicate := self._schema_type_predicate(schema, variable_name):
+            predicates.append(type_predicate)
+        predicates.extend(self._schema_number_range_predicates(schema, variable_name))
+        predicates.extend(self._schema_size_predicates(schema, variable_name))
+        return self._join_contains_predicates(predicates, "and") if predicates else None
+
+    def _number_literal(self, value: UnionIntFloat | float) -> int | float:  # noqa: PLR6301
+        return value.value if isinstance(value, UnionIntFloat) else value
 
     def _get_array_contains_validator(self, field_name: str, field: JsonSchemaObject) -> dict[str, Any] | None:
         contains = field.extras.get("contains")
@@ -3626,6 +3693,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if validator:
             self.extra_template_data[path]["json_schema_validators"] = {"array_contains": [validator]}
 
+    def _iter_dependent_schema_objects(self, extras: dict[str, Any]) -> Iterator[tuple[str, JsonSchemaObject]]:
+        dependent_schemas = extras.get("dependentSchemas")
+        if isinstance(dependent_schemas, dict):
+            for property_name, dependent_schema in dependent_schemas.items():
+                if isinstance(property_name, str) and isinstance(dependent_schema, dict):
+                    yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
+
+        dependencies = extras.get("dependencies")
+        if isinstance(dependencies, dict):
+            for property_name, dependent_schema in dependencies.items():
+                if isinstance(property_name, str) and isinstance(dependent_schema, dict):
+                    yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
+
+    def _collect_dependent_schema_property_validators(
+        self,
+        extras: dict[str, Any],
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        field_names = self._field_name_mapping(fields)
+        validators: list[dict[str, str]] = []
+        for property_name, dependent_schema in self._iter_dependent_schema_objects(extras):
+            trigger_field = field_names.get(property_name, property_name)
+            if not dependent_schema.properties:
+                continue
+            for dependent_property_name, dependent_property_schema in dependent_schema.properties.items():
+                if not isinstance(dependent_property_schema, JsonSchemaObject):
+                    continue
+                field_name = field_names.get(dependent_property_name)
+                if not field_name:
+                    continue
+                value_name = f"{field_name}_value"
+                predicate = self._schema_value_predicate(dependent_property_schema, value_name)
+                if predicate:
+                    validators.append({
+                        "trigger": trigger_field,
+                        "field": field_name,
+                        "value": value_name,
+                        "predicate": predicate,
+                    })
+        return validators
+
     def _set_object_model_validators(
         self,
         path: str,
@@ -3656,6 +3764,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         array_contains = self._collect_array_contains_validators(obj, fields)
         if array_contains:
             validators["array_contains"] = array_contains
+
+        dependent_schema_properties = self._collect_dependent_schema_property_validators(obj.extras, fields)
+        if dependent_schema_properties:
+            validators["dependent_schema_properties"] = dependent_schema_properties
 
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators

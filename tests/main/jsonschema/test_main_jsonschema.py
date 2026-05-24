@@ -4756,6 +4756,40 @@ def test_main_jsonschema_object_model_validators(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_dependent_schema_property_validators(output_file: Path) -> None:
+    """Test schema-valued dependentSchemas/dependencies property constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_property_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dependent_schema_property_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for valid_json, invalid_json in [
+        ('{"plan":"pro","quota":5,"region":"us"}', '{"plan":"pro"}'),
+        ('{"plan":"pro","quota":5,"region":"eu"}', '{"plan":"pro","quota":0,"region":"eu"}'),
+        ('{"plan":"pro","quota":5,"region":"eu"}', '{"plan":"pro","quota":11,"region":"eu"}'),
+        ('{"plan":"pro","quota":5,"region":"us"}', '{"plan":"pro","quota":5,"region":"ap"}'),
+        ('{"zone":"a","tags":["x","y"]}', '{"zone":"a","tags":["x"]}'),
+        ('{"zone":"a","tags":["x","y","z"]}', '{"zone":"a","tags":["w","x","y","z"]}'),
+        ('{"legacy":true,"region":"legacy"}', '{"legacy":true}'),
+        ('{"legacy":true,"region":"legacy"}', '{"legacy":true,"region":"new"}'),
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="dependent_schema_property_validators",
+            model_name="DependentSchemaPropertyValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(
