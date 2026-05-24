@@ -4108,6 +4108,29 @@ def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> Non
     )
 
 
+def test_main_jsonschema_dependent_schema_property_names_intersection(output_file: Path) -> None:
+    """Test statically active dependent schemas intersect generated property name constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_property_names_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dependent_schema_property_names_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="dependent_schema_property_names_intersection",
+        model_name="DependentSchemaPropertyNamesIntersection",
+        valid_json='{"kind":"card","allowed":5}',
+        invalid_json='{"kind":"card","allowed":5,"blocked":true}',
+        expected_error_type="extra_forbidden",
+        expected_attribute_path=("allowed",),
+        expected_attribute_value=5,
+    )
+
+
 def test_main_jsonschema_conditional_schema_intersection(output_file: Path) -> None:
     """Test statically true conditional schemas intersect generated object constraints."""
     run_main_and_assert(
@@ -4336,6 +4359,26 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "dependentSchemas": {"method": {"properties": {"method": {"type": "string", "const": "cash"}}}},
             },
             id="dependent-schema-property-const-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}, "blocked": {"type": "string"}},
+                "required": ["kind", "blocked"],
+                "dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}}},
+            },
+            id="dependent-schema-property-names-required-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}},
+                "required": ["kind"],
+                "dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}},
+            },
+            id="dependent-schema-property-names-min-properties-disjoint",
         ),
         pytest.param({"title": "Payload", "if": True, "then": False}, id="conditional-true-then-false"),
         pytest.param({"title": "Payload", "if": False, "else": False}, id="conditional-false-else-false"),

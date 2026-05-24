@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DependentSchemaPropertyNamesIntersection",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "enum": ["card", "cash"]
+    },
+    "allowed": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "blocked": {
+      "type": "boolean"
+    }
+  },
+  "required": ["kind"],
+  "dependentSchemas": {
+    "kind": {
+      "properties": {
+        "allowed": {
+          "maximum": 5
+        }
+      },
+      "required": ["allowed"],
+      "propertyNames": {
+        "anyOf": [
+          {
+            "const": "kind"
+          },
+          {
+            "const": "allowed"
+          }
+        ]
+      },
+      "additionalProperties": false
+    }
+  }
+}

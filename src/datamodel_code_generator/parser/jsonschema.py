@@ -2584,7 +2584,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return [name for name in required if isinstance(name, str)] if isinstance(required, list) else []
 
     @classmethod
-    def _merge_raw_active_dependent_schema(cls, schema_dict: dict[Any, Any], dependency: dict[Any, Any]) -> None:
+    def _merge_raw_active_dependent_schema(  # noqa: PLR0912
+        cls, schema_dict: dict[Any, Any], dependency: dict[Any, Any]
+    ) -> None:
         dependency_type = dependency.get("type")
         if dependency_type is not None and not cls._raw_type_accepts_object(dependency_type):
             cls._raise_object_constraint_conflict()
@@ -2604,8 +2606,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                             property_schema,
                         )
 
-        if dependency.get("additionalProperties") is False:
-            schema_dict["additionalProperties"] = False
+        dependency_pattern_properties = dependency.get("patternProperties")
+        if isinstance(dependency_pattern_properties, dict):
+            pattern_properties = schema_dict.setdefault("patternProperties", {})
+            if isinstance(pattern_properties, dict):
+                for pattern, pattern_schema in dependency_pattern_properties.items():
+                    if isinstance(pattern, str):
+                        pattern_properties[pattern] = cls._merge_raw_schema_intersection(
+                            pattern_properties.get(pattern, True),
+                            pattern_schema,
+                        )
+
+        if "propertyNames" in dependency:
+            schema_dict["propertyNames"] = cls._merge_raw_property_names_intersection(
+                schema_dict.get("propertyNames", True),
+                dependency["propertyNames"],
+            )
+
+        if "additionalProperties" in dependency:
+            schema_dict["additionalProperties"] = cls._merge_raw_schema_intersection(
+                schema_dict.get("additionalProperties", True),
+                dependency["additionalProperties"],
+            )
+
+    @classmethod
+    def _merge_raw_property_names_intersection(cls, left: Any, right: Any) -> Any:
+        if left is True or left is None:
+            return right
+        if right is True or right is None:
+            return left
+        if left is False or right is False:
+            return False
+        if not isinstance(left, dict) or not isinstance(right, dict):
+            return right
+        return cls._merge_raw_schema_intersection(left, right)
 
     @classmethod
     def _merge_raw_object_keyword(cls, schema_dict: dict[Any, Any], key: str, value: Any) -> None:
