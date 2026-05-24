@@ -201,9 +201,8 @@ class _XMLSchemaConverter:
         else:
             properties: dict[str, JsonSchema] = {}
             for element in global_elements:
-                name = element.get("name")
-                if name:
-                    properties[name] = self._convert_global_element_as_property(element)
+                name = cast("str", element.get("name"))
+                properties[name] = self._convert_global_element_as_property(element)
             schema = {
                 "title": "Model",
                 "type": "object",
@@ -391,7 +390,7 @@ class _XMLSchemaConverter:
             schemas.extend(self._convert_simple_type(child) for child in _xsd_children(union_element, "simpleType"))
             schema = {"anyOf": schemas} if schemas else {}
         else:
-            schema = STRING_SCHEMA
+            schema = _copy_schema(STRING_SCHEMA)
 
         if documentation := _documentation(simple_type):
             schema = _copy_schema(schema)
@@ -400,11 +399,14 @@ class _XMLSchemaConverter:
 
     def _restriction_base_schema(self, restriction: ET.Element) -> JsonSchema:
         if base := restriction.get("base"):
+            local = _local_name(base)
+            if local in self.simple_types and local not in self._building_definitions:
+                return self._convert_simple_type(self.simple_types[local])
             return self._schema_for_qname(base)
         simple_type = _first_xsd_child(restriction, "simpleType")
         if simple_type is not None:
             return self._convert_simple_type(simple_type)
-        return STRING_SCHEMA
+        return _copy_schema(STRING_SCHEMA)
 
     def _apply_restriction_facets(self, restriction: ET.Element, schema: JsonSchema) -> JsonSchema:  # noqa: PLR0912
         schema = _copy_schema(schema)
@@ -508,7 +510,9 @@ class _XMLSchemaConverter:
     def _convert_simple_content(self, simple_content: ET.Element, owner: ET.Element) -> JsonSchema:
         child = _first_xsd_child(simple_content, "extension", "restriction")
         value_schema = (
-            self._schema_for_qname(child.get("base")) if child is not None and child.get("base") else STRING_SCHEMA
+            self._schema_for_qname(child.get("base"))
+            if child is not None and child.get("base")
+            else _copy_schema(STRING_SCHEMA)
         )
         if child is not None and _local_name(child.tag) == "restriction":
             value_schema = self._apply_restriction_facets(child, value_schema)

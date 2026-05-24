@@ -51,11 +51,11 @@ Options:
                         Timeout in seconds for HTTP requests to remote hosts
                         (default: 30)
   --input INPUT         Input file/directory (default: stdin)
-  --input-file-type {auto,openapi,jsonschema,json,yaml,dict,csv,graphql}
+  --input-file-type {auto,openapi,jsonschema,xmlschema,json,yaml,dict,csv,graphql}
                         Input file type (default: auto). Use 'jsonschema',
-                        'openapi', or 'graphql' for schema definitions. Use
-                        'json', 'yaml', or 'csv' for raw sample data to infer
-                        a schema automatically.
+                        'openapi', 'graphql', or 'xmlschema' for schema
+                        definitions. Use 'json', 'yaml', or 'csv' for raw
+                        sample data to infer a schema automatically.
   --input-model MODULE:NAME
                         Python import path to a Pydantic v2 model or schema
                         dict (e.g., 'mypackage.module:ClassName' or
