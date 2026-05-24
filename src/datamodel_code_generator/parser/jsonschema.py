@@ -872,7 +872,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _extract_const_enum_from_combined(  # noqa: PLR0912
-        cls, items: list[JsonSchemaObject | bool], parent_type: str | list[str] | None
+        cls,
+        items: list[JsonSchemaObject | bool],
+        parent_type: str | list[str] | None,
+        parent_schema: JsonSchemaObject | None = None,
     ) -> tuple[list[Any], list[str], list[str], str | None, bool] | None:
         """Extract enum values from oneOf/anyOf const pattern."""
         enum_values: list[Any] = []
@@ -880,6 +883,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         descriptions: list[str] = []
         nullable = False
         inferred_type: str | None = None
+        parent_filter = cls._raw_parent_literal_filter_schema(parent_schema, parent_type)
 
         for item in items:
             if item is False:
@@ -887,7 +891,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if item is True:
                 return None
             if item.type == "null" and "const" not in item.extras:
-                nullable = True
+                if cls._raw_value_matches_schema(None, parent_filter):
+                    nullable = True
                 continue
 
             if "const" not in item.extras:
@@ -897,6 +902,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return None
 
             const_value = item.extras["const"]
+            if not cls._raw_value_matches_schema(const_value, parent_filter):
+                continue
             enum_values.append(const_value)
 
             if item.title:
@@ -914,8 +921,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     case float():
                         inferred_type = "number"
 
-        if not enum_values:  # pragma: no cover
-            return None
+        if not enum_values and not nullable:
+            cls._raise_allof_literal_conflict()
 
         final_type: str | None
         match parent_type:
@@ -930,6 +937,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 final_type = inferred_type
 
         return (enum_values, varnames, descriptions, final_type, nullable)
+
+    @classmethod
+    def _raw_parent_literal_filter_schema(
+        cls,
+        parent_schema: JsonSchemaObject | None,
+        parent_type: str | list[str] | None,
+    ) -> dict[str, Any]:
+        filter_schema: dict[str, Any] = {}
+        if parent_type is not None:
+            filter_schema["type"] = parent_type
+        if parent_schema is None:
+            return filter_schema
+        if parent_schema.enum:
+            filter_schema["enum"] = parent_schema.enum
+        if "const" in parent_schema.extras:
+            filter_schema["const"] = parent_schema.extras["const"]
+        for field in JsonSchemaObject.__constraint_fields__:
+            value = getattr(parent_schema, field)
+            if field in parent_schema.model_fields_set and value is not None:
+                filter_schema[field] = value
+        return filter_schema
 
     def _create_synthetic_enum_obj(  # noqa: PLR0913, PLR0917
         self,
@@ -6072,7 +6100,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         if item.anyOf or item.oneOf:
             combined_items = item.anyOf or item.oneOf
-            const_enum_data = self._extract_const_enum_from_combined(combined_items, item.type)
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, item.type, item)
             if const_enum_data is None:
                 return True
             enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
@@ -6160,7 +6188,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if item.discriminator and parent and parent.is_array and (item.oneOf or item.anyOf):
             return self.parse_root_type(name, item, path)
         if item.anyOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type)
+            const_enum_data = self._extract_const_enum_from_combined(item.anyOf, item.type, item)
             if const_enum_data is not None:
                 enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(
@@ -6171,7 +6199,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.parse_enum(name, synthetic_obj, get_special_path("enum", path), singular_name=singular_name)
             return self.data_type(data_types=self.parse_any_of(name, item, get_special_path("anyOf", path)))
         if item.oneOf:
-            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type)
+            const_enum_data = self._extract_const_enum_from_combined(item.oneOf, item.type, item)
             if const_enum_data is not None:
                 enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(
@@ -6470,7 +6498,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             ).data_type  # pragma: no cover
         elif obj.anyOf or obj.oneOf:
             combined_items = obj.anyOf or obj.oneOf
-            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type, obj)
             if const_enum_data is not None:  # pragma: no cover
                 enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(
@@ -7361,7 +7389,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self.parse_all_of(name, obj, path)
         elif obj.oneOf or obj.anyOf:
             combined_items = obj.oneOf or obj.anyOf
-            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type)
+            const_enum_data = self._extract_const_enum_from_combined(combined_items, obj.type, obj)
             if const_enum_data is not None:
                 enum_values, varnames, descriptions, enum_type, nullable = const_enum_data
                 synthetic_obj = self._create_synthetic_enum_obj(

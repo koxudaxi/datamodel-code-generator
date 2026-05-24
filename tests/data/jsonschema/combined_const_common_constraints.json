@@ -1,0 +1,16 @@
+{
+  "title": "CombinedConstCommonConstraints",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "minLength": 2,
+      "anyOf": [{ "const": "a" }, { "const": "bb" }]
+    },
+    "count": {
+      "type": "integer",
+      "minimum": 2,
+      "anyOf": [{ "const": 1 }, { "const": 2 }]
+    }
+  }
+}
