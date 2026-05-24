@@ -383,7 +383,6 @@ class _XMLSchemaConverter:
         return schema
 
     def _convert_element(self, element: ET.Element) -> JsonSchema:
-        ref = element.get("ref")
         if ref := element.get("ref"):
             schema = {"$ref": self._ref_for_key(self._resolve_key(ref, self.elements, element=element))}
         elif type_name := element.get("type"):
@@ -519,11 +518,9 @@ class _XMLSchemaConverter:
         return value
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | str:  # noqa: PLR6301
-        match schema.get("type"):
-            case "integer":
-                return integer if (integer := _safe_int(value)) is not None else value
-            case _:
-                return number if (number := _safe_float(value)) is not None else value
+        if schema.get("type") == "integer":
+            return integer if (integer := _safe_int(value)) is not None else value
+        return number if (number := _safe_float(value)) is not None else value
 
     def _convert_complex_type(self, complex_type: ET.Element) -> JsonSchema:
         if (complex_content := _first_xsd_child(complex_type, "complexContent")) is not None:
