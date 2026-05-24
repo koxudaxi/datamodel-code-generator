@@ -3755,7 +3755,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             remaining_names -= removed_names
 
     @classmethod
-    def _raw_dependency_excludes_property_name(
+    def _raw_dependency_excludes_property_name(  # noqa: PLR0911
         cls,
         dependency: Any,
         name: str,
@@ -3780,9 +3780,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     dependency_pattern_properties,
                 ):
                     return True
+            dependency_min_properties = cls._number_constraint_value(dependency.get("minProperties"))
+            if dependency_min_properties is not None:
+                dependency_allowed_names = cls._raw_dependency_allowed_property_name_values(dependency, allowed_names)
+                if dependency_min_properties > len(dependency_allowed_names):
+                    return True
+            dependency_max_properties = cls._number_constraint_value(dependency.get("maxProperties"))
+            if dependency_max_properties is not None and dependency_max_properties < 1:
+                return True
         return any(
             required_name not in allowed_names for required_name in cls._raw_dependency_required_names(dependency)
         )
+
+    @classmethod
+    def _raw_dependency_allowed_property_name_values(
+        cls,
+        dependency: dict[Any, Any],
+        allowed_names: set[str],
+    ) -> set[str]:
+        dependency_properties = dependency.get("properties")
+        declared_names = set(dependency_properties) if isinstance(dependency_properties, dict) else set()
+        dependency_pattern_properties = dependency.get("patternProperties")
+        additional_properties = dependency.get("additionalProperties")
+
+        return {
+            name
+            for name in allowed_names
+            if cls._raw_property_name_accepts_name(dependency.get("propertyNames"), name)
+            and not (isinstance(dependency_properties, dict) and dependency_properties.get(name) is False)
+            and (
+                additional_properties is not False
+                or name in declared_names
+                or cls._raw_required_name_allowed_by_pattern_properties(name, dependency_pattern_properties)
+            )
+        }
 
     @classmethod
     def _raw_finite_property_name_values(cls, property_names: Any) -> set[str] | None:

@@ -4130,6 +4130,17 @@ def test_main_jsonschema_dependent_required_property_names_count_conflict(output
     )
 
 
+def test_main_jsonschema_dependent_schema_property_names_count_conflict(output_file: Path) -> None:
+    """Test dependent schema property counts can make finite propertyNames impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> None:
     """Test statically active dependent schemas intersect generated property constraints."""
     run_main_and_assert(
@@ -4638,6 +4649,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "minProperties": 1,
+                "allOf": [
+                    {"propertyNames": {"enum": ["trigger"]}},
+                    {"dependentSchemas": {"trigger": {"minProperties": 2}}},
+                ],
+            },
+            id="allof-property-names-dependent-schema-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "allOf": [
                     {"properties": {"kind": {"type": "string"}}, "required": ["kind"]},
                     {"dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}}},
@@ -5141,6 +5164,16 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "dependentRequired": {"trigger": ["dependent"]},
             },
             id="object-property-names-dependent-required-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger"]},
+                "minProperties": 1,
+                "dependentSchemas": {"trigger": {"minProperties": 2}},
+            },
+            id="object-property-names-dependent-schema-min-properties",
         ),
         pytest.param(
             {
@@ -8079,6 +8112,17 @@ def test_main_jsonschema_allof_dependent_required_property_names_count_conflict(
     """Test allOf sibling propertyNames and dependentRequired can make counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_required_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_dependent_schema_property_names_count_conflict(output_file: Path) -> None:
+    """Test allOf sibling propertyNames and dependentSchemas can make counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_schema_property_names_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

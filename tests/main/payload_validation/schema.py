@@ -682,7 +682,21 @@ def _iter_dependencies(schema: dict[str, Any]) -> Iterator[tuple[str, Any]]:
             )
 
 
-def _dependency_excludes_property_name(dependency: Any, name: str, allowed_names: set[str]) -> bool:
+def _dependency_allowed_property_name_values(dependency: dict[str, Any], allowed_names: set[str]) -> set[str]:
+    dependency_properties = dependency.get("properties")
+    declared_names = set(dependency_properties) if isinstance(dependency_properties, dict) else set()
+    additional_properties = dependency.get("additionalProperties")
+
+    return {
+        name
+        for name in allowed_names
+        if _property_name_accepts_name(dependency.get("propertyNames"), name)
+        and not (isinstance(dependency_properties, dict) and dependency_properties.get(name) is False)
+        and (additional_properties is not False or name in declared_names)
+    }
+
+
+def _dependency_excludes_property_name(dependency: Any, name: str, allowed_names: set[str]) -> bool:  # noqa: PLR0911
     if dependency is False:
         return True
     if isinstance(dependency, dict):
@@ -698,6 +712,14 @@ def _dependency_excludes_property_name(dependency: Any, name: str, allowed_names
             declared_names = set(dependency_properties) if isinstance(dependency_properties, dict) else set()
             if name not in declared_names:
                 return True
+        min_properties = dependency.get("minProperties")
+        if isinstance(min_properties, int) and not isinstance(min_properties, bool):
+            dependency_allowed_names = _dependency_allowed_property_name_values(dependency, allowed_names)
+            if min_properties > len(dependency_allowed_names):
+                return True
+        max_properties = dependency.get("maxProperties")
+        if isinstance(max_properties, int) and not isinstance(max_properties, bool) and max_properties < 1:
+            return True
     return any(required_name not in allowed_names for required_name in _dependency_required_names(dependency))
 
 
