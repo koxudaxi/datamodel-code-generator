@@ -28,7 +28,7 @@ def convert_xmlschema(text: str, tmp_path: Path) -> dict[str, object]:
     return converter.convert(Source(path=Path("schema.xsd"), text=text))
 
 
-def test_xmlschema_helpers() -> None:
+def test_xmlschema_helpers(tmp_path: Path) -> None:
     """Test XML Schema helper functions."""
     assert not is_xml_schema_text("not xml")
     assert not is_xml_schema_text("<broken")
@@ -48,6 +48,24 @@ def test_xmlschema_helpers() -> None:
     copied["items"][0]["type"] = "integer"
     assert schema["items"][0]["type"] == "string"
     assert _XMLSchemaConverter._definition_ref("Thing") == "#/definitions/Thing"
+
+    converter = _XMLSchemaConverter(base_path=tmp_path, encoding="utf-8")
+    assert converter._namespaces_for(None) is converter.namespaces
+    assert converter._namespace_name(None) == "NoNamespace"
+    root = converter._parse_schema(
+        """<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:dup="https://example.com/one">
+  <xs:annotation xmlns:dup="https://example.com/two"/>
+</xs:schema>""",
+        tmp_path / "schema.xsd",
+    )
+    assert root.tag == f"{{{XML_SCHEMA_NAMESPACE}}}schema"
+    type_element = ET.Element(f"{{{XML_SCHEMA_NAMESPACE}}}simpleType")
+    converter.simple_types["urn:a-b", "Thing"] = type_element
+    converter.simple_types["urn:a_b", "Thing"] = type_element
+    converter._prepare_definition_names()
+    assert converter._definition_name(("urn:a-b", "Thing")) != converter._definition_name(("urn:a_b", "Thing"))
 
 
 def test_xmlschema_parse_errors(tmp_path: Path) -> None:
@@ -402,7 +420,7 @@ def test_xmlschema_edge_cases(tmp_path: Path) -> None:
 
 
 def test_xmlschema_import_resolves_by_namespace(tmp_path: Path) -> None:
-    """Resolve imported schema components with the QName namespace URI."""
+    """Resolve imported components and exclude imported elements from root selection."""
     (tmp_path / "external.xsd").write_text(
         """<?xml version="1.0"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/external">
@@ -411,6 +429,7 @@ def test_xmlschema_import_resolves_by_namespace(tmp_path: Path) -> None:
       <xs:length value="5"/>
     </xs:restriction>
   </xs:simpleType>
+  <xs:element name="externalRoot" type="ImportedCode"/>
 </xs:schema>
 """,
         encoding="utf-8",
@@ -428,8 +447,94 @@ def test_xmlschema_import_resolves_by_namespace(tmp_path: Path) -> None:
 
     assert schema["title"] == "Code"
     assert schema["allOf"] == [{"$ref": "#/definitions/ImportedCode"}]
+    assert "externalRoot" not in schema.get("properties", {})
     assert schema["definitions"]["ImportedCode"]["minLength"] == 5
     assert schema["definitions"]["ImportedCode"]["maxLength"] == 5
+
+
+def test_xmlschema_imported_namespace_name_collisions(tmp_path: Path) -> None:
+    """Keep imported definitions distinct when local names collide."""
+    (tmp_path / "shipping.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:common="https://example.com/common/shipping"
+    targetNamespace="https://example.com/shipping">
+  <xs:import namespace="https://example.com/common/shipping" schemaLocation="shipping_common.xsd"/>
+  <xs:complexType name="Address">
+    <xs:sequence>
+      <xs:element name="code" type="common:Code"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "shipping_common.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/common/shipping">
+  <xs:simpleType name="Code">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="2"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "billing.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:common="https://example.com/common/billing"
+    targetNamespace="https://example.com/billing">
+  <xs:import namespace="https://example.com/common/billing" schemaLocation="billing_common.xsd"/>
+  <xs:complexType name="Address">
+    <xs:sequence>
+      <xs:element name="code" type="common:Code"/>
+    </xs:sequence>
+  </xs:complexType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    (tmp_path / "billing_common.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/common/billing">
+  <xs:simpleType name="Code">
+    <xs:restriction base="xs:string">
+      <xs:maxLength value="4"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    xsd = """<?xml version="1.0"?>
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:ship="https://example.com/shipping"
+    xmlns:bill="https://example.com/billing"
+    targetNamespace="https://example.com/order">
+  <xs:import namespace="https://example.com/shipping" schemaLocation="shipping.xsd"/>
+  <xs:import namespace="https://example.com/billing" schemaLocation="billing.xsd"/>
+  <xs:element name="shipping" type="ship:Address"/>
+  <xs:element name="billing" type="bill:Address"/>
+</xs:schema>
+"""
+    schema = convert_xmlschema(xsd, tmp_path)
+    definitions = schema["definitions"]
+
+    shipping_ref = schema["properties"]["shipping"]["$ref"]
+    billing_ref = schema["properties"]["billing"]["$ref"]
+    assert shipping_ref != billing_ref
+
+    shipping = definitions[shipping_ref.rsplit("/", maxsplit=1)[-1]]
+    billing = definitions[billing_ref.rsplit("/", maxsplit=1)[-1]]
+    shipping_code = definitions[shipping["properties"]["code"]["$ref"].rsplit("/", maxsplit=1)[-1]]
+    billing_code = definitions[billing["properties"]["code"]["$ref"].rsplit("/", maxsplit=1)[-1]]
+    assert shipping_code["minLength"] == 2
+    assert billing_code["maxLength"] == 4
 
 
 def test_xmlschema_namespace_fallback_and_referenced_name_collision(tmp_path: Path) -> None:
