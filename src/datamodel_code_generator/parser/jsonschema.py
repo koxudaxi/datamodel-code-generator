@@ -3806,6 +3806,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         return [validator]
 
+    def _collect_not_validators(
+        self,
+        extras: dict[str, Any],
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        raw_not_schema = extras.get("not")
+        if not isinstance(raw_not_schema, dict):
+            return []
+
+        if not raw_not_schema:
+            return [{"condition": "True"}]
+
+        field_names = self._field_name_mapping(fields)
+        not_schema = self.SCHEMA_OBJECT_TYPE.model_validate(raw_not_schema)
+        condition = self._schema_condition_predicate(not_schema, field_names)
+        return [{"condition": condition}] if condition else []
+
     def _set_object_model_validators(
         self,
         path: str,
@@ -3844,6 +3861,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         conditional_validators = self._collect_conditional_validators(obj.extras, fields)
         if conditional_validators:
             validators["conditional"] = conditional_validators
+
+        not_validators = self._collect_not_validators(obj.extras, fields)
+        if not_validators:
+            validators["not"] = not_validators
 
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators

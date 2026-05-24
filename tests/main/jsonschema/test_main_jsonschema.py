@@ -4825,6 +4825,35 @@ def test_main_jsonschema_conditional_object_validators(output_file: Path) -> Non
         )
 
 
+def test_main_jsonschema_not_object_validators(output_file: Path) -> None:
+    """Test object-level Pydantic validators for not constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "not_object_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="not_object_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for valid_json, invalid_json in [
+        ('{"status":"closed","archived":true}', '{"status":"closed","archived":false}'),
+        ('{"status":"open","archived":false}', '{"status":"closed","archived":false}'),
+        ('{"status":"closed"}', '{"status":"closed","archived":false}'),
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="not_object_validators",
+            model_name="NotObjectValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(

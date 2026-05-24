@@ -514,6 +514,24 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_not_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            condition = validator.get("condition")
+            if not isinstance(condition, str):
+                continue
+            lines.extend([
+                f"if {condition}:",
+                "    raise ValueError('not schema must not match')",
+            ])
+        return lines
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -571,10 +589,12 @@ class BaseModel(BaseModelBase):
         dependent_required = validators.get("dependent_required")
         dependent_schema_properties = validators.get("dependent_schema_properties")
         conditional = validators.get("conditional")
+        not_validator_lines = self._get_not_validator_lines(validators.get("not"))
         needs_provided_keys = (
             (isinstance(dependent_required, dict) and dependent_required)
             or (isinstance(dependent_schema_properties, list) and dependent_schema_properties)
             or (isinstance(conditional, list) and conditional)
+            or not_validator_lines
         )
         if needs_provided_keys:
             lines.extend(self._get_provided_keys_validator_lines(property_count, has_prior_lines=bool(lines)))
@@ -590,6 +610,10 @@ class BaseModel(BaseModelBase):
             if lines and conditional_lines:
                 lines.append("")
             lines.extend(conditional_lines)
+
+        if lines and not_validator_lines:
+            lines.append("")
+        lines.extend(not_validator_lines)
 
         array_contains = validators.get("array_contains")
         if isinstance(array_contains, list):
