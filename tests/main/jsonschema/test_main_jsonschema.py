@@ -3704,7 +3704,7 @@ def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
 
 
 def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> None:
-    """Test unevaluatedProperties schema allows extra keys without typed runtime validation."""
+    """Test unevaluatedProperties schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_schema.json",
         output_path=output_file,
@@ -3712,6 +3712,14 @@ def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> Non
         assert_func=assert_file_content,
         expected_file="unevaluated_properties_schema.py",
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="unevaluated_properties_schema",
+        model_name="Resource",
+        valid_json='{"name":"x","extra":"value"}',
+        invalid_json='{"name":"x","extra":1}',
+        expected_error_type="value_error",
     )
 
 
@@ -4485,7 +4493,7 @@ def test_main_jsonschema_property_names_closed_object(output_file: Path) -> None
 
 
 def test_main_jsonschema_additional_properties_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
         output_path=output_file,
@@ -4498,10 +4506,18 @@ def test_main_jsonschema_additional_properties_schema_with_properties(output_fil
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_schema_with_properties",
+        model_name="KnownAndExtra",
+        valid_json='{"name":"x","extra":1}',
+        invalid_json='{"name":"x","extra":"1"}',
+        expected_error_type="value_error",
+    )
 
 
 def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties enum schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties enum schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_enum_schema_with_properties.json",
         output_path=output_file,
@@ -4514,10 +4530,18 @@ def test_main_jsonschema_additional_properties_enum_schema_with_properties(outpu
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_enum_schema_with_properties",
+        model_name="KnownAndEnumExtra",
+        valid_json='{"name":"x","extra":"red"}',
+        invalid_json='{"name":"x","extra":"green"}',
+        expected_error_type="value_error",
+    )
 
 
 def test_main_jsonschema_additional_properties_const_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties const schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties const schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_const_schema_with_properties.json",
         output_path=output_file,
@@ -4530,10 +4554,18 @@ def test_main_jsonschema_additional_properties_const_schema_with_properties(outp
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_const_schema_with_properties",
+        model_name="KnownAndConstExtra",
+        valid_json='{"name":"x","extra":"red"}',
+        invalid_json='{"name":"x","extra":"blue"}',
+        expected_error_type="value_error",
+    )
 
 
 def test_main_jsonschema_additional_properties_object_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties object schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties object schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_object_schema_with_properties.json",
         output_path=output_file,
@@ -4546,10 +4578,18 @@ def test_main_jsonschema_additional_properties_object_schema_with_properties(out
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_object_schema_with_properties",
+        model_name="KnownAndObjectExtra",
+        valid_json='{"name":"x","extra":{"count":1}}',
+        invalid_json='{"name":"x","extra":{}}',
+        expected_error_type="value_error",
+    )
 
 
 def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties array schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties array schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_array_schema_with_properties.json",
         output_path=output_file,
@@ -4562,10 +4602,18 @@ def test_main_jsonschema_additional_properties_array_schema_with_properties(outp
         ],
         force_exec_validation=True,
     )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_array_schema_with_properties",
+        model_name="KnownAndArrayExtra",
+        valid_json='{"name":"x","extra":["a",1,2]}',
+        invalid_json='{"name":"x","extra":["a","b"]}',
+        expected_error_type="value_error",
+    )
 
 
 def test_main_jsonschema_additional_properties_ref_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties ref schema allows extra keys without typed runtime validation."""
+    """Test additionalProperties ref schema validates extra values."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_ref_schema_with_properties.json",
         output_path=output_file,
@@ -4577,6 +4625,14 @@ def test_main_jsonschema_additional_properties_ref_schema_with_properties(output
             "pydantic_v2.BaseModel",
         ],
         force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_properties_ref_schema_with_properties",
+        model_name="KnownAndRefExtra",
+        valid_json='{"name":"x","extra":{"count":1}}',
+        invalid_json='{"name":"x","extra":{"count":"1"}}',
+        expected_error_type="value_error",
     )
 
 

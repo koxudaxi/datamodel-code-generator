@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class Resource(BaseModel):
@@ -12,3 +12,14 @@ class Resource(BaseModel):
         extra='allow',
     )
     name: str
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        extra_values = getattr(self, '__pydantic_extra__', None) or {}
+
+        for extra_key, extra_value in extra_values.items():
+            if not (isinstance(extra_value, str)):
+                raise ValueError(
+                    'additional property ' + extra_key + ' does not match schema'
+                )
+        return self

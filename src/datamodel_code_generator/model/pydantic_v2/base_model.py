@@ -382,7 +382,10 @@ class BaseModel(BaseModelBase):
         return False
 
     @staticmethod
-    def _get_property_count_validator_lines(property_count: dict[str, Any]) -> list[str]:
+    def _get_property_count_validator_lines(property_count: Any) -> list[str]:
+        if not isinstance(property_count, dict):
+            return []
+
         lines: list[str] = []
         if property_count.get("min") is not None or property_count.get("max") is not None:
             lines.extend([
@@ -422,7 +425,10 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
-    def _get_dependent_required_validator_lines(dependent_required: dict[str, Any]) -> list[str]:
+    def _get_dependent_required_validator_lines(dependent_required: Any) -> list[str]:
+        if not isinstance(dependent_required, dict):
+            return []
+
         lines: list[str] = []
         for field_name, required_names in dependent_required.items():
             if not required_names:
@@ -437,7 +443,10 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
-    def _get_dependent_schema_property_validator_lines(validators: list[Any]) -> list[str]:
+    def _get_dependent_schema_property_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
         lines: list[str] = []
         for validator in validators:
             if not isinstance(validator, dict):
@@ -494,7 +503,10 @@ class BaseModel(BaseModelBase):
         return lines
 
     @classmethod
-    def _get_conditional_validator_lines(cls, validators: list[Any]) -> list[str]:
+    def _get_conditional_validator_lines(cls, validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
         lines: list[str] = []
         for validator in validators:
             if not isinstance(validator, dict):
@@ -532,6 +544,27 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_additional_properties_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            predicate = validator.get("predicate")
+            if not isinstance(predicate, str):
+                continue
+            lines.extend([
+                "for extra_key, extra_value in extra_values.items():",
+                f"    if not ({predicate}):",
+                "        raise ValueError(",
+                "            'additional property ' + extra_key + ' does not match schema'",
+                "        )",
+            ])
+        return lines
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -559,7 +592,10 @@ class BaseModel(BaseModelBase):
             ])
         return lines
 
-    def _get_array_contains_validators_lines(self, array_contains: list[Any]) -> list[str]:
+    def _get_array_contains_validators_lines(self, array_contains: Any) -> list[str]:
+        if not isinstance(array_contains, list):
+            return []
+
         lines: list[str] = []
         for validator in array_contains:
             if not isinstance(validator, dict):
@@ -572,6 +608,12 @@ class BaseModel(BaseModelBase):
             lines.extend(validator_lines)
         return lines
 
+    @staticmethod
+    def _extend_validator_lines(lines: list[str], new_lines: list[str]) -> None:
+        if lines and new_lines:
+            lines.append("")
+        lines.extend(new_lines)
+
     def _process_json_schema_validators(self) -> None:
         """Process JSON Schema object validators for constraints that need model context."""
         if self.IS_ALIAS:
@@ -583,44 +625,33 @@ class BaseModel(BaseModelBase):
 
         lines: list[str] = []
         property_count = validators.get("property_count")
-        if isinstance(property_count, dict):
-            lines.extend(self._get_property_count_validator_lines(property_count))
-
-        dependent_required = validators.get("dependent_required")
-        dependent_schema_properties = validators.get("dependent_schema_properties")
-        conditional = validators.get("conditional")
-        not_validator_lines = self._get_not_validator_lines(validators.get("not"))
-        needs_provided_keys = (
-            (isinstance(dependent_required, dict) and dependent_required)
-            or (isinstance(dependent_schema_properties, list) and dependent_schema_properties)
-            or (isinstance(conditional, list) and conditional)
-            or not_validator_lines
+        property_count_lines = self._get_property_count_validator_lines(property_count)
+        lines.extend(property_count_lines)
+        dependent_required_lines = self._get_dependent_required_validator_lines(validators.get("dependent_required"))
+        dependent_schema_properties_lines = self._get_dependent_schema_property_validator_lines(
+            validators.get("dependent_schema_properties")
         )
-        if needs_provided_keys:
+        conditional_lines = self._get_conditional_validator_lines(validators.get("conditional"))
+        not_validator_lines = self._get_not_validator_lines(validators.get("not"))
+        dependent_context_lines = [dependent_required_lines, dependent_schema_properties_lines]
+        context_validator_lines = [*dependent_context_lines, conditional_lines, not_validator_lines]
+        if any(context_validator_lines):
             lines.extend(self._get_provided_keys_validator_lines(property_count, has_prior_lines=bool(lines)))
 
-        if isinstance(dependent_required, dict) and dependent_required:
-            lines.extend(self._get_dependent_required_validator_lines(dependent_required))
+        for validator_lines in dependent_context_lines:
+            lines.extend(validator_lines)
+        self._extend_validator_lines(lines, conditional_lines)
+        self._extend_validator_lines(lines, not_validator_lines)
 
-        if isinstance(dependent_schema_properties, list) and dependent_schema_properties:
-            lines.extend(self._get_dependent_schema_property_validator_lines(dependent_schema_properties))
-
-        if isinstance(conditional, list) and conditional:
-            conditional_lines = self._get_conditional_validator_lines(conditional)
-            if lines and conditional_lines:
-                lines.append("")
-            lines.extend(conditional_lines)
-
-        if lines and not_validator_lines:
-            lines.append("")
-        lines.extend(not_validator_lines)
-
-        array_contains = validators.get("array_contains")
-        if isinstance(array_contains, list):
-            array_contains_lines = self._get_array_contains_validators_lines(array_contains)
-            if lines and array_contains_lines:
-                lines.append("")
-            lines.extend(array_contains_lines)
+        additional_properties_lines = self._get_additional_properties_validator_lines(
+            validators.get("additional_properties")
+        )
+        if additional_properties_lines and not (
+            self._property_count_uses_extra_values(property_count) or any(context_validator_lines)
+        ):
+            self._extend_validator_lines(lines, ["extra_values = getattr(self, '__pydantic_extra__', None) or {}"])
+        self._extend_validator_lines(lines, additional_properties_lines)
+        self._extend_validator_lines(lines, self._get_array_contains_validators_lines(validators.get("array_contains")))
 
         if not lines:
             return

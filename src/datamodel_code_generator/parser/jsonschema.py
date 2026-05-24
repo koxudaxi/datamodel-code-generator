@@ -3647,6 +3647,89 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         predicates.extend(self._schema_size_predicates(schema, variable_name))
         return self._join_contains_predicates(predicates, "and") if predicates else None
 
+    def _schema_value_predicate_from_value(
+        self,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
+        variable_name: str,
+    ) -> str | None:
+        if schema is True:
+            return "True"
+        if schema is False:
+            return "False"
+        if schema.ref:
+            schema = self._load_ref_schema_object(schema.ref)
+        return self._schema_runtime_value_predicate(schema, variable_name)
+
+    def _schema_object_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates: list[str] = []
+        if schema.required:
+            required_set = "{" + ", ".join(repr(required_name) for required_name in schema.required) + "}"
+            predicates.append(f"(not isinstance({variable_name}, dict) or {required_set}.issubset({variable_name}))")
+        if schema.properties:
+            for index, (property_name, property_schema) in enumerate(schema.properties.items()):
+                if not isinstance(property_schema, JsonSchemaObject):
+                    continue
+                property_variable = f"{variable_name}_property_{index}"
+                predicate = self._schema_value_predicate_from_value(property_schema, property_variable)
+                if predicate:
+                    predicates.append(
+                        f"(not isinstance({variable_name}, dict) "
+                        f"or {property_name!r} not in {variable_name} "
+                        f"or (lambda {property_variable}: {predicate})({variable_name}[{property_name!r}]))"
+                    )
+        return predicates
+
+    def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates: list[str] = []
+        item_schemas = schema.prefixItems if schema.prefixItems is not None else schema.items
+        if isinstance(item_schemas, list):
+            for index, item_schema in enumerate(item_schemas):
+                predicate = self._schema_value_predicate_from_value(item_schema, "extra_item")
+                if predicate == "False":
+                    predicates.append(f"(not isinstance({variable_name}, list) or len({variable_name}) <= {index})")
+                elif predicate:
+                    predicates.append(
+                        f"(not isinstance({variable_name}, list) "
+                        f"or len({variable_name}) <= {index} "
+                        f"or (lambda extra_item: {predicate})({variable_name}[{index}]))"
+                    )
+
+            tail_schema = schema.items if schema.prefixItems is not None else schema.additionalItems
+            if tail_schema is False:
+                predicates.append(
+                    f"(not isinstance({variable_name}, list) or len({variable_name}) <= {len(item_schemas)})"
+                )
+            elif isinstance(tail_schema, JsonSchemaObject):
+                predicate = self._schema_value_predicate_from_value(tail_schema, "extra_item")
+                if predicate:
+                    predicates.append(
+                        f"(not isinstance({variable_name}, list) "
+                        f"or all((lambda extra_item: {predicate})(extra_item) "
+                        f"for extra_item in {variable_name}[{len(item_schemas)}:]))"
+                    )
+        elif isinstance(schema.items, JsonSchemaObject):
+            predicate = self._schema_value_predicate_from_value(schema.items, "extra_item")
+            if predicate:
+                predicates.append(
+                    f"(not isinstance({variable_name}, list) "
+                    f"or all((lambda extra_item: {predicate})(extra_item) for extra_item in {variable_name}))"
+                )
+        elif schema.items is False:
+            predicates.append(f"(not isinstance({variable_name}, list) or not {variable_name})")
+        return predicates
+
+    def _schema_runtime_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
+        predicates = [
+            predicate
+            for predicate in [
+                self._schema_value_predicate(schema, variable_name),
+                *self._schema_object_value_predicates(schema, variable_name),
+                *self._schema_array_value_predicates(schema, variable_name),
+            ]
+            if predicate
+        ]
+        return self._join_contains_predicates(predicates, "and") if predicates else None
+
     def _number_literal(self, value: UnionIntFloat | float) -> int | float:  # noqa: PLR6301
         return value.value if isinstance(value, UnionIntFloat) else value
 
@@ -3687,6 +3770,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if field_name and (validator := self._get_array_contains_validator(field_name, field_schema)):
                 validators.append(validator)
         return validators
+
+    def _collect_additional_properties_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
+        extra_value_schema = obj.additionalProperties
+        if not isinstance(extra_value_schema, JsonSchemaObject):
+            extra_value_schema = obj.unevaluatedProperties if obj.additionalProperties is None else None
+
+        if not isinstance(extra_value_schema, JsonSchemaObject):
+            return []
+
+        predicate = self._schema_value_predicate_from_value(extra_value_schema, "extra_value")
+        return [{"predicate": predicate}] if predicate and predicate != "True" else []
 
     def _set_root_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
         validator = self._get_array_contains_validator("root", obj)
@@ -3865,6 +3959,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         not_validators = self._collect_not_validators(obj.extras, fields)
         if not_validators:
             validators["not"] = not_validators
+
+        additional_properties = self._collect_additional_properties_validators(obj)
+        if additional_properties:
+            validators["additional_properties"] = additional_properties
 
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators
