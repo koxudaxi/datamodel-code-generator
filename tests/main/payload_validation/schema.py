@@ -577,7 +577,7 @@ def _property_names_forbids_all_names(property_names: Any) -> bool:  # noqa: PLR
     if isinstance(all_of, list) and any(_property_names_forbids_all_names(item) for item in all_of):
         return True
     one_of = property_names.get("oneOf")
-    if isinstance(one_of, list) and all(_property_names_forbids_all_names(item) for item in one_of):
+    if isinstance(one_of, list) and _oneof_property_names_forbids_all_names(one_of):
         return True
     if _schema_accepts_every_property_name(property_names.get("not")):
         return True
@@ -592,6 +592,13 @@ def _property_names_forbids_all_names(property_names: Any) -> bool:  # noqa: PLR
     min_length = property_names.get("minLength")
     max_length = property_names.get("maxLength")
     return isinstance(min_length, int) and isinstance(max_length, int) and min_length > max_length
+
+
+def _oneof_property_names_forbids_all_names(one_of: list[Any]) -> bool:
+    return (
+        all(_property_names_forbids_all_names(item) for item in one_of)
+        or sum(_schema_accepts_every_property_name(item) for item in one_of) > 1
+    )
 
 
 def _property_name_accepts_name(property_names: Any, name: str) -> bool:

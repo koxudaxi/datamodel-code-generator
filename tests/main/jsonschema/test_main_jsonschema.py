@@ -4038,6 +4038,17 @@ def test_main_jsonschema_property_names_oneof_false_count_conflict(output_file: 
     )
 
 
+def test_main_jsonschema_property_names_oneof_always_match_count_conflict(output_file: Path) -> None:
+    """Test propertyNames oneOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_oneof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_allof_wrapped_not_property_names_count_conflict(output_file: Path) -> None:
     """Test not allOf branches can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -5568,6 +5579,24 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "minProperties": 2,
             },
             id="object-property-names-oneof-false-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"oneOf": [True, {"type": "string"}]},
+                "minProperties": 1,
+            },
+            id="object-property-names-oneof-always-match-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "minProperties": 1,
+                "allOf": [{"propertyNames": {"oneOf": [True, {"minLength": 0}]}}],
+            },
+            id="object-allof-property-names-oneof-always-match-min-properties",
         ),
         pytest.param(
             {
@@ -8605,6 +8634,17 @@ def test_main_jsonschema_allof_dependent_required_property_names_count_conflict(
     """Test allOf sibling propertyNames and dependentRequired can make counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_required_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_property_names_oneof_always_match_count_conflict(output_file: Path) -> None:
+    """Test allOf propertyNames oneOf branches that all names match reject every name."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_property_names_oneof_always_match_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

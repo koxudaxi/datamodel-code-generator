@@ -4200,7 +4200,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(all_of, list) and any(cls._raw_property_names_forbids_all_names(item) for item in all_of):
             return True
         one_of = property_names.get("oneOf")
-        if isinstance(one_of, list) and all(cls._raw_property_names_forbids_all_names(item) for item in one_of):
+        if isinstance(one_of, list) and cls._raw_oneof_property_names_forbids_all_names(one_of):
             return True
         not_schema = property_names.get("not")
         if cls._raw_schema_accepts_every_property_name(not_schema):
@@ -4216,6 +4216,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         min_length = cls._number_constraint_value(property_names.get("minLength"))
         max_length = cls._number_constraint_value(property_names.get("maxLength"))
         return min_length is not None and max_length is not None and min_length > max_length
+
+    @classmethod
+    def _raw_oneof_property_names_forbids_all_names(cls, one_of: list[Any]) -> bool:
+        return (
+            all(cls._raw_property_names_forbids_all_names(item) for item in one_of)
+            or sum(cls._raw_schema_accepts_every_property_name(item) for item in one_of) > 1
+        )
 
     @classmethod
     def _raw_schema_accepts_every_property_name(cls, schema: Any) -> bool:
