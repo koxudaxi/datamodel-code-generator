@@ -3588,6 +3588,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "object": f"isinstance({variable_name}, dict)",
         }.get(schema_type)
 
+    def _schema_type_is_limited_to(self, schema: JsonSchemaObject, schema_types: set[str]) -> bool:  # noqa: PLR6301
+        explicit_types = schema.type if isinstance(schema.type, list) else [schema.type]
+        return bool(explicit_types) and all(schema_type in schema_types for schema_type in explicit_types)
+
     def _schema_type_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
         schema_types = schema.type if isinstance(schema.type, list) else [schema.type]
         predicates = [
@@ -3602,68 +3606,91 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _schema_number_range_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
+        number_predicate = f"isinstance({variable_name}, (int, float)) and not isinstance({variable_name}, bool)"
+        number_only = self._schema_type_is_limited_to(schema, {"integer", "number"})
         if schema.minimum is not None:
             minimum = self._number_literal(schema.minimum)
+            predicate = f"{variable_name} >= {minimum!r}"
             predicates.append(
-                f"isinstance({variable_name}, (int, float)) "
-                f"and not isinstance({variable_name}, bool) "
-                f"and {variable_name} >= {minimum!r}"
+                f"{number_predicate} and {predicate}" if number_only else f"(not ({number_predicate}) or {predicate})"
             )
         if schema.maximum is not None:
             maximum = self._number_literal(schema.maximum)
+            predicate = f"{variable_name} <= {maximum!r}"
             predicates.append(
-                f"isinstance({variable_name}, (int, float)) "
-                f"and not isinstance({variable_name}, bool) "
-                f"and {variable_name} <= {maximum!r}"
+                f"{number_predicate} and {predicate}" if number_only else f"(not ({number_predicate}) or {predicate})"
             )
         if isinstance(schema.exclusiveMinimum, (int, float)) and not isinstance(schema.exclusiveMinimum, bool):
+            predicate = f"{variable_name} > {schema.exclusiveMinimum!r}"
             predicates.append(
-                f"isinstance({variable_name}, (int, float)) "
-                f"and not isinstance({variable_name}, bool) "
-                f"and {variable_name} > {schema.exclusiveMinimum!r}"
+                f"{number_predicate} and {predicate}" if number_only else f"(not ({number_predicate}) or {predicate})"
             )
         if isinstance(schema.exclusiveMaximum, (int, float)) and not isinstance(schema.exclusiveMaximum, bool):
+            predicate = f"{variable_name} < {schema.exclusiveMaximum!r}"
             predicates.append(
-                f"isinstance({variable_name}, (int, float)) "
-                f"and not isinstance({variable_name}, bool) "
-                f"and {variable_name} < {schema.exclusiveMaximum!r}"
+                f"{number_predicate} and {predicate}" if number_only else f"(not ({number_predicate}) or {predicate})"
             )
         return predicates
 
-    def _schema_size_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:  # noqa: PLR6301
+    def _schema_size_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
+        string_only = self._schema_type_is_limited_to(schema, {"string"})
+        array_only = self._schema_type_is_limited_to(schema, {"array"})
         if schema.minLength is not None:
-            predicates.append(f"isinstance({variable_name}, str) and len({variable_name}) >= {schema.minLength}")
+            predicate = f"len({variable_name}) >= {schema.minLength}"
+            predicates.append(
+                f"isinstance({variable_name}, str) and {predicate}"
+                if string_only
+                else f"(not isinstance({variable_name}, str) or {predicate})"
+            )
         if schema.maxLength is not None:
-            predicates.append(f"isinstance({variable_name}, str) and len({variable_name}) <= {schema.maxLength}")
+            predicate = f"len({variable_name}) <= {schema.maxLength}"
+            predicates.append(
+                f"isinstance({variable_name}, str) and {predicate}"
+                if string_only
+                else f"(not isinstance({variable_name}, str) or {predicate})"
+            )
         if schema.minItems is not None:
-            predicates.append(f"isinstance({variable_name}, list) and len({variable_name}) >= {schema.minItems}")
+            predicate = f"len({variable_name}) >= {schema.minItems}"
+            predicates.append(
+                f"isinstance({variable_name}, list) and {predicate}"
+                if array_only
+                else f"(not isinstance({variable_name}, list) or {predicate})"
+            )
         if schema.maxItems is not None:
-            predicates.append(f"isinstance({variable_name}, list) and len({variable_name}) <= {schema.maxItems}")
+            predicate = f"len({variable_name}) <= {schema.maxItems}"
+            predicates.append(
+                f"isinstance({variable_name}, list) and {predicate}"
+                if array_only
+                else f"(not isinstance({variable_name}, list) or {predicate})"
+            )
         return predicates
 
-    def _schema_string_pattern_predicates(  # noqa: PLR6301
+    def _schema_string_pattern_predicates(
         self,
         schema: JsonSchemaObject,
         variable_name: str,
     ) -> list[str]:
         if schema.pattern is None:
             return []
-        return [f"isinstance({variable_name}, str) and re.search({schema.pattern!r}, {variable_name}) is not None"]
+        predicate = f"re.search({schema.pattern!r}, {variable_name}) is not None"
+        if self._schema_type_is_limited_to(schema, {"string"}):
+            return [f"isinstance({variable_name}, str) and {predicate}"]
+        return [f"(not isinstance({variable_name}, str) or {predicate})"]
 
-    def _schema_multiple_of_predicates(  # noqa: PLR6301
+    def _schema_multiple_of_predicates(
         self,
         schema: JsonSchemaObject,
         variable_name: str,
     ) -> list[str]:
         if not schema.multipleOf:
             return []
+        number_predicate = f"isinstance({variable_name}, (int, float)) and not isinstance({variable_name}, bool)"
+        predicate = f"({variable_name} / {schema.multipleOf!r}).is_integer()"
         return [
-            (
-                f"isinstance({variable_name}, (int, float)) "
-                f"and not isinstance({variable_name}, bool) "
-                f"and ({variable_name} / {schema.multipleOf!r}).is_integer()"
-            )
+            f"{number_predicate} and {predicate}"
+            if self._schema_type_is_limited_to(schema, {"integer", "number"})
+            else f"(not ({number_predicate}) or {predicate})"
         ]
 
     def _schema_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:

@@ -70,11 +70,14 @@ class ObjectContextAliasValidators(BaseModel):
                     not isinstance(model_data, dict)
                     or all(
                         (
-                            lambda property_key: isinstance(property_key, str)
-                            and re.search(
-                                '^(credit-card|billing-address|x-count)$', property_key
+                            lambda property_key: (
+                                not isinstance(property_key, str)
+                                or re.search(
+                                    '^(credit-card|billing-address|x-count)$',
+                                    property_key,
+                                )
+                                is not None
                             )
-                            is not None
                         )(property_key)
                         for property_key in model_data
                     )

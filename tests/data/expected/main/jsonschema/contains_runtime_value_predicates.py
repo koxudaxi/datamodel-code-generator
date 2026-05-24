@@ -88,9 +88,11 @@ class ContainsRuntimeValuePredicates(BaseModel):
                             not isinstance(item, dict)
                             or all(
                                 (
-                                    lambda property_key: isinstance(property_key, str)
-                                    and re.search('^(kind|values)$', property_key)
-                                    is not None
+                                    lambda property_key: (
+                                        not isinstance(property_key, str)
+                                        or re.search('^(kind|values)$', property_key)
+                                        is not None
+                                    )
                                 )(property_key)
                                 for property_key in item
                             )

@@ -4759,6 +4759,38 @@ def test_main_jsonschema_additional_properties_ref_schema_with_properties(output
     )
 
 
+def test_main_jsonschema_additional_properties_type_specific_constraints(output_file: Path) -> None:
+    """Test type-specific constraints on extra values only apply to matching JSON types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_type_specific_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_type_specific_constraints.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"name":"x","text":"ABC","count":12,"items":[1,2],"flag":false,"meta":{"a":1}}'
+    for invalid_json in [
+        '{"name":"x","text":"abcd"}',
+        '{"name":"x","text":"ABCD"}',
+        '{"name":"x","count":9}',
+        '{"name":"x","count":11}',
+        '{"name":"x","items":[1,2,3]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="additional_properties_type_specific_constraints",
+            model_name="AdditionalPropertiesTypeSpecificConstraints",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_property_names_type_non_string(output_file: Path) -> None:
     """Test non-string propertyNames type rejects every JSON object key."""
     run_main_and_assert(
