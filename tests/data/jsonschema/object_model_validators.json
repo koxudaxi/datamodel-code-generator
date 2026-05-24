@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "object model validators",
+  "type": "object",
+  "minProperties": 2,
+  "maxProperties": 3,
+  "properties": {
+    "credit-card": {
+      "type": "number"
+    },
+    "billing-address": {
+      "type": "string"
+    },
+    "memo": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "dependentRequired": {
+    "credit-card": ["billing-address"]
+  },
+  "dependentSchemas": {
+    "memo": {
+      "required": ["note"]
+    }
+  },
+  "dependencies": {
+    "note": ["memo"]
+  },
+  "additionalProperties": false
+}

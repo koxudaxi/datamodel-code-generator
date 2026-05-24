@@ -29,6 +29,7 @@ from datamodel_code_generator.model.pydantic_v2.imports import (
     IMPORT_CONFIG_DICT,
     IMPORT_FIELD,
     IMPORT_FIELD_VALIDATOR,
+    IMPORT_MODEL_VALIDATOR,
     IMPORT_VALIDATION_INFO,
     IMPORT_VALIDATOR_FUNCTION_WRAP_HANDLER,
 )
@@ -328,6 +329,7 @@ class BaseModel(BaseModelBase):
             self.extra_template_data["config"] = ConfigDict.model_validate(config_parameters)  # ty: ignore
             self._additional_imports.append(IMPORT_CONFIG_DICT)
 
+        self._process_json_schema_validators()
         self._process_validators()
 
     def _get_config_extra(self) -> Literal["'allow'", "'forbid'", "'ignore'"] | None:
@@ -378,6 +380,68 @@ class BaseModel(BaseModelBase):
                 if pattern and lookaround_regex.search(pattern):
                     return True
         return False
+
+    def _process_json_schema_validators(self) -> None:
+        """Process JSON Schema object validators for constraints that need model context."""
+        validators = self.extra_template_data.get("json_schema_validators")
+        if not isinstance(validators, dict):
+            return
+
+        lines: list[str] = []
+        property_count = validators.get("property_count")
+        if isinstance(property_count, dict):
+            if property_count.get("min") is not None or property_count.get("max") is not None:
+                lines.extend([
+                    "field_count = len(self.model_fields_set)",
+                    "extra_values = getattr(self, '__pydantic_extra__', None) or {}",
+                    "field_count += len(extra_values)",
+                ])
+            if (min_count := property_count.get("min")) is not None:
+                lines.extend([
+                    f"if field_count < {min_count}:",
+                    f"    raise ValueError('Expected at least {min_count} properties')",
+                ])
+            if (max_count := property_count.get("max")) is not None:
+                lines.extend([
+                    f"if field_count > {max_count}:",
+                    f"    raise ValueError('Expected at most {max_count} properties')",
+                ])
+
+        dependent_required = validators.get("dependent_required")
+        if isinstance(dependent_required, dict) and dependent_required:
+            if lines:
+                lines.append("")
+            elif not (
+                isinstance(property_count, dict)
+                and (property_count.get("min") is not None or property_count.get("max") is not None)
+            ):
+                lines.append("extra_values = getattr(self, '__pydantic_extra__', None) or {}")
+            lines.extend([
+                "provided_keys = set(self.model_fields_set)",
+                "provided_keys.update(extra_values)",
+            ])
+            for field_name, required_names in dependent_required.items():
+                if not required_names:
+                    continue
+                required_set = "{" + ", ".join(repr(name) for name in required_names) + "}"
+                lines.extend([
+                    f"if {field_name!r} in provided_keys:",
+                    f"    missing = {required_set} - provided_keys",
+                    "    if missing:",
+                    f"        raise ValueError({field_name!r} + ' requires properties: ' + ', '.join(sorted(missing)))",
+                ])
+
+        if not lines:
+            return
+
+        lines.append("return self")
+        self.extra_template_data["prepared_model_validators"] = [
+            {
+                "method_name": "validate_json_schema_constraints",
+                "lines": lines,
+            }
+        ]
+        self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""

@@ -3466,6 +3466,61 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         return fields
 
+    def _collect_dependent_required(self, extras: dict[str, Any]) -> dict[str, list[str]]:  # noqa: PLR6301
+        dependent_required: dict[str, list[str]] = {}
+        for keyword in ("dependentRequired", "dependencies"):
+            raw_dependent_required = extras.get(keyword)
+            if isinstance(raw_dependent_required, dict):
+                dependent_required.update({
+                    property_name: [required_name for required_name in required_names if isinstance(required_name, str)]
+                    for property_name, required_names in raw_dependent_required.items()
+                    if isinstance(property_name, str) and isinstance(required_names, list)
+                })
+
+        dependent_schemas = extras.get("dependentSchemas")
+        if isinstance(dependent_schemas, dict):
+            dependent_required.update({
+                property_name: [required_name for required_name in required_names if isinstance(required_name, str)]
+                for property_name, dependent_schema in dependent_schemas.items()
+                if isinstance(property_name, str)
+                and isinstance(dependent_schema, dict)
+                and isinstance(required_names := dependent_schema.get("required"), list)
+            })
+        return dependent_required
+
+    def _field_name_mapping(self, fields: list[DataModelFieldBase]) -> dict[str, str]:  # noqa: PLR6301
+        return {field.original_name or field.name: field.name for field in fields if field.name}
+
+    def _set_object_model_validators(
+        self,
+        path: str,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> None:
+        """Attach runtime validators for object constraints that need model-level context."""
+        validators: dict[str, Any] = {}
+        if obj.minProperties is not None or obj.maxProperties is not None:
+            validators["property_count"] = {
+                "min": obj.minProperties,
+                "max": obj.maxProperties,
+            }
+
+        dependent_required = self._collect_dependent_required(obj.extras)
+        if dependent_required:
+            field_names = self._field_name_mapping(fields)
+            mapped_dependent_required: dict[str, list[str]] = {}
+            for property_name, required_names in dependent_required.items():
+                mapped_required_names = [
+                    field_names.get(required_name, required_name) for required_name in required_names
+                ]
+                if mapped_required_names:
+                    mapped_dependent_required[field_names.get(property_name, property_name)] = mapped_required_names
+            if mapped_dependent_required:
+                validators["dependent_required"] = mapped_dependent_required
+
+        if validators:
+            self.extra_template_data[path]["json_schema_validators"] = validators
+
     def parse_object(
         self,
         name: str,
@@ -3504,6 +3559,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             class_name=class_name,
         )
         has_declared_fields = bool(fields)
+        if has_declared_fields:
+            self._set_object_model_validators(reference.path, obj, fields)
         should_parse_dict_root = not has_declared_fields and (
             isinstance(obj.additionalProperties, JsonSchemaObject) or self._should_parse_empty_object_as_dict(obj)
         )

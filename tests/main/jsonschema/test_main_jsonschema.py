@@ -4702,6 +4702,60 @@ def test_main_jsonschema_object_impossible_property_count(output_file: Path) -> 
     )
 
 
+def test_main_jsonschema_object_model_validators(output_file: Path) -> None:
+    """Test object-level Pydantic validators for property count and dependentRequired."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_model_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_model_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_model_validators",
+        model_name="ObjectModelValidators",
+        valid_json='{"credit-card":1,"billing-address":"x"}',
+        invalid_json='{"credit-card":1,"memo":"x"}',
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_model_validators",
+        model_name="ObjectModelValidators",
+        valid_json='{"memo":"x","note":"y"}',
+        invalid_json='{"memo":"x"}',
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="object_model_validators",
+        model_name="ObjectModelValidators",
+        invalid_json='{"memo":"x","billing-address":"y"}',
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="object_model_validators",
+        model_name="ObjectModelValidators",
+        invalid_json='{"note":"x","billing-address":"y"}',
+        expected_error_type="value_error",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="object_model_validators",
+        model_name="ObjectModelValidators",
+        valid_json='{"billing-address":"x","memo":"y","note":"z"}',
+        invalid_json='{"credit-card":1,"billing-address":"x","memo":"y","note":"z"}',
+        expected_error_type="value_error",
+    )
+
+
 def test_main_jsonschema_property_names_min_max_length(output_file: Path) -> None:
     """Test propertyNames with minLength/maxLength constraints generates dict with constr key."""
     run_main_and_assert(

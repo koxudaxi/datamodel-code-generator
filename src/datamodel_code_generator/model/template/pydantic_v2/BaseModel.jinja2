@@ -44,6 +44,16 @@ class {{ class_name }}({{ base_class }}):{% if comment is defined %}  # {{ comme
     {{ method }}
 {%- endfor -%}
 {%- endfor -%}
+{%- if prepared_model_validators %}
+{% for v in prepared_model_validators %}
+
+    @model_validator(mode='after')
+    def {{ v.method_name }}(self):
+{%- for line in v.lines %}
+        {{ line }}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}
 {%- if prepared_validators %}
 {% for v in prepared_validators %}
 
