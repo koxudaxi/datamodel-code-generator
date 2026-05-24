@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AnyOfTypeLiteralIntersection",
+  "anyOf": [
+    {
+      "type": "integer",
+      "enum": [1.2, true]
+    },
+    {
+      "type": "string",
+      "enum": ["ok", 1]
+    }
+  ]
+}

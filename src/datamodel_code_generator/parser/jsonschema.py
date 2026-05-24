@@ -2150,15 +2150,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _filter_literal_constraints_for_type(cls, schema_dict: dict[Any, Any]) -> None:
         type_value = schema_dict.get("type")
-        if type_value is None:
-            return
-        if "const" in schema_dict and not cls._json_value_matches_type_constraint(schema_dict["const"], type_value):
+        type_constraint = [type_value, "null"] if schema_dict.get("nullable") is True and type_value else type_value
+        if (
+            type_constraint is not None
+            and "const" in schema_dict
+            and not cls._json_value_matches_type_constraint(schema_dict["const"], type_constraint)
+        ):
             cls._raise_allof_literal_conflict()
         if isinstance(schema_dict.get("enum"), list):
             filtered_enum = [
                 enum_value
                 for enum_value in schema_dict["enum"]
-                if cls._json_value_matches_type_constraint(enum_value, type_value)
+                if (type_constraint is None or cls._json_value_matches_type_constraint(enum_value, type_constraint))
                 and cls._json_value_matches_schema_constraints(enum_value, schema_dict)
             ]
             if not filtered_enum:
@@ -2168,6 +2171,80 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 cls._drop_enum_metadata(schema_dict)
         if "const" in schema_dict and not cls._json_value_matches_schema_constraints(schema_dict["const"], schema_dict):
             cls._raise_allof_literal_conflict()
+
+    @classmethod
+    def _normalize_raw_schema_literal_constraints(
+        cls,
+        raw: YamlValue,
+        *,
+        false_on_unsatisfiable: bool = False,
+    ) -> YamlValue:
+        if isinstance(raw, bool) or not isinstance(raw, dict):
+            return raw
+
+        normalized = dict(raw)
+        try:
+            cls._normalize_literal_constraints(normalized)
+        except SchemaParseError:
+            if false_on_unsatisfiable:
+                return False
+            raise
+
+        for key in (
+            "additionalProperties",
+            "contains",
+            "contentSchema",
+            "else",
+            "if",
+            "items",
+            "not",
+            "propertyNames",
+            "then",
+            "unevaluatedItems",
+            "unevaluatedProperties",
+        ):
+            value = normalized.get(key)
+            if isinstance(value, (bool, dict)):
+                normalized[key] = cls._normalize_raw_schema_literal_constraints(
+                    value,
+                    false_on_unsatisfiable=True,
+                )
+
+        value = normalized.get("allOf")
+        if isinstance(value, list):
+            normalized["allOf"] = [cls._normalize_raw_schema_literal_constraints(item) for item in value]
+
+        for key in ("anyOf", "oneOf", "prefixItems"):
+            value = normalized.get(key)
+            if isinstance(value, list):
+                normalized[key] = [
+                    cls._normalize_raw_schema_literal_constraints(item, false_on_unsatisfiable=True) for item in value
+                ]
+
+        for key in (
+            "$defs",
+            "definitions",
+            "dependentSchemas",
+        ):
+            value = normalized.get(key)
+            if isinstance(value, dict):
+                normalized[key] = {
+                    child_key: cls._normalize_raw_schema_literal_constraints(
+                        child_value,
+                        false_on_unsatisfiable=True,
+                    )
+                    for child_key, child_value in value.items()
+                }
+
+        for key in ("patternProperties", "properties"):
+            value = normalized.get(key)
+            if isinstance(value, dict):
+                normalized[key] = {
+                    child_key: cls._normalize_raw_schema_literal_constraints(child_value)
+                    for child_key, child_value in value.items()
+                }
+
+        return normalized
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]
@@ -5557,7 +5634,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if raw is False:
             return self.SCHEMA_OBJECT_TYPE(is_boolean_schema_false=True)
         try:
-            return self.SCHEMA_OBJECT_TYPE.model_validate(raw)
+            return self.SCHEMA_OBJECT_TYPE.model_validate(
+                self._normalize_raw_schema_literal_constraints(raw),
+            )
         except SchemaParseError:
             raise
         except Exception as e:

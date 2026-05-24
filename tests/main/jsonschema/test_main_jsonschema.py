@@ -3869,6 +3869,52 @@ def test_main_jsonschema_enum_complex_values_literal(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_type_literal_intersection(output_file: Path) -> None:
+    """Test type and value constraints intersect enum and const literals."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_literal_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="type_literal_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="type_literal_intersection",
+        model_name="TypeLiteralIntersection",
+        valid_json=('{"intValue":1,"stringValue":"b","nullableValue":null,"constValue":"ok","boundedValue":4}'),
+        invalid_json=('{"intValue":1,"stringValue":"b","nullableValue":null,"constValue":"ok","boundedValue":3}'),
+        expected_error_type="literal_error",
+        expected_attribute_path=("boundedValue",),
+        expected_attribute_value=4,
+    )
+
+
+def test_main_jsonschema_anyof_type_literal_intersection(output_file: Path) -> None:
+    """Test unsatisfiable anyOf literal branches are skipped."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_type_literal_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_type_literal_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_type_literal_intersection",
+        model_name="AnyOfTypeLiteralIntersection",
+        valid_json='"ok"',
+        invalid_json="1.2",
+        expected_error_type="literal_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value="ok",
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -4122,6 +4168,38 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 },
             },
             id="property-allof-enum-length-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": {"type": "integer", "enum": [1.2, True]}},
+            },
+            id="property-type-enum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": {"type": "boolean", "const": 1}},
+            },
+            id="property-type-const-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": {"type": "integer", "enum": [3], "multipleOf": 2}},
+            },
+            id="property-enum-multiple-of-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": {"enum": ["a"], "minLength": 2}},
+            },
+            id="property-enum-length-disjoint",
         ),
     ],
 )

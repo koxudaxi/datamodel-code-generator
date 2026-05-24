@@ -6,19 +6,11 @@ from __future__ import annotations
 
 from enum import Enum
 
-from pydantic import RootModel
 
-
-class ModelEnum(Enum):
-    True_ = True
-    False_ = False
+class Model(Enum):
     special_ = ''
     special__1 = '\n'
     special__ = '\r\n'
     special__2 = '\t'
     special_x08 = '\\x08'
     special__3 = '\\'
-
-
-class Model(RootModel[ModelEnum | None]):
-    root: ModelEnum | None = None

@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TypeLiteralIntersection",
+  "type": "object",
+  "properties": {
+    "intValue": {
+      "type": "integer",
+      "enum": [1, 1.2, 2, true]
+    },
+    "stringValue": {
+      "type": "string",
+      "enum": ["a", 3, "b"]
+    },
+    "nullableValue": {
+      "type": ["integer", "null"],
+      "enum": [1, null, 1.5, false]
+    },
+    "constValue": {
+      "type": "string",
+      "const": "ok"
+    },
+    "boundedValue": {
+      "type": "integer",
+      "enum": [1, 2, 3, 4],
+      "minimum": 2,
+      "multipleOf": 2
+    }
+  },
+  "required": ["intValue", "stringValue", "nullableValue", "constValue", "boundedValue"]
+}
