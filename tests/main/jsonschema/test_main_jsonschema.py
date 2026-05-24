@@ -5305,6 +5305,37 @@ def test_main_jsonschema_object_context_array_model_value_validators(output_file
         )
 
 
+def test_main_jsonschema_object_context_nested_alias_model_value_validators(output_file: Path) -> None:
+    """Test object-context validators inspect nested model values with aliases."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_nested_alias_model_value_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_nested_alias_model_value_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":5,"optional-flag":true}}'
+    for invalid_json in [
+        '{"trigger":true}',
+        '{"trigger":true,"profile-data":{"service-code":"L-1","quota-limit":5}}',
+        '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":1}}',
+        '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":6,"optional-flag":true}}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_nested_alias_model_value_validators",
+            model_name="ObjectContextNestedAliasModelValueValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_conditional_boolean_branch_validators(output_file: Path) -> None:
     """Test boolean then/else schemas generate runtime conditional validators."""
     run_main_and_assert(

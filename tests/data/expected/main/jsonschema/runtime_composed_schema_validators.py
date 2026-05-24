@@ -22,7 +22,9 @@ class RuntimeComposedSchemaValidators(BaseModel):
     def validate_json_schema_constraints(self):
         def json_schema_runtime_value(value):
             if hasattr(value, 'model_dump'):
-                return value.model_dump(mode='python', exclude_unset=True)
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
             if isinstance(value, (list, tuple)):
                 return [json_schema_runtime_value(item) for item in value]
             if isinstance(value, dict):
