@@ -31,8 +31,20 @@ class PatternPropertiesClosedObjectValidators(BaseModel):
             return value
 
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
+        provided_keys = set(self.model_fields_set)
+        provided_keys.update(extra_values)
+        model_data = {
+            field_name: json_schema_runtime_value(getattr(self, field_name))
+            for field_name in self.model_fields_set
+        }
+        model_data.update(
+            {
+                key: json_schema_runtime_value(value)
+                for key, value in extra_values.items()
+            }
+        )
 
-        for extra_key, extra_value in extra_values.items():
+        for extra_key, extra_value in model_data.items():
             extra_value = json_schema_runtime_value(extra_value)
             matched_pattern = False
             if re.search('^s_', extra_key):
@@ -66,7 +78,7 @@ class PatternPropertiesClosedObjectValidators(BaseModel):
                 raise ValueError(
                     'additional property ' + extra_key + ' matches forbidden pattern'
                 )
-            if not matched_pattern:
+            if not matched_pattern and extra_key in extra_values:
                 raise ValueError(
                     'additional property '
                     + extra_key

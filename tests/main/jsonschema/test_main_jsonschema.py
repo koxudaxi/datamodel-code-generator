@@ -3751,6 +3751,36 @@ def test_main_jsonschema_unevaluated_properties_pattern_properties(output_file: 
         )
 
 
+def test_main_jsonschema_pattern_properties_declared_properties(output_file: Path) -> None:
+    """Test patternProperties also constrain declared properties that match."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_declared_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_declared_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"name":"plain","x-code":"abc"}'
+    for invalid_json in [
+        '{"name":"plain","x-code":"a"}',
+        '{"name":"plain","x-code":"abc","x-flag":1}',
+        '{"name":"plain","x-code":"abc","other":"value"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="pattern_properties_declared_properties",
+            model_name="PatternPropertiesDeclaredProperties",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_unevaluated_properties_multiple_types(output_file: Path) -> None:
     """Test unevaluatedProperties with multiple types triggers _set_schema_metadata."""
     run_main_and_assert(

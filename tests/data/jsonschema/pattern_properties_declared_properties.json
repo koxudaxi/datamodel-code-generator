@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pattern properties declared properties",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "x-code": {
+      "type": "string"
+    },
+    "x-flag": {
+      "type": "integer"
+    }
+  },
+  "patternProperties": {
+    "^x-": {
+      "type": "string",
+      "minLength": 3
+    }
+  },
+  "additionalProperties": false,
+  "required": [
+    "name",
+    "x-code"
+  ]
+}

@@ -678,7 +678,7 @@ class BaseModel(BaseModelBase):
             return []
 
         lines = [
-            "for extra_key, extra_value in extra_values.items():",
+            "for extra_key, extra_value in model_data.items():",
             "    extra_value = json_schema_runtime_value(extra_value)",
             "    matched_pattern = False",
         ]
@@ -709,7 +709,7 @@ class BaseModel(BaseModelBase):
                 ])
         if validators.get("allow_unmatched") is False:
             lines.extend([
-                "    if not matched_pattern:",
+                "    if not matched_pattern and extra_key in extra_values:",
                 "        raise ValueError(",
                 "            'additional property ' + extra_key + ' does not match any allowed pattern'",
                 "        )",
@@ -908,13 +908,19 @@ class BaseModel(BaseModelBase):
         )
         conditional_lines = self._get_conditional_validator_lines(validators.get("conditional"))
         not_validator_lines = self._get_not_validator_lines(validators.get("not"))
+        pattern_properties_lines = self._get_pattern_properties_validator_lines(validators.get("pattern_properties"))
         dependent_context_lines = [
             property_value_lines,
             self._get_property_names_validator_lines(validators.get("property_names")),
             dependent_required_lines,
             dependent_schema_properties_lines,
         ]
-        context_validator_lines = [*dependent_context_lines, conditional_lines, not_validator_lines]
+        context_validator_lines = [
+            *dependent_context_lines,
+            conditional_lines,
+            not_validator_lines,
+            pattern_properties_lines,
+        ]
         if any(context_validator_lines):
             lines.extend(
                 self._get_provided_keys_validator_lines(
@@ -932,7 +938,6 @@ class BaseModel(BaseModelBase):
         additional_properties_lines = self._get_additional_properties_validator_lines(
             validators.get("additional_properties")
         )
-        pattern_properties_lines = self._get_pattern_properties_validator_lines(validators.get("pattern_properties"))
         root_pattern_properties_lines = self._get_root_pattern_properties_validator_lines(
             validators.get("root_pattern_properties")
         )

@@ -124,7 +124,7 @@ class RuntimeComposedSchemaValidators(BaseModel):
                     'additional property ' + extra_key + ' does not match schema'
                 )
 
-        for extra_key, extra_value in extra_values.items():
+        for extra_key, extra_value in model_data.items():
             extra_value = json_schema_runtime_value(extra_value)
             matched_pattern = False
             if re.search('^x-', extra_key):
