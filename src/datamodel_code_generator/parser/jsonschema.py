@@ -2080,8 +2080,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         JSON Schema 2020-12 allows $ref alongside other keywords,
         which should be merged together.
-
-        The local keywords take precedence over referenced schema.
         """
         if not obj.ref:
             return obj
@@ -2093,10 +2091,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         ref_schema = self._load_ref_schema_object(obj.ref)
         ref_dict = ref_schema.model_dump(exclude_unset=True, by_alias=True)
         current_dict = obj.model_dump(exclude={"ref"}, exclude_unset=True, by_alias=True)
-        merged = self._deep_merge(ref_dict, current_dict)
+        merged = self._merge_ref_schema_dicts(ref_dict, current_dict)
         merged.pop("$ref", None)
 
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged)
+
+    def _merge_ref_schema_dicts(self, ref_dict: dict[Any, Any], current_dict: dict[Any, Any]) -> dict[Any, Any]:
+        """Merge a referenced schema with adjacent schema keywords."""
+        return self._deep_merge_allof_schema(ref_dict, current_dict)
 
     def _is_ref_circular(self, resolved_ref: str) -> bool:
         """Check if a resolved $ref target contains a circular reference (cached)."""

@@ -211,6 +211,12 @@ class OpenAPIParser(JsonSchemaParser):
         self._discriminator_schemas: dict[str, dict[str, Any]] = {}
         self._discriminator_subtypes: dict[str, list[str]] = defaultdict(list)
 
+    def _merge_ref_schema_dicts(self, ref_dict: dict[Any, Any], current_dict: dict[Any, Any]) -> dict[Any, Any]:
+        """Merge a referenced schema with adjacent schema keywords."""
+        if self.schema_features.ref_sibling_keywords:
+            return self._deep_merge_allof_schema(ref_dict, current_dict)
+        return self._deep_merge(ref_dict, current_dict)
+
     def get_ref_model(self, ref: str) -> dict[str, Any]:
         """Resolve a reference to its model definition."""
         ref_file, ref_path = self.model_resolver.resolve_ref(ref).split("#", 1)

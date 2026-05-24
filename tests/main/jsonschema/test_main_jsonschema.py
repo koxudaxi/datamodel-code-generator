@@ -5102,6 +5102,70 @@ def test_main_jsonschema_combined_common_constraints(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_ref_sibling_constraint_intersection(output_file: Path) -> None:
+    """Test $ref sibling constraints intersect with referenced constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "ref_sibling_constraint_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="ref_sibling_constraint_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"relaxedCode":"abcd","strictCode":"abc","relaxedMap":{"x_a":1},"strictMap":{"x_ab":2}}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="ref_sibling_constraint_intersection",
+        model_name="RefSiblingConstraintIntersection",
+        valid_json=valid_json,
+        invalid_json='{"relaxedCode":"abcde"}',
+        expected_error_type="string_too_long",
+        expected_attribute_path=("relaxedCode",),
+        expected_attribute_value="abcd",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="ref_sibling_constraint_intersection",
+        model_name="RefSiblingConstraintIntersection",
+        valid_json=valid_json,
+        invalid_json='{"strictCode":"abcd"}',
+        expected_error_type="string_too_long",
+        expected_attribute_path=("strictCode",),
+        expected_attribute_value="abc",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="ref_sibling_constraint_intersection",
+        model_name="RefSiblingConstraintIntersection",
+        valid_json=valid_json,
+        invalid_json='{"relaxedMap":{"x_a":0}}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("relaxedMap",),
+        expected_attribute_value={"x_a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="ref_sibling_constraint_intersection",
+        model_name="RefSiblingConstraintIntersection",
+        valid_json=valid_json,
+        invalid_json='{"relaxedMap":{"x_a":1,"x_b":2,"x_c":3}}',
+        expected_error_type="too_long",
+        expected_attribute_path=("relaxedMap",),
+        expected_attribute_value={"x_a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="ref_sibling_constraint_intersection",
+        model_name="RefSiblingConstraintIntersection",
+        valid_json=valid_json,
+        invalid_json='{"strictMap":{"x":2}}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("strictMap",),
+        expected_attribute_value={"x_ab": 2},
+    )
+
+
 def test_main_nested_all_of(output_file: Path) -> None:
     """Test nested allOf schemas."""
     run_main_and_assert(

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RefSiblingConstraintIntersection",
+  "$defs": {
+    "ShortCode": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4
+    },
+    "BoundedMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x_"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minProperties": 1,
+      "maxProperties": 2
+    }
+  },
+  "type": "object",
+  "properties": {
+    "relaxedCode": {
+      "$ref": "#/$defs/ShortCode",
+      "minLength": 1,
+      "maxLength": 8
+    },
+    "strictCode": {
+      "$ref": "#/$defs/ShortCode",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "relaxedMap": {
+      "$ref": "#/$defs/BoundedMap",
+      "minProperties": 0,
+      "maxProperties": 5,
+      "additionalProperties": {
+        "minimum": 0
+      }
+    },
+    "strictMap": {
+      "$ref": "#/$defs/BoundedMap",
+      "propertyNames": {
+        "minLength": 4
+      },
+      "additionalProperties": {
+        "minimum": 2
+      },
+      "maxProperties": 1
+    }
+  }
+}
