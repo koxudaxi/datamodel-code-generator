@@ -213,6 +213,50 @@ def _has_unsatisfiable_contains_bounds(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_contains_bounds)
 
 
+def _has_unsatisfiable_array_length(value: Any) -> bool:
+    def max_item_counts(schema: dict[str, Any]) -> list[int]:
+        counts: list[int] = []
+        prefix_items = schema.get("prefixItems")
+        if isinstance(prefix_items, list):
+            false_prefix_index = next((index for index, item in enumerate(prefix_items) if item is False), None)
+            if false_prefix_index is not None:
+                counts.append(false_prefix_index)
+
+        items = schema.get("items")
+        if items is False:
+            counts.append(len(prefix_items) if isinstance(prefix_items, list) else 0)
+        elif isinstance(items, list):
+            false_item_index = next((index for index, item in enumerate(items) if item is False), None)
+            if false_item_index is not None:
+                counts.append(false_item_index)
+            if schema.get("additionalItems") is False:
+                counts.append(len(items))
+        elif schema.get("unevaluatedItems") is False and items is None and "contains" not in schema:
+            counts.append(len(prefix_items) if isinstance(prefix_items, list) else 0)
+
+        contains = schema.get("contains")
+        max_contains = schema.get("maxContains")
+        if (contains is True or contains == {}) and isinstance(max_contains, int):
+            counts.append(max_contains)
+        return counts
+
+    def has_unsatisfiable_array_length(schema: dict[str, Any]) -> bool:
+        if schema.get("type") != "array":
+            return False
+        min_items = schema.get("minItems")
+        contains = schema.get("contains")
+        min_contains = schema.get("minContains", 1)
+        if (contains is True or contains == {}) and isinstance(min_contains, int):
+            min_items = max(min_items, min_contains) if isinstance(min_items, int) else min_contains
+        counts = max_item_counts(schema)
+        max_items = schema.get("maxItems")
+        if isinstance(max_items, int):
+            counts.append(max_items)
+        return isinstance(min_items, int) and bool(counts) and min_items > min(counts)
+
+    return _any_schema_node(value, has_unsatisfiable_array_length)
+
+
 def _has_unsatisfiable_property_count(value: Any) -> bool:
     def has_unsatisfiable_property_count(schema: dict[str, Any]) -> bool:
         properties = schema.get("properties")
@@ -256,6 +300,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "contains false with minContains greater than zero has no valid array payloads"
     if _has_unsatisfiable_contains_bounds(schema):
         return "contains minContains/maxContains bounds have no valid array payloads"
+    if _has_unsatisfiable_array_length(schema):
+        return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):
         return "object property count constraints have no valid payloads"
     if not is_openapi and _has_object_keywords_without_object_type(schema):

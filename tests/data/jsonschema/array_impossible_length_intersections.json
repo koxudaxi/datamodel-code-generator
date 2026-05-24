@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ArrayImpossibleLengthIntersections",
+  "type": "array",
+  "prefixItems": [
+    {
+      "type": "integer"
+    },
+    false
+  ],
+  "minItems": 2
+}

@@ -2079,6 +2079,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         raise SchemaParseError(message=message)
 
     @staticmethod
+    def _raise_array_constraint_conflict() -> None:
+        message = "array constraints have no common values"
+        raise SchemaParseError(message=message)
+
+    @staticmethod
     def _raise_not_constraint_conflict() -> None:
         message = "not constraints have no common values"
         raise SchemaParseError(message=message)
@@ -2196,6 +2201,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             cls._normalize_literal_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
+            cls._validate_raw_array_constraints(normalized)
         except SchemaParseError:
             if false_on_unsatisfiable:
                 return False
@@ -2265,6 +2271,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_known_property_constraints(normalized)
             cls._normalize_raw_contains_item_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
+            cls._validate_raw_array_constraints(normalized)
             cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
             if false_on_unsatisfiable:
@@ -2656,6 +2663,71 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _raw_contains_requires_match(cls, schema_dict: dict[Any, Any]) -> bool:
         min_contains = cls._raw_min_contains_value(schema_dict)
         return min_contains is not None and min_contains > 0
+
+    @classmethod
+    def _validate_raw_array_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "array":
+            return
+
+        min_items = cls._number_constraint_value(schema_dict.get("minItems"))
+        max_item_counts = cls._raw_array_max_item_counts(schema_dict)
+        min_contains, max_contains = cls._raw_contains_array_item_bounds(schema_dict)
+        if min_contains is not None:
+            min_items = max(min_items, min_contains) if min_items is not None else min_contains
+        if max_contains is not None:
+            max_item_counts.append(max_contains)
+
+        max_items = cls._number_constraint_value(schema_dict.get("maxItems"))
+        if max_items is not None:
+            max_item_counts.append(max_items)
+        if max_item_counts:
+            max_items = min(max_item_counts)
+        if min_items is not None and max_items is not None and min_items > max_items:
+            cls._raise_array_constraint_conflict()
+
+    @classmethod
+    def _raw_array_max_item_counts(cls, schema_dict: dict[Any, Any]) -> list[int]:
+        max_item_counts: list[int] = []
+        prefix_items = schema_dict.get("prefixItems")
+        false_prefix_index = cls._raw_first_false_schema_index(prefix_items)
+        if false_prefix_index is not None:
+            max_item_counts.append(false_prefix_index)
+
+        items = schema_dict.get("items")
+        if items is False:
+            max_item_counts.append(len(prefix_items) if isinstance(prefix_items, list) else 0)
+        elif isinstance(items, list):
+            false_item_index = cls._raw_first_false_schema_index(items)
+            if false_item_index is not None:
+                max_item_counts.append(false_item_index)
+            if schema_dict.get("additionalItems") is False:
+                max_item_counts.append(len(items))
+        elif schema_dict.get("unevaluatedItems") is False and items is None and "contains" not in schema_dict:
+            max_item_counts.append(len(prefix_items) if isinstance(prefix_items, list) else 0)
+
+        return max_item_counts
+
+    @staticmethod
+    def _raw_first_false_schema_index(items: Any) -> int | None:
+        if not isinstance(items, list):
+            return None
+        return next((index for index, item in enumerate(items) if item is False), None)
+
+    @classmethod
+    def _raw_contains_array_item_bounds(cls, schema_dict: dict[Any, Any]) -> tuple[int | None, int | None]:
+        contains_schema = schema_dict.get("contains")
+        if contains_schema is False:
+            if cls._raw_contains_requires_match(schema_dict):
+                cls._raise_array_constraint_conflict()
+            return None, None
+        if contains_schema is not True and contains_schema != {}:
+            return None, None
+
+        min_contains = cls._raw_min_contains_value(schema_dict)
+        min_items = min_contains if min_contains is not None and min_contains > 0 else None
+        max_contains = schema_dict.get("maxContains")
+        max_items = max_contains if isinstance(max_contains, int) and not isinstance(max_contains, bool) else None
+        return min_items, max_items
 
     @classmethod
     def _normalize_raw_known_property_constraints(cls, schema_dict: dict[Any, Any]) -> None:

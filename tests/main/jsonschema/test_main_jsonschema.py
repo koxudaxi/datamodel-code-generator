@@ -45,7 +45,6 @@ from tests.main.conftest import (
     LEGACY_BLACK_SKIP,
     MSGSPEC_LEGACY_BLACK_SKIP,
     TIMESTAMP,
-    assert_generated_model_json_invalid,
     assert_generated_model_json_validation,
     run_generate_file_and_assert,
     run_main_and_assert,
@@ -4250,6 +4249,42 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": "array", "items": False, "contains": {}},
             id="contains-items-false-default",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "prefixItems": [{"type": "string"}, False],
+                "minItems": 2,
+            },
+            id="array-prefix-false-min-items-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "prefixItems": [{"type": "integer"}],
+                "items": False,
+                "minItems": 2,
+            },
+            id="array-items-false-min-items-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "contains": True,
+                "maxContains": 0,
+            },
+            id="array-contains-true-default-min-max-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "contains": False,
+            },
+            id="array-contains-false-default-min-contains-disjoint",
         ),
         pytest.param(
             {
@@ -9487,6 +9522,17 @@ def test_main_jsonschema_prefix_items_fixed_tail_schema(output_file: Path) -> No
     )
 
 
+def test_main_jsonschema_array_impossible_length_intersections(output_file: Path) -> None:
+    """Test impossible array length intersections are rejected statically."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_impossible_length_intersections.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_contains_true_max_contains_zero(output_file: Path) -> None:
     """Test contains true with maxContains zero constrains arrays to empty."""
     run_main_and_assert(
@@ -9633,29 +9679,13 @@ def test_main_jsonschema_contains_items_intersection(output_file: Path) -> None:
 
 
 def test_main_jsonschema_contains_false_default(output_file: Path) -> None:
-    """Test contains false with default minContains rejects every array."""
+    """Test contains false with default minContains is rejected statically."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "contains_false_default.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="contains_false_default.py",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="contains_false_default",
-        model_name="ContainsFalseDefault",
-        invalid_json='{"values":[]}',
-        expected_error_type="too_short",
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="contains_false_default",
-        model_name="ContainsFalseDefault",
-        invalid_json='{"values":[1]}',
-        expected_error_type="too_long",
+        expected_exit=Exit.ERROR,
     )
 
 
