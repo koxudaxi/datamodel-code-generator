@@ -2079,6 +2079,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         raise SchemaParseError(message=message)
 
     @staticmethod
+    def _raise_not_constraint_conflict() -> None:
+        message = "not constraints have no common values"
+        raise SchemaParseError(message=message)
+
+    @staticmethod
     def _json_schema_values_equal(left: Any, right: Any) -> bool:  # noqa: PLR0911
         """Return JSON Schema data-model equality for enum intersection."""
         if left is None or right is None:
@@ -2255,12 +2260,99 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         try:
             cls._validate_raw_object_constraints(normalized)
+            cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
             if false_on_unsatisfiable:
                 return False
             raise
 
         return normalized
+
+    @classmethod
+    def _normalize_raw_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if "not" not in schema_dict:
+            return
+
+        not_schema = schema_dict["not"]
+        if not_schema is False:
+            schema_dict.pop("not")
+            return
+        if not_schema is True or not_schema == {}:
+            cls._raise_not_constraint_conflict()
+        if not isinstance(not_schema, dict):
+            return
+
+        type_value = schema_dict.get("type")
+        not_type_value = not_schema.get("type")
+        if type_value is not None and not_type_value is not None:
+            type_values = cls._type_values(type_value)
+            not_type_values = cls._type_values(not_type_value)
+            if type_values is not None and not_type_values is not None:
+                filtered_types = sorted(type_values - not_type_values)
+                if not filtered_types:
+                    cls._raise_not_constraint_conflict()
+                schema_dict["type"] = filtered_types[0] if len(filtered_types) == 1 else filtered_types
+                cls._filter_literal_constraints_for_type(schema_dict)
+
+        if not cls._raw_schema_is_supported_literal_filter(not_schema):
+            return
+
+        if "const" in schema_dict and cls._raw_value_matches_schema(schema_dict["const"], not_schema):
+            cls._raise_not_constraint_conflict()
+
+        enum_values = schema_dict.get("enum")
+        if isinstance(enum_values, list):
+            filtered_enum = [
+                enum_value for enum_value in enum_values if not cls._raw_value_matches_schema(enum_value, not_schema)
+            ]
+            if not filtered_enum:
+                cls._raise_not_constraint_conflict()
+            if len(filtered_enum) != len(enum_values):
+                schema_dict["enum"] = filtered_enum
+                cls._drop_enum_metadata(schema_dict)
+
+    @classmethod
+    def _raw_schema_is_supported_literal_filter(cls, schema_dict: dict[Any, Any]) -> bool:
+        metadata_keys = {
+            "$comment",
+            "$id",
+            "$schema",
+            "description",
+            "examples",
+            "title",
+        }
+        supported_filter_keys = {
+            "const",
+            "enum",
+            "exclusiveMaximum",
+            "exclusiveMinimum",
+            "maximum",
+            "maxItems",
+            "maxLength",
+            "maxProperties",
+            "minimum",
+            "minItems",
+            "minLength",
+            "minProperties",
+            "multipleOf",
+            "type",
+            "uniqueItems",
+        }
+        return set(schema_dict) <= metadata_keys | supported_filter_keys
+
+    @classmethod
+    def _raw_value_matches_schema(cls, value: Any, schema_dict: dict[Any, Any]) -> bool:
+        type_value = schema_dict.get("type")
+        if type_value is not None and not cls._json_value_matches_type_constraint(value, type_value):
+            return False
+        if "const" in schema_dict and not cls._json_schema_values_equal(value, schema_dict["const"]):
+            return False
+        enum_values = schema_dict.get("enum")
+        if isinstance(enum_values, list) and not any(
+            cls._json_schema_values_equal(value, enum_value) for enum_value in enum_values
+        ):
+            return False
+        return cls._json_value_matches_schema_constraints(value, schema_dict)
 
     @classmethod
     def _validate_raw_object_constraints(cls, schema_dict: dict[Any, Any]) -> None:

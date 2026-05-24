@@ -3938,6 +3938,29 @@ def test_main_jsonschema_anyof_object_constraint_intersection(output_file: Path)
     )
 
 
+def test_main_jsonschema_anyof_not_intersection(output_file: Path) -> None:
+    """Test not constraints remove unsatisfiable anyOf branches and literal values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_not_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_not_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_not_intersection",
+        model_name="AnyOfNotIntersection",
+        valid_json='"keep"',
+        invalid_json='"drop"',
+        expected_error_type="literal_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value="keep",
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -3966,6 +3989,14 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
     "schema",
     [
         pytest.param({"title": "Payload", "anyOf": [False, False]}, id="anyof-only-false"),
+        pytest.param({"title": "Payload", "not": True}, id="not-true"),
+        pytest.param({"title": "Payload", "not": {}}, id="not-empty-schema"),
+        pytest.param({"title": "Payload", "const": "x", "not": {"const": "x"}}, id="const-not-const"),
+        pytest.param({"title": "Payload", "enum": ["x"], "not": {"enum": ["x"]}}, id="enum-not-enum"),
+        pytest.param(
+            {"title": "Payload", "type": ["integer", "string"], "not": {"type": ["integer", "string"]}},
+            id="type-not-same-types",
+        ),
         pytest.param(
             {
                 "title": "Payload",

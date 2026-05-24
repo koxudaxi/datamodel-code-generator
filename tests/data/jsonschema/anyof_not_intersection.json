@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnyOfNotIntersection",
+  "anyOf": [
+    {
+      "not": true
+    },
+    {
+      "type": "string",
+      "enum": ["keep", "drop"],
+      "not": {
+        "const": "drop"
+      }
+    },
+    {
+      "type": ["integer", "string"],
+      "enum": [1, "x"],
+      "not": {
+        "type": "string"
+      }
+    }
+  ]
+}
