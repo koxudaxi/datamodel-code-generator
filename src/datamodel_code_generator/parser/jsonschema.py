@@ -982,6 +982,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return False
 
     @classmethod
+    def _get_fixed_length_prefix_tuple_items(cls, obj: JsonSchemaObject) -> list[JsonSchemaObject | bool] | None:
+        """Return positional item schemas for fixed-length prefixItems arrays."""
+        if (
+            obj.prefixItems is None
+            or obj.minItems is None
+            or obj.maxItems is None
+            or obj.minItems != obj.maxItems
+            or obj.minItems < 0
+        ):
+            return None
+
+        tuple_length = obj.minItems
+        prefix_items = obj.prefixItems
+        if any(item is False for item in prefix_items[:tuple_length]):
+            return None
+
+        items = [*prefix_items[:tuple_length]]
+        if len(items) == tuple_length:
+            return items
+
+        tail_item: JsonSchemaObject | bool
+        if isinstance(obj.items, (JsonSchemaObject, bool)):
+            tail_item = obj.items
+        elif isinstance(obj.unevaluatedItems, (JsonSchemaObject, bool)):
+            tail_item = obj.unevaluatedItems
+        else:
+            tail_item = True
+        if tail_item is False:
+            return None
+
+        items.extend(tail_item for _ in range(tuple_length - len(items)))
+        return items
+
+    @classmethod
     def _get_property_count_constraints(cls, obj: JsonSchemaObject) -> dict[str, int]:
         """Return dict length constraints derived from object property-count keywords."""
         constraints: dict[str, int] = {}
@@ -1518,7 +1552,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constraints = constraints or {}
             constraints.update(array_items_constraints)
         # Suppress minItems/maxItems for fixed-length tuples
-        if constraints and self._is_fixed_length_tuple(field):
+        if constraints and (
+            self._is_fixed_length_tuple(field) or self._get_fixed_length_prefix_tuple_items(field) is not None
+        ):
             constraints.pop("minItems", None)
             constraints.pop("maxItems", None)
         # Handle multiple aliases (Pydantic v2 AliasChoices)
@@ -4319,7 +4355,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     nullable = None
         is_tuple = False
         suppress_item_constraints = False
-        if obj.prefixItems is not None and self._is_fixed_length_tuple(obj):
+        fixed_prefix_tuple_items = self._get_fixed_length_prefix_tuple_items(obj)
+        if fixed_prefix_tuple_items is not None:
+            suppress_item_constraints = True
+            items = fixed_prefix_tuple_items
+            is_tuple = True
+        elif obj.prefixItems is not None and self._is_fixed_length_tuple(obj):
             suppress_item_constraints = True
             items = obj.prefixItems
             is_tuple = True

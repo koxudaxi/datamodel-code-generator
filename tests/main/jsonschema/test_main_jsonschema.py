@@ -8424,6 +8424,29 @@ def test_main_jsonschema_prefix_items_items_schema(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_prefix_items_fixed_tail_schema(output_file: Path) -> None:
+    """Test fixed-length prefixItems with items schema preserves positional types."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "prefix_items_fixed_tail_schema.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="prefix_items_fixed_tail_schema.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="prefix_items_fixed_tail_schema",
+        model_name="PrefixItemsFixedTailSchema",
+        valid_json='{"values":[1,"a","b"]}',
+        invalid_json='{"values":["x","a","b"]}',
+        expected_error_type="int_parsing",
+        expected_attribute_path=("values",),
+        expected_attribute_value=(1, "a", "b"),
+    )
+
+
 def test_main_jsonschema_contains_true_max_contains_zero(output_file: Path) -> None:
     """Test contains true with maxContains zero constrains arrays to empty."""
     run_main_and_assert(
