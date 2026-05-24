@@ -3958,6 +3958,36 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             },
             id="property-allof-enum-disjoint",
         ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "string", "enum": ["a"]},
+                            {"const": "b"},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-const-enum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"const": True},
+                            {"const": 1},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-const-bool-number-disjoint",
+        ),
     ],
 )
 def test_main_jsonschema_false_schema_errors(schema: dict[str, object], output_file: Path) -> None:
@@ -6244,6 +6274,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_ref_value_schemas.json", "allof_ref_value_schemas.py"),
         ("allof_nested_value_schemas.json", "allof_nested_value_schemas.py"),
         ("allof_enum_intersection.json", "allof_enum_intersection.py"),
+        ("allof_const_enum_intersection.json", "allof_const_enum_intersection.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(
@@ -6280,6 +6311,29 @@ def test_main_jsonschema_allof_enum_intersection(output_file: Path) -> None:
         model_name="AllOfEnumIntersection",
         valid_json='{"value":"b"}',
         invalid_json='{"value":"a"}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("value", "root"),
+        expected_attribute_value="b",
+    )
+
+
+def test_main_jsonschema_allof_const_enum_intersection(output_file: Path) -> None:
+    """Test allOf const and enum branches intersect literal values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_const_enum_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_const_enum_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_const_enum_intersection",
+        model_name="AllOfConstEnumIntersection",
+        valid_json='{"value":"b","count":1}',
+        invalid_json='{"value":"a","count":1}',
         expected_error_type="literal_error",
         expected_attribute_path=("value", "root"),
         expected_attribute_value="b",

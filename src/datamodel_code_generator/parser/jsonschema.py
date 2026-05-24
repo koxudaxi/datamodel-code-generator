@@ -2013,12 +2013,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         result = dict1.copy()
         for key, value in dict2.items():
             if key in result:
+                if key == "const":
+                    if not JsonSchemaParser._json_schema_values_equal(result[key], value):
+                        JsonSchemaParser._raise_allof_literal_conflict()
+                    continue
                 if key == "enum" and isinstance(result[key], list) and isinstance(value, list):
                     result[key] = self._intersect_enum_values(result[key], value)
                     if not result[key]:
-                        message = "allOf enum constraints have no common values"
-                        raise SchemaParseError(message=message)
+                        JsonSchemaParser._raise_allof_literal_conflict()
                     JsonSchemaParser._drop_enum_metadata(result)
+                    self._normalize_literal_constraints(result)
                     continue
                 allof_constraint_fields = JsonSchemaObject.__constraint_fields__ | {
                     "minProperties",
@@ -2034,7 +2038,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     result[key] = result[key] + value  # noqa: PLR6104
                     continue
             result[key] = value
+            if key in {"const", "enum"}:
+                self._normalize_literal_constraints(result)
         return result
+
+    @staticmethod
+    def _raise_allof_literal_conflict() -> None:
+        message = "allOf literal constraints have no common values"
+        raise SchemaParseError(message=message)
 
     @staticmethod
     def _json_schema_values_equal(left: Any, right: Any) -> bool:  # noqa: PLR0911
@@ -2074,6 +2085,39 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         """Drop enum metadata whose positions no longer match an intersected enum list."""
         for key in ("x-enum-varnames", "x-enum-descriptions", "x-enumNames"):
             schema_dict.pop(key, None)
+
+    @classmethod
+    def _normalize_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if "const" not in schema_dict or not isinstance(schema_dict.get("enum"), list):
+            return
+        const_value = schema_dict["const"]
+        if not any(cls._json_schema_values_equal(const_value, enum_value) for enum_value in schema_dict["enum"]):
+            cls._raise_allof_literal_conflict()
+        schema_dict["enum"] = [const_value]
+        cls._drop_enum_metadata(schema_dict)
+
+    def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
+        enum_values = [item.enum for item in items if item.enum]
+        if enum_values:
+            merged_enum = [*enum_values[0]]
+            for enum_value in enum_values[1:]:
+                merged_enum = self._intersect_enum_values(merged_enum, enum_value)
+            if not merged_enum:
+                JsonSchemaParser._raise_allof_literal_conflict()
+            base_dict["enum"] = merged_enum
+            JsonSchemaParser._drop_enum_metadata(base_dict)
+
+        const_values = [item.extras["const"] for item in items if "const" in item.extras]
+        if const_values:
+            merged_const = const_values[0]
+            if any(
+                not JsonSchemaParser._json_schema_values_equal(merged_const, const_value)
+                for const_value in const_values[1:]
+            ):
+                JsonSchemaParser._raise_allof_literal_conflict()
+            base_dict["const"] = merged_const
+
+        self._normalize_literal_constraints(base_dict)
 
     def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
@@ -2265,17 +2309,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     else:
                         base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
 
-        enum_values = [item.enum for item in items if item.enum]
-        if enum_values:
-            merged_enum = [*enum_values[0]]
-            for enum_value in enum_values[1:]:
-                merged_enum = self._intersect_enum_values(merged_enum, enum_value)
-            if not merged_enum:
-                message = "allOf enum constraints have no common values"
-                raise SchemaParseError(message=message)
-            base_dict["enum"] = merged_enum
-            JsonSchemaParser._drop_enum_metadata(base_dict)
-
+        self._merge_primitive_literal_constraints(base_dict, items)
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
     def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
@@ -2395,7 +2429,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     ref_data_types.append(nested_type)
                 else:
                     primitive_items.append(item)
-            elif item.enum:  # pragma: no cover
+            elif item.enum or "const" in item.extras:
                 primitive_items.append(item)
             elif item.has_constraint:
                 constraint_only_items.append(item)

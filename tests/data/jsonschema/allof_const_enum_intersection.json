@@ -1,0 +1,34 @@
+{
+  "title": "AllOfConstEnumIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        {
+          "type": "string",
+          "enum": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "const": "b"
+        }
+      ]
+    },
+    "count": {
+      "allOf": [
+        {
+          "const": 1
+        },
+        {
+          "const": 1.0
+        }
+      ]
+    }
+  },
+  "required": [
+    "value",
+    "count"
+  ]
+}
