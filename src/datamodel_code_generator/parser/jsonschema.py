@@ -3862,12 +3862,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         allowed_set = "{" + ", ".join(repr(property_name) for property_name in allowed_names) + "}"
         unmatched_key_conditions = [f"extra_key in {allowed_set}", *pattern_match_expressions]
         matched_known_key = " or ".join(f"({condition})" for condition in unmatched_key_conditions) or "False"
-        if schema.additionalProperties is False:
+        if self._object_unmatched_properties_are_forbidden(schema):
             predicates.append(
                 f"(not isinstance({variable_name}, dict) or all({matched_known_key} for extra_key in {variable_name}))"
             )
         elif isinstance(schema.additionalProperties, JsonSchemaObject):
             predicate = self._schema_value_predicate_from_value(schema.additionalProperties, "extra_value")
+            if predicate and predicate != "True":
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) "
+                    f"or all((lambda extra_value: {predicate})(extra_value) "
+                    f"for extra_key, extra_value in {variable_name}.items() "
+                    f"if not ({matched_known_key})))"
+                )
+        elif isinstance(schema.unevaluatedProperties, JsonSchemaObject):
+            predicate = self._schema_value_predicate_from_value(schema.unevaluatedProperties, "extra_value")
             if predicate and predicate != "True":
                 predicates.append(
                     f"(not isinstance({variable_name}, dict) "

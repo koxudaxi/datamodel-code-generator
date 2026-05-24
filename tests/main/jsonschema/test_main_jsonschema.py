@@ -4769,6 +4769,35 @@ def test_main_jsonschema_additional_properties_object_schema_with_properties(out
     )
 
 
+def test_main_jsonschema_additional_properties_unevaluated_object(output_file: Path) -> None:
+    """Test nested unevaluatedProperties constraints inside additionalProperties values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_unevaluated_object.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_properties_unevaluated_object.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"name":"x","meta":{"id":1}}'
+    for invalid_json in [
+        '{"name":"x","meta":{"id":1,"extra":"bad"}}',
+        '{"name":"x","meta":{"extra":"bad"}}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="additional_properties_unevaluated_object",
+            model_name="AdditionalPropertiesUnevaluatedObject",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
     """Test additionalProperties array schema validates extra values."""
     run_main_and_assert(
