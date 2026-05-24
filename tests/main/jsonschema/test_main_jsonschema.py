@@ -4016,6 +4016,40 @@ def test_main_jsonschema_not_bound_intersection(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_not_number_type_intersection(output_file: Path) -> None:
+    """Test not number removes integer from mixed type lists."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "not_number_type_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="not_number_type_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="not_number_type_intersection",
+        model_name="NotNumberTypeIntersection",
+        valid_json='{"value":"ok"}',
+        invalid_json='{"value":1}',
+        expected_error_type="string_type",
+        expected_attribute_path=("value",),
+        expected_attribute_value="ok",
+    )
+
+
+def test_main_jsonschema_not_number_type_conflict(output_file: Path) -> None:
+    """Test integer and not number is rejected statically."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "not_number_type_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_pattern_required_intersection(output_file: Path) -> None:
     """Test required names covered by patternProperties are generated with intersected constraints."""
     run_main_and_assert(
@@ -4235,6 +4269,10 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": ["integer", "string"], "not": {"type": ["integer", "string"]}},
             id="type-not-same-types",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "integer", "not": {"type": "number"}},
+            id="integer-not-number-type",
         ),
         pytest.param(
             {"title": "Payload", "type": "string", "oneOf": [{"const": "x"}, {"enum": ["x"]}]},

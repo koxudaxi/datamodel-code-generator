@@ -3338,14 +3338,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         type_value = schema_dict.get("type")
         not_type_value = not_schema.get("type")
         if type_value is not None and not_type_value is not None:
-            type_values = cls._type_values(type_value)
-            not_type_values = cls._type_values(not_type_value)
-            if type_values is not None and not_type_values is not None:
-                filtered_types = sorted(type_values - not_type_values)
-                if not filtered_types:
-                    cls._raise_not_constraint_conflict()
-                schema_dict["type"] = filtered_types[0] if len(filtered_types) == 1 else filtered_types
-                cls._filter_literal_constraints_for_type(schema_dict)
+            cls._normalize_raw_not_type_constraints(schema_dict, type_value, not_type_value)
 
         if not cls._raw_schema_is_supported_literal_filter(not_schema):
             return
@@ -3365,6 +3358,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 cls._drop_enum_metadata(schema_dict)
 
         cls._normalize_raw_not_bound_constraints(schema_dict, not_schema)
+
+    @classmethod
+    def _normalize_raw_not_type_constraints(
+        cls,
+        schema_dict: dict[Any, Any],
+        type_value: str | list[str],
+        not_type_value: str | list[str],
+    ) -> None:
+        type_values = cls._type_values(type_value)
+        not_type_values = cls._type_values(not_type_value)
+        if type_values is None or not_type_values is None:
+            return
+        filtered_types = cls._subtract_not_type_values(type_values, not_type_values)
+        if filtered_types is None:
+            return
+        if not filtered_types:
+            cls._raise_not_constraint_conflict()
+        schema_dict["type"] = next(iter(filtered_types)) if len(filtered_types) == 1 else sorted(filtered_types)
+        cls._filter_literal_constraints_for_type(schema_dict)
+
+    @classmethod
+    def _subtract_not_type_values(cls, type_values: set[str], not_type_values: set[str]) -> set[str] | None:
+        filtered_types: set[str] = set()
+        for type_value in type_values:
+            if type_value == "integer":
+                if "integer" not in not_type_values and "number" not in not_type_values:
+                    filtered_types.add(type_value)
+            elif type_value == "number":
+                if "number" in not_type_values:
+                    continue
+                if "integer" in not_type_values:
+                    return None
+                filtered_types.add(type_value)
+            elif type_value not in not_type_values:
+                filtered_types.add(type_value)
+        return cls._simplify_type_values(filtered_types)
 
     @classmethod
     def _normalize_raw_not_bound_constraints(cls, schema_dict: dict[Any, Any], not_schema: dict[Any, Any]) -> None:

@@ -1,0 +1,13 @@
+{
+  "title": "NotNumberTypeConflict",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "integer",
+      "not": {
+        "type": "number"
+      }
+    }
+  },
+  "required": ["value"]
+}

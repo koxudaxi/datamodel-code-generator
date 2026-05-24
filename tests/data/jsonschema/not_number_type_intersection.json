@@ -1,0 +1,13 @@
+{
+  "title": "NotNumberTypeIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": ["integer", "string"],
+      "not": {
+        "type": "number"
+      }
+    }
+  },
+  "required": ["value"]
+}

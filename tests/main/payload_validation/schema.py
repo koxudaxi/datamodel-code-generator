@@ -431,6 +431,38 @@ def _has_unsatisfiable_anyof_literal_constraints(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_anyof_literal_constraints)
 
 
+def _subtract_not_type_values(type_values: set[str], not_type_values: set[str]) -> set[str] | None:
+    filtered_types: set[str] = set()
+    for type_value in type_values:
+        if type_value == "integer":
+            if "integer" not in not_type_values and "number" not in not_type_values:
+                filtered_types.add(type_value)
+        elif type_value == "number":
+            if "number" in not_type_values:
+                continue
+            if "integer" in not_type_values:
+                return None
+            filtered_types.add(type_value)
+        elif type_value not in not_type_values:
+            filtered_types.add(type_value)
+    return _simplify_types(filtered_types)
+
+
+def _has_unsatisfiable_not_type_constraints(value: Any) -> bool:
+    def has_unsatisfiable_not_type_constraints(schema: dict[str, Any]) -> bool:
+        not_schema = schema.get("not")
+        if not not_schema or not isinstance(not_schema, dict):
+            return False
+        type_values = _type_values(schema.get("type"))
+        not_type_values = _type_values(not_schema.get("type"))
+        if type_values is None or not_type_values is None:
+            return False
+        filtered_types = _subtract_not_type_values(type_values, not_type_values)
+        return filtered_types == set()
+
+    return _any_schema_node(value, has_unsatisfiable_not_type_constraints)
+
+
 def _has_unsatisfiable_array_length(value: Any) -> bool:
     def max_item_counts(schema: dict[str, Any]) -> list[int]:
         counts: list[int] = []
@@ -524,6 +556,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "numeric multipleOf bounds have no valid payloads"
     if _has_unsatisfiable_anyof_literal_constraints(schema):
         return "anyOf literal constraints have no valid payloads"
+    if _has_unsatisfiable_not_type_constraints(schema):
+        return "not type constraints have no valid payloads"
     if _has_unsatisfiable_array_length(schema):
         return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):
