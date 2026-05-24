@@ -2259,6 +2259,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 }
 
         try:
+            cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
             cls._normalize_raw_known_property_constraints(normalized)
@@ -2271,6 +2272,55 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise
 
         return normalized
+
+    @classmethod
+    def _normalize_raw_oneof_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        one_of = schema_dict.get("oneOf")
+        if not isinstance(one_of, list):
+            return
+
+        literal_branches: list[dict[Any, Any]] = []
+        for branch in one_of:
+            if branch is False:
+                continue
+            if branch is True or not isinstance(branch, dict):
+                return
+            if not cls._raw_schema_is_supported_literal_filter(branch) or not (
+                "const" in branch or isinstance(branch.get("enum"), list)
+            ):
+                return
+            literal_branches.append(branch)
+
+        if not literal_branches:
+            return
+
+        candidates: list[Any] = []
+        for branch in literal_branches:
+            if "const" in branch:
+                cls._append_unique_json_value(candidates, branch["const"])
+            else:
+                for value in branch["enum"]:
+                    cls._append_unique_json_value(candidates, value)
+
+        match_counts = [
+            sum(cls._raw_value_matches_schema(value, branch) for branch in literal_branches) for value in candidates
+        ]
+        if all(count == 1 for count in match_counts):
+            return
+
+        one_of_values = [value for value, count in zip(candidates, match_counts, strict=False) if count == 1]
+        if not one_of_values:
+            cls._raise_allof_literal_conflict()
+
+        schema_dict.pop("oneOf", None)
+        schema_dict["enum"] = one_of_values
+        cls._drop_enum_metadata(schema_dict)
+        cls._normalize_literal_constraints(schema_dict)
+
+    @classmethod
+    def _append_unique_json_value(cls, values: list[Any], value: Any) -> None:
+        if not any(cls._json_schema_values_equal(value, existing) for existing in values):
+            values.append(value)
 
     @classmethod
     def _normalize_raw_conditional_constraints(cls, schema_dict: dict[Any, Any]) -> None:

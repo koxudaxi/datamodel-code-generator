@@ -3915,6 +3915,39 @@ def test_main_jsonschema_anyof_type_literal_intersection(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_oneof_literal_intersection(output_file: Path) -> None:
+    """Test oneOf literal values that match multiple branches are excluded."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "oneof_literal_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="oneof_literal_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_literal_intersection",
+        model_name="OneOfLiteralIntersection",
+        valid_json='{"status":"draft","level":1}',
+        invalid_json='{"status":"ready","level":1}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("status",),
+        expected_attribute_value="draft",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="oneof_literal_intersection",
+        model_name="OneOfLiteralIntersection",
+        valid_json='{"status":"archived","level":3}',
+        invalid_json='{"status":"archived","level":2}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("level",),
+        expected_attribute_value=3,
+    )
+
+
 def test_main_jsonschema_anyof_object_constraint_intersection(output_file: Path) -> None:
     """Test unsatisfiable anyOf object constraint branches are skipped."""
     run_main_and_assert(
@@ -4180,6 +4213,10 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": ["integer", "string"], "not": {"type": ["integer", "string"]}},
             id="type-not-same-types",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "string", "oneOf": [{"const": "x"}, {"enum": ["x"]}]},
+            id="oneof-duplicate-literal",
         ),
         pytest.param({"title": "Payload", "type": "integer", "minimum": 0, "not": {"minimum": 0}}, id="not-minimum"),
         pytest.param({"title": "Payload", "type": "string", "not": {"minLength": 0}}, id="not-min-length"),
