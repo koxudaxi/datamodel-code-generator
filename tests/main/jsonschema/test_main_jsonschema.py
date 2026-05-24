@@ -4615,6 +4615,36 @@ def test_main_jsonschema_property_names_closed_object(output_file: Path) -> None
     )
 
 
+def test_main_jsonschema_property_names_explicit_properties(output_file: Path) -> None:
+    """Test propertyNames validates known properties and extra keys on object models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_explicit_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_explicit_properties.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"good":"ok","x-count":1}'
+    for invalid_json in [
+        '{"bad":"accepted"}',
+        '{"good":"ok","bad":"accepted"}',
+        '{"good":"ok","other":1}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="property_names_explicit_properties",
+            model_name="PropertyNamesExplicitProperties",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_additional_properties_schema_with_properties(output_file: Path) -> None:
     """Test additionalProperties schema validates extra values."""
     run_main_and_assert(

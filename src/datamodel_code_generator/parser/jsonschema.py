@@ -4230,6 +4230,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators.append({"field": field_name, "value": value_name, "predicate": predicate})
         return validators
 
+    def _collect_property_names_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
+        if obj.propertyNames is None:
+            return []
+        if obj.propertyNames is False:
+            return [{"predicate": "False"}]
+        if obj.propertyNames is True:
+            return []
+        predicate = self._schema_value_predicate_from_value(obj.propertyNames, "property_key")
+        return [{"predicate": predicate}] if predicate and predicate != "True" else []
+
+    def _set_object_property_names_validators(self, validators: dict[str, Any], obj: JsonSchemaObject) -> None:
+        property_names = self._collect_property_names_validators(obj)
+        if property_names:
+            validators["property_names"] = property_names
+
     def _collect_additional_properties_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
         extra_value_schema = obj.additionalProperties
         if not isinstance(extra_value_schema, JsonSchemaObject):
@@ -4477,6 +4492,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         property_values = self._collect_property_value_validators(obj, fields)
         if property_values:
             validators["property_values"] = property_values
+
+        self._set_object_property_names_validators(validators, obj)
 
         dependent_schema_properties = self._collect_dependent_schema_property_validators(obj.extras, fields)
         if dependent_schema_properties:

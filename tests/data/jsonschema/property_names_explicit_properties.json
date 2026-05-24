@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "property names explicit properties",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^(good|x-[a-z]+)$"
+  },
+  "properties": {
+    "good": {
+      "type": "string"
+    },
+    "bad": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": {
+    "type": "integer"
+  }
+}

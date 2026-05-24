@@ -493,6 +493,27 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_property_names_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, list):
+            return []
+
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            predicate = validator.get("predicate")
+            if not isinstance(predicate, str):
+                continue
+            lines.extend([
+                "for property_key in model_data:",
+                f"    if not ({predicate}):",
+                "        raise ValueError(",
+                "            'property name ' + property_key + ' does not match schema'",
+                "        )",
+            ])
+        return lines
+
+    @staticmethod
     def _get_dependent_schema_property_validator_lines(validators: Any) -> list[str]:
         if not isinstance(validators, list):
             return []
@@ -884,7 +905,12 @@ class BaseModel(BaseModelBase):
         )
         conditional_lines = self._get_conditional_validator_lines(validators.get("conditional"))
         not_validator_lines = self._get_not_validator_lines(validators.get("not"))
-        dependent_context_lines = [property_value_lines, dependent_required_lines, dependent_schema_properties_lines]
+        dependent_context_lines = [
+            property_value_lines,
+            self._get_property_names_validator_lines(validators.get("property_names")),
+            dependent_required_lines,
+            dependent_schema_properties_lines,
+        ]
         context_validator_lines = [*dependent_context_lines, conditional_lines, not_validator_lines]
         if any(context_validator_lines):
             lines.extend(
