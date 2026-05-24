@@ -5102,6 +5102,44 @@ def test_main_jsonschema_runtime_composed_schema_validators(output_file: Path) -
         )
 
 
+def test_main_jsonschema_nested_object_context_schema_validators(output_file: Path) -> None:
+    """Test nested runtime object predicates honor dependent and conditional schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_object_context_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_object_context_schema_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"records":[{"enabled":true,"config":{"level":2},"kind":"secure","token":"abcde"}],"extra":{"kind":"public"}}'
+    )
+    for invalid_json in [
+        '{"extra":{"enabled":true}}',
+        '{"extra":{"config":{"level":1}}}',
+        '{"extra":{"kind":"secure"}}',
+        '{"extra":{"kind":"secure","token":"abcd"}}',
+        '{"extra":{"kind":"public","token":"abcde"}}',
+        '{"records":[{"enabled":true}]}',
+        '{"records":[{"config":{"level":1}}]}',
+        '{"records":[{"kind":"secure"}]}',
+        '{"records":[{"kind":"public","token":"abcde"}]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="nested_object_context_schema_validators",
+            model_name="NestedObjectContextSchemaValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_object_boolean_context_validators(output_file: Path) -> None:
     """Test object-context validators honor empty and boolean schemas."""
     run_main_and_assert(

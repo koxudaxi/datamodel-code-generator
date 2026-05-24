@@ -3712,6 +3712,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         predicate = self._schema_value_predicate_from_value(not_schema, variable_name)
         return f"not ({predicate})" if predicate else None
 
+    def _schema_runtime_predicate_from_raw(
+        self,
+        raw_schema: Any,
+        variable_name: str,
+        *,
+        empty_schema_predicate: str | None = None,
+    ) -> str | None:
+        if raw_schema is True:
+            return "True"
+        if raw_schema is False:
+            return "False"
+        if not isinstance(raw_schema, dict):
+            return None
+        if not raw_schema:
+            return empty_schema_predicate
+        return self._schema_value_predicate_from_value(
+            self.SCHEMA_OBJECT_TYPE.model_validate(raw_schema),
+            variable_name,
+        )
+
     def _schema_object_size_and_name_predicates(
         self,
         schema: JsonSchemaObject,
@@ -3854,8 +3874,68 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return predicates
 
+    def _schema_dependent_required_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates: list[str] = []
+        for property_name, required_names in self._collect_dependent_required(schema.extras).items():
+            if not required_names:
+                continue
+            required_set = "{" + ", ".join(repr(required_name) for required_name in required_names) + "}"
+            predicates.append(
+                f"(not isinstance({variable_name}, dict) "
+                f"or {property_name!r} not in {variable_name} "
+                f"or {required_set}.issubset({variable_name}))"
+            )
+        return predicates
+
+    def _schema_dependent_schema_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates: list[str] = []
+        for property_name, dependent_schema in self._iter_dependent_schema_objects(schema.extras):
+            predicate = self._schema_value_predicate_from_value(dependent_schema, variable_name)
+            if predicate and predicate != "True":
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) "
+                    f"or {property_name!r} not in {variable_name} "
+                    f"or ({predicate}))"
+                )
+        return predicates
+
+    def _schema_conditional_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        raw_if_schema = schema.extras.get("if")
+        if_predicate = self._schema_runtime_predicate_from_raw(
+            raw_if_schema,
+            variable_name,
+            empty_schema_predicate="True",
+        )
+        if not if_predicate:
+            return []
+
+        predicates: list[str] = []
+        raw_then_schema = schema.extras.get("then")
+        then_predicate = self._schema_runtime_predicate_from_raw(
+            raw_then_schema,
+            variable_name,
+            empty_schema_predicate="True",
+        )
+        if then_predicate and then_predicate != "True":
+            predicates.append(f"(not ({if_predicate}) or ({then_predicate}))")
+
+        raw_else_schema = schema.extras.get("else")
+        else_predicate = self._schema_runtime_predicate_from_raw(
+            raw_else_schema,
+            variable_name,
+            empty_schema_predicate="True",
+        )
+        if else_predicate and else_predicate != "True":
+            predicates.append(f"(({if_predicate}) or ({else_predicate}))")
+        return predicates
+
     def _schema_object_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
-        return self._schema_object_property_predicates(schema, variable_name)
+        return [
+            *self._schema_object_property_predicates(schema, variable_name),
+            *self._schema_dependent_required_predicates(schema, variable_name),
+            *self._schema_dependent_schema_predicates(schema, variable_name),
+            *self._schema_conditional_predicates(schema, variable_name),
+        ]
 
     def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
