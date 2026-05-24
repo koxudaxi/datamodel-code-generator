@@ -3491,6 +3491,80 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _field_name_mapping(self, fields: list[DataModelFieldBase]) -> dict[str, str]:  # noqa: PLR6301
         return {field.original_name or field.name: field.name for field in fields if field.name}
 
+    def _json_value_predicate(self, value: Any) -> str:  # noqa: PLR6301
+        if value is None:
+            return "item is None"
+        if isinstance(value, bool):
+            return f"item is {value}"
+        if isinstance(value, int):
+            return f"item == {value!r} and isinstance(item, int) and not isinstance(item, bool)"
+        if isinstance(value, float):
+            return f"item == {value!r} and isinstance(item, (int, float)) and not isinstance(item, bool)"
+        return f"item == {value!r}"
+
+    def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
+        if "const" in schema.extras:
+            return self._json_value_predicate(schema.extras["const"])
+        if schema.enum:
+            return " or ".join(f"({self._json_value_predicate(value)})" for value in schema.enum)
+
+        schema_types = schema.type if isinstance(schema.type, list) else [schema.type]
+        predicates: list[str] = []
+        for schema_type in schema_types:
+            if schema_type == "string":
+                predicates.append("isinstance(item, str)")
+            elif schema_type == "integer":
+                predicates.append("isinstance(item, int) and not isinstance(item, bool)")
+            elif schema_type == "number":
+                predicates.append("isinstance(item, (int, float)) and not isinstance(item, bool)")
+            elif schema_type == "boolean":
+                predicates.append("isinstance(item, bool)")
+            elif schema_type == "null":
+                predicates.append("item is None")
+            elif schema_type == "array":
+                predicates.append("isinstance(item, list)")
+            elif schema_type == "object":
+                predicates.append("isinstance(item, dict)")
+        return " or ".join(predicates) or None
+
+    def _get_array_contains_validator(self, field_name: str, field: JsonSchemaObject) -> dict[str, Any] | None:
+        contains = field.extras.get("contains")
+        if not field.is_array or contains in (None, True, False, {}):
+            return None
+        if not isinstance(contains, dict):
+            return None
+
+        contains_schema = self.SCHEMA_OBJECT_TYPE.model_validate(contains)
+        predicate = self._contains_predicate_from_schema(contains_schema)
+        if not predicate:
+            return None
+
+        min_contains = field.extras.get("minContains", 1)
+        max_contains = field.extras.get("maxContains")
+        return {
+            "field": field_name,
+            "predicate": predicate,
+            "min": min_contains if isinstance(min_contains, int) and not isinstance(min_contains, bool) else 1,
+            "max": max_contains if isinstance(max_contains, int) and not isinstance(max_contains, bool) else None,
+        }
+
+    def _collect_array_contains_validators(
+        self,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, Any]]:
+        if not obj.properties:
+            return []
+        field_names = self._field_name_mapping(fields)
+        validators: list[dict[str, Any]] = []
+        for property_name, field_schema in obj.properties.items():
+            if not isinstance(field_schema, JsonSchemaObject):
+                continue
+            field_name = field_names.get(property_name)
+            if field_name and (validator := self._get_array_contains_validator(field_name, field_schema)):
+                validators.append(validator)
+        return validators
+
     def _set_object_model_validators(
         self,
         path: str,
@@ -3517,6 +3591,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     mapped_dependent_required[field_names.get(property_name, property_name)] = mapped_required_names
             if mapped_dependent_required:
                 validators["dependent_required"] = mapped_dependent_required
+
+        array_contains = self._collect_array_contains_validators(obj, fields)
+        if array_contains:
+            validators["array_contains"] = array_contains
 
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators

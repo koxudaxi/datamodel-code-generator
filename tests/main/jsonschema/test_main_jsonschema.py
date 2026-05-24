@@ -4756,6 +4756,38 @@ def test_main_jsonschema_object_model_validators(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
+    """Test object-level Pydantic validators for schema-valued contains constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_contains_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="array_contains_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"values":["a","b",1],"markers":["primary"],"choices":[1,"x"]}'
+    for invalid_json in [
+        '{"values":["a",1],"markers":["primary"],"choices":[1]}',
+        '{"values":["a","b","c"],"markers":["primary"],"choices":[1]}',
+        '{"values":["a","b"],"markers":["secondary"],"choices":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1,2]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[true]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="array_contains_validators",
+            model_name="ArrayContainsValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_property_names_min_max_length(output_file: Path) -> None:
     """Test propertyNames with minLength/maxLength constraints generates dict with constr key."""
     run_main_and_assert(

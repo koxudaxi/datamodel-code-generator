@@ -381,6 +381,99 @@ class BaseModel(BaseModelBase):
                     return True
         return False
 
+    @staticmethod
+    def _get_property_count_validator_lines(property_count: dict[str, Any]) -> list[str]:
+        lines: list[str] = []
+        if property_count.get("min") is not None or property_count.get("max") is not None:
+            lines.extend([
+                "field_count = len(self.model_fields_set)",
+                "extra_values = getattr(self, '__pydantic_extra__', None) or {}",
+                "field_count += len(extra_values)",
+            ])
+        if (min_count := property_count.get("min")) is not None:
+            lines.extend([
+                f"if field_count < {min_count}:",
+                f"    raise ValueError('Expected at least {min_count} properties')",
+            ])
+        if (max_count := property_count.get("max")) is not None:
+            lines.extend([
+                f"if field_count > {max_count}:",
+                f"    raise ValueError('Expected at most {max_count} properties')",
+            ])
+        return lines
+
+    @staticmethod
+    def _get_dependent_required_validator_lines(
+        dependent_required: dict[str, Any],
+        property_count: Any,
+        *,
+        has_prior_lines: bool,
+    ) -> list[str]:
+        lines: list[str] = []
+        if has_prior_lines:
+            lines.append("")
+        elif not (
+            isinstance(property_count, dict)
+            and (property_count.get("min") is not None or property_count.get("max") is not None)
+        ):
+            lines.append("extra_values = getattr(self, '__pydantic_extra__', None) or {}")
+        lines.extend([
+            "provided_keys = set(self.model_fields_set)",
+            "provided_keys.update(extra_values)",
+        ])
+        for field_name, required_names in dependent_required.items():
+            if not required_names:
+                continue
+            required_set = "{" + ", ".join(repr(name) for name in required_names) + "}"
+            lines.extend([
+                f"if {field_name!r} in provided_keys:",
+                f"    missing = {required_set} - provided_keys",
+                "    if missing:",
+                f"        raise ValueError({field_name!r} + ' requires properties: ' + ', '.join(sorted(missing)))",
+            ])
+        return lines
+
+    @staticmethod
+    def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
+        field_name = validator.get("field")
+        predicate = validator.get("predicate")
+        if not isinstance(field_name, str) or not isinstance(predicate, str):
+            return []
+
+        variable_name = f"{field_name}_match_count"
+        lines = [
+            f"if self.{field_name} is not None:",
+            f"    {variable_name} = sum(1 for item in self.{field_name} if {predicate})",
+        ]
+        if (min_count := validator.get("min")) is not None:
+            lines.extend([
+                f"    if {variable_name} < {min_count}:",
+                "        raise ValueError(",
+                f"            {field_name!r} + ' must contain at least {min_count} matching item(s)'",
+                "        )",
+            ])
+        if (max_count := validator.get("max")) is not None:
+            lines.extend([
+                f"    if {variable_name} > {max_count}:",
+                "        raise ValueError(",
+                f"            {field_name!r} + ' must contain at most {max_count} matching item(s)'",
+                "        )",
+            ])
+        return lines
+
+    def _get_array_contains_validators_lines(self, array_contains: list[Any]) -> list[str]:
+        lines: list[str] = []
+        for validator in array_contains:
+            if not isinstance(validator, dict):
+                continue
+            validator_lines = self._get_array_contains_validator_lines(validator)
+            if not validator_lines:
+                continue
+            if lines:
+                lines.append("")
+            lines.extend(validator_lines)
+        return lines
+
     def _process_json_schema_validators(self) -> None:
         """Process JSON Schema object validators for constraints that need model context."""
         validators = self.extra_template_data.get("json_schema_validators")
@@ -390,46 +483,24 @@ class BaseModel(BaseModelBase):
         lines: list[str] = []
         property_count = validators.get("property_count")
         if isinstance(property_count, dict):
-            if property_count.get("min") is not None or property_count.get("max") is not None:
-                lines.extend([
-                    "field_count = len(self.model_fields_set)",
-                    "extra_values = getattr(self, '__pydantic_extra__', None) or {}",
-                    "field_count += len(extra_values)",
-                ])
-            if (min_count := property_count.get("min")) is not None:
-                lines.extend([
-                    f"if field_count < {min_count}:",
-                    f"    raise ValueError('Expected at least {min_count} properties')",
-                ])
-            if (max_count := property_count.get("max")) is not None:
-                lines.extend([
-                    f"if field_count > {max_count}:",
-                    f"    raise ValueError('Expected at most {max_count} properties')",
-                ])
+            lines.extend(self._get_property_count_validator_lines(property_count))
 
         dependent_required = validators.get("dependent_required")
         if isinstance(dependent_required, dict) and dependent_required:
-            if lines:
+            lines.extend(
+                self._get_dependent_required_validator_lines(
+                    dependent_required,
+                    property_count,
+                    has_prior_lines=bool(lines),
+                )
+            )
+
+        array_contains = validators.get("array_contains")
+        if isinstance(array_contains, list):
+            array_contains_lines = self._get_array_contains_validators_lines(array_contains)
+            if lines and array_contains_lines:
                 lines.append("")
-            elif not (
-                isinstance(property_count, dict)
-                and (property_count.get("min") is not None or property_count.get("max") is not None)
-            ):
-                lines.append("extra_values = getattr(self, '__pydantic_extra__', None) or {}")
-            lines.extend([
-                "provided_keys = set(self.model_fields_set)",
-                "provided_keys.update(extra_values)",
-            ])
-            for field_name, required_names in dependent_required.items():
-                if not required_names:
-                    continue
-                required_set = "{" + ", ".join(repr(name) for name in required_names) + "}"
-                lines.extend([
-                    f"if {field_name!r} in provided_keys:",
-                    f"    missing = {required_set} - provided_keys",
-                    "    if missing:",
-                    f"        raise ValueError({field_name!r} + ' requires properties: ' + ', '.join(sorted(missing)))",
-                ])
+            lines.extend(array_contains_lines)
 
         if not lines:
             return

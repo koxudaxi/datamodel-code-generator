@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "array contains validators",
+  "type": "object",
+  "required": ["values", "markers", "choices"],
+  "properties": {
+    "values": {
+      "type": "array",
+      "items": {},
+      "contains": {
+        "type": "string"
+      },
+      "minContains": 2,
+      "maxContains": 2
+    },
+    "markers": {
+      "type": "array",
+      "items": {},
+      "contains": {
+        "const": "primary"
+      },
+      "minContains": 1
+    },
+    "choices": {
+      "type": "array",
+      "items": {},
+      "contains": {
+        "enum": [1, 2]
+      },
+      "maxContains": 1
+    }
+  }
+}
