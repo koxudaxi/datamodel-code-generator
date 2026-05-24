@@ -4359,6 +4359,19 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         ),
         pytest.param(
             {
+                "$schema": "https://json-schema.org/draft-07/schema",
+                "title": "Payload",
+                "type": "array",
+                "minItems": 1,
+                "allOf": [
+                    {"items": [{"type": "integer"}]},
+                    {"items": [{"type": "string"}]},
+                ],
+            },
+            id="allof-items-array-index-disjoint",
+        ),
+        pytest.param(
+            {
                 "title": "Payload",
                 "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
@@ -7471,6 +7484,35 @@ def test_main_jsonschema_allof_prefix_items_intersection(output_file: Path) -> N
         output_file,
         module_name="allof_prefix_items_intersection",
         model_name="AllofPrefixItemsIntersection",
+        valid_json='{"values":[1,"ok"]}',
+        invalid_json='{"values":[1,"x"]}',
+        expected_error_type="string_too_short",
+    )
+
+
+def test_main_jsonschema_allof_items_array_intersection(output_file: Path) -> None:
+    """Test allOf tuple-style items intersect by array index instead of concatenating."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_items_array_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_items_array_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--use-tuple-for-fixed-items"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_items_array_intersection",
+        model_name="AllofItemsArrayIntersection",
+        valid_json='{"values":[1,"ok"]}',
+        invalid_json='{"values":[0,"ok"]}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_items_array_intersection",
+        model_name="AllofItemsArrayIntersection",
         valid_json='{"values":[1,"ok"]}',
         invalid_json='{"values":[1,"x"]}',
         expected_error_type="string_too_short",

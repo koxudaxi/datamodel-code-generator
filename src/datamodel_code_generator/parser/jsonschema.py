@@ -2046,7 +2046,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and isinstance(value, (bool, dict))
         ):
             result[key] = JsonSchemaParser._merge_raw_schema_intersection(result[key], value)
-        elif key == "prefixItems" and isinstance(result[key], list) and isinstance(value, list):
+        elif key in {"items", "prefixItems"} and isinstance(result[key], list) and isinstance(value, list):
             result[key] = JsonSchemaParser._merge_raw_prefix_items_intersection(result[key], value)
         elif isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = self._deep_merge_allof_schema(result[key], value)
@@ -2060,6 +2060,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _allof_schema_valued_keywords() -> set[str]:
         return {
             "additionalProperties",
+            "additionalItems",
             "contains",
             "contentSchema",
             "items",
