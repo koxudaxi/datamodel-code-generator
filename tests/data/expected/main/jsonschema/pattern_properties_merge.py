@@ -25,8 +25,14 @@ class Model(
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         if isinstance(self.root, dict):
             for extra_key, extra_value in self.root.items():
+                extra_value = json_schema_runtime_value(extra_value)
                 matched_pattern = False
                 if re.search('^i-', extra_key):
                     matched_pattern = True

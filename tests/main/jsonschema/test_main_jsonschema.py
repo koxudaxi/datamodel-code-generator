@@ -4369,6 +4369,38 @@ def test_main_jsonschema_root_pattern_properties_validators(output_file: Path) -
         )
 
 
+def test_main_jsonschema_root_pattern_properties_object_validators(output_file: Path) -> None:
+    """Test root patternProperties validators inspect Pydantic-converted object values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_pattern_properties_object_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_pattern_properties_object_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"item-a":{"id":1,"enabled":true},"item-b":{"id":2,"enabled":false}}'
+    for invalid_json in [
+        '{"item-a":{"id":0,"enabled":true}}',
+        '{"item-a":{"id":1}}',
+        '{"item-a":{"id":1,"enabled":true,"extra":1}}',
+        '{"other":{"id":1,"enabled":true}}',
+        '{"blocked-a":{"id":1,"enabled":true}}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_pattern_properties_object_validators",
+            model_name="RootPatternPropertiesObjectValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
     """Test patternProperties with all false values fall back to object type."""
     run_main_and_assert(

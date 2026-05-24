@@ -633,6 +633,7 @@ class BaseModel(BaseModelBase):
 
         lines = [
             "for extra_key, extra_value in extra_values.items():",
+            "    extra_value = json_schema_runtime_value(extra_value)",
             "    matched_pattern = False",
         ]
         for validator in patterns:
@@ -681,6 +682,7 @@ class BaseModel(BaseModelBase):
         lines = [
             "if isinstance(self.root, dict):",
             "    for extra_key, extra_value in self.root.items():",
+            "        extra_value = json_schema_runtime_value(extra_value)",
             "        matched_pattern = False",
         ]
         for validator in patterns:
