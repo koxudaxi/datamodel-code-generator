@@ -514,6 +514,14 @@ def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
 
 def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:
     """Test built-in formatter normalizes top-level blanks when no imports exist."""
+    code = "Alias = str\n\n\n\nOtherAlias = Alias\n"
+
+    assert apply_builtin_formatter(code) == "Alias = str\n\n\nOtherAlias = Alias\n"
+
+
+@pytest.mark.skipif(sys.version_info < (3, 12), reason="type statements require Python 3.12")
+def test_apply_builtin_formatter_normalizes_type_alias_blank_lines_without_imports() -> None:
+    """Test built-in formatter normalizes top-level blanks between type statements."""
     code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
 
     assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"

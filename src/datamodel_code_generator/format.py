@@ -481,7 +481,7 @@ def _source_segment(source: str, node: ast.AST) -> str:
 
 def _inline_source_segment(source: str, node: ast.AST) -> str:
     if isinstance(node, ast.Lambda):
-        return ast.unparse(node)
+        return re.sub(r"^lambda\s+:", "lambda:", ast.unparse(node))
     return _source_segment(source, node)
 
 
