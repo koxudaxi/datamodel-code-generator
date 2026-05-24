@@ -2297,6 +2297,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 continue
             if dependency is False:
                 cls._raise_object_constraint_conflict()
+            if isinstance(dependency, dict):
+                cls._merge_raw_active_dependent_schema(schema_dict, dependency)
             dependency_required = cls._raw_dependency_required_names(dependency)
             for required_name in dependency_required:
                 if required_name not in required_names:
@@ -2325,6 +2327,91 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return []
         required = dependency.get("required")
         return [name for name in required if isinstance(name, str)] if isinstance(required, list) else []
+
+    @classmethod
+    def _merge_raw_active_dependent_schema(cls, schema_dict: dict[Any, Any], dependency: dict[Any, Any]) -> None:
+        dependency_type = dependency.get("type")
+        if dependency_type is not None and not cls._raw_type_accepts_object(dependency_type):
+            cls._raise_object_constraint_conflict()
+
+        for count_key in ("minProperties", "maxProperties"):
+            if count_key in dependency:
+                cls._merge_raw_object_keyword(schema_dict, count_key, dependency[count_key])
+
+        dependency_properties = dependency.get("properties")
+        if isinstance(dependency_properties, dict):
+            properties = schema_dict.setdefault("properties", {})
+            if isinstance(properties, dict):
+                for property_name, property_schema in dependency_properties.items():
+                    if isinstance(property_name, str):
+                        properties[property_name] = cls._merge_raw_schema_intersection(
+                            properties.get(property_name, True),
+                            property_schema,
+                        )
+
+        if dependency.get("additionalProperties") is False:
+            schema_dict["additionalProperties"] = False
+
+    @classmethod
+    def _merge_raw_object_keyword(cls, schema_dict: dict[Any, Any], key: str, value: Any) -> None:
+        if key in schema_dict and schema_dict[key] is not None and value is not None:
+            schema_dict[key] = cls._intersect_constraint(key, schema_dict[key], value)
+        elif value is not None:
+            schema_dict[key] = value
+
+    @classmethod
+    def _merge_raw_schema_intersection(cls, left: Any, right: Any) -> Any:
+        if left is True:
+            return right
+        if right is True:
+            return left
+        if left is False or right is False:
+            return False
+        if not isinstance(left, dict) or not isinstance(right, dict):
+            return right
+
+        merged = dict(left)
+        for key, value in right.items():
+            if key in JsonSchemaObject.__metadata_only_fields__:
+                continue
+            if key not in merged:
+                merged[key] = value
+                continue
+            cls._merge_raw_schema_keyword(merged, key, value)
+
+        cls._normalize_literal_constraints(merged)
+        cls._normalize_raw_not_constraints(merged)
+        return merged
+
+    @classmethod
+    def _merge_raw_schema_keyword(cls, merged: dict[Any, Any], key: Any, value: Any) -> None:
+        if key == "const":
+            if not cls._json_schema_values_equal(merged[key], value):
+                cls._raise_allof_literal_conflict()
+        elif key == "enum" and isinstance(merged[key], list) and isinstance(value, list):
+            merged[key] = cls._intersect_enum_values(merged[key], value)
+            if not merged[key]:
+                cls._raise_allof_literal_conflict()
+            cls._drop_enum_metadata(merged)
+        elif key == "type":
+            left_types = cls._type_values(merged["type"])
+            right_types = cls._type_values(value)
+            if left_types is not None and right_types is not None:
+                merged_type_values = cls._intersect_type_values(left_types, right_types)
+                if not merged_type_values:
+                    cls._raise_allof_type_conflict()
+                merged["type"] = (
+                    next(iter(merged_type_values)) if len(merged_type_values) == 1 else sorted(merged_type_values)
+                )
+        elif key in (JsonSchemaObject.__constraint_fields__ | {"minProperties", "maxProperties"}):
+            merged[key] = cls._intersect_constraint(key, merged[key], value)
+        elif key == "properties" and isinstance(merged[key], dict) and isinstance(value, dict):
+            for property_name, property_schema in value.items():
+                if isinstance(property_name, str):
+                    merged[key][property_name] = cls._merge_raw_schema_intersection(
+                        merged[key].get(property_name, True),
+                        property_schema,
+                    )
 
     @classmethod
     def _normalize_raw_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -2498,6 +2585,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return type_value == "string"
         if isinstance(type_value, list):
             return "string" in type_value
+        return False
+
+    @staticmethod
+    def _raw_type_accepts_object(type_value: Any) -> bool:
+        if type_value is None:
+            return True
+        if isinstance(type_value, str):
+            return type_value == "object"
+        if isinstance(type_value, list):
+            return "object" in type_value
         return False
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:

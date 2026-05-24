@@ -3984,6 +3984,29 @@ def test_main_jsonschema_dependent_required_intersection(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> None:
+    """Test statically active dependent schemas intersect generated property constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dependent_schema_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="dependent_schema_intersection",
+        model_name="DependentSchemaIntersection",
+        valid_json='{"method":"card","billing_address":"Main","limit":5}',
+        invalid_json='{"method":"cash","billing_address":"Main","limit":5}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("method",),
+        expected_attribute_value="card",
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -4050,6 +4073,26 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "dependencies": {"kind": False},
             },
             id="legacy-dependency-schema-false-required-trigger",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}},
+                "required": ["kind"],
+                "dependentSchemas": {"kind": {"type": "array"}},
+            },
+            id="dependent-schema-non-object-required-trigger",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"method": {"type": "string", "const": "card"}},
+                "required": ["method"],
+                "dependentSchemas": {"method": {"properties": {"method": {"type": "string", "const": "cash"}}}},
+            },
+            id="dependent-schema-property-const-disjoint",
         ),
         pytest.param(
             {
