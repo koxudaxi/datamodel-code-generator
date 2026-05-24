@@ -3706,6 +3706,48 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if isinstance(property_name, str) and isinstance(dependent_schema, dict):
                     yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
 
+    def _schema_required_fields(self, schema: JsonSchemaObject, field_names: dict[str, str]) -> list[str]:  # noqa: PLR6301
+        return [field_names.get(required_name, required_name) for required_name in schema.required]
+
+    def _collect_schema_property_predicates(
+        self,
+        schema: JsonSchemaObject,
+        field_names: dict[str, str],
+    ) -> list[dict[str, str]]:
+        validators: list[dict[str, str]] = []
+        if not schema.properties:
+            return validators
+        for property_name, property_schema in schema.properties.items():
+            if not isinstance(property_schema, JsonSchemaObject):
+                continue
+            field_name = field_names.get(property_name)
+            if not field_name:
+                continue
+            value_name = f"{field_name}_value"
+            predicate = self._schema_value_predicate(property_schema, value_name)
+            if predicate:
+                validators.append({
+                    "field": field_name,
+                    "value": value_name,
+                    "predicate": predicate,
+                })
+        return validators
+
+    def _schema_condition_predicate(self, schema: JsonSchemaObject, field_names: dict[str, str]) -> str | None:
+        required_fields = self._schema_required_fields(schema, field_names)
+        predicates = []
+        if required_fields:
+            required_set = "{" + ", ".join(repr(field_name) for field_name in required_fields) + "}"
+            predicates.append(f"{required_set}.issubset(provided_keys)")
+        for validator in self._collect_schema_property_predicates(schema, field_names):
+            field_name = validator["field"]
+            value_name = validator["value"]
+            predicate = validator["predicate"]
+            predicates.append(
+                f"({field_name!r} not in provided_keys or (lambda {value_name}: {predicate})(self.{field_name}))"
+            )
+        return self._join_contains_predicates(predicates, "and") if predicates else None
+
     def _collect_dependent_schema_property_validators(
         self,
         extras: dict[str, Any],
@@ -3715,24 +3757,54 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         validators: list[dict[str, str]] = []
         for property_name, dependent_schema in self._iter_dependent_schema_objects(extras):
             trigger_field = field_names.get(property_name, property_name)
-            if not dependent_schema.properties:
-                continue
-            for dependent_property_name, dependent_property_schema in dependent_schema.properties.items():
-                if not isinstance(dependent_property_schema, JsonSchemaObject):
-                    continue
-                field_name = field_names.get(dependent_property_name)
-                if not field_name:
-                    continue
-                value_name = f"{field_name}_value"
-                predicate = self._schema_value_predicate(dependent_property_schema, value_name)
-                if predicate:
-                    validators.append({
-                        "trigger": trigger_field,
-                        "field": field_name,
-                        "value": value_name,
-                        "predicate": predicate,
-                    })
+            validators.extend(
+                {"trigger": trigger_field, **validator}
+                for validator in self._collect_schema_property_predicates(dependent_schema, field_names)
+            )
         return validators
+
+    def _collect_conditional_validator_branch(
+        self,
+        schema: JsonSchemaObject,
+        field_names: dict[str, str],
+    ) -> dict[str, Any]:
+        return {
+            "required": self._schema_required_fields(schema, field_names),
+            "properties": self._collect_schema_property_predicates(schema, field_names),
+        }
+
+    def _collect_conditional_validators(
+        self,
+        extras: dict[str, Any],
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, Any]]:
+        raw_if_schema = extras.get("if")
+        if not isinstance(raw_if_schema, dict):
+            return []
+
+        raw_then_schema = extras.get("then")
+        raw_else_schema = extras.get("else")
+        if not isinstance(raw_then_schema, dict) and not isinstance(raw_else_schema, dict):
+            return []
+
+        field_names = self._field_name_mapping(fields)
+        if_schema = self.SCHEMA_OBJECT_TYPE.model_validate(raw_if_schema)
+        condition = self._schema_condition_predicate(if_schema, field_names)
+        if not condition:
+            return []
+
+        validator: dict[str, Any] = {"condition": condition}
+        if isinstance(raw_then_schema, dict):
+            validator["then"] = self._collect_conditional_validator_branch(
+                self.SCHEMA_OBJECT_TYPE.model_validate(raw_then_schema),
+                field_names,
+            )
+        if isinstance(raw_else_schema, dict):
+            validator["else"] = self._collect_conditional_validator_branch(
+                self.SCHEMA_OBJECT_TYPE.model_validate(raw_else_schema),
+                field_names,
+            )
+        return [validator]
 
     def _set_object_model_validators(
         self,
@@ -3768,6 +3840,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         dependent_schema_properties = self._collect_dependent_schema_property_validators(obj.extras, fields)
         if dependent_schema_properties:
             validators["dependent_schema_properties"] = dependent_schema_properties
+
+        conditional_validators = self._collect_conditional_validators(obj.extras, fields)
+        if conditional_validators:
+            validators["conditional"] = conditional_validators
 
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators

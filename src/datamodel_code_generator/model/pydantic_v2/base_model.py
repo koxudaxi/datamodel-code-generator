@@ -459,6 +459,61 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_conditional_branch_lines(branch: Any, branch_name: str) -> list[str]:
+        if not isinstance(branch, dict):
+            return []
+
+        lines: list[str] = []
+        required_names = branch.get("required")
+        if isinstance(required_names, list) and required_names:
+            required_set = "{" + ", ".join(repr(name) for name in required_names if isinstance(name, str)) + "}"
+            lines.extend([
+                f"missing = {required_set} - provided_keys",
+                "if missing:",
+                f"    raise ValueError('{branch_name} schema requires properties: ' + ', '.join(sorted(missing)))",
+            ])
+
+        properties = branch.get("properties")
+        if isinstance(properties, list):
+            for validator in properties:
+                if not isinstance(validator, dict):
+                    continue
+                field_name = validator.get("field")
+                value_name = validator.get("value")
+                predicate = validator.get("predicate")
+                if not all(isinstance(value, str) for value in (field_name, value_name, predicate)):
+                    continue
+                lines.extend([
+                    f"if {field_name!r} in provided_keys:",
+                    f"    {value_name} = self.{field_name}",
+                    f"    if not ({predicate}):",
+                    "        raise ValueError(",
+                    f"            '{branch_name} schema requires {field_name}' + ' to match schema'",
+                    "        )",
+                ])
+        return lines
+
+    @classmethod
+    def _get_conditional_validator_lines(cls, validators: list[Any]) -> list[str]:
+        lines: list[str] = []
+        for validator in validators:
+            if not isinstance(validator, dict):
+                continue
+            condition = validator.get("condition")
+            if not isinstance(condition, str):
+                continue
+            then_lines = cls._get_conditional_branch_lines(validator.get("then"), "then")
+            else_lines = cls._get_conditional_branch_lines(validator.get("else"), "else")
+            if not then_lines and not else_lines:
+                continue
+            lines.append(f"if {condition}:")
+            lines.extend(f"    {line}" if line else "" for line in then_lines)
+            if else_lines:
+                lines.append("else:")
+                lines.extend(f"    {line}" if line else "" for line in else_lines)
+        return lines
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -515,8 +570,11 @@ class BaseModel(BaseModelBase):
 
         dependent_required = validators.get("dependent_required")
         dependent_schema_properties = validators.get("dependent_schema_properties")
-        needs_provided_keys = (isinstance(dependent_required, dict) and dependent_required) or (
-            isinstance(dependent_schema_properties, list) and dependent_schema_properties
+        conditional = validators.get("conditional")
+        needs_provided_keys = (
+            (isinstance(dependent_required, dict) and dependent_required)
+            or (isinstance(dependent_schema_properties, list) and dependent_schema_properties)
+            or (isinstance(conditional, list) and conditional)
         )
         if needs_provided_keys:
             lines.extend(self._get_provided_keys_validator_lines(property_count, has_prior_lines=bool(lines)))
@@ -526,6 +584,12 @@ class BaseModel(BaseModelBase):
 
         if isinstance(dependent_schema_properties, list) and dependent_schema_properties:
             lines.extend(self._get_dependent_schema_property_validator_lines(dependent_schema_properties))
+
+        if isinstance(conditional, list) and conditional:
+            conditional_lines = self._get_conditional_validator_lines(conditional)
+            if lines and conditional_lines:
+                lines.append("")
+            lines.extend(conditional_lines)
 
         array_contains = validators.get("array_contains")
         if isinstance(array_contains, list):

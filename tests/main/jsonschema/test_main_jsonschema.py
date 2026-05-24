@@ -4790,6 +4790,41 @@ def test_main_jsonschema_dependent_schema_property_validators(output_file: Path)
         )
 
 
+def test_main_jsonschema_conditional_object_validators(output_file: Path) -> None:
+    """Test object-level Pydantic validators for if/then/else constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_object_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_object_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for valid_json, invalid_json in [
+        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","contact":"ops"}'),
+        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":1,"contact":"ops"}'),
+        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":9,"contact":"ops"}'),
+        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":4,"contact":"xy"}'),
+        ('{"kind":"personal","reason":"personal","tags":["x"]}', '{"kind":"personal"}'),
+        ('{"kind":"personal","reason":"trial","tags":["x","y"]}', '{"kind":"personal","reason":"other"}'),
+        ('{"reason":"trial"}', "{}"),
+        ('{"reason":"personal","tags":["x"]}', '{"reason":"personal","tags":[]}'),
+        ('{"reason":"personal","tags":["x","y"]}', '{"reason":"personal","tags":["x","y","z"]}'),
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="conditional_object_validators",
+            model_name="ConditionalObjectValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(
