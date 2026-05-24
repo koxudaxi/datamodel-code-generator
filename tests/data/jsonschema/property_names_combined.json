@@ -1,0 +1,99 @@
+{
+  "title": "PropertyNamesCombined",
+  "type": "object",
+  "properties": {
+    "anyMap": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "pattern": "^x_"
+          },
+          {
+            "pattern": "^y_"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "oneMap": {
+      "type": "object",
+      "propertyNames": {
+        "oneOf": [
+          {
+            "const": "primary"
+          },
+          {
+            "pattern": "^z_"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    },
+    "allMap": {
+      "type": "object",
+      "propertyNames": {
+        "allOf": [
+          {
+            "pattern": "^x_"
+          },
+          {
+            "minLength": 3
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "anyTrueMap": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          true,
+          {
+            "pattern": "^only_"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "anyImpossibleMap": {
+      "type": "object",
+      "propertyNames": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "const": 1
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "integer"
+      }
+    },
+    "allFalseMap": {
+      "type": "object",
+      "propertyNames": {
+        "allOf": [
+          true,
+          false,
+          {
+            "pattern": "^x_"
+          }
+        ]
+      },
+      "additionalProperties": {
+        "type": "boolean"
+      }
+    }
+  }
+}

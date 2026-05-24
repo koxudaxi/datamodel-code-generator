@@ -4777,6 +4777,77 @@ def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_property_names_combined(output_file: Path) -> None:
+    """Test propertyNames anyOf, oneOf, and allOf generate constrained dict keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_combined.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_combined.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"anyMap":{"x_a":"ok","y_b":"ok"},"oneMap":{"primary":true,"z_a":false},'
+        '"allMap":{"x_a":1},"anyTrueMap":{"bad":1.5},"anyImpossibleMap":{},'
+        '"allFalseMap":{}}'
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined",
+        model_name="PropertyNamesCombined",
+        valid_json=valid_json,
+        invalid_json='{"anyMap":{"bad":"no"}}',
+        expected_error_type="string_pattern_mismatch",
+        expected_attribute_path=("anyMap",),
+        expected_attribute_value={"x_a": "ok", "y_b": "ok"},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined",
+        model_name="PropertyNamesCombined",
+        valid_json=valid_json,
+        invalid_json='{"oneMap":{"secondary":true}}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("oneMap",),
+        expected_attribute_value={"primary": True, "z_a": False},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined",
+        model_name="PropertyNamesCombined",
+        valid_json=valid_json,
+        invalid_json='{"allMap":{"x":1}}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("allMap",),
+        expected_attribute_value={"x_a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined",
+        model_name="PropertyNamesCombined",
+        valid_json=valid_json,
+        invalid_json='{"anyImpossibleMap":{"1":1}}',
+        expected_error_type="too_long",
+        expected_attribute_path=("anyImpossibleMap",),
+        expected_attribute_value={},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined",
+        model_name="PropertyNamesCombined",
+        valid_json=valid_json,
+        invalid_json='{"allFalseMap":{"x_a":true}}',
+        expected_error_type="too_long",
+        expected_attribute_path=("allFalseMap",),
+        expected_attribute_value={},
+    )
+
+
 def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
     """Test propertyNames with $ref to enum definition uses enum type as dict key."""
     run_main_and_assert(

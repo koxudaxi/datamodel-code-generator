@@ -631,7 +631,7 @@ class DataType(_BaseModel):
 
         # Propagate imports from any dict_key type
         if self.dict_key:
-            yield from self.dict_key.imports
+            yield from self.dict_key.all_imports
 
     def __init__(self, **values: Any) -> None:
         """Initialize DataType with validation and reference setup."""
