@@ -4,18 +4,52 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, constr
+import re
+
+from pydantic import BaseModel, ConfigDict, constr, model_validator
 
 
 class Network(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra='allow',
     )
     name: str | None = None
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        extra_values = getattr(self, '__pydantic_extra__', None) or {}
+
+        for extra_key, extra_value in extra_values.items():
+            matched_pattern = False
+            if re.search('^x-', extra_key):
+                matched_pattern = True
+            if not matched_pattern:
+                raise ValueError(
+                    'additional property '
+                    + extra_key
+                    + ' does not match any allowed pattern'
+                )
+        return self
 
 
 class Model(BaseModel):
     model_config = ConfigDict(
-        extra='forbid',
+        extra='allow',
     )
     networks: dict[constr(pattern=r'^[a-zA-Z0-9._-]+$'), Network | None]
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        extra_values = getattr(self, '__pydantic_extra__', None) or {}
+
+        for extra_key, extra_value in extra_values.items():
+            matched_pattern = False
+            if re.search('^x-', extra_key):
+                matched_pattern = True
+            if not matched_pattern:
+                raise ValueError(
+                    'additional property '
+                    + extra_key
+                    + ' does not match any allowed pattern'
+                )
+        return self

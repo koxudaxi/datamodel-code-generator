@@ -3742,6 +3742,15 @@ def test_main_jsonschema_nullable_object(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="nullable_object.py",
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_object",
+        model_name="Model",
+        valid_json='{"networks":{"default":{"name":"main","x-note":1}},"x-root":true}',
+        invalid_json='{"networks":{"default":{"name":"main","extra":1}}}',
+        expected_error_type="value_error",
     )
 
 
@@ -4298,6 +4307,36 @@ def test_main_jsonschema_pattern_properties_merge(output_file: Path) -> None:
         ],
         force_exec_validation=True,
     )
+
+
+def test_main_jsonschema_pattern_properties_closed_object_validators(output_file: Path) -> None:
+    """Test patternProperties allows matching extras while rejecting unmatched closed-object keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_closed_object_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_properties_closed_object_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        '{"id":"x","other":"value"}',
+        '{"id":"x","s_name":"x"}',
+        '{"id":"x","i_count":0}',
+        '{"id":"x","blocked_flag":"value"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="pattern_properties_closed_object_validators",
+            model_name="PatternPropertiesClosedObjectValidators",
+            valid_json='{"id":"x","s_name":"ok","i_count":1}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
 
 
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:

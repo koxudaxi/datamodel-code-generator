@@ -55,6 +55,7 @@ from datamodel_code_generator.model.enum import (
     Enum,
     StrEnum,
 )
+from datamodel_code_generator.model.pydantic_v2.base_model import BaseModel as PydanticV2BaseModel
 from datamodel_code_generator.model.pydantic_v2.dataclass import DataClass as PydanticV2DataClass
 from datamodel_code_generator.model.typed_dict import TypedDict as TypedDictModel
 from datamodel_code_generator.parser import DefaultPutDict, LiteralType
@@ -3782,6 +3783,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         predicate = self._schema_value_predicate_from_value(extra_value_schema, "extra_value")
         return [{"predicate": predicate}] if predicate and predicate != "True" else []
 
+    def _collect_pattern_properties_validators(self, obj: JsonSchemaObject) -> dict[str, Any]:
+        if not obj.patternProperties or not obj.properties:
+            return {}
+
+        pattern_validators: list[dict[str, Any]] = []
+        for pattern, schema in obj.patternProperties.items():
+            validator: dict[str, Any] = {"pattern": pattern}
+            if schema is False:
+                validator["forbid"] = True
+            elif isinstance(schema, JsonSchemaObject):
+                predicate = self._schema_value_predicate_from_value(schema, "extra_value")
+                if predicate and predicate != "True":
+                    validator["predicate"] = predicate
+            pattern_validators.append(validator)
+
+        if not pattern_validators:
+            return {}
+        return {
+            "allow_unmatched": obj.additionalProperties is not False,
+            "patterns": pattern_validators,
+        }
+
+    def _pattern_properties_require_allowed_extra(self, obj: JsonSchemaObject) -> bool:
+        return (
+            bool(obj.properties)
+            and bool(obj.patternProperties)
+            and obj.additionalProperties is False
+            and issubclass(self.data_model_type, PydanticV2BaseModel)
+        )
+
+    def _set_pattern_properties_extra_allowance(self, path: str, obj: JsonSchemaObject) -> None:
+        if self._pattern_properties_require_allowed_extra(obj):
+            self.extra_template_data[path]["additionalProperties"] = True
+
     def _set_root_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
         validator = self._get_array_contains_validator("root", obj)
         if validator:
@@ -3964,6 +3999,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if additional_properties:
             validators["additional_properties"] = additional_properties
 
+        pattern_properties = self._collect_pattern_properties_validators(obj)
+        if pattern_properties:
+            validators["pattern_properties"] = pattern_properties
+
         if validators:
             self.extra_template_data[path]["json_schema_validators"] = validators
 
@@ -4059,6 +4098,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_model_type_class = self.data_model_root_type
 
         self._set_schema_metadata(reference.path, obj)
+        self._set_pattern_properties_extra_allowance(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
         generates_separate = self._should_generate_separate_models(fields, None)

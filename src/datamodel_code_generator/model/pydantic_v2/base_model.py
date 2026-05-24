@@ -565,6 +565,53 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_pattern_properties_validator_lines(validators: Any) -> list[str]:
+        if not isinstance(validators, dict):
+            return []
+
+        patterns = validators.get("patterns")
+        if not isinstance(patterns, list):
+            return []
+
+        lines = [
+            "for extra_key, extra_value in extra_values.items():",
+            "    matched_pattern = False",
+        ]
+        for validator in patterns:
+            if not isinstance(validator, dict):
+                continue
+            pattern = validator.get("pattern")
+            if not isinstance(pattern, str):
+                continue
+            lines.extend([
+                f"    if re.search({pattern!r}, extra_key):",
+                "        matched_pattern = True",
+            ])
+            if validator.get("forbid") is True:
+                lines.extend([
+                    "        raise ValueError(",
+                    "            'additional property ' + extra_key + ' matches forbidden pattern'",
+                    "        )",
+                ])
+                continue
+            predicate = validator.get("predicate")
+            if isinstance(predicate, str):
+                lines.extend([
+                    f"        if not ({predicate}):",
+                    "            raise ValueError(",
+                    "                'additional property ' + extra_key + ' does not match pattern schema'",
+                    "            )",
+                ])
+        if validators.get("allow_unmatched") is False:
+            lines.extend([
+                "    if not matched_pattern:",
+                "        raise ValueError(",
+                "            'additional property ' + extra_key + ' does not match any allowed pattern'",
+                "        )",
+            ])
+        return lines
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -646,11 +693,14 @@ class BaseModel(BaseModelBase):
         additional_properties_lines = self._get_additional_properties_validator_lines(
             validators.get("additional_properties")
         )
-        if additional_properties_lines and not (
+        pattern_properties_lines = self._get_pattern_properties_validator_lines(validators.get("pattern_properties"))
+        extra_value_lines = [additional_properties_lines, pattern_properties_lines]
+        if any(extra_value_lines) and not (
             self._property_count_uses_extra_values(property_count) or any(context_validator_lines)
         ):
             self._extend_validator_lines(lines, ["extra_values = getattr(self, '__pydantic_extra__', None) or {}"])
-        self._extend_validator_lines(lines, additional_properties_lines)
+        for validator_lines in extra_value_lines:
+            self._extend_validator_lines(lines, validator_lines)
         self._extend_validator_lines(lines, self._get_array_contains_validators_lines(validators.get("array_contains")))
 
         if not lines:
@@ -664,6 +714,8 @@ class BaseModel(BaseModelBase):
             }
         ]
         self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
+        if pattern_properties_lines:
+            self._additional_imports.append(Import(import_="re"))
 
     def _process_validators(self) -> None:
         """Process validator definitions and prepare them for template rendering."""
