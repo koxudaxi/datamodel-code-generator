@@ -226,22 +226,25 @@ class _XMLSchemaConverter:
             active_namespaces: dict[str, str] = {}
             namespace_stack: list[tuple[str, str | None]] = []
             for event, payload in ET.iterparse(io.StringIO(text), events=("start", "start-ns", "end-ns")):  # noqa: S314
-                if event == "start-ns":
-                    prefix, uri = cast("tuple[str, str]", payload)
-                    namespace_stack.append((prefix, active_namespaces.get(prefix)))
-                    active_namespaces[prefix] = uri
-                    self.namespaces.setdefault(prefix, uri)
-                elif event == "end-ns":
-                    prefix, previous_uri = namespace_stack.pop()
-                    if previous_uri is None:
-                        active_namespaces.pop(prefix, None)
-                    else:
-                        active_namespaces[prefix] = previous_uri
-                elif event == "start":  # pragma: no branch
-                    element = cast("ET.Element", payload)
-                    if root is None:
-                        root = element
-                    self._element_namespaces[id(element)] = active_namespaces.copy()
+                match event:
+                    case "start-ns":
+                        prefix, uri = cast("tuple[str, str]", payload)
+                        namespace_stack.append((prefix, active_namespaces.get(prefix)))
+                        active_namespaces[prefix] = uri
+                        self.namespaces.setdefault(prefix, uri)
+                    case "end-ns":
+                        prefix, previous_uri = namespace_stack.pop()
+                        if previous_uri is None:
+                            active_namespaces.pop(prefix, None)
+                        else:
+                            active_namespaces[prefix] = previous_uri
+                    case "start":
+                        element = cast("ET.Element", payload)
+                        if root is None:
+                            root = element
+                        self._element_namespaces[id(element)] = active_namespaces.copy()
+                    case _:  # pragma: no cover
+                        pass
         except ET.ParseError as exc:
             msg = f"Invalid XML Schema document {source_path}: {exc}"
             raise Error(msg) from exc
@@ -274,20 +277,25 @@ class _XMLSchemaConverter:
             if not name:
                 continue
             key = (schema_namespace, name)
-            if _is_xsd_element(child, "simpleType"):
-                self.simple_types.setdefault(key, child)
-            elif _is_xsd_element(child, "complexType"):
-                self.complex_types.setdefault(key, child)
-            elif _is_xsd_element(child, "element"):
-                self.elements.setdefault(key, child)
-                if is_root:
-                    self.local_elements.add(key)
-            elif _is_xsd_element(child, "attribute"):
-                self.attributes.setdefault(key, child)
-            elif _is_xsd_element(child, "group"):
-                self.groups.setdefault(key, child)
-            elif _is_xsd_element(child, "attributeGroup"):
-                self.attribute_groups.setdefault(key, child)
+            if _namespace(child.tag) != XML_SCHEMA_NAMESPACE:
+                continue
+            match _local_name(child.tag):
+                case "simpleType":
+                    self.simple_types.setdefault(key, child)
+                case "complexType":
+                    self.complex_types.setdefault(key, child)
+                case "element":
+                    self.elements.setdefault(key, child)
+                    if is_root:
+                        self.local_elements.add(key)
+                case "attribute":
+                    self.attributes.setdefault(key, child)
+                case "group":
+                    self.groups.setdefault(key, child)
+                case "attributeGroup":
+                    self.attribute_groups.setdefault(key, child)
+                case _:  # pragma: no cover
+                    pass
         for child in root.iter():
             if _namespace(child.tag) == XML_SCHEMA_NAMESPACE and (ref := child.get("ref")):
                 self.referenced_elements.add(self._qname_key(ref, child))
@@ -376,19 +384,16 @@ class _XMLSchemaConverter:
 
     def _convert_element(self, element: ET.Element) -> JsonSchema:
         ref = element.get("ref")
-        if ref:
+        if ref := element.get("ref"):
             schema = {"$ref": self._ref_for_key(self._resolve_key(ref, self.elements, element=element))}
         elif type_name := element.get("type"):
             schema = self._schema_for_qname(type_name, element)
+        elif (simple_type := _first_xsd_child(element, "simpleType")) is not None:
+            schema = self._convert_simple_type(simple_type)
+        elif (complex_type := _first_xsd_child(element, "complexType")) is not None:
+            schema = self._convert_complex_type(complex_type)
         else:
-            simple_type = _first_xsd_child(element, "simpleType")
-            complex_type = _first_xsd_child(element, "complexType")
-            if simple_type is not None:
-                schema = self._convert_simple_type(simple_type)
-            elif complex_type is not None:
-                schema = self._convert_complex_type(complex_type)
-            else:
-                schema = {}
+            schema = {}
 
         schema = self._apply_common_element_metadata(element, _copy_schema(schema))
         return self._apply_occurs(element, schema)
@@ -420,20 +425,16 @@ class _XMLSchemaConverter:
         return array_schema
 
     def _convert_simple_type(self, simple_type: ET.Element) -> JsonSchema:
-        restriction = _first_xsd_child(simple_type, "restriction")
-        list_element = _first_xsd_child(simple_type, "list")
-        union_element = _first_xsd_child(simple_type, "union")
-        if restriction is not None:
+        if (restriction := _first_xsd_child(simple_type, "restriction")) is not None:
             base_schema = self._restriction_base_schema(restriction)
             schema = self._apply_restriction_facets(restriction, base_schema)
-        elif list_element is not None:
+        elif (list_element := _first_xsd_child(simple_type, "list")) is not None:
             item_type = list_element.get("itemType")
             item_schema = self._schema_for_qname(item_type, list_element) if item_type else {}
-            inline_item_type = _first_xsd_child(list_element, "simpleType")
-            if inline_item_type is not None:
+            if (inline_item_type := _first_xsd_child(list_element, "simpleType")) is not None:
                 item_schema = self._convert_simple_type(inline_item_type)
             schema = {"type": "array", "items": item_schema}
-        elif union_element is not None:
+        elif (union_element := _first_xsd_child(simple_type, "union")) is not None:
             schemas = []
             member_types = (union_element.get("memberTypes") or "").split()
             schemas.extend(self._schema_for_qname(member_type, union_element) for member_type in member_types)
@@ -453,8 +454,7 @@ class _XMLSchemaConverter:
             if key in self.simple_types and key not in self._building_definitions:
                 return self._convert_simple_type(self.simple_types[key])
             return self._schema_for_qname(base, restriction)
-        simple_type = _first_xsd_child(restriction, "simpleType")
-        if simple_type is not None:
+        if (simple_type := _first_xsd_child(restriction, "simpleType")) is not None:
             return self._convert_simple_type(simple_type)
         return _copy_schema(STRING_SCHEMA)
 
@@ -468,28 +468,29 @@ class _XMLSchemaConverter:
             value = facet.get("value")
             if value is None:
                 continue
-            if name == "enumeration":
-                enum_values.append(self._parse_literal(value, schema))
-            elif name == "pattern":
-                schema["pattern"] = value
-            elif name == "length":
-                self._set_length(schema, value, same=True)
-            elif name == "minLength":
-                self._set_length(schema, value, same=False, minimum=True)
-            elif name == "maxLength":
-                self._set_length(schema, value, same=False, minimum=False)
-            elif name == "minInclusive":
-                schema["minimum"] = self._parse_number(value, schema)
-            elif name == "maxInclusive":
-                schema["maximum"] = self._parse_number(value, schema)
-            elif name == "minExclusive":
-                schema["exclusiveMinimum"] = self._parse_number(value, schema)
-            elif name == "maxExclusive":
-                schema["exclusiveMaximum"] = self._parse_number(value, schema)
-            elif name == "totalDigits":
-                schema["x-xsd-totalDigits"] = _safe_int(value)
-            elif name == "fractionDigits":
-                schema["x-xsd-fractionDigits"] = _safe_int(value)
+            match name:
+                case "enumeration":
+                    enum_values.append(self._parse_literal(value, schema))
+                case "pattern":
+                    schema["pattern"] = value
+                case "length":
+                    self._set_length(schema, value, same=True)
+                case "minLength":
+                    self._set_length(schema, value, same=False, minimum=True)
+                case "maxLength":
+                    self._set_length(schema, value, same=False, minimum=False)
+                case "minInclusive":
+                    schema["minimum"] = self._parse_number(value, schema)
+                case "maxInclusive":
+                    schema["maximum"] = self._parse_number(value, schema)
+                case "minExclusive":
+                    schema["exclusiveMinimum"] = self._parse_number(value, schema)
+                case "maxExclusive":
+                    schema["exclusiveMaximum"] = self._parse_number(value, schema)
+                case "totalDigits":
+                    schema["x-xsd-totalDigits"] = _safe_int(value)
+                case "fractionDigits":
+                    schema["x-xsd-fractionDigits"] = _safe_int(value)
         if enum_values:
             schema["enum"] = enum_values
         return schema
@@ -508,28 +509,26 @@ class _XMLSchemaConverter:
             schema[max_key] = length
 
     def _parse_literal(self, value: str, schema: JsonSchema) -> Any:  # noqa: PLR6301
-        schema_type = schema.get("type")
-        if schema_type == "integer":
-            return _safe_int(value) if _safe_int(value) is not None else value
-        if schema_type == "number":
-            return _safe_float(value) if _safe_float(value) is not None else value
-        if schema_type == "boolean":
-            return value in {"true", "1"}
+        match schema.get("type"):
+            case "integer":
+                return integer if (integer := _safe_int(value)) is not None else value
+            case "number":
+                return number if (number := _safe_float(value)) is not None else value
+            case "boolean":
+                return value in {"true", "1"}
         return value
 
     def _parse_number(self, value: str, schema: JsonSchema) -> int | float | str:  # noqa: PLR6301
-        if schema.get("type") == "integer":
-            integer = _safe_int(value)
-            return integer if integer is not None else value
-        number = _safe_float(value)
-        return number if number is not None else value
+        match schema.get("type"):
+            case "integer":
+                return integer if (integer := _safe_int(value)) is not None else value
+            case _:
+                return number if (number := _safe_float(value)) is not None else value
 
     def _convert_complex_type(self, complex_type: ET.Element) -> JsonSchema:
-        complex_content = _first_xsd_child(complex_type, "complexContent")
-        simple_content = _first_xsd_child(complex_type, "simpleContent")
-        if complex_content is not None:
+        if (complex_content := _first_xsd_child(complex_type, "complexContent")) is not None:
             return self._convert_complex_content(complex_content, complex_type)
-        if simple_content is not None:
+        if (simple_content := _first_xsd_child(complex_type, "simpleContent")) is not None:
             return self._convert_simple_content(simple_content, complex_type)
 
         schema: JsonSchema = {"type": "object", "properties": {}}
