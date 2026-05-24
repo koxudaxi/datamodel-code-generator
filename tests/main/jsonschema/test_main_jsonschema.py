@@ -4439,6 +4439,32 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "allOf": [
+                    {
+                        "properties": {"kind": {"type": "string"}},
+                        "required": ["kind"],
+                        "additionalProperties": False,
+                    },
+                    {"dependentRequired": {"kind": ["code"]}},
+                ],
+            },
+            id="allof-dependent-required-closed-missing-property",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "allOf": [
+                    {"properties": {"kind": {"type": "string"}}, "required": ["kind"]},
+                    {"dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}}},
+                ],
+            },
+            id="allof-dependent-schema-property-names-min-properties-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
                 "additionalProperties": False,
@@ -7602,6 +7628,39 @@ def test_main_jsonschema_allof_scoped_array_keywords(output_file: Path) -> None:
         valid_json='{"tail":["ok",1],"matches":[{}]}',
         invalid_json='{"tail":["ok",1],"matches":[]}',
         expected_error_type="too_short",
+    )
+
+
+def test_main_jsonschema_allof_dependent_schema_intersection(output_file: Path) -> None:
+    """Test allOf required names trigger dependent schemas in sibling branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_schema_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_dependent_schema_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_dependent_schema_intersection",
+        model_name="AllofDependentSchemaIntersection",
+        valid_json='{"schemaDependency":{"kind":"card","code":1},"requiredDependency":{"kind":"card","code":1}}',
+        invalid_json='{"schemaDependency":{"kind":"card"},"requiredDependency":{"kind":"card","code":1}}',
+        expected_error_type="missing",
+        expected_attribute_path=("schemaDependency", "code"),
+        expected_attribute_value=1,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_dependent_schema_intersection",
+        model_name="AllofDependentSchemaIntersection",
+        valid_json='{"schemaDependency":{"kind":"card","code":1},"requiredDependency":{"kind":"card","code":1}}',
+        invalid_json='{"schemaDependency":{"kind":"card","code":1},"requiredDependency":{"kind":"card"}}',
+        expected_error_type="missing",
+        expected_attribute_path=("requiredDependency", "code"),
+        expected_attribute_value=1,
     )
 
 

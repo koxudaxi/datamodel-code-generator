@@ -1,0 +1,49 @@
+{
+  "title": "AllofDependentSchemaIntersection",
+  "type": "object",
+  "properties": {
+    "schemaDependency": {
+      "type": "object",
+      "allOf": [
+        {
+          "properties": {
+            "kind": { "type": "string" }
+          },
+          "required": ["kind"]
+        },
+        {
+          "dependentSchemas": {
+            "kind": {
+              "required": ["code"],
+              "properties": {
+                "code": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "requiredDependency": {
+      "type": "object",
+      "allOf": [
+        {
+          "properties": {
+            "kind": { "type": "string" }
+          },
+          "required": ["kind"]
+        },
+        {
+          "properties": {
+            "code": { "type": "integer" }
+          },
+          "dependentRequired": {
+            "kind": ["code"]
+          }
+        }
+      ]
+    }
+  }
+}

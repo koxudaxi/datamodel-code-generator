@@ -2306,6 +2306,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         try:
             cls._normalize_raw_oneof_literal_constraints(normalized)
+            cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
             cls._validate_raw_allof_object_member_constraints(normalized)
@@ -2601,6 +2602,52 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     required.append(required_name)
                     required_names.add(required_name)
                     added = True
+        return added
+
+    @classmethod
+    def _normalize_raw_allof_dependent_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object" or "allOf" not in schema_dict:
+            return
+
+        required = schema_dict.setdefault("required", [])
+        if not isinstance(required, list):
+            return
+
+        while True:
+            object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
+            required_names = cls._raw_allof_required_names(object_schemas)
+            added = cls._add_raw_allof_dependent_required(schema_dict, object_schemas, required, required_names)
+            if not added:
+                return
+
+    @classmethod
+    def _raw_allof_required_names(cls, object_schemas: Iterable[dict[Any, Any]]) -> set[str]:
+        return {
+            required_name for item in object_schemas for required_name in cls._raw_required_names(item.get("required"))
+        }
+
+    @classmethod
+    def _add_raw_allof_dependent_required(
+        cls,
+        schema_dict: dict[Any, Any],
+        object_schemas: Iterable[dict[Any, Any]],
+        required: list[Any],
+        required_names: set[str],
+    ) -> bool:
+        added = False
+        for item in object_schemas:
+            for dependency_name, dependency in cls._iter_raw_dependencies(item):
+                if dependency_name not in required_names:
+                    continue
+                if dependency is False:
+                    cls._raise_object_constraint_conflict()
+                if isinstance(dependency, dict):
+                    cls._merge_raw_active_dependent_schema(schema_dict, dependency)
+                for required_name in cls._raw_dependency_required_names(dependency):
+                    if required_name not in required_names:
+                        required.append(required_name)
+                        required_names.add(required_name)
+                        added = True
         return added
 
     @classmethod
