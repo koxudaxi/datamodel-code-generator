@@ -1,0 +1,21 @@
+{
+  "title": "NestedAdditionalPropertiesIntersection",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": ["token"],
+      "allOf": [
+        {
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        {
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": ["payload"]
+}

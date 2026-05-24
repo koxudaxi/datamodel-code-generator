@@ -3255,10 +3255,24 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         merged[key].get(property_name, True),
                         property_schema,
                     )
+        elif key == "patternProperties" and isinstance(merged[key], dict) and isinstance(value, dict):
+            for pattern, property_schema in value.items():
+                if isinstance(pattern, str):
+                    merged[key][pattern] = cls._merge_raw_schema_intersection(
+                        merged[key].get(pattern, True),
+                        property_schema,
+                    )
         elif key == "required" and isinstance(merged[key], list) and isinstance(value, list):
             merged[key] = list(dict.fromkeys([*merged[key], *value]))
-        elif key == "additionalProperties" and isinstance(merged[key], bool) and isinstance(value, bool):
-            merged[key] = merged[key] and value
+        elif (
+            key == "additionalProperties"
+            and isinstance(merged[key], (bool, dict))
+            and isinstance(
+                value,
+                (bool, dict),
+            )
+        ):
+            merged[key] = cls._merge_raw_schema_intersection(merged[key], value)
 
     @staticmethod
     def _drop_ignored_array_dependent_keywords(schema_dict: dict[Any, Any]) -> None:
@@ -3518,6 +3532,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not required_names:
             return
 
+        cls._validate_raw_allof_required_member_schema_constraints(object_schemas, required_names)
+
         for item in object_schemas:
             property_names = item.get("propertyNames")
             if any(not cls._raw_property_name_accepts_name(property_names, name) for name in required_names):
@@ -3534,6 +3550,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for name in required_names
             ):
                 cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _validate_raw_allof_required_member_schema_constraints(
+        cls,
+        object_schemas: list[dict[Any, Any]],
+        required_names: set[str],
+    ) -> None:
+        for name in required_names:
+            merged_schema: Any = True
+            for item in object_schemas:
+                member_schema = cls._raw_allof_member_schema_for_name(item, name)
+                if member_schema is None:
+                    continue
+                merged_schema = cls._merge_raw_schema_intersection(merged_schema, member_schema)
+                if merged_schema is False:
+                    cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _raw_allof_member_schema_for_name(cls, schema_dict: dict[Any, Any], name: str) -> Any:
+        properties = schema_dict.get("properties")
+        property_schema = properties.get(name, True) if isinstance(properties, dict) and name in properties else None
+
+        pattern_properties = schema_dict.get("patternProperties")
+        pattern_schema = (
+            cls._merge_raw_matching_pattern_properties(name, pattern_properties)
+            if isinstance(pattern_properties, dict)
+            else None
+        )
+        if pattern_schema is not None:
+            property_schema = cls._merge_raw_schema_intersection(
+                True if property_schema is None else property_schema,
+                pattern_schema,
+            )
+
+        if property_schema is not None:
+            return property_schema
+
+        additional_properties = schema_dict.get("additionalProperties")
+        if isinstance(additional_properties, dict) or additional_properties is False:
+            return additional_properties
+        return None
 
     @classmethod
     def _iter_raw_allof_object_schemas(cls, schema_dict: dict[Any, Any]) -> Iterator[dict[Any, Any]]:

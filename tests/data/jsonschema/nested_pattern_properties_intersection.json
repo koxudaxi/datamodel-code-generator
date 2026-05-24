@@ -1,0 +1,27 @@
+{
+  "title": "NestedPatternPropertiesIntersection",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "required": ["code"],
+      "allOf": [
+        {
+          "patternProperties": {
+            "^code$": {
+              "const": "a"
+            }
+          }
+        },
+        {
+          "patternProperties": {
+            "^code$": {
+              "const": "b"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": ["payload"]
+}

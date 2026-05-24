@@ -5087,6 +5087,42 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "properties": {
+                    "payload": {
+                        "type": "object",
+                        "required": ["token"],
+                        "allOf": [
+                            {"additionalProperties": {"type": "string"}},
+                            {"additionalProperties": False},
+                        ],
+                    }
+                },
+                "required": ["payload"],
+            },
+            id="nested-allof-additional-properties-schema-false-required-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "payload": {
+                        "type": "object",
+                        "required": ["code"],
+                        "allOf": [
+                            {"patternProperties": {"^code$": {"const": "a"}}},
+                            {"patternProperties": {"^code$": {"const": "b"}}},
+                        ],
+                    }
+                },
+                "required": ["payload"],
+            },
+            id="nested-allof-pattern-properties-same-pattern-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"a": {"type": "string"}, "b": {"type": "string"}},
                 "required": ["a", "b"],
                 "maxProperties": 1,
@@ -10270,6 +10306,28 @@ def test_main_jsonschema_numeric_multiple_of_bounds_conflict(output_file: Path) 
     """Test multipleOf and numeric bounds with no matching value are rejected statically."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "numeric_multiple_of_bounds_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_nested_additional_properties_intersection(output_file: Path) -> None:
+    """Test nested allOf additionalProperties schema and false intersections are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_additional_properties_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_nested_pattern_properties_intersection(output_file: Path) -> None:
+    """Test nested allOf patternProperties with the same pattern are intersected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_pattern_properties_intersection.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
