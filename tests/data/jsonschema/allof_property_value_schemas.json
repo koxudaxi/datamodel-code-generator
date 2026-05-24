@@ -1,0 +1,59 @@
+{
+  "title": "AllofPropertyValueSchemas",
+  "type": "object",
+  "properties": {
+    "name": {
+      "allOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "maxLength": 16
+        }
+      ]
+    },
+    "bag": {
+      "allOf": [
+        {
+          "type": "object",
+          "propertyNames": {
+            "const": "primary"
+          },
+          "additionalProperties": {
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "values": {
+      "allOf": [
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "string"
+            }
+          ],
+          "items": {
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "choice": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

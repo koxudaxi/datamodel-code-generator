@@ -1,0 +1,13 @@
+{
+  "title": "AllofRootPrimitiveValues",
+  "allOf": [
+    {
+      "type": "string",
+      "minLength": 2
+    },
+    {
+      "maxLength": 8,
+      "pattern": "^[A-Z]+$"
+    }
+  ]
+}

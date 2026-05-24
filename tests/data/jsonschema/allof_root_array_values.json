@@ -1,0 +1,19 @@
+{
+  "title": "AllofRootArrayValues",
+  "allOf": [
+    {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "items": {
+        "type": "boolean"
+      }
+    }
+  ]
+}

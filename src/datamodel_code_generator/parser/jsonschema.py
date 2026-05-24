@@ -2837,6 +2837,61 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return self.parse_root_type(name, merged_schema, path)
 
+    @staticmethod
+    def _allof_item_is_map_root_schema(item: JsonSchemaObject) -> bool:
+        if item.ref:
+            return False
+        return (
+            not item.properties
+            and not item.required
+            and (
+                item.propertyNames is not None
+                or item.patternProperties is not None
+                or item.additionalProperties is not None
+                or item.unevaluatedProperties is not None
+            )
+        )
+
+    def _allof_item_has_value_shape(self, item: JsonSchemaObject) -> bool:
+        if item.ref:
+            return False
+        return bool(
+            item.is_array
+            or (item.anyOf and not self._allof_requires_model_type(item.anyOf, resolve_ref=True))
+            or (item.oneOf and not self._allof_requires_model_type(item.oneOf, resolve_ref=True))
+            or item.enum
+            or "const" in item.extras
+            or (isinstance(item.type, str) and item.type != "object")
+            or (isinstance(item.type, list) and any(type_ not in {"object", "null"} for type_ in item.type))
+            or (item.has_constraint and item.type != "object")
+        )
+
+    def _get_allof_root_value_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
+        if obj.properties or obj.required:
+            return None
+
+        effective_items = [item for item in obj.allOf if isinstance(item, JsonSchemaObject)]
+        if not effective_items:
+            return None
+        if any(item.ref for item in effective_items):
+            return None
+
+        if all(self._allof_item_is_map_root_schema(item) for item in effective_items):
+            merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+            for item in effective_items:
+                resolved_item = self._load_ref_schema_object(item.ref) if item.ref else item
+                merged_schema = self._deep_merge(
+                    merged_schema,
+                    resolved_item.model_dump(exclude_unset=True, by_alias=True),
+                )
+            merged_schema.pop("allOf", None)
+            return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
+
+        if any(self._allof_item_has_value_shape(item) for item in effective_items):
+            return obj
+
+        return None
+
     def _merge_all_of_object(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:
         """Merge allOf items when they share object properties to avoid duplicate models.
 
@@ -3308,6 +3363,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         root_model_result = self._handle_allof_root_model_with_constraints(name, obj, path)
         if root_model_result is not None:
             return root_model_result
+
+        root_value_obj = self._get_allof_root_value_schema(obj)
+        if root_value_obj is not None:
+            return self.parse_root_type(name, root_value_obj, path)
 
         fields: list[DataModelFieldBase] = []
         base_classes: list[Reference] = []

@@ -5951,6 +5951,32 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("schema_file", "expected_file"),
+    [
+        ("allof_root_primitive_values.json", "allof_root_primitive_values.py"),
+        ("allof_root_array_values.json", "allof_root_array_values.py"),
+        ("allof_root_map_values.json", "allof_root_map_values.py"),
+        ("allof_property_value_schemas.json", "allof_property_value_schemas.py"),
+    ],
+)
+def test_main_jsonschema_allof_value_schemas(
+    output_file: Path,
+    schema_file: str,
+    expected_file: str,
+) -> None:
+    """Test allOf value schemas generate typed roots instead of empty models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / schema_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+
+
 def test_force_optional_required(output_file: Path) -> None:
     """Test --force-optional makes required fields optional."""
     run_main_and_assert(

@@ -32,8 +32,8 @@ class Config(BaseConfig, ExtendedConfig):
     pass
 
 
-class Metadata(BaseModel):
-    pass
+class Metadata(RootModel[dict[str, constr(min_length=1)]]):
+    root: dict[str, constr(min_length=1)]
 
 
 class ProjectedItem(BaseModel):

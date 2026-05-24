@@ -1,0 +1,17 @@
+{
+  "title": "AllofRootMapValues",
+  "allOf": [
+    {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x_"
+      }
+    }
+  ]
+}

@@ -103,11 +103,11 @@ class RefToPatternPropsAllOf(BaseModel):
     pass
 
 
-class NestedAllOfDatatype(BaseModel):
-    pass
+class NestedAllOfDatatype(RootModel[constr(min_length=1)]):
+    root: constr(min_length=1)
 
 
-class RefToNestedAllOfAllOf(NestedAllOfDatatype):
+class RefToNestedAllOfAllOf(BaseModel):
     pass
 
 

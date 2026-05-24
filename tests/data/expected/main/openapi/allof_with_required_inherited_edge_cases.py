@@ -43,8 +43,12 @@ class ObjectWithoutAdditional(BaseModel):
     nested: str | None = None
 
 
-class MultipleAdditionalProps(BaseModel):
-    pass
+class MultipleAdditionalProps1(BaseModel):
+    id: int | None = None
+
+
+class MultipleAdditionalProps(RootModel[dict[str, MultipleAdditionalProps1]]):
+    root: dict[str, MultipleAdditionalProps1]
 
 
 class L3(BaseModel):
