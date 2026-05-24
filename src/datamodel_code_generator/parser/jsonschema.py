@@ -2571,7 +2571,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return all(cls._raw_value_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
         schema_types = cls._type_values(schema.get("type"))
         filter_types = cls._type_values(filter_schema.get("type"))
-        return schema_types is not None and filter_types is not None and schema_types <= filter_types
+        return (
+            schema_types is not None
+            and filter_types is not None
+            and cls._intersect_type_values(schema_types, filter_types) == cls._simplify_type_values(schema_types)
+        )
 
     @classmethod
     def _raw_schema_is_disjoint_from_supported_filter(cls, schema: Any, filter_schema: Any) -> bool:  # noqa: PLR0911
@@ -2590,7 +2594,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return not any(cls._raw_value_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
         schema_types = cls._type_values(schema.get("type"))
         filter_types = cls._type_values(filter_schema.get("type"))
-        return schema_types is not None and filter_types is not None and not schema_types & filter_types
+        return (
+            schema_types is not None
+            and filter_types is not None
+            and not cls._intersect_type_values(
+                schema_types,
+                filter_types,
+            )
+        )
 
     @staticmethod
     def _raw_required_names(value: Any) -> set[str]:
@@ -2950,13 +2961,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return
 
         min_contains = cls._raw_min_contains_value(schema_dict)
-        if min_contains is None or min_contains <= 0:
+        if min_contains is not None and min_contains > 0:
+            possible_matches = sum(
+                not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema) for item in tuple_items
+            )
+            if possible_matches < min_contains:
+                cls._raise_object_constraint_conflict()
+
+        max_contains = schema_dict.get("maxContains")
+        if not isinstance(max_contains, int) or isinstance(max_contains, bool):
             return
 
-        possible_matches = sum(
-            not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema) for item in tuple_items
+        min_items = cls._raw_count_constraint_value(schema_dict.get("minItems")) or 0
+        required_tuple_items = tuple_items[: min(min_items, len(tuple_items))]
+        guaranteed_matches = sum(
+            cls._raw_schema_implies_supported_filter(item, contains_schema) for item in required_tuple_items
         )
-        if possible_matches < min_contains:
+        if guaranteed_matches > max_contains:
             cls._raise_object_constraint_conflict()
 
     @classmethod

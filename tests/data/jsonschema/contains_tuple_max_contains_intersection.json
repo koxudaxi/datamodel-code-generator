@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContainsTupleMaxContainsIntersection",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "minItems": 2,
+      "prefixItems": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "integer"
+        }
+      ],
+      "items": false,
+      "contains": {
+        "type": "number"
+      },
+      "maxContains": 1
+    }
+  },
+  "required": ["values"]
+}

@@ -213,6 +213,72 @@ def _has_unsatisfiable_contains_bounds(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_contains_bounds)
 
 
+def _type_values(type_value: Any) -> set[str] | None:
+    if type_value is None:
+        return None
+    if isinstance(type_value, str):
+        return {type_value}
+    if isinstance(type_value, list):
+        return {value for value in type_value if isinstance(value, str)}
+    return None
+
+
+def _type_intersection(left: set[str], right: set[str]) -> set[str]:
+    intersections: set[str] = set()
+    for left_type in left:
+        for right_type in right:
+            if left_type == right_type:
+                intersections.add(left_type)
+            elif {left_type, right_type} == {"integer", "number"}:
+                intersections.add("integer")
+    return _simplify_types(intersections)
+
+
+def _simplify_types(types: set[str]) -> set[str]:
+    return types - {"integer"} if "number" in types else types
+
+
+def _schema_implies_type_filter(schema: Any, filter_schema: Any) -> bool:
+    if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+        return False
+    schema_types = _type_values(schema.get("type"))
+    filter_types = _type_values(filter_schema.get("type"))
+    return (
+        schema_types is not None
+        and filter_types is not None
+        and _type_intersection(schema_types, filter_types) == _simplify_types(schema_types)
+    )
+
+
+def _has_unsatisfiable_closed_tuple_contains_max(value: Any) -> bool:
+    def closed_tuple_items(schema: dict[str, Any]) -> list[Any] | None:
+        prefix_items = schema.get("prefixItems")
+        if isinstance(prefix_items, list):
+            return prefix_items if schema.get("items") is False else None
+        items = schema.get("items")
+        return items if isinstance(items, list) and schema.get("additionalItems") is False else None
+
+    def has_unsatisfiable_closed_tuple_contains_max(schema: dict[str, Any]) -> bool:
+        if schema.get("type") != "array":
+            return False
+        contains = schema.get("contains")
+        max_contains = schema.get("maxContains")
+        min_items = schema.get("minItems")
+        if not isinstance(contains, dict) or not isinstance(max_contains, int) or isinstance(max_contains, bool):
+            return False
+        if not isinstance(min_items, int) or isinstance(min_items, bool):
+            return False
+        tuple_items = closed_tuple_items(schema)
+        if tuple_items is None:
+            return False
+        guaranteed_matches = sum(
+            _schema_implies_type_filter(item, contains) for item in tuple_items[: min(min_items, len(tuple_items))]
+        )
+        return guaranteed_matches > max_contains
+
+    return _any_schema_node(value, has_unsatisfiable_closed_tuple_contains_max)
+
+
 def _has_unsatisfiable_array_length(value: Any) -> bool:
     def max_item_counts(schema: dict[str, Any]) -> list[int]:
         counts: list[int] = []
@@ -300,6 +366,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "contains false with minContains greater than zero has no valid array payloads"
     if _has_unsatisfiable_contains_bounds(schema):
         return "contains minContains/maxContains bounds have no valid array payloads"
+    if _has_unsatisfiable_closed_tuple_contains_max(schema):
+        return "closed tuple contains maxContains bounds have no valid array payloads"
     if _has_unsatisfiable_array_length(schema):
         return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):

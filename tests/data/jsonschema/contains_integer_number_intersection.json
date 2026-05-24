@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContainsIntegerNumberIntersection",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      },
+      "contains": {
+        "type": "number"
+      },
+      "minContains": 2,
+      "maxContains": 3
+    }
+  },
+  "required": ["values"]
+}

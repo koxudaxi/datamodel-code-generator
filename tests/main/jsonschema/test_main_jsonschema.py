@@ -4388,6 +4388,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": "array",
+                "minItems": 2,
+                "prefixItems": [{"type": "integer"}, {"type": "integer"}],
+                "items": False,
+                "contains": {"type": "number"},
+                "maxContains": 1,
+            },
+            id="array-closed-tuple-contains-guaranteed-max-count-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "minProperties": 1,
                 "allOf": [
@@ -10157,6 +10169,50 @@ def test_main_jsonschema_contains_items_intersection(output_file: Path) -> None:
         expected_error_type="too_long",
         expected_attribute_path=("literalValues",),
         expected_attribute_value=["ok", "ok", "ok"],
+    )
+
+
+def test_main_jsonschema_contains_integer_number_intersection(output_file: Path) -> None:
+    """Test integer item schemas imply number contains schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_integer_number_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_integer_number_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_integer_number_intersection",
+        model_name="ContainsIntegerNumberIntersection",
+        valid_json='{"values":[1,2]}',
+        invalid_json='{"values":[1]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_integer_number_intersection",
+        model_name="ContainsIntegerNumberIntersection",
+        valid_json='{"values":[1,2,3]}',
+        invalid_json='{"values":[1,2,3,4]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("values",),
+        expected_attribute_value=[1, 2, 3],
+    )
+
+
+def test_main_jsonschema_contains_tuple_max_contains_intersection(output_file: Path) -> None:
+    """Test required tuple items that imply contains cannot exceed maxContains."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_tuple_max_contains_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
     )
 
 
