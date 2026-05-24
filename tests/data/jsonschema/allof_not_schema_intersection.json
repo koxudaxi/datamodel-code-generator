@@ -1,0 +1,28 @@
+{
+  "title": "AllofNotSchemaIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "string",
+      "allOf": [
+        {
+          "enum": ["a", "b"]
+        },
+        {
+          "not": { "const": "a" }
+        }
+      ]
+    },
+    "count": {
+      "type": "integer",
+      "allOf": [
+        {
+          "enum": [1, 2, 3]
+        },
+        {
+          "not": { "maximum": 2 }
+        }
+      ]
+    }
+  }
+}

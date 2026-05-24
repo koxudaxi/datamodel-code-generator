@@ -4254,6 +4254,31 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": "string",
+                "allOf": [{"const": "x"}, {"not": {"const": "x"}}],
+            },
+            id="allof-not-const-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "allOf": [
+                    {"properties": {"kind": {"const": "card"}}, "required": ["kind"]},
+                    {
+                        "not": {
+                            "type": "object",
+                            "properties": {"kind": {"const": "card"}},
+                            "required": ["kind"],
+                        }
+                    },
+                ],
+            },
+            id="allof-not-object-condition-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "array",
                 "items": {"type": "string", "enum": ["no"]},
                 "contains": {"const": "ok"},
@@ -7717,6 +7742,39 @@ def test_main_jsonschema_allof_conditional_schema_intersection(output_file: Path
         expected_error_type="missing",
         expected_attribute_path=("cashPayment", "cashCode"),
         expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_allof_not_schema_intersection(output_file: Path) -> None:
+    """Test allOf not branches filter literal values from sibling constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_not_schema_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_not_schema_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_not_schema_intersection",
+        model_name="AllofNotSchemaIntersection",
+        valid_json='{"value":"b","count":3}',
+        invalid_json='{"value":"a","count":3}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("value", "root"),
+        expected_attribute_value="b",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_not_schema_intersection",
+        model_name="AllofNotSchemaIntersection",
+        valid_json='{"value":"b","count":3}',
+        invalid_json='{"value":"b","count":2}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("count", "root"),
+        expected_attribute_value=3,
     )
 
 

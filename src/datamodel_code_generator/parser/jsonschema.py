@@ -2308,6 +2308,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_allof_conditional_constraints(normalized)
+            cls._normalize_raw_allof_not_constraints(normalized)
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
             cls._validate_raw_allof_object_member_constraints(normalized)
@@ -2709,6 +2710,85 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if properties:
             evidence_schema["properties"] = properties
         return evidence_schema
+
+    @classmethod
+    def _normalize_raw_allof_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if "allOf" not in schema_dict:
+            return
+
+        allof_schemas = list(cls._iter_raw_allof_schema_dicts(schema_dict))
+        not_schemas = [item.get("not") for item in allof_schemas if "not" in item]
+        if not not_schemas:
+            return
+
+        evidence_schema = cls._raw_allof_evidence_schema(allof_schemas)
+        if not evidence_schema:
+            return
+
+        for not_schema in not_schemas:
+            if cls._raw_schema_implies_not_schema(evidence_schema, not_schema):
+                cls._raise_not_constraint_conflict()
+            evidence_schema["not"] = not_schema
+            cls._normalize_raw_not_constraints(evidence_schema)
+
+        cls._normalize_raw_not_constraints(evidence_schema)
+        for key, value in evidence_schema.items():
+            if key in {"allOf", "not"}:
+                continue
+            if key in schema_dict:
+                cls._merge_raw_schema_keyword(schema_dict, key, value)
+            else:
+                schema_dict[key] = value
+
+    @classmethod
+    def _raw_schema_implies_not_schema(cls, evidence_schema: dict[Any, Any], not_schema: Any) -> bool:
+        if not_schema is False:
+            return False
+        if not_schema is True or not_schema == {}:
+            return True
+        if not isinstance(not_schema, dict):
+            return False
+        if cls._raw_schema_implies_supported_filter(evidence_schema, not_schema):
+            return True
+        return cls._get_raw_object_conditional_result(evidence_schema, not_schema) is True
+
+    @classmethod
+    def _raw_allof_evidence_schema(cls, allof_schemas: Iterable[dict[Any, Any]]) -> dict[Any, Any]:
+        evidence_schema: dict[Any, Any] = {}
+        for item in allof_schemas:
+            item_evidence = {
+                key: value
+                for key, value in item.items()
+                if key not in cls._raw_allof_evidence_excluded_keywords()
+                and key not in JsonSchemaObject.__metadata_only_fields__
+            }
+            evidence_schema = cls._merge_raw_schema_intersection(evidence_schema, item_evidence)
+        return evidence_schema if isinstance(evidence_schema, dict) else {}
+
+    @staticmethod
+    def _raw_allof_evidence_excluded_keywords() -> set[str]:
+        return {
+            "allOf",
+            "anyOf",
+            "dependencies",
+            "dependentRequired",
+            "dependentSchemas",
+            "else",
+            "if",
+            "not",
+            "oneOf",
+            "then",
+        }
+
+    @classmethod
+    def _iter_raw_allof_schema_dicts(cls, schema_dict: dict[Any, Any]) -> Iterator[dict[Any, Any]]:
+        yield schema_dict
+        all_of = schema_dict.get("allOf")
+        if not isinstance(all_of, list):
+            return
+        for item in all_of:
+            if isinstance(item, dict):
+                yield from cls._iter_raw_allof_schema_dicts(item)
 
     @classmethod
     def _iter_raw_dependencies(cls, schema_dict: dict[Any, Any]) -> Iterator[tuple[str, Any]]:
