@@ -4659,6 +4659,89 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "propertyNames": {"enum": ["only"]},
+                "minProperties": 2,
+            },
+            id="object-property-names-enum-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["a", "bbb"], "minLength": 2},
+                "minProperties": 2,
+            },
+            id="object-property-names-enum-length-filtered-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"anyOf": [{"const": "a"}, {"enum": ["b"]}]},
+                "minProperties": 3,
+            },
+            id="object-property-names-anyof-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"allOf": [{"enum": ["a", "bbb"]}, {"minLength": 2}]},
+                "minProperties": 2,
+            },
+            id="object-property-names-allof-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"oneOf": [{"enum": ["a", "b"]}, {"const": "b"}]},
+                "minProperties": 2,
+            },
+            id="object-property-names-oneof-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"anyOf": [False, {"enum": [1]}]},
+                "minProperties": 1,
+            },
+            id="object-property-names-anyof-forbids-all-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"allOf": [{"type": "string"}, {"type": "integer"}]},
+                "minProperties": 1,
+            },
+            id="object-property-names-allof-forbids-all-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"only": {"type": "string"}, "blocked": {"type": "integer"}},
+                "propertyNames": {"enum": ["only"]},
+                "additionalProperties": False,
+                "minProperties": 2,
+            },
+            id="object-property-names-filtered-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": False,
+                "minProperties": 1,
+            },
+            id="object-property-names-false-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "patternProperties": {"^allowed$": {"type": "string"}},
                 "required": ["blocked"],
                 "additionalProperties": False,
@@ -5425,32 +5508,16 @@ def test_main_jsonschema_object_property_count_additional_true(output_file: Path
 
 
 def test_main_jsonschema_object_impossible_property_count(output_file: Path) -> None:
-    """Test impossible object property count constraints reject both empty and populated objects."""
+    """Test impossible object property count constraints are rejected statically."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "object_impossible_property_count.json",
         output_path=output_file,
         input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_impossible_property_count.py",
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="object_impossible_property_count",
-        model_name="ObjectImpossiblePropertyCount",
-        invalid_json="{}",
-        expected_error_type="too_short",
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="object_impossible_property_count",
-        model_name="ObjectImpossiblePropertyCount",
-        invalid_json='{"a":1}',
-        expected_error_type="too_long",
+        expected_exit=Exit.ERROR,
     )
 
 
@@ -5680,6 +5747,29 @@ def test_main_jsonschema_property_names_known_properties(output_file: Path) -> N
         invalid_json='{"allowed":"ok","blocked":1}',
         expected_error_type="extra_forbidden",
         expected_attribute_path=("alsoAllowed",),
+        expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_property_names_combined_known_properties(output_file: Path) -> None:
+    """Test combined propertyNames rejects incompatible declared properties in closed objects."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_combined_known_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_combined_known_properties.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_combined_known_properties",
+        model_name="PropertyNamesCombinedKnownProperties",
+        valid_json='{"alpha":"ok","beta":1}',
+        invalid_json='{"alpha":"ok","gamma":true}',
+        expected_error_type="extra_forbidden",
+        expected_attribute_path=("beta",),
         expected_attribute_value=1,
     )
 

@@ -3014,19 +3014,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if schema_dict.get("type") != "object":
             return
         required = schema_dict.get("required")
-        if not isinstance(required, list):
-            return
-        required_names = {name for name in required if isinstance(name, str)}
-        if not required_names:
-            return
+        required_names = {name for name in required if isinstance(name, str)} if isinstance(required, list) else set()
 
         max_properties = cls._number_constraint_value(schema_dict.get("maxProperties"))
         if max_properties is not None and len(required_names) > max_properties:
             cls._raise_object_constraint_conflict()
+        min_properties = cls._number_constraint_value(schema_dict.get("minProperties"))
+        max_possible_properties = cls._raw_max_possible_property_count(schema_dict)
+        if (
+            min_properties is not None
+            and max_possible_properties is not None
+            and min_properties > max_possible_properties
+        ):
+            cls._raise_object_constraint_conflict()
 
         property_names = schema_dict.get("propertyNames")
-        if cls._raw_property_names_forbids_all_names(property_names):
-            cls._raise_object_constraint_conflict()
         if any(not cls._raw_property_name_accepts_name(property_names, name) for name in required_names):
             cls._raise_object_constraint_conflict()
 
@@ -3045,6 +3047,94 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._raise_object_constraint_conflict()
 
     @classmethod
+    def _raw_max_possible_property_count(cls, schema_dict: dict[Any, Any]) -> int | None:
+        property_names = schema_dict.get("propertyNames")
+        if cls._raw_property_names_forbids_all_names(property_names):
+            return 0
+        property_name_values = cls._raw_finite_property_name_values(property_names)
+        if property_name_values is not None:
+            return len(property_name_values)
+        if property_names is False:
+            return 0
+        if schema_dict.get("additionalProperties") is not False:
+            return None
+
+        properties = schema_dict.get("properties")
+        pattern_properties = schema_dict.get("patternProperties")
+        if isinstance(pattern_properties, dict) and any(value is not False for value in pattern_properties.values()):
+            return None
+        return len(properties) if isinstance(properties, dict) else 0
+
+    @classmethod
+    def _raw_finite_property_name_values(cls, property_names: Any) -> set[str] | None:
+        if not isinstance(property_names, dict):
+            return None
+
+        combined_values = cls._raw_finite_combined_property_name_values(property_names)
+        if combined_values is not None:
+            return combined_values
+
+        enum_values = property_names.get("enum")
+        if isinstance(enum_values, list):
+            return {
+                value
+                for value in enum_values
+                if isinstance(value, str) and cls._raw_property_name_accepts_name(property_names, value)
+            }
+        const_value = property_names.get("const")
+        if "const" in property_names:
+            return (
+                {const_value}
+                if isinstance(const_value, str) and cls._raw_property_name_accepts_name(property_names, const_value)
+                else set()
+            )
+        return None
+
+    @classmethod
+    def _raw_finite_combined_property_name_values(  # noqa: PLR0911
+        cls, property_names: dict[Any, Any]
+    ) -> set[str] | None:
+        any_of = property_names.get("anyOf")
+        one_of = property_names.get("oneOf")
+        all_of = property_names.get("allOf")
+
+        combined_key_count = sum(isinstance(value, list) for value in (any_of, one_of, all_of))
+        if combined_key_count != 1:
+            return None
+
+        if isinstance(any_of, list):
+            branch_values = [cls._raw_finite_property_name_values(branch) for branch in any_of]
+            if any(values is None for values in branch_values):
+                return None
+            return {
+                name
+                for values in branch_values
+                for name in values or set()
+                if cls._raw_property_name_accepts_name(property_names, name)
+            }
+
+        if isinstance(one_of, list):
+            branch_values = [cls._raw_finite_property_name_values(branch) for branch in one_of]
+            if any(values is None for values in branch_values):
+                return None
+            return {
+                name
+                for values in branch_values
+                for name in values or set()
+                if cls._raw_property_name_accepts_name(property_names, name)
+            }
+
+        if isinstance(all_of, list):
+            branch_values = [cls._raw_finite_property_name_values(branch) for branch in all_of]
+            finite_values = [values for values in branch_values if values is not None]
+            if not finite_values:
+                return None
+            candidate_names = set.intersection(*finite_values) if len(finite_values) > 1 else set(finite_values[0])
+            return {name for name in candidate_names if cls._raw_property_name_accepts_name(property_names, name)}
+
+        return None
+
+    @classmethod
     def _raw_required_name_allowed_by_pattern_properties(cls, name: str, pattern_properties: Any) -> bool:
         if not isinstance(pattern_properties, dict):
             return False
@@ -3056,11 +3146,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
 
     @classmethod
-    def _raw_property_names_forbids_all_names(cls, property_names: Any) -> bool:
+    def _raw_property_names_forbids_all_names(cls, property_names: Any) -> bool:  # noqa: PLR0911
         if property_names is False:
             return True
         if not isinstance(property_names, dict):
             return False
+        any_of = property_names.get("anyOf")
+        if isinstance(any_of, list) and all(cls._raw_property_names_forbids_all_names(item) for item in any_of):
+            return True
+        all_of = property_names.get("allOf")
+        if isinstance(all_of, list) and any(cls._raw_property_names_forbids_all_names(item) for item in all_of):
+            return True
+        one_of = property_names.get("oneOf")
+        if isinstance(one_of, list) and all(cls._raw_property_names_forbids_all_names(item) for item in one_of):
+            return True
         if not cls._raw_type_accepts_string(property_names.get("type")):
             return True
         enum_values = property_names.get("enum")
@@ -3075,10 +3174,51 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _raw_property_name_accepts_name(cls, property_names: Any, name: str) -> bool:
+        return cls._raw_property_name_acceptance(property_names, name) is not False
+
+    @classmethod
+    def _raw_property_name_acceptance(cls, property_names: Any, name: str) -> bool | None:  # noqa: PLR0911, PLR0912
         if property_names is None or property_names is True:
             return True
-        if property_names is False or not isinstance(property_names, dict):
+        if property_names is False:
             return False
+        if not isinstance(property_names, dict):
+            return None
+
+        combined_result: bool | None = True
+        any_of = property_names.get("anyOf")
+        if isinstance(any_of, list):
+            branch_results = [cls._raw_property_name_acceptance(branch, name) for branch in any_of]
+            if any(result is True for result in branch_results):
+                combined_result = True
+            elif all(result is False for result in branch_results):
+                combined_result = False
+            else:
+                combined_result = None
+
+        all_of = property_names.get("allOf")
+        if isinstance(all_of, list):
+            branch_results = [cls._raw_property_name_acceptance(branch, name) for branch in all_of]
+            if any(result is False for result in branch_results):
+                combined_result = False
+            elif all(result is True for result in branch_results):
+                combined_result = combined_result if combined_result is not False else False
+            else:
+                combined_result = None if combined_result is not False else False
+
+        one_of = property_names.get("oneOf")
+        if isinstance(one_of, list):
+            branch_results = [cls._raw_property_name_acceptance(branch, name) for branch in one_of]
+            true_count = sum(result is True for result in branch_results)
+            if true_count > 1:
+                combined_result = False
+            elif any(result is None for result in branch_results):
+                combined_result = None if combined_result is not False else False
+            else:
+                combined_result = (true_count == 1) if combined_result is not False else False
+        if combined_result is False:
+            return False
+
         type_value = property_names.get("type")
         if not cls._raw_type_accepts_string(type_value):
             return False
@@ -3091,9 +3231,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         min_length = cls._number_constraint_value(property_names.get("minLength"))
         max_length = cls._number_constraint_value(property_names.get("maxLength"))
-        return not (
-            (min_length is not None and len(name) < min_length) or (max_length is not None and len(name) > max_length)
-        )
+        if (min_length is not None and len(name) < min_length) or (max_length is not None and len(name) > max_length):
+            return False
+        pattern = property_names.get("pattern")
+        if isinstance(pattern, str):
+            try:
+                if re.search(pattern, name) is None:
+                    return False
+            except re.error:
+                return None
+        supported_keys = {
+            "$comment",
+            "$id",
+            "$schema",
+            "const",
+            "description",
+            "enum",
+            "examples",
+            "allOf",
+            "anyOf",
+            "maxLength",
+            "minLength",
+            "oneOf",
+            "pattern",
+            "title",
+            "type",
+        }
+        if set(property_names) <= supported_keys:
+            return combined_result
+        return False if combined_result is False else None
 
     @staticmethod
     def _raw_type_accepts_string(type_value: Any) -> bool:
