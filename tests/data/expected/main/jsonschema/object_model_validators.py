@@ -20,7 +20,13 @@ class ObjectModelValidators(BaseModel):
     def validate_json_schema_constraints(self):
         def json_schema_runtime_value(value):
             if hasattr(value, 'model_dump'):
-                return value.model_dump(mode='python')
+                return value.model_dump(mode='python', exclude_unset=True)
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
             return value
 
         field_count = len(self.model_fields_set)

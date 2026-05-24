@@ -5267,6 +5267,44 @@ def test_main_jsonschema_object_context_model_value_validators(output_file: Path
         )
 
 
+def test_main_jsonschema_object_context_array_model_value_validators(output_file: Path) -> None:
+    """Test object-context validators inspect Pydantic-converted array item models."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_array_model_value_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_array_model_value_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"trigger":true,"records":[{"kind":"hit","score":10},{"kind":"hit","score":11,"flag":true}]}'
+    for invalid_json in [
+        '{"trigger":true}',
+        '{"trigger":true,"records":[]}',
+        '{"trigger":true,"records":[{"kind":"miss","score":10}]}',
+        '{"trigger":true,"records":[{"kind":"hit","score":9}]}',
+        (
+            '{"trigger":true,"records":['
+            '{"kind":"hit","score":10,"flag":true},'
+            '{"kind":"hit","score":11},'
+            '{"kind":"hit","score":12}'
+            "]}"
+        ),
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_array_model_value_validators",
+            model_name="ObjectContextArrayModelValueValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_conditional_boolean_branch_validators(output_file: Path) -> None:
     """Test boolean then/else schemas generate runtime conditional validators."""
     run_main_and_assert(
