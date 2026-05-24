@@ -2017,6 +2017,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             result[key] = value
             if key in {"const", "enum", "type"}:
                 self._normalize_literal_constraints(result)
+        JsonSchemaParser._validate_allof_intersected_constraints(result)
         return result
 
     def _merge_allof_shared_keyword(self, result: dict[Any, Any], key: Any, value: Any) -> bool:
@@ -2064,6 +2065,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @staticmethod
     def _raise_allof_type_conflict() -> None:
         message = "allOf type constraints have no common values"
+        raise SchemaParseError(message=message)
+
+    @staticmethod
+    def _raise_allof_constraint_conflict() -> None:
+        message = "allOf constraints have no common values"
         raise SchemaParseError(message=message)
 
     @staticmethod
@@ -2181,6 +2187,63 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             base_dict["const"] = merged_const
 
         self._normalize_literal_constraints(base_dict)
+
+    @staticmethod
+    def _number_constraint_value(value: Any) -> float | None:
+        if value is None or isinstance(value, bool):
+            return None
+        with suppress(TypeError, ValueError):
+            return float(value)
+        return None
+
+    @classmethod
+    def _get_effective_numeric_bound(
+        cls,
+        schema_dict: dict[str, Any],
+        inclusive_key: str,
+        exclusive_key: str,
+        *,
+        lower: bool,
+    ) -> tuple[float, bool] | None:
+        inclusive_value = cls._number_constraint_value(schema_dict.get(inclusive_key))
+        exclusive_value = cls._number_constraint_value(schema_dict.get(exclusive_key))
+        if inclusive_value is None:
+            return (exclusive_value, True) if exclusive_value is not None else None
+        if exclusive_value is None:
+            return (inclusive_value, False)
+        if inclusive_value == exclusive_value:
+            return (inclusive_value, True)
+        if lower:
+            return (exclusive_value, True) if exclusive_value > inclusive_value else (inclusive_value, False)
+        return (exclusive_value, True) if exclusive_value < inclusive_value else (inclusive_value, False)
+
+    @classmethod
+    def _validate_allof_numeric_bounds(cls, schema_dict: dict[Any, Any]) -> None:
+        lower_bound = cls._get_effective_numeric_bound(schema_dict, "minimum", "exclusiveMinimum", lower=True)
+        upper_bound = cls._get_effective_numeric_bound(schema_dict, "maximum", "exclusiveMaximum", lower=False)
+        if lower_bound is None or upper_bound is None:
+            return
+        lower_value, lower_exclusive = lower_bound
+        upper_value, upper_exclusive = upper_bound
+        if lower_value > upper_value or (lower_value == upper_value and (lower_exclusive or upper_exclusive)):
+            cls._raise_allof_constraint_conflict()
+
+    @classmethod
+    def _validate_allof_count_bounds(cls, schema_dict: dict[Any, Any], min_key: str, max_key: str) -> None:
+        min_value = cls._number_constraint_value(schema_dict.get(min_key))
+        max_value = cls._number_constraint_value(schema_dict.get(max_key))
+        if min_value is not None and max_value is not None and min_value > max_value:
+            cls._raise_allof_constraint_conflict()
+
+    @classmethod
+    def _validate_allof_intersected_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        cls._validate_allof_numeric_bounds(schema_dict)
+        for min_key, max_key in (
+            ("minLength", "maxLength"),
+            ("minItems", "maxItems"),
+            ("minProperties", "maxProperties"),
+        ):
+            cls._validate_allof_count_bounds(schema_dict, min_key, max_key)
 
     @staticmethod
     def _type_values(type_value: str | list[str] | None) -> set[str] | None:
@@ -2416,6 +2479,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
 
         self._merge_primitive_literal_constraints(base_dict, items)
+        JsonSchemaParser._validate_allof_intersected_constraints(base_dict)
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
     def _merge_primitive_schemas_for_allof(self, items: list[JsonSchemaObject]) -> JsonSchemaObject | None:
