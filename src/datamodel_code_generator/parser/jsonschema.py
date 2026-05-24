@@ -1132,7 +1132,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         min_contains = obj.extras.get("minContains")
         max_contains = obj.extras.get("maxContains")
-        min_items = min_contains if isinstance(min_contains, int) and not isinstance(min_contains, bool) else None
+        min_items = (
+            min_contains
+            if isinstance(min_contains, int) and not isinstance(min_contains, bool) and min_contains > 0
+            else 1
+            if "minContains" not in obj.extras
+            else None
+        )
         max_items = max_contains if isinstance(max_contains, int) and not isinstance(max_contains, bool) else None
         return min_items, max_items
 
