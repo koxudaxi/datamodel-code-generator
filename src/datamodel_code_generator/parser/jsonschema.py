@@ -2074,6 +2074,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         raise SchemaParseError(message=message)
 
     @staticmethod
+    def _raise_object_constraint_conflict() -> None:
+        message = "object constraints have no common values"
+        raise SchemaParseError(message=message)
+
+    @staticmethod
     def _json_schema_values_equal(left: Any, right: Any) -> bool:  # noqa: PLR0911
         """Return JSON Schema data-model equality for enum intersection."""
         if left is None or right is None:
@@ -2173,7 +2178,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._raise_allof_literal_conflict()
 
     @classmethod
-    def _normalize_raw_schema_literal_constraints(
+    def _normalize_raw_schema_literal_constraints(  # noqa: PLR0912
         cls,
         raw: YamlValue,
         *,
@@ -2185,6 +2190,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         normalized = dict(raw)
         try:
             cls._normalize_literal_constraints(normalized)
+            cls._validate_raw_object_constraints(normalized)
         except SchemaParseError:
             if false_on_unsatisfiable:
                 return False
@@ -2240,11 +2246,109 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             value = normalized.get(key)
             if isinstance(value, dict):
                 normalized[key] = {
-                    child_key: cls._normalize_raw_schema_literal_constraints(child_value)
+                    child_key: cls._normalize_raw_schema_literal_constraints(
+                        child_value,
+                        false_on_unsatisfiable=True,
+                    )
                     for child_key, child_value in value.items()
                 }
 
+        try:
+            cls._validate_raw_object_constraints(normalized)
+        except SchemaParseError:
+            if false_on_unsatisfiable:
+                return False
+            raise
+
         return normalized
+
+    @classmethod
+    def _validate_raw_object_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object":
+            return
+        required = schema_dict.get("required")
+        if not isinstance(required, list):
+            return
+        required_names = {name for name in required if isinstance(name, str)}
+        if not required_names:
+            return
+
+        max_properties = cls._number_constraint_value(schema_dict.get("maxProperties"))
+        if max_properties is not None and len(required_names) > max_properties:
+            cls._raise_object_constraint_conflict()
+
+        property_names = schema_dict.get("propertyNames")
+        if cls._raw_property_names_forbids_all_names(property_names):
+            cls._raise_object_constraint_conflict()
+        if any(not cls._raw_property_name_accepts_name(property_names, name) for name in required_names):
+            cls._raise_object_constraint_conflict()
+
+        properties = schema_dict.get("properties")
+        declared_names = set(properties) if isinstance(properties, dict) else set()
+        if isinstance(properties, dict) and any(properties.get(name) is False for name in required_names):
+            cls._raise_object_constraint_conflict()
+
+        additional_properties = schema_dict.get("additionalProperties")
+        pattern_properties = schema_dict.get("patternProperties")
+        if (
+            additional_properties is False
+            and not required_names <= declared_names
+            and (
+                not isinstance(pattern_properties, dict)
+                or all(pattern_schema is False for pattern_schema in pattern_properties.values())
+            )
+        ):
+            cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _raw_property_names_forbids_all_names(cls, property_names: Any) -> bool:
+        if property_names is False:
+            return True
+        if not isinstance(property_names, dict):
+            return False
+        if not cls._raw_type_accepts_string(property_names.get("type")):
+            return True
+        enum_values = property_names.get("enum")
+        if isinstance(enum_values, list) and not any(isinstance(value, str) for value in enum_values):
+            return True
+        const_value = property_names.get("const")
+        if "const" in property_names and not isinstance(const_value, str):
+            return True
+        min_length = cls._number_constraint_value(property_names.get("minLength"))
+        max_length = cls._number_constraint_value(property_names.get("maxLength"))
+        return min_length is not None and max_length is not None and min_length > max_length
+
+    @classmethod
+    def _raw_property_name_accepts_name(cls, property_names: Any, name: str) -> bool:
+        if property_names in {None, True}:
+            return True
+        if property_names is False or not isinstance(property_names, dict):
+            return False
+        type_value = property_names.get("type")
+        if not cls._raw_type_accepts_string(type_value):
+            return False
+        enum_values = property_names.get("enum")
+        if isinstance(enum_values, list) and not any(
+            cls._json_schema_values_equal(name, enum_value) for enum_value in enum_values
+        ):
+            return False
+        if "const" in property_names and not cls._json_schema_values_equal(name, property_names["const"]):
+            return False
+        min_length = cls._number_constraint_value(property_names.get("minLength"))
+        max_length = cls._number_constraint_value(property_names.get("maxLength"))
+        return not (
+            (min_length is not None and len(name) < min_length) or (max_length is not None and len(name) > max_length)
+        )
+
+    @staticmethod
+    def _raw_type_accepts_string(type_value: Any) -> bool:
+        if type_value is None:
+            return True
+        if isinstance(type_value, str):
+            return type_value == "string"
+        if isinstance(type_value, list):
+            return "string" in type_value
+        return False
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]

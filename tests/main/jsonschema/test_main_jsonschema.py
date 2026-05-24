@@ -3915,6 +3915,29 @@ def test_main_jsonschema_anyof_type_literal_intersection(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_anyof_object_constraint_intersection(output_file: Path) -> None:
+    """Test unsatisfiable anyOf object constraint branches are skipped."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_object_constraint_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_object_constraint_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_object_constraint_intersection",
+        model_name="AnyOfObjectConstraintIntersection",
+        valid_json='{"kind":"ok"}',
+        invalid_json='{"kind":"bad"}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("root", "kind"),
+        expected_attribute_value="ok",
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -3986,7 +4009,12 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         ),
         pytest.param({"title": "Payload", "allOf": [{"allOf": [False]}]}, id="nested-allof-direct-false"),
         pytest.param(
-            {"title": "Payload", "type": "object", "properties": {"value": {"allOf": [False]}}},
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": {"allOf": [False]}},
+                "required": ["value"],
+            },
             id="property-allof-direct-false",
         ),
         pytest.param(
@@ -4001,6 +4029,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-enum-disjoint",
         ),
@@ -4016,6 +4045,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-const-enum-disjoint",
         ),
@@ -4031,6 +4061,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-const-bool-number-disjoint",
         ),
@@ -4046,6 +4077,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-type-disjoint",
         ),
@@ -4061,6 +4093,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-type-enum-disjoint",
         ),
@@ -4076,6 +4109,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-type-const-disjoint",
         ),
@@ -4091,6 +4125,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-min-max-disjoint",
         ),
@@ -4106,6 +4141,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-inclusive-exclusive-bound-disjoint",
         ),
@@ -4121,6 +4157,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-length-bound-disjoint",
         ),
@@ -4136,6 +4173,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-enum-minimum-disjoint",
         ),
@@ -4151,6 +4189,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-const-minimum-disjoint",
         ),
@@ -4166,6 +4205,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                         ]
                     }
                 },
+                "required": ["value"],
             },
             id="property-allof-enum-length-disjoint",
         ),
@@ -4174,6 +4214,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "title": "Payload",
                 "type": "object",
                 "properties": {"value": {"type": "integer", "enum": [1.2, True]}},
+                "required": ["value"],
             },
             id="property-type-enum-disjoint",
         ),
@@ -4182,6 +4223,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "title": "Payload",
                 "type": "object",
                 "properties": {"value": {"type": "boolean", "const": 1}},
+                "required": ["value"],
             },
             id="property-type-const-disjoint",
         ),
@@ -4190,6 +4232,7 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "title": "Payload",
                 "type": "object",
                 "properties": {"value": {"type": "integer", "enum": [3], "multipleOf": 2}},
+                "required": ["value"],
             },
             id="property-enum-multiple-of-disjoint",
         ),
@@ -4198,8 +4241,57 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "title": "Payload",
                 "type": "object",
                 "properties": {"value": {"enum": ["a"], "minLength": 2}},
+                "required": ["value"],
             },
             id="property-enum-length-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"value": False},
+                "required": ["value"],
+            },
+            id="object-required-false-property",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["missing"],
+            },
+            id="object-required-closed-missing-property",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": False,
+                "required": ["value"],
+                "additionalProperties": {"type": "string"},
+            },
+            id="object-required-property-names-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["allowed"]},
+                "required": ["blocked"],
+                "additionalProperties": {"type": "string"},
+            },
+            id="object-required-property-names-enum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"a": {"type": "string"}, "b": {"type": "string"}},
+                "required": ["a", "b"],
+                "maxProperties": 1,
+            },
+            id="object-required-max-properties-disjoint",
         ),
     ],
 )

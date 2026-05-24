@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnyOfObjectConstraintIntersection",
+  "anyOf": [
+    {
+      "type": "object",
+      "properties": {
+        "never": false
+      },
+      "required": ["never"]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "ok"
+        }
+      },
+      "required": ["kind"],
+      "additionalProperties": false
+    }
+  ]
+}
