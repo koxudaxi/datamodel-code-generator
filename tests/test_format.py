@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import sys
 import warnings
 from pathlib import Path
@@ -16,6 +17,7 @@ from datamodel_code_generator.format import (
     Formatter,
     PythonVersion,
     PythonVersionMin,
+    _format_import_node,
     _warn_default_formatters_deprecation,
     apply_builtin_formatter,
     resolve_use_type_checking_imports,
@@ -308,6 +310,46 @@ def test_format_code_builtin_formatter_sorts_type_checking_imports(
     )
 
 
+def test_apply_builtin_formatter_sorts_aliased_imports_like_isort() -> None:
+    """Test built-in formatter keeps isort-compatible groups for aliased imports."""
+    code = (
+        "from pydantic import Field\n"
+        "from pydantic import BaseModel as Model\n"
+        "from pydantic import ConfigDict\n"
+        "\n"
+        "class Pet(Model):\n"
+        "    name: str = Field(...)\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from pydantic import BaseModel as Model\n"
+        "from pydantic import ConfigDict\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Pet(Model):\n"
+        "    name: str = Field(...)\n"
+    )
+
+
+def test_format_import_node_formats_from_import_aliases() -> None:
+    """Test direct import node formatting for aliased from-imports."""
+    node = ast.parse("from pydantic import Field as PydanticField, BaseModel as Model\n").body[0]
+
+    assert isinstance(node, ast.ImportFrom)
+    assert _format_import_node(node, line_length=88) == (
+        2,
+        "from pydantic import BaseModel as Model\nfrom pydantic import Field as PydanticField",
+    )
+
+
+def test_apply_builtin_formatter_adds_blank_after_module_docstring() -> None:
+    """Test built-in formatter keeps a blank line between module docstrings and imports."""
+    code = '"""Generated models."""\nimport sys\n\nclass Pet:\n    pass\n'
+
+    assert apply_builtin_formatter(code) == '"""Generated models."""\n\nimport sys\n\n\nclass Pet:\n    pass\n'
+
+
 def test_format_code_builtin_formatter_wraps_generated_model_statements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -462,7 +504,7 @@ def test_apply_builtin_formatter_matches_black_isort_for_normalized_expected_fil
 
         checked_files += 1
         if apply_builtin_formatter(code) != black_isort_code:
-            mismatches.append(relative_path)
+            mismatches.append(relative_path)  # pragma: no cover
 
     assert checked_files > 1000
     assert not mismatches
