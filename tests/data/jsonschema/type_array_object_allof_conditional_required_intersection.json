@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TypeArrayObjectAllofConditionalRequiredIntersection",
+  "type": ["object"],
+  "allOf": [
+    {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer"
+        }
+      },
+      "required": ["kind"]
+    },
+    {
+      "if": {
+        "required": ["kind"]
+      },
+      "then": {
+        "required": ["code"]
+      }
+    }
+  ]
+}

@@ -2671,7 +2671,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_dependent_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object":
+        if not cls._raw_type_is_object_only(schema_dict.get("type")):
             return
 
         required = schema_dict.get("required")
@@ -2709,7 +2709,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_allof_dependent_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object" or "allOf" not in schema_dict:
+        if not cls._raw_type_is_object_only(schema_dict.get("type")) or "allOf" not in schema_dict:
             return
 
         required = schema_dict.setdefault("required", [])
@@ -2755,7 +2755,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_allof_conditional_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object" or "allOf" not in schema_dict:
+        if not cls._raw_type_is_object_only(schema_dict.get("type")) or "allOf" not in schema_dict:
             return
 
         object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
@@ -3165,7 +3165,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _normalize_raw_known_property_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object":
+        if not cls._raw_type_is_object_only(schema_dict.get("type")):
             return
 
         required_names = cls._raw_required_names(schema_dict.get("required"))

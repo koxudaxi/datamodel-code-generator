@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TypeArrayObjectDependentRequiredIntersection",
+  "type": ["object"],
+  "properties": {
+    "credit_card": {
+      "type": "string"
+    },
+    "billing_address": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    }
+  },
+  "required": ["credit_card"],
+  "dependentRequired": {
+    "credit_card": ["billing_address"],
+    "billing_address": ["country"]
+  }
+}
