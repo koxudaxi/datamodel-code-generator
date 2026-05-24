@@ -7519,6 +7519,27 @@ def test_main_jsonschema_allof_items_array_intersection(output_file: Path) -> No
     )
 
 
+def test_main_jsonschema_allof_scoped_array_keywords(output_file: Path) -> None:
+    """Test array keywords keep same-schema-object scope while merging allOf."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_scoped_array_keywords.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_scoped_array_keywords.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_scoped_array_keywords",
+        model_name="AllofScopedArrayKeywords",
+        valid_json='{"tail":["ok",1],"matches":[{}]}',
+        invalid_json='{"tail":["ok",1],"matches":[]}',
+        expected_error_type="too_short",
+    )
+
+
 def test_main_jsonschema_allof_nested_value_schema_container_constraints(output_file: Path) -> None:
     """Test allOf nested anyOf/oneOf value schemas keep container constraints."""
     run_main_and_assert(

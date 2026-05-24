@@ -2011,7 +2011,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _deep_merge_allof_schema(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
         """Deep merge allOf schemas while intersecting shared constraints."""
         result = dict1.copy()
-        for key, value in dict2.items():
+        JsonSchemaParser._drop_ignored_array_dependent_keywords(result)
+        scoped_dict2 = dict2.copy()
+        JsonSchemaParser._drop_ignored_array_dependent_keywords(scoped_dict2)
+        for key, value in scoped_dict2.items():
             if key in result and self._merge_allof_shared_keyword(result, key, value):
                 continue
             result[key] = value
@@ -2908,7 +2911,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return right
 
         merged = dict(left)
-        for key, value in right.items():
+        cls._drop_ignored_array_dependent_keywords(merged)
+        scoped_right = dict(right)
+        cls._drop_ignored_array_dependent_keywords(scoped_right)
+        for key, value in scoped_right.items():
             if key in JsonSchemaObject.__metadata_only_fields__:
                 continue
             if key not in merged:
@@ -2953,6 +2959,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged[key] = list(dict.fromkeys([*merged[key], *value]))
         elif key == "additionalProperties" and isinstance(merged[key], bool) and isinstance(value, bool):
             merged[key] = merged[key] and value
+
+    @staticmethod
+    def _drop_ignored_array_dependent_keywords(schema_dict: dict[Any, Any]) -> None:
+        if not isinstance(schema_dict.get("items"), list):
+            schema_dict.pop("additionalItems", None)
+        if "contains" not in schema_dict:
+            schema_dict.pop("minContains", None)
+            schema_dict.pop("maxContains", None)
 
     @classmethod
     def _normalize_raw_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -4657,9 +4671,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if type_values is not None and not type_values <= {"array", "null"}:
             return False
 
-        item_dict = item.model_dump(exclude_unset=True, by_alias=True)
+        item_dict_keys = set(item.model_dump(exclude_unset=True, by_alias=True)) | set(item.extras)
         return bool(
-            set(item_dict)
+            item_dict_keys
             & {
                 "additionalItems",
                 "contains",

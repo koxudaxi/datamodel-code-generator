@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AllofScopedArrayKeywords",
+  "type": "object",
+  "properties": {
+    "tail": {
+      "type": "array",
+      "allOf": [
+        {
+          "items": [{ "type": "string" }],
+          "additionalItems": { "type": "number" }
+        },
+        { "additionalItems": false },
+        { "minItems": 2 }
+      ]
+    },
+    "matches": {
+      "type": "array",
+      "allOf": [{ "contains": true }, { "maxContains": 0 }, { "minItems": 1 }]
+    }
+  }
+}
