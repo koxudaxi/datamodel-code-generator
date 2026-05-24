@@ -207,6 +207,17 @@ DEFAULT_FORMATTERS = [Formatter.BLACK, Formatter.ISORT]
 DEFAULT_LINE_LENGTH = 88
 
 
+@lru_cache(maxsize=1)
+def _warn_default_formatters_deprecation() -> None:
+    warn(
+        "The default external formatters (black, isort) will become opt-in in a future version. "
+        "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
+        "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN].",
+        FutureWarning,
+        stacklevel=3,
+    )
+
+
 def _find_pyproject_toml(settings_path: Path) -> Path | None:
     for path in (settings_path, *settings_path.parents):
         pyproject_toml = path / "pyproject.toml"
@@ -517,13 +528,7 @@ class CodeFormatter:
     ) -> None:
         """Initialize code formatter with configuration for black, isort, ruff, and custom formatters."""
         if formatters is None:
-            warn(
-                "The default external formatters (black, isort) will become opt-in in a future version. "
-                "To keep the current behavior, specify formatters=[Formatter.BLACK, Formatter.ISORT]. "
-                "To prepare for dependency-free formatting, use formatters=[Formatter.BUILTIN].",
-                FutureWarning,
-                stacklevel=2,
-            )
+            _warn_default_formatters_deprecation()
             formatters = list(DEFAULT_FORMATTERS)
 
         if not settings_path:
