@@ -2789,7 +2789,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return json.dumps(prop_schema.model_dump(exclude_unset=True, by_alias=True), sort_keys=True, default=repr)
 
     def _is_root_model_schema(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR0911
-        """Check if schema represents a root model (primitive type with constraints).
+        """Check if schema represents a non-object root model with constraints.
 
         Based on parse_raw_obj() else branch conditions. Returns True when
         the schema would be processed by parse_root_type().
@@ -2818,11 +2818,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         This handler is for generating a root model from a root model reference.
         Object inheritance (with properties) is handled by existing _parse_all_of_item() path.
-        Only applies to named schema definitions, not inline properties.
         """
         for path_element in path:
             if SPECIAL_PATH_MARKER in path_element:
-                return None  # pragma: no cover
+                return None
 
         ref_items = [item for item in obj.allOf if isinstance(item, JsonSchemaObject) and item.ref]
 
@@ -3316,6 +3315,187 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return ref_data_type
 
+    def _is_propertyless_object_schema(
+        self,
+        schema: JsonSchemaObject,
+        visited_refs: frozenset[str] | None = None,
+    ) -> bool:
+        if schema.ref:
+            if visited_refs is None:
+                visited_refs = frozenset()
+            if schema.ref in visited_refs:
+                return False
+            return self._is_propertyless_object_schema(
+                self._load_ref_schema_object(schema.ref),
+                visited_refs | {schema.ref},
+            )
+        if schema.properties:
+            return False
+        return bool(
+            schema.type == "object"
+            or schema.propertyNames is not None
+            or schema.patternProperties
+            or schema.additionalProperties is not None
+            or schema.unevaluatedProperties is not None
+        )
+
+    def _object_schema_has_root_collection_constraint(
+        self,
+        schema: JsonSchemaObject,
+        visited_refs: frozenset[str] | None = None,
+    ) -> bool:
+        if schema.ref:
+            if visited_refs is None:
+                visited_refs = frozenset()
+            if schema.ref in visited_refs:
+                return False
+            return self._object_schema_has_root_collection_constraint(
+                self._load_ref_schema_object(schema.ref),
+                visited_refs | {schema.ref},
+            )
+        return bool(
+            schema.propertyNames is not None
+            or schema.patternProperties
+            or isinstance(schema.additionalProperties, JsonSchemaObject)
+            or schema.additionalProperties is False
+            or isinstance(schema.unevaluatedProperties, JsonSchemaObject)
+            or schema.unevaluatedProperties is False
+            or schema.minProperties is not None
+            or schema.maxProperties is not None
+            or self._object_needs_root_runtime_validator(schema)
+            or any(
+                isinstance(item, JsonSchemaObject)
+                and self._object_schema_has_root_collection_constraint(item, visited_refs)
+                for item in schema.allOf
+            )
+        )
+
+    def _allof_can_validate_as_root_object(self, obj: JsonSchemaObject) -> bool:
+        if not self._supports_root_json_schema_validators() or obj.properties:
+            return False
+        has_object_anchor = any(
+            isinstance(item, JsonSchemaObject) and self._is_propertyless_object_schema(item) for item in obj.allOf
+        )
+        has_collection_constraint = self._object_schema_has_root_collection_constraint(obj) or any(
+            isinstance(item, JsonSchemaObject) and self._object_schema_has_root_collection_constraint(item)
+            for item in obj.allOf
+        )
+        return has_object_anchor and has_collection_constraint
+
+    def _handle_allof_root_object_model(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType | None:
+        if not self._allof_can_validate_as_root_object(obj):
+            return None
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if not predicate or predicate == "True":
+            return None
+
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        field = self.get_object_field(
+            field_name=None,
+            field=self.SCHEMA_OBJECT_TYPE.model_validate({"type": "object"}),
+            required=True,
+            original_field_name=None,
+            field_type=self.data_type(
+                data_types=[
+                    self.data_type_manager.get_data_type(Types.any),
+                ],
+                is_dict=True,
+            ),
+            alias=None,
+        )
+        self._set_schema_metadata(reference.path, obj)
+        validators = self.extra_template_data[reference.path].setdefault("json_schema_validators", {})
+        validators["root_object"] = {"predicate": predicate}
+        self.set_schema_extensions(reference.path, obj)
+
+        data_model_root = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=reference,
+            fields=[field],
+            custom_base_class=self._resolve_base_class(reference.name, obj.custom_base_path),
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
+            keyword_only=self.keyword_only,
+            treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
+        )
+        self.generation_store.register_model(data_model_root)
+        return self.data_type(reference=reference)
+
+    def _handle_allof_root_array_model(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType | None:
+        if (
+            not self._supports_root_json_schema_validators()
+            or not obj.allOf
+            or not any(isinstance(item, JsonSchemaObject) and self._is_array_schema(item) for item in obj.allOf)
+        ):
+            return None
+        data_type = self._build_lightweight_type(obj)
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if data_type is None or not predicate or predicate == "True":
+            return None
+
+        reference = self.model_resolver.add(path, name, class_name=True, loaded=True)
+        field = self.data_model_field_type(
+            data_type=data_type,
+            default=obj.default,
+            required=not obj.has_default,
+            constraints={},
+            nullable=True if obj.nullable else None,
+            strip_default_none=self.strip_default_none,
+            extras=self.get_field_extras(obj),
+            use_annotated=self.use_annotated,
+            use_field_description=self.use_field_description,
+            use_field_description_example=self.use_field_description_example,
+            use_inline_field_description=self.use_inline_field_description,
+            original_name=None,
+            has_default=obj.has_default,
+        )
+        self._set_schema_metadata(reference.path, obj)
+        validators = self.extra_template_data[reference.path].setdefault("json_schema_validators", {})
+        validators["root_object"] = {"predicate": predicate}
+        self.set_schema_extensions(reference.path, obj)
+        data_model_root = self._create_data_model(
+            model_type=self.data_model_root_type,
+            reference=reference,
+            fields=[field],
+            custom_base_class=self._resolve_base_class(reference.name, obj.custom_base_path),
+            custom_template_dir=self.custom_template_dir,
+            extra_template_data=self.extra_template_data,
+            path=self.current_source_path,
+            description=obj.description if self.use_schema_description else None,
+            nullable=obj.type_has_null,
+            keyword_only=self.keyword_only,
+            treat_dot_as_module=self.treat_dot_as_module,
+            dataclass_arguments=self.dataclass_arguments,
+        )
+        self.generation_store.register_model(data_model_root)
+        return self.data_type(reference=reference)
+
+    def _handle_allof_root_collection_model(
+        self,
+        name: str,
+        obj: JsonSchemaObject,
+        path: list[str],
+    ) -> DataType | None:
+        return self._handle_allof_root_array_model(name, obj, path) or self._handle_allof_root_object_model(
+            name,
+            obj,
+            path,
+        )
+
     def parse_all_of(
         self,
         name: str,
@@ -3342,6 +3522,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 base_classes=[],
                 required=[],
             )
+
+        root_collection_result = self._handle_allof_root_collection_model(name, obj, path)
+        if root_collection_result is not None:
+            return root_collection_result
 
         root_model_result = self._handle_allof_root_model_with_constraints(name, obj, path)
         if root_model_result is not None:
@@ -4592,6 +4776,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
             validators["root_object"] = {"predicate": predicate}
 
+    def _is_array_schema(self, schema: JsonSchemaObject, visited_refs: frozenset[str] | None = None) -> bool:
+        if schema.ref:
+            if visited_refs is None:
+                visited_refs = frozenset()
+            if schema.ref in visited_refs:
+                return False
+            return self._is_array_schema(self._load_ref_schema_object(schema.ref), visited_refs | {schema.ref})
+        return bool(
+            schema.is_array
+            or any(
+                isinstance(item, JsonSchemaObject) and self._is_array_schema(item, visited_refs)
+                for item in schema.allOf
+            )
+        )
+
+    def _set_root_allof_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
+        if (
+            not obj.allOf
+            or not self._supports_root_json_schema_validators()
+            or not any(isinstance(item, JsonSchemaObject) and self._is_array_schema(item) for item in obj.allOf)
+        ):
+            return
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if predicate and predicate != "True":
+            validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+            validators["root_object"] = {"predicate": predicate}
+
     def _iter_dependent_schema_objects(
         self,
         extras: dict[str, Any],
@@ -5538,6 +5749,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if obj.is_array:
             self._set_root_array_model_validators(reference.path, obj)
         self._set_root_pattern_properties_model_validators(reference.path, obj)
+        self._set_root_allof_array_model_validators(reference.path, obj)
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}

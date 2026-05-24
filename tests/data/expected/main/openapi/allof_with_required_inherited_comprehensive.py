@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, RootModel, constr
+from pydantic import BaseModel, ConfigDict, RootModel, constr, model_validator
 
 
 class Status(Enum):
@@ -36,6 +36,71 @@ class AllofWithPattern(RootModel[str]):
 
 class AllofWithUnique(RootModel[list[str]]):
     root: list[str]
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_unique_key(value):
+            value = json_schema_runtime_value(value)
+            if isinstance(value, bool) or value is None or isinstance(value, str):
+                return (type(value).__name__, value)
+            if isinstance(value, (int, float)):
+                return ('number', value)
+            if isinstance(value, list):
+                return ('array', tuple(json_schema_unique_key(item) for item in value))
+            if isinstance(value, dict):
+                return (
+                    'object',
+                    tuple(
+                        sorted(
+                            (key, json_schema_unique_key(item))
+                            for key, item in value.items()
+                        )
+                    ),
+                )
+            return (type(value).__name__, value)
+
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            (
+                (isinstance(root_value, list))
+                and (
+                    (
+                        not isinstance(root_value, list)
+                        or all(
+                            (lambda extra_item: isinstance(extra_item, str))(extra_item)
+                            for extra_item in root_value
+                        )
+                    )
+                )
+            )
+            and (
+                (
+                    not isinstance(root_value, list)
+                    or len(root_value)
+                    == len(
+                        {
+                            json_schema_unique_key(unique_item)
+                            for unique_item in root_value
+                        }
+                    )
+                )
+            )
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class Level2(BaseModel):

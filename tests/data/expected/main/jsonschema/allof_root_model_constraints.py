@@ -72,8 +72,45 @@ class ConstraintWithProperties(BaseModel):
     extra: str | None = None
 
 
-class ConstraintWithItems(BaseModel):
-    pass
+class ConstraintWithItems(RootModel[StringDatatype]):
+    root: StringDatatype = Field(..., description='Constraint item has items.')
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            (
+                (isinstance(root_value, str))
+                and (
+                    isinstance(root_value, str)
+                    and re.search('^\\S(.*\\S)?$', root_value) is not None
+                )
+            )
+            and (
+                (
+                    not isinstance(root_value, list)
+                    or all(
+                        (lambda extra_item: isinstance(extra_item, str))(extra_item)
+                        for extra_item in root_value
+                    )
+                )
+            )
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class NumberIntegerCompatible(RootModel[conint(ge=0)]):
@@ -92,16 +129,73 @@ class ArrayDatatype(RootModel[list[str]]):
     root: list[str]
 
 
-class RefToArrayAllOf(BaseModel):
-    pass
+class RefToArrayAllOf(RootModel[ArrayDatatype]):
+    root: ArrayDatatype = Field(..., description='Ref to array - not a root model.')
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            (
+                (isinstance(root_value, list))
+                and (
+                    (
+                        not isinstance(root_value, list)
+                        or all(
+                            (lambda extra_item: isinstance(extra_item, str))(extra_item)
+                            for extra_item in root_value
+                        )
+                    )
+                )
+            )
+            and ((not isinstance(root_value, list) or len(root_value) >= 1))
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class ObjectNoPropsDatatype(BaseModel):
     pass
 
 
-class RefToObjectNoPropsAllOf(ObjectNoPropsDatatype):
-    pass
+class RefToObjectNoPropsAllOf(RootModel[dict[str, Any]]):
+    root: dict[str, Any]
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            (isinstance(root_value, dict))
+            and ((not isinstance(root_value, dict) or len(root_value) >= 1))
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class PatternPropsDatatype(
@@ -139,8 +233,44 @@ class PatternPropsDatatype(
         return self
 
 
-class RefToPatternPropsAllOf(BaseModel):
-    pass
+class RefToPatternPropsAllOf(RootModel[dict[str, Any]]):
+    root: dict[str, Any]
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(
+                    mode='python', by_alias=True, exclude_unset=True
+                )
+            if isinstance(value, (list, tuple)):
+                return [json_schema_runtime_value(item) for item in value]
+            if isinstance(value, dict):
+                return {
+                    key: json_schema_runtime_value(item) for key, item in value.items()
+                }
+            return value
+
+        root_value = json_schema_runtime_value(self.root)
+        if not (
+            (
+                (
+                    not isinstance(root_value, dict)
+                    or all(
+                        re.search('^S_', extra_key) is None
+                        or (
+                            lambda root_value_pattern_property_0: isinstance(
+                                root_value_pattern_property_0, str
+                            )
+                        )(extra_value)
+                        for extra_key, extra_value in root_value.items()
+                    )
+                )
+            )
+            and ((not isinstance(root_value, dict) or len(root_value) >= 1))
+        ):
+            raise ValueError('root object does not match schema')
+        return self
 
 
 class NestedAllOfDatatype(BaseModel):

@@ -6041,7 +6041,7 @@ def test_main_jsonschema_property_names_enum_integers(output_file: Path) -> None
 
 
 def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
-    """Test propertyNames in allOf with $ref."""
+    """Test root allOf object constraints from a propertyNames $ref."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "property_names_allof_ref.json",
         output_path=output_file,
@@ -6052,7 +6052,21 @@ def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
+    for invalid_json in [
+        "{}",
+        '{"A":"x"}',
+        '{"a":1}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="property_names_allof_ref",
+            model_name="Model",
+            valid_json='{"a":"x"}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
 
 
 def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
@@ -10401,7 +10415,22 @@ def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) 
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
     )
+    for valid_json, invalid_json in [
+        ('{"refarr":["x"]}', '{"refarr":[]}'),
+        ('{"refobjnoprops":{"a":1}}', '{"refobjnoprops":{}}'),
+        ('{"refpatternprops":{"S_a":"x"}}', '{"refpatternprops":{}}'),
+        ('{"refpatternprops":{"S_a":"x"}}', '{"refpatternprops":{"S_a":1}}'),
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="allof_root_model_constraints_merge_pydantic_v2",
+            model_name="Model",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
 
 
 @pytest.mark.benchmark
