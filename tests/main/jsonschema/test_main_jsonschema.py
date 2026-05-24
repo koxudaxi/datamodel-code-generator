@@ -4465,6 +4465,28 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "allOf": [
+                    {
+                        "properties": {"kind": {"const": "card"}},
+                        "required": ["kind"],
+                        "additionalProperties": False,
+                    },
+                    {
+                        "if": {
+                            "type": "object",
+                            "properties": {"kind": {"const": "card"}},
+                            "required": ["kind"],
+                        },
+                        "then": {"required": ["billing"]},
+                    },
+                ],
+            },
+            id="allof-conditional-then-closed-missing-property",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
                 "additionalProperties": False,
@@ -7660,6 +7682,40 @@ def test_main_jsonschema_allof_dependent_schema_intersection(output_file: Path) 
         invalid_json='{"schemaDependency":{"kind":"card","code":1},"requiredDependency":{"kind":"card"}}',
         expected_error_type="missing",
         expected_attribute_path=("requiredDependency", "code"),
+        expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_allof_conditional_schema_intersection(output_file: Path) -> None:
+    """Test allOf sibling constraints activate conditional then and else schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_conditional_schema_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_conditional_schema_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"cardPayment":{"kind":"card","billing":"ok"},"cashPayment":{"kind":"cash","cashCode":1}}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_conditional_schema_intersection",
+        model_name="AllofConditionalSchemaIntersection",
+        valid_json=valid_json,
+        invalid_json='{"cardPayment":{"kind":"card"},"cashPayment":{"kind":"cash","cashCode":1}}',
+        expected_error_type="missing",
+        expected_attribute_path=("cardPayment", "billing"),
+        expected_attribute_value="ok",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_conditional_schema_intersection",
+        model_name="AllofConditionalSchemaIntersection",
+        valid_json=valid_json,
+        invalid_json='{"cardPayment":{"kind":"card","billing":"ok"},"cashPayment":{"kind":"cash"}}',
+        expected_error_type="missing",
+        expected_attribute_path=("cashPayment", "cashCode"),
         expected_attribute_value=1,
     )
 

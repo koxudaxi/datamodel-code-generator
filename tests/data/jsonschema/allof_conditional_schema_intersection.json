@@ -1,0 +1,64 @@
+{
+  "title": "AllofConditionalSchemaIntersection",
+  "type": "object",
+  "properties": {
+    "cardPayment": {
+      "type": "object",
+      "allOf": [
+        {
+          "properties": {
+            "kind": { "const": "card" }
+          },
+          "required": ["kind"]
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "card" }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["billing"],
+            "properties": {
+              "billing": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      ]
+    },
+    "cashPayment": {
+      "type": "object",
+      "allOf": [
+        {
+          "properties": {
+            "kind": { "const": "cash" }
+          },
+          "required": ["kind"]
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "kind": { "const": "card" }
+            },
+            "required": ["kind"]
+          },
+          "else": {
+            "required": ["cashCode"],
+            "properties": {
+              "cashCode": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

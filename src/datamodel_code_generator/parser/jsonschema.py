@@ -2307,6 +2307,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
+            cls._normalize_raw_allof_conditional_constraints(normalized)
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
             cls._validate_raw_allof_object_member_constraints(normalized)
@@ -2649,6 +2650,65 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         required_names.add(required_name)
                         added = True
         return added
+
+    @classmethod
+    def _normalize_raw_allof_conditional_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object" or "allOf" not in schema_dict:
+            return
+
+        object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
+        evidence_schema = cls._raw_allof_object_evidence_schema(object_schemas)
+        active_schemas: list[Any] = []
+
+        for item in object_schemas:
+            if "if" not in item:
+                continue
+            conditional_schema = {
+                **evidence_schema,
+                "if": item.get("if"),
+                "then": item.get("then", True),
+                "else": item.get("else", True),
+            }
+            active_schema = cls._get_raw_active_conditional_schema(conditional_schema)
+            if active_schema is not None:
+                active_schemas.append(active_schema)
+
+        for active_schema in active_schemas:
+            if active_schema is True:
+                continue
+            if active_schema is False:
+                cls._raise_object_constraint_conflict()
+            if not isinstance(active_schema, dict):
+                continue
+            merged_schema = cls._merge_raw_schema_intersection(schema_dict, active_schema)
+            schema_dict.clear()
+            schema_dict.update(merged_schema)
+
+        if active_schemas:
+            cls._normalize_raw_allof_dependent_constraints(schema_dict)
+
+    @classmethod
+    def _raw_allof_object_evidence_schema(cls, object_schemas: Iterable[dict[Any, Any]]) -> dict[Any, Any]:
+        evidence_schema: dict[Any, Any] = {"type": "object"}
+        required_names = cls._raw_allof_required_names(object_schemas)
+        if required_names:
+            evidence_schema["required"] = sorted(required_names)
+
+        properties: dict[Any, Any] = {}
+        for item in object_schemas:
+            item_properties = item.get("properties")
+            if not isinstance(item_properties, dict):
+                continue
+            for property_name, property_schema in item_properties.items():
+                if isinstance(property_name, str):
+                    properties[property_name] = cls._merge_raw_schema_intersection(
+                        properties.get(property_name, True),
+                        property_schema,
+                    )
+
+        if properties:
+            evidence_schema["properties"] = properties
+        return evidence_schema
 
     @classmethod
     def _iter_raw_dependencies(cls, schema_dict: dict[Any, Any]) -> Iterator[tuple[str, Any]]:
