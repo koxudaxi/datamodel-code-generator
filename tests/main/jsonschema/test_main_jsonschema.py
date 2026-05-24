@@ -4770,19 +4770,54 @@ def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
         ],
         force_exec_validation=True,
     )
-    valid_json = '{"values":["a","b",1],"markers":["primary"],"choices":[1,"x"]}'
+    valid_json = (
+        '{"values":["a","b",1],"markers":["primary"],"choices":[1,"x"],"typedChoices":[3,"x"],"nonStrings":[1,"x"]}'
+    )
     for invalid_json in [
-        '{"values":["a",1],"markers":["primary"],"choices":[1]}',
-        '{"values":["a","b","c"],"markers":["primary"],"choices":[1]}',
-        '{"values":["a","b"],"markers":["secondary"],"choices":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1,2]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[true]}',
+        '{"values":["a",1],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
+        '{"values":["a","b","c"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["secondary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1,2],"typedChoices":[3],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[true],"typedChoices":[3],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":["3"],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3,5],"nonStrings":[1]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":["x"]}',
+        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1,false]}',
     ]:
         assert_generated_model_json_validation(
             output_file,
             module_name="array_contains_validators",
             model_name="ArrayContainsValidators",
             valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> None:
+    """Test RootModel validators for schema-valued contains constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_array_contains_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_array_contains_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        '["x", 1]',
+        '["x", 7, "y"]',
+        '["x", true]',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_array_contains_validators",
+            model_name="RootArrayContainsValidators",
+            valid_json='["x", 7, false]',
             invalid_json=invalid_json,
             expected_error_type="value_error",
         )

@@ -51,3 +51,13 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
 
     {%- endif %}
 {%- endif %}
+{%- if prepared_model_validators %}
+{% for v in prepared_model_validators %}
+
+    @model_validator(mode='after')
+    def {{ v.method_name }}(self):
+{%- for line in v.lines %}
+        {{ line }}
+{%- endfor %}
+{%- endfor %}
+{%- endif %}

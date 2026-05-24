@@ -3502,12 +3502,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return f"item == {value!r} and isinstance(item, (int, float)) and not isinstance(item, bool)"
         return f"item == {value!r}"
 
-    def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
-        if "const" in schema.extras:
-            return self._json_value_predicate(schema.extras["const"])
-        if schema.enum:
-            return " or ".join(f"({self._json_value_predicate(value)})" for value in schema.enum)
+    def _join_contains_predicates(self, predicates: list[str], operator: str) -> str:  # noqa: PLR6301
+        if "False" in predicates and operator == "and":
+            return "False"
+        if "True" in predicates and operator == "or":
+            return "True"
+        predicates = [
+            predicate
+            for predicate in predicates
+            if not ((predicate == "True" and operator == "and") or (predicate == "False" and operator == "or"))
+        ]
+        if not predicates:
+            return "True" if operator == "and" else "False"
+        if len(predicates) == 1:
+            return predicates[0]
+        return f" {operator} ".join(f"({predicate})" for predicate in predicates)
 
+    def _one_of_contains_predicate(self, predicates: list[str]) -> str:  # noqa: PLR6301
+        predicates = [predicate for predicate in predicates if predicate != "False"]
+        if not predicates:
+            return "False"
+        if len(predicates) == 1:
+            return predicates[0]
+        return f"sum(1 for matched in ({', '.join(predicates)}) if matched) == 1"
+
+    def _contains_predicate_from_value(self, schema: JsonSchemaObject | bool) -> str | None:  # noqa: FBT001
+        if schema is True:
+            return "True"
+        if schema is False:
+            return "False"
+        return self._contains_predicate_from_schema(schema)
+
+    def _contains_combined_predicate(
+        self,
+        schemas: list[JsonSchemaObject | bool],
+        operator: str,
+    ) -> str | None:
+        predicates = [predicate for schema in schemas if (predicate := self._contains_predicate_from_value(schema))]
+        if not predicates:
+            return None
+        if operator == "oneOf":
+            return self._one_of_contains_predicate(predicates)
+        return self._join_contains_predicates(predicates, "and" if operator == "allOf" else "or")
+
+    def _contains_type_predicate(self, schema: JsonSchemaObject) -> str | None:
         schema_types = schema.type if isinstance(schema.type, list) else [schema.type]
         predicates: list[str] = []
         for schema_type in schema_types:
@@ -3525,7 +3563,25 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 predicates.append("isinstance(item, list)")
             elif schema_type == "object":
                 predicates.append("isinstance(item, dict)")
-        return " or ".join(predicates) or None
+        return self._join_contains_predicates(predicates, "or") if predicates else None
+
+    def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
+        predicates: list[str] = []
+        if "const" in schema.extras:
+            predicates.append(self._json_value_predicate(schema.extras["const"]))
+        if schema.enum:
+            predicates.append(
+                self._join_contains_predicates([self._json_value_predicate(value) for value in schema.enum], "or")
+            )
+        if type_predicate := self._contains_type_predicate(schema):
+            predicates.append(type_predicate)
+        if schema.anyOf and (predicate := self._contains_combined_predicate(schema.anyOf, "anyOf")):
+            predicates.append(predicate)
+        if schema.oneOf and (predicate := self._contains_combined_predicate(schema.oneOf, "oneOf")):
+            predicates.append(predicate)
+        if schema.allOf and (predicate := self._contains_combined_predicate(schema.allOf, "allOf")):
+            predicates.append(predicate)
+        return self._join_contains_predicates(predicates, "and") if predicates else None
 
     def _get_array_contains_validator(self, field_name: str, field: JsonSchemaObject) -> dict[str, Any] | None:
         contains = field.extras.get("contains")
@@ -3564,6 +3620,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if field_name and (validator := self._get_array_contains_validator(field_name, field_schema)):
                 validators.append(validator)
         return validators
+
+    def _set_root_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
+        validator = self._get_array_contains_validator("root", obj)
+        if validator:
+            self.extra_template_data[path]["json_schema_validators"] = {"array_contains": [validator]}
 
     def _set_object_model_validators(
         self,
@@ -4199,6 +4260,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
+        self._set_root_array_model_validators(reference.path, obj)
         field = self.parse_array_fields(original_name or name, obj, [*path, name])
 
         if any(d.reference == reference for d in field.data_type.all_data_types if d.reference):
@@ -4337,6 +4399,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             reference = self.model_resolver.add(path, name, loaded=True, class_name=True)
         self._set_schema_metadata(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
+        if obj.is_array:
+            self._set_root_array_model_validators(reference.path, obj)
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}

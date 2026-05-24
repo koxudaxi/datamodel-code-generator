@@ -13,6 +13,8 @@ class ArrayContainsValidators(BaseModel):
     values: list[Any]
     markers: list[Any]
     choices: list[Any]
+    typedChoices: list[Any] | None = None
+    nonStrings: list[Any] | None = None
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
@@ -43,4 +45,42 @@ class ArrayContainsValidators(BaseModel):
                 )
             if choices_match_count > 1:
                 raise ValueError('choices' + ' must contain at most 1 matching item(s)')
+
+        if self.typedChoices is not None:
+            typedChoices_match_count = sum(
+                1
+                for item in self.typedChoices
+                if (isinstance(item, int) and not isinstance(item, bool))
+                and (
+                    (item == 3 and isinstance(item, int) and not isinstance(item, bool))
+                    or (
+                        item == 5
+                        and isinstance(item, int)
+                        and not isinstance(item, bool)
+                    )
+                )
+            )
+            if typedChoices_match_count < 1:
+                raise ValueError(
+                    'typedChoices' + ' must contain at least 1 matching item(s)'
+                )
+            if typedChoices_match_count > 1:
+                raise ValueError(
+                    'typedChoices' + ' must contain at most 1 matching item(s)'
+                )
+
+        if self.nonStrings is not None:
+            nonStrings_match_count = sum(
+                1
+                for item in self.nonStrings
+                if sum(1 for matched in (True, isinstance(item, str)) if matched) == 1
+            )
+            if nonStrings_match_count < 1:
+                raise ValueError(
+                    'nonStrings' + ' must contain at least 1 matching item(s)'
+                )
+            if nonStrings_match_count > 1:
+                raise ValueError(
+                    'nonStrings' + ' must contain at most 1 matching item(s)'
+                )
         return self

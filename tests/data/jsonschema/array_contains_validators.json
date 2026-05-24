@@ -28,6 +28,36 @@
         "enum": [1, 2]
       },
       "maxContains": 1
+    },
+    "typedChoices": {
+      "type": "array",
+      "items": {},
+      "contains": {
+        "allOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "enum": [3, 5]
+          }
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
+    },
+    "nonStrings": {
+      "type": "array",
+      "items": {},
+      "contains": {
+        "oneOf": [
+          true,
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "minContains": 1,
+      "maxContains": 1
     }
   }
 }

@@ -476,6 +476,9 @@ class BaseModel(BaseModelBase):
 
     def _process_json_schema_validators(self) -> None:
         """Process JSON Schema object validators for constraints that need model context."""
+        if self.IS_ALIAS:
+            return
+
         validators = self.extra_template_data.get("json_schema_validators")
         if not isinstance(validators, dict):
             return
