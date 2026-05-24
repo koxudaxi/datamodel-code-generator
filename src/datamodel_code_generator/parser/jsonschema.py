@@ -3937,6 +3937,49 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             *self._schema_conditional_predicates(schema, variable_name),
         ]
 
+    def _schema_array_contains_count(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
+        contains = schema.extras.get("contains")
+        if contains is None:
+            return None
+
+        contains_predicate: str | None
+        if contains is True or contains == {}:
+            contains_predicate = "True"
+        elif contains is False:
+            contains_predicate = "False"
+        else:
+            contains_predicate = self._schema_runtime_predicate_from_raw(
+                contains,
+                "extra_item",
+                empty_schema_predicate="True",
+            )
+        if contains_predicate == "True":
+            return f"len({variable_name})"
+        if contains_predicate == "False":
+            return "0"
+        if not contains_predicate:
+            return None
+        return (
+            f"sum(1 for contains_item in {variable_name} if (lambda extra_item: {contains_predicate})(contains_item))"
+        )
+
+    def _schema_array_contains_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        count = self._schema_array_contains_count(schema, variable_name)
+        if count is None:
+            return []
+
+        predicates: list[str] = []
+        raw_min_contains = schema.extras.get("minContains", 1)
+        min_contains = (
+            raw_min_contains if isinstance(raw_min_contains, int) and not isinstance(raw_min_contains, bool) else 1
+        )
+        predicates.append(f"(not isinstance({variable_name}, list) or {count} >= {min_contains})")
+
+        raw_max_contains = schema.extras.get("maxContains")
+        if isinstance(raw_max_contains, int) and not isinstance(raw_max_contains, bool):
+            predicates.append(f"(not isinstance({variable_name}, list) or {count} <= {raw_max_contains})")
+        return predicates
+
     def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
         item_schemas = schema.prefixItems if schema.prefixItems is not None else schema.items
@@ -3974,6 +4017,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
         elif schema.items is False:
             predicates.append(f"(not isinstance({variable_name}, list) or not {variable_name})")
+        predicates.extend(self._schema_array_contains_predicates(schema, variable_name))
         return predicates
 
     def _schema_runtime_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:

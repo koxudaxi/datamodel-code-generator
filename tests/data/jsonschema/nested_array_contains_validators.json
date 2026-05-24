@@ -1,0 +1,63 @@
+{
+  "title": "nested array contains validators",
+  "type": "object",
+  "properties": {
+    "trigger": {
+      "type": "boolean"
+    },
+    "matrix": {
+      "type": "array"
+    }
+  },
+  "dependentSchemas": {
+    "trigger": {
+      "required": [
+        "matrix"
+      ],
+      "properties": {
+        "matrix": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "contains": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 5
+                },
+                {
+                  "type": "string",
+                  "pattern": "^hit"
+                }
+              ]
+            },
+            "minContains": 1,
+            "maxContains": 2
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": {
+    "type": "array",
+    "contains": {
+      "type": "object",
+      "required": [
+        "kind",
+        "score"
+      ],
+      "properties": {
+        "kind": {
+          "const": "hit"
+        },
+        "score": {
+          "type": "integer",
+          "minimum": 10
+        }
+      },
+      "additionalProperties": false
+    },
+    "minContains": 2,
+    "maxContains": 2
+  }
+}
