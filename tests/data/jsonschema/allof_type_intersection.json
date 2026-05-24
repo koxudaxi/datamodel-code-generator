@@ -1,0 +1,50 @@
+{
+  "title": "AllOfTypeIntersection",
+  "type": "object",
+  "properties": {
+    "intNumber": {
+      "allOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "integer"
+        }
+      ]
+    },
+    "nullableString": {
+      "allOf": [
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "listValue": {
+      "allOf": [
+        {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        {
+          "type": [
+            "integer",
+            "number"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "intNumber",
+    "nullableString",
+    "listValue"
+  ]
+}

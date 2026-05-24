@@ -2048,6 +2048,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         raise SchemaParseError(message=message)
 
     @staticmethod
+    def _raise_allof_type_conflict() -> None:
+        message = "allOf type constraints have no common values"
+        raise SchemaParseError(message=message)
+
+    @staticmethod
     def _json_schema_values_equal(left: Any, right: Any) -> bool:  # noqa: PLR0911
         """Return JSON Schema data-model equality for enum intersection."""
         if left is None or right is None:
@@ -2118,6 +2123,45 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             base_dict["const"] = merged_const
 
         self._normalize_literal_constraints(base_dict)
+
+    @staticmethod
+    def _type_values(type_value: str | list[str] | None) -> set[str] | None:
+        if type_value is None:
+            return None
+        if isinstance(type_value, str):
+            return {type_value}
+        return set(type_value)
+
+    @staticmethod
+    def _simplify_type_values(types: set[str]) -> set[str]:
+        if "number" in types:
+            return types - {"integer"}
+        return types
+
+    @classmethod
+    def _intersect_type_values(cls, left: set[str], right: set[str]) -> set[str]:
+        intersections: set[str] = set()
+        for left_type in left:
+            for right_type in right:
+                if left_type == right_type:
+                    intersections.add(left_type)
+                elif {left_type, right_type} == {"integer", "number"}:
+                    intersections.add("integer")
+        return cls._simplify_type_values(intersections)
+
+    @classmethod
+    def _merge_allof_type_constraints(cls, items: list[JsonSchemaObject]) -> str | list[str] | None:
+        merged_types: set[str] | None = None
+        for item in items:
+            item_types = cls._type_values(item.type)
+            if item_types is None:
+                continue
+            merged_types = item_types if merged_types is None else cls._intersect_type_values(merged_types, item_types)
+            if not merged_types:
+                cls._raise_allof_type_conflict()
+        if merged_types is None:
+            return None
+        return next(iter(merged_types)) if len(merged_types) == 1 else sorted(merged_types)
 
     def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
@@ -2298,6 +2342,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 base_dict = item.model_dump(exclude_unset=True, by_alias=True)
                 break
 
+        merged_type = JsonSchemaParser._merge_allof_type_constraints(items)
+        if merged_type is not None:
+            base_dict["type"] = merged_type
+
         for item in items:
             for field in JsonSchemaObject.__constraint_fields__:
                 value = getattr(item, field, None)
@@ -2417,10 +2465,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         for item in allof_effective_items:
             if item.ref:
                 ref_items.append(item)
-            elif item.type and item.type != "object" and not isinstance(item.type, list):
-                primitive_items.append(item)
             elif item.properties or item.additionalProperties or item.type == "object":
                 object_items.append(item)
+            elif item.type:
+                primitive_items.append(item)
             elif item.allOf or item.anyOf or item.oneOf:
                 nested_type = self._build_lightweight_type(item, depth + 1, visited, max_depth, max_union_elements)
                 if nested_type is None:  # pragma: no cover
