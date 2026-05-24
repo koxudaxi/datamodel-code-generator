@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from datamodel_code_generator import Error, InputFileType, infer_input_type
+from datamodel_code_generator import Error, InputFileType, _is_xml_text, infer_input_type
 
 DATA_PATH: Path = Path(__file__).parent / "data"
 
@@ -92,3 +92,23 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
     for file in xmlschema_files:
         result = infer_input_type(file.read_text(encoding="utf-8"))
         assert result == InputFileType.XMLSchema, f"{file} was the wrong type!"
+
+
+def test_is_xml_text() -> None:
+    """Test XML-looking text detection for input type inference."""
+    assert _is_xml_text(" \n\t\ufeff<xs:schema />")
+    assert not _is_xml_text("")
+    assert not _is_xml_text(" \n\t\ufeff")
+    assert not _is_xml_text("name: value")
+
+
+def test_infer_input_type_non_schema_xml() -> None:
+    """Test non-schema XML does not infer as XML Schema."""
+    with pytest.raises(
+        Error,
+        match=(
+            r"Can't infer input file type from the input data. "
+            r"Please specify the input file type explicitly with --input-file-type option."
+        ),
+    ):
+        infer_input_type("<root />")
