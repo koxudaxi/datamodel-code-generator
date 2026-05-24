@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllofTypeArrayObjectRequiredPropertyNamesConflict",
+  "type": ["object"],
+  "allOf": [
+    {
+      "properties": {
+        "blocked": {
+          "type": "string"
+        }
+      },
+      "required": ["blocked"]
+    },
+    {
+      "propertyNames": {
+        "enum": ["allowed"]
+      }
+    }
+  ]
+}

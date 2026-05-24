@@ -3571,7 +3571,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _validate_raw_object_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object":
+        if not cls._raw_type_is_object_only(schema_dict.get("type")):
             return
         required = schema_dict.get("required")
         required_names = {name for name in required if isinstance(name, str)} if isinstance(required, list) else set()
@@ -3608,7 +3608,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _validate_raw_allof_object_member_constraints(cls, schema_dict: dict[Any, Any]) -> None:
-        if schema_dict.get("type") != "object":
+        if not cls._raw_type_is_object_only(schema_dict.get("type")):
             return
 
         object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
@@ -4381,6 +4381,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(type_value, list):
             return "object" in type_value
         return False
+
+    @classmethod
+    def _raw_type_is_object_only(cls, type_value: Any) -> bool:
+        return cls._type_values(type_value) == {"object"}
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]

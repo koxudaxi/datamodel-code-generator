@@ -4038,6 +4038,28 @@ def test_main_jsonschema_property_names_oneof_false_count_conflict(output_file: 
     )
 
 
+def test_main_jsonschema_type_array_object_property_names_count_conflict(output_file: Path) -> None:
+    """Test type arrays containing only object still reject impossible object constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_object_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_type_array_object_required_property_names_conflict(output_file: Path) -> None:
+    """Test type arrays containing only object still reject required names forbidden by propertyNames."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "type_array_object_required_property_names_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_property_names_oneof_always_match_count_conflict(output_file: Path) -> None:
     """Test propertyNames oneOf branches that all names match reject every name."""
     run_main_and_assert(
@@ -4885,6 +4907,17 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": ["object"],
+                "allOf": [
+                    {"properties": {"blocked": {"type": "string"}}, "required": ["blocked"]},
+                    {"propertyNames": {"enum": ["allowed"]}},
+                ],
+            },
+            id="allof-type-array-object-property-names-required-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "allOf": [
                     {
@@ -5473,11 +5506,30 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": ["object"],
+                "propertyNames": {"enum": ["allowed"]},
+                "required": ["blocked"],
+                "additionalProperties": {"type": "string"},
+            },
+            id="type-array-object-required-property-names-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "propertyNames": {"enum": ["only"]},
                 "minProperties": 2,
             },
             id="object-property-names-enum-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": ["object"],
+                "propertyNames": {"enum": ["only"]},
+                "minProperties": 2,
+            },
+            id="type-array-object-property-names-enum-min-properties",
         ),
         pytest.param(
             {
@@ -8716,6 +8768,17 @@ def test_main_jsonschema_allof_property_names_not_anyof_always_match_count_confl
     """Test allOf propertyNames not anyOf branches that all names match reject every name."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_property_names_not_anyof_always_match_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_type_array_object_required_property_names_conflict(output_file: Path) -> None:
+    """Test allOf object member constraints apply to type arrays containing only object."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_type_array_object_required_property_names_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

@@ -793,6 +793,11 @@ def _dependency_required_names(dependency: Any) -> list[str]:
     return [name for name in required if isinstance(name, str)] if isinstance(required, list) else []
 
 
+def _required_names(schema: dict[str, Any]) -> set[str]:
+    required = schema.get("required")
+    return {name for name in required if isinstance(name, str)} if isinstance(required, list) else set()
+
+
 def _iter_dependencies(schema: dict[str, Any]) -> Iterator[tuple[str, Any]]:
     for key in ("dependentRequired", "dependentSchemas", "dependencies"):
         dependencies = schema.get(key)
@@ -1125,6 +1130,13 @@ def _has_unsatisfiable_property_count(value: Any) -> bool:
         min_properties = schema.get("minProperties")
         max_properties = schema.get("maxProperties")
         object_schemas = list(_iter_allof_object_schemas(schema))
+        required_names = {name for item in object_schemas for name in _required_names(item)}
+        if any(
+            not _property_name_accepts_name(item.get("propertyNames"), name)
+            for item in object_schemas
+            for name in required_names
+        ):
+            return True
         if any(_property_names_forbids_all_names(item.get("propertyNames")) for item in object_schemas):
             return isinstance(min_properties, int) and min_properties > 0
         property_name_values = _finite_allof_property_name_values(schema)
