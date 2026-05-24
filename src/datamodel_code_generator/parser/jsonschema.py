@@ -2664,17 +2664,25 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         required_names = cls._raw_required_names(schema_dict.get("required"))
         pattern_properties = schema_dict.get("patternProperties")
-        if not required_names and not isinstance(pattern_properties, dict):
+        property_names = schema_dict.get("propertyNames")
+        properties = schema_dict.get("properties")
+        additional_properties = schema_dict.get("additionalProperties")
+        if (
+            not required_names
+            and not isinstance(pattern_properties, dict)
+            and not (additional_properties is False and property_names is not None and isinstance(properties, dict))
+        ):
             return
 
-        properties = schema_dict.get("properties")
         if not isinstance(properties, dict):
             properties = {}
             schema_dict["properties"] = properties
 
+        if additional_properties is False:
+            cls._drop_raw_properties_rejected_by_property_names(properties, property_names, required_names)
+
         known_names = [name for name in properties if isinstance(name, str)]
         known_names.extend(name for name in required_names if name not in properties)
-        additional_properties = schema_dict.get("additionalProperties")
 
         for property_name in known_names:
             pattern_schema = (
@@ -2697,6 +2705,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     cls._raise_object_constraint_conflict()
                 continue
             properties[property_name] = merged_schema
+
+    @classmethod
+    def _drop_raw_properties_rejected_by_property_names(
+        cls,
+        properties: dict[Any, Any],
+        property_names: Any,
+        required_names: set[str],
+    ) -> None:
+        rejected_names = [
+            name
+            for name in properties
+            if isinstance(name, str) and not cls._raw_property_name_accepts_name(property_names, name)
+        ]
+        for name in rejected_names:
+            if name in required_names:
+                cls._raise_object_constraint_conflict()
+            properties.pop(name, None)
 
     @classmethod
     def _merge_raw_matching_pattern_properties(
@@ -3050,7 +3075,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _raw_property_name_accepts_name(cls, property_names: Any, name: str) -> bool:
-        if property_names in {None, True}:
+        if property_names is None or property_names is True:
             return True
         if property_names is False or not isinstance(property_names, dict):
             return False

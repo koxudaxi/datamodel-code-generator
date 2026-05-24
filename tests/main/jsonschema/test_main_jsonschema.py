@@ -4648,6 +4648,17 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "properties": {"blocked": {"type": "integer"}},
+                "required": ["blocked"],
+                "propertyNames": {"enum": ["allowed"]},
+                "additionalProperties": False,
+            },
+            id="object-required-property-names-declared-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "patternProperties": {"^allowed$": {"type": "string"}},
                 "required": ["blocked"],
                 "additionalProperties": False,
@@ -5647,6 +5658,29 @@ def test_main_jsonschema_property_names_pattern_properties_intersection(output_f
         valid_json='{"scores":{"x_ok":1}}',
         invalid_json='{"scores":{"y_ok":1}}',
         expected_error_type="string_pattern_mismatch",
+    )
+
+
+def test_main_jsonschema_property_names_known_properties(output_file: Path) -> None:
+    """Test propertyNames rejects incompatible declared properties in closed objects."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_known_properties.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_known_properties.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_known_properties",
+        model_name="PropertyNamesKnownProperties",
+        valid_json='{"allowed":"ok","alsoAllowed":1}',
+        invalid_json='{"allowed":"ok","blocked":1}',
+        expected_error_type="extra_forbidden",
+        expected_attribute_path=("alsoAllowed",),
+        expected_attribute_value=1,
     )
 
 
