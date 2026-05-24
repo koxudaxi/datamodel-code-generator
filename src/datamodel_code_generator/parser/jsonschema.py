@@ -2013,6 +2013,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         result = dict1.copy()
         for key, value in dict2.items():
             if key in result:
+                if key == "enum" and isinstance(result[key], list) and isinstance(value, list):
+                    result[key] = self._intersect_enum_values(result[key], value)
+                    if not result[key]:
+                        message = "allOf enum constraints have no common values"
+                        raise SchemaParseError(message=message)
+                    JsonSchemaParser._drop_enum_metadata(result)
+                    continue
                 allof_constraint_fields = JsonSchemaObject.__constraint_fields__ | {
                     "minProperties",
                     "maxProperties",
@@ -2028,6 +2035,45 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     continue
             result[key] = value
         return result
+
+    @staticmethod
+    def _json_schema_values_equal(left: Any, right: Any) -> bool:  # noqa: PLR0911
+        """Return JSON Schema data-model equality for enum intersection."""
+        if left is None or right is None:
+            return left is right
+        if isinstance(left, bool) or isinstance(right, bool):
+            return isinstance(left, bool) and isinstance(right, bool) and left == right
+        if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+            return left == right
+        if isinstance(left, str) or isinstance(right, str):
+            return isinstance(left, str) and isinstance(right, str) and left == right
+        if isinstance(left, list) and isinstance(right, list):
+            if len(left) != len(right):
+                return False
+            return all(
+                JsonSchemaParser._json_schema_values_equal(left_item, right[index])
+                for index, left_item in enumerate(left)
+            )
+        if isinstance(left, dict) and isinstance(right, dict):
+            return left.keys() == right.keys() and all(
+                JsonSchemaParser._json_schema_values_equal(left[key], right[key]) for key in left
+            )
+        return type(left) is type(right) and left == right
+
+    @classmethod
+    def _intersect_enum_values(cls, left: list[Any], right: list[Any]) -> list[Any]:
+        """Return enum values that satisfy both enum constraints."""
+        return [
+            left_value
+            for left_value in left
+            if any(cls._json_schema_values_equal(left_value, right_value) for right_value in right)
+        ]
+
+    @staticmethod
+    def _drop_enum_metadata(schema_dict: dict[Any, Any]) -> None:
+        """Drop enum metadata whose positions no longer match an intersected enum list."""
+        for key in ("x-enum-varnames", "x-enum-descriptions", "x-enumNames"):
+            schema_dict.pop(key, None)
 
     def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
@@ -2218,6 +2264,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         base_dict[field] = value
                     else:
                         base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
+
+        enum_values = [item.enum for item in items if item.enum]
+        if enum_values:
+            merged_enum = [*enum_values[0]]
+            for enum_value in enum_values[1:]:
+                merged_enum = self._intersect_enum_values(merged_enum, enum_value)
+            if not merged_enum:
+                message = "allOf enum constraints have no common values"
+                raise SchemaParseError(message=message)
+            base_dict["enum"] = merged_enum
+            JsonSchemaParser._drop_enum_metadata(base_dict)
 
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 

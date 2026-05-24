@@ -3943,6 +3943,21 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {"title": "Payload", "type": "object", "properties": {"value": {"allOf": [False]}}},
             id="property-allof-direct-false",
         ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "string", "enum": ["a"]},
+                            {"type": "string", "enum": ["b"]},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-enum-disjoint",
+        ),
     ],
 )
 def test_main_jsonschema_false_schema_errors(schema: dict[str, object], output_file: Path) -> None:
@@ -6228,6 +6243,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_property_value_schemas.json", "allof_property_value_schemas.py"),
         ("allof_ref_value_schemas.json", "allof_ref_value_schemas.py"),
         ("allof_nested_value_schemas.json", "allof_nested_value_schemas.py"),
+        ("allof_enum_intersection.json", "allof_enum_intersection.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(
@@ -6244,6 +6260,29 @@ def test_main_jsonschema_allof_value_schemas(
         expected_file=expected_file,
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
         force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_allof_enum_intersection(output_file: Path) -> None:
+    """Test allOf enum branches intersect allowed values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_enum_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_enum_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_enum_intersection",
+        model_name="AllOfEnumIntersection",
+        valid_json='{"value":"b"}',
+        invalid_json='{"value":"a"}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("value", "root"),
+        expected_attribute_value="b",
     )
 
 

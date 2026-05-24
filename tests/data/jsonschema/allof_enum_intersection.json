@@ -1,0 +1,27 @@
+{
+  "title": "AllOfEnumIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        {
+          "type": "string",
+          "enum": [
+            "a",
+            "b"
+          ]
+        },
+        {
+          "type": "string",
+          "enum": [
+            "b",
+            "c"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "value"
+  ]
+}
