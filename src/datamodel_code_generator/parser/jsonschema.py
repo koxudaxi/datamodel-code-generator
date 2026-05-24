@@ -3556,7 +3556,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schemas: list[JsonSchemaObject | bool],
         operator: str,
     ) -> str | None:
-        predicates = [predicate for schema in schemas if (predicate := self._contains_predicate_from_value(schema))]
+        return self._schema_combined_predicate(schemas, operator, "item")
+
+    def _schema_combined_predicate(
+        self,
+        schemas: list[JsonSchemaObject | bool],
+        operator: str,
+        variable_name: str,
+    ) -> str | None:
+        predicates = [
+            predicate
+            for schema in schemas
+            if (predicate := self._schema_value_predicate_from_value(schema, variable_name))
+        ]
         if not predicates:
             return None
         if operator == "oneOf":
@@ -3584,16 +3596,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return self._join_contains_predicates(predicates, "or") if predicates else None
 
     def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
-        predicates: list[str] = []
-        if value_predicate := self._schema_runtime_value_predicate(schema, "item"):
-            predicates.append(value_predicate)
-        if schema.anyOf and (predicate := self._contains_combined_predicate(schema.anyOf, "anyOf")):
-            predicates.append(predicate)
-        if schema.oneOf and (predicate := self._contains_combined_predicate(schema.oneOf, "oneOf")):
-            predicates.append(predicate)
-        if schema.allOf and (predicate := self._contains_combined_predicate(schema.allOf, "allOf")):
-            predicates.append(predicate)
-        return self._join_contains_predicates(predicates, "and") if predicates else None
+        return self._schema_runtime_value_predicate(schema, "item")
 
     def _schema_number_range_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
@@ -3692,6 +3695,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if schema.ref:
             schema = self._load_ref_schema_object(schema.ref)
         return self._schema_runtime_value_predicate(schema, variable_name)
+
+    def _schema_not_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
+        raw_not_schema = schema.extras.get("not")
+        if raw_not_schema is None:
+            return None
+        if raw_not_schema is True:
+            return "False"
+        if raw_not_schema is False:
+            return "True"
+        if not isinstance(raw_not_schema, dict):
+            return None
+        if not raw_not_schema:
+            return "False"
+        not_schema = self.SCHEMA_OBJECT_TYPE.model_validate(raw_not_schema)
+        predicate = self._schema_value_predicate_from_value(not_schema, variable_name)
+        return f"not ({predicate})" if predicate else None
 
     def _schema_object_size_and_name_predicates(
         self,
@@ -3884,6 +3903,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 self._schema_value_predicate(schema, variable_name),
                 *self._schema_object_value_predicates(schema, variable_name),
                 *self._schema_array_value_predicates(schema, variable_name),
+                self._schema_combined_predicate(schema.anyOf, "anyOf", variable_name) if schema.anyOf else None,
+                self._schema_combined_predicate(schema.oneOf, "oneOf", variable_name) if schema.oneOf else None,
+                self._schema_combined_predicate(schema.allOf, "allOf", variable_name) if schema.allOf else None,
+                self._schema_not_predicate(schema, variable_name),
             ]
             if predicate
         ]
@@ -3939,7 +3962,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return []
 
         predicate = self._schema_value_predicate_from_value(extra_value_schema, "extra_value")
-        return [{"predicate": predicate}] if predicate and predicate != "True" else []
+        if not predicate or predicate == "True":
+            return []
+        validator: dict[str, Any] = {"predicate": predicate}
+        if obj.patternProperties:
+            validator["ignored_patterns"] = list(obj.patternProperties)
+        return [validator]
 
     def _get_unmatched_property_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR6301
         if isinstance(obj.additionalProperties, JsonSchemaObject):

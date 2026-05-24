@@ -591,8 +591,19 @@ class BaseModel(BaseModelBase):
             predicate = validator.get("predicate")
             if not isinstance(predicate, str):
                 continue
+            ignored_patterns = validator.get("ignored_patterns")
             lines.extend([
                 "for extra_key, extra_value in extra_values.items():",
+            ])
+            if isinstance(ignored_patterns, list) and all(isinstance(pattern, str) for pattern in ignored_patterns):
+                pattern_checks = " or ".join(
+                    f"re.search({pattern!r}, extra_key) is not None" for pattern in ignored_patterns
+                )
+                lines.extend([
+                    f"    if {pattern_checks}:",
+                    "        continue",
+                ])
+            lines.extend([
                 f"    if not ({predicate}):",
                 "        raise ValueError(",
                 "            'additional property ' + extra_key + ' does not match schema'",

@@ -5068,6 +5068,40 @@ def test_main_jsonschema_object_context_alias_validators(output_file: Path) -> N
         )
 
 
+def test_main_jsonschema_runtime_composed_schema_validators(output_file: Path) -> None:
+    """Test runtime validators honor composed schemas in nested value predicates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "runtime_composed_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="runtime_composed_schema_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"gate":true,"values":[2,"v-ok"],"x-code":"x-ok","extra-code":"extra-ok","extra-count":100}'
+    for invalid_json in [
+        '{"gate":true,"values":[1],"x-code":"x-ok","extra-code":"extra-ok"}',
+        '{"gate":true,"values":["v-bad"],"x-code":"x-ok","extra-code":"extra-ok"}',
+        '{"gate":true,"values":[false],"x-code":"x-ok","extra-code":"extra-ok"}',
+        '{"gate":true,"values":[2],"x-code":0,"extra-code":"extra-ok"}',
+        '{"gate":true,"values":[2],"x-code":"bad","extra-code":"extra-ok"}',
+        '{"gate":true,"values":[2],"x-code":"x-ok","extra-code":"bad"}',
+        '{"gate":true,"values":[2],"x-code":"x-ok","extra-count":99}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="runtime_composed_schema_validators",
+            model_name="RuntimeComposedSchemaValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_object_boolean_context_validators(output_file: Path) -> None:
     """Test object-context validators honor empty and boolean schemas."""
     run_main_and_assert(
