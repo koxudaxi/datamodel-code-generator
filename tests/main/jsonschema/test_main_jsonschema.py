@@ -5394,6 +5394,40 @@ def test_main_jsonschema_nested_array_contains_validators(output_file: Path) -> 
         )
 
 
+def test_main_jsonschema_nested_array_unique_items_validators(output_file: Path) -> None:
+    """Test nested runtime array predicates honor uniqueItems."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nested_array_unique_items_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nested_array_unique_items_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1,2]],"extra":[true,1,"a",{"id":1}]}'
+    for invalid_json in [
+        '{"trigger":true,"groups":[[{"id":1},{"id":1}]],"direct":[[true,1]],"extra":[true,1,"a"]}',
+        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,true]],"extra":[true,1,"a"]}',
+        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[1,1]],"extra":[true,1,"a"]}',
+        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":["a","a"]}',
+        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":[{"id":1},{"id":1}]}',
+        '{"trigger":true,"groups":[[{"id":1,"x":1}]],"direct":[[true,1]],"extra":["a",1]}',
+        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":[{"id":1,"x":1}]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="nested_array_unique_items_validators",
+            model_name="NestedArrayUniqueItemsValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> None:
     """Test RootModel validators for schema-valued contains constraints."""
     run_main_and_assert(

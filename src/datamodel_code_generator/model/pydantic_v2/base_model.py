@@ -760,6 +760,52 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_array_unique_items_validator_lines(validator: dict[str, str]) -> list[str]:
+        field_name = validator.get("field")
+        predicate = validator.get("predicate")
+        if not isinstance(field_name, str) or not isinstance(predicate, str):
+            return []
+
+        return [
+            f"if self.{field_name} is not None and not ({predicate}):",
+            f"    raise ValueError({field_name!r} + ' does not match array schema')",
+        ]
+
+    def _get_array_unique_items_validators_lines(self, array_unique_items: Any) -> list[str]:
+        if not isinstance(array_unique_items, list):
+            return []
+
+        lines: list[str] = []
+        for validator in array_unique_items:
+            if not isinstance(validator, dict):
+                continue
+            validator_lines = self._get_array_unique_items_validator_lines(validator)
+            if not validator_lines:
+                continue
+            if lines:
+                lines.append("")
+            lines.extend(validator_lines)
+        return lines
+
+    @staticmethod
+    def _get_json_schema_unique_key_lines() -> list[str]:
+        return [
+            "def json_schema_unique_key(value):",
+            "    if isinstance(value, bool) or value is None or isinstance(value, str):",
+            "        return (type(value).__name__, value)",
+            "    if isinstance(value, (int, float)):",
+            "        return ('number', value)",
+            "    if isinstance(value, list):",
+            "        return ('array', tuple(json_schema_unique_key(item) for item in value))",
+            "    if isinstance(value, dict):",
+            "        return (",
+            "            'object',",
+            "            tuple(sorted((key, json_schema_unique_key(item)) for key, item in value.items())),",
+            "        )",
+            "    return (type(value).__name__, value)",
+        ]
+
+    @staticmethod
     def _extend_validator_lines(lines: list[str], new_lines: list[str]) -> None:
         if lines and new_lines:
             lines.append("")
@@ -816,9 +862,15 @@ class BaseModel(BaseModelBase):
             self._extend_validator_lines(lines, validator_lines)
         self._extend_validator_lines(lines, root_pattern_properties_lines)
         self._extend_validator_lines(lines, self._get_array_contains_validators_lines(validators.get("array_contains")))
+        self._extend_validator_lines(
+            lines, self._get_array_unique_items_validators_lines(validators.get("array_unique_items"))
+        )
 
         if not lines:
             return
+
+        if any("json_schema_unique_key(" in line for line in lines):
+            lines = [*self._get_json_schema_unique_key_lines(), "", *lines]
 
         lines.append("return self")
         self.extra_template_data["prepared_model_validators"] = [

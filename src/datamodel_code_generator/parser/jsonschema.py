@@ -3980,6 +3980,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             predicates.append(f"(not isinstance({variable_name}, list) or {count} <= {raw_max_contains})")
         return predicates
 
+    def _schema_array_unique_items_predicates(  # noqa: PLR6301
+        self, schema: JsonSchemaObject, variable_name: str
+    ) -> list[str]:
+        if schema.uniqueItems is not True:
+            return []
+        return [
+            (
+                f"(not isinstance({variable_name}, list) "
+                f"or len({variable_name}) "
+                f"== len({{json_schema_unique_key(unique_item) for unique_item in {variable_name}}}))"
+            )
+        ]
+
     def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
         item_schemas = schema.prefixItems if schema.prefixItems is not None else schema.items
@@ -4018,6 +4031,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         elif schema.items is False:
             predicates.append(f"(not isinstance({variable_name}, list) or not {variable_name})")
         predicates.extend(self._schema_array_contains_predicates(schema, variable_name))
+        predicates.extend(self._schema_array_unique_items_predicates(schema, variable_name))
         return predicates
 
     def _schema_runtime_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
@@ -4060,6 +4074,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "max": max_contains if isinstance(max_contains, int) and not isinstance(max_contains, bool) else None,
         }
 
+    def _schema_needs_array_unique_items_validator(self, schema: JsonSchemaObject | bool) -> bool:  # noqa: FBT001
+        if not isinstance(schema, JsonSchemaObject) or not schema.is_array:
+            return False
+        if schema.uniqueItems is True:
+            return True
+
+        item_schemas: list[JsonSchemaObject | bool] = []
+        if isinstance(schema.prefixItems, list):
+            item_schemas.extend(schema.prefixItems)
+            if isinstance(schema.items, (JsonSchemaObject, bool)):
+                item_schemas.append(schema.items)
+        elif isinstance(schema.items, (JsonSchemaObject, bool)):
+            item_schemas.append(schema.items)
+        if isinstance(schema.additionalItems, (JsonSchemaObject, bool)):
+            item_schemas.append(schema.additionalItems)
+        contains = schema.extras.get("contains")
+        if isinstance(contains, dict):
+            item_schemas.append(self.SCHEMA_OBJECT_TYPE.model_validate(contains))
+        elif isinstance(contains, bool):
+            item_schemas.append(contains)
+        return any(self._schema_needs_array_unique_items_validator(item_schema) for item_schema in item_schemas)
+
+    def _get_array_unique_items_validator(self, field_name: str, field: JsonSchemaObject) -> dict[str, str] | None:
+        if self.use_unique_items_as_set or isinstance(self.source, str):
+            return None
+        if not self._schema_needs_array_unique_items_validator(field):
+            return None
+
+        predicate = self._join_contains_predicates(
+            self._schema_array_value_predicates(field, f"self.{field_name}"), "and"
+        )
+        return {"field": field_name, "predicate": predicate} if predicate else None
+
+    def _field_data_type_uses_set(self, field: DataModelFieldBase) -> bool:  # noqa: PLR6301
+        return any(data_type.is_set or data_type.is_frozen_set for data_type in field.data_type.all_data_types)
+
     def _collect_array_contains_validators(
         self,
         obj: JsonSchemaObject,
@@ -4076,6 +4126,44 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if field_name and (validator := self._get_array_contains_validator(field_name, field_schema)):
                 validators.append(validator)
         return validators
+
+    def _collect_array_unique_items_validators(
+        self,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        if not obj.properties:
+            return []
+        field_names = self._field_name_mapping(fields)
+        fields_by_original_name = {field.original_name or field.name: field for field in fields}
+        validators: list[dict[str, str]] = []
+        for property_name, field_schema in obj.properties.items():
+            if not isinstance(field_schema, JsonSchemaObject):
+                continue
+            field_name = field_names.get(property_name)
+            field = fields_by_original_name.get(property_name)
+            if (
+                field_name
+                and field is not None
+                and not self._field_data_type_uses_set(field)
+                and (validator := self._get_array_unique_items_validator(field_name, field_schema))
+            ):
+                validators.append(validator)
+        return validators
+
+    def _set_object_array_validators(
+        self,
+        validators: dict[str, Any],
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> None:
+        array_contains = self._collect_array_contains_validators(obj, fields)
+        if array_contains:
+            validators["array_contains"] = array_contains
+
+        array_unique_items = self._collect_array_unique_items_validators(obj, fields)
+        if array_unique_items:
+            validators["array_unique_items"] = array_unique_items
 
     def _collect_additional_properties_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
         extra_value_schema = obj.additionalProperties
@@ -4314,9 +4402,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if mapped_dependent_required:
                 validators["dependent_required"] = mapped_dependent_required
 
-        array_contains = self._collect_array_contains_validators(obj, fields)
-        if array_contains:
-            validators["array_contains"] = array_contains
+        self._set_object_array_validators(validators, obj, fields)
 
         dependent_schema_properties = self._collect_dependent_schema_property_validators(obj.extras, fields)
         if dependent_schema_properties:
