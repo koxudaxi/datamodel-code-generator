@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "root raw array item oneof validators",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "required": [
+          "a"
+        ],
+        "properties": {
+          "a": {
+            "type": "integer"
+          }
+        }
+      },
+      {
+        "type": "object",
+        "required": [
+          "b"
+        ],
+        "properties": {
+          "b": {
+            "type": "integer"
+          }
+        }
+      }
+    ]
+  }
+}

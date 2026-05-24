@@ -4182,6 +4182,18 @@ def test_main_jsonschema_root_logical_runtime_validators(output_file: Path) -> N
             ],
             id="anyof-extra-rejected-objects",
         ),
+        pytest.param(
+            "root_raw_array_item_oneof_validators.json",
+            "root_raw_array_item_oneof_validators.py",
+            "root_raw_array_item_oneof_validators",
+            "RootRawArrayItemOneofValidators",
+            '[{"a":1}]',
+            [
+                '[{"a":1,"b":2}]',
+                '[{"a":true}]',
+            ],
+            id="array-item-oneof-overlapping-objects",
+        ),
     ],
 )
 def test_main_jsonschema_root_raw_composed_object_validators(
@@ -4243,6 +4255,18 @@ def test_main_jsonschema_root_raw_composed_object_validators(
                 '{"payload":{"a":true}}',
             ],
             id="not-extra-object",
+        ),
+        pytest.param(
+            "property_raw_array_item_oneof_validators.json",
+            "property_raw_array_item_oneof_validators.py",
+            "property_raw_array_item_oneof_validators",
+            "PropertyRawArrayItemOneofValidators",
+            '{"items":[{"a":1}]}',
+            [
+                '{"items":[{"a":1,"b":2}]}',
+                '{"items":[{"a":true}]}',
+            ],
+            id="array-item-oneof-overlapping-objects",
         ),
     ],
 )
