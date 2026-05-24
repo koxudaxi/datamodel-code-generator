@@ -1,0 +1,39 @@
+{
+  "title": "root array object contains validators",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "kind",
+      "score"
+    ],
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "score": {
+        "type": "integer"
+      }
+    },
+    "additionalProperties": false
+  },
+  "contains": {
+    "type": "object",
+    "required": [
+      "kind",
+      "score"
+    ],
+    "properties": {
+      "kind": {
+        "const": "hit"
+      },
+      "score": {
+        "type": "integer",
+        "minimum": 10
+      }
+    },
+    "additionalProperties": false
+  },
+  "minContains": 2,
+  "maxContains": 2
+}

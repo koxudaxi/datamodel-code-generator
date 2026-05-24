@@ -5457,6 +5457,65 @@ def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> No
         )
 
 
+def test_main_jsonschema_root_array_object_contains_validators(output_file: Path) -> None:
+    """Test RootModel contains validators inspect Pydantic-converted object items."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_array_object_contains_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_array_object_contains_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '[{"kind":"hit","score":10},{"kind":"miss","score":20},{"kind":"hit","score":12}]'
+    for invalid_json in [
+        '[{"kind":"hit","score":9},{"kind":"miss","score":20},{"kind":"hit","score":12}]',
+        '[{"kind":"hit","score":10},{"kind":"hit","score":11},{"kind":"hit","score":12}]',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_array_object_contains_validators",
+            model_name="RootArrayObjectContainsValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_root_array_unique_items_validators(output_file: Path) -> None:
+    """Test RootModel validators for uniqueItems constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_array_unique_items_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_array_unique_items_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = "[true,1,2,false,0]"
+    for invalid_json in [
+        "[true,1,true]",
+        "[true,1,1]",
+        "[true,1,false,0,false]",
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_array_unique_items_validators",
+            model_name="RootArrayUniqueItemsValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_property_names_min_max_length(output_file: Path) -> None:
     """Test propertyNames with minLength/maxLength constraints generates dict with constr key."""
     run_main_and_assert(

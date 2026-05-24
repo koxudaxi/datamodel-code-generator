@@ -1,0 +1,15 @@
+{
+  "title": "root array unique items validators",
+  "type": "array",
+  "uniqueItems": true,
+  "items": {
+    "anyOf": [
+      {
+        "type": "integer"
+      },
+      {
+        "type": "boolean"
+      }
+    ]
+  }
+}

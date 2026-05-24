@@ -17,26 +17,33 @@ class ContainsRuntimeValuePredicates(BaseModel):
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         if self.numbers is not None:
             numbers_match_count = sum(
                 1
                 for item in self.numbers
-                if (isinstance(item, int) and not isinstance(item, bool))
-                and (
-                    isinstance(item, (int, float))
-                    and not isinstance(item, bool)
-                    and item >= 2
-                )
-                and (
-                    isinstance(item, (int, float))
-                    and not isinstance(item, bool)
-                    and item <= 4
-                )
-                and (
-                    isinstance(item, (int, float))
-                    and not isinstance(item, bool)
-                    and (item / 2.0).is_integer()
-                )
+                if (
+                    lambda item: (isinstance(item, int) and not isinstance(item, bool))
+                    and (
+                        isinstance(item, (int, float))
+                        and not isinstance(item, bool)
+                        and item >= 2
+                    )
+                    and (
+                        isinstance(item, (int, float))
+                        and not isinstance(item, bool)
+                        and item <= 4
+                    )
+                    and (
+                        isinstance(item, (int, float))
+                        and not isinstance(item, bool)
+                        and (item / 2.0).is_integer()
+                    )
+                )(json_schema_runtime_value(item))
             )
             if numbers_match_count < 1:
                 raise ValueError(
@@ -49,9 +56,11 @@ class ContainsRuntimeValuePredicates(BaseModel):
             names_match_count = sum(
                 1
                 for item in self.names
-                if (isinstance(item, str))
-                and (isinstance(item, str) and len(item) >= 2)
-                and (isinstance(item, str) and re.search('^A', item) is not None)
+                if (
+                    lambda item: (isinstance(item, str))
+                    and (isinstance(item, str) and len(item) >= 2)
+                    and (isinstance(item, str) and re.search('^A', item) is not None)
+                )(json_schema_runtime_value(item))
             )
             if names_match_count < 1:
                 raise ValueError('names' + ' must contain at least 1 matching item(s)')
@@ -62,71 +71,78 @@ class ContainsRuntimeValuePredicates(BaseModel):
             objects_match_count = sum(
                 1
                 for item in self.objects
-                if (isinstance(item, dict))
-                and ((not isinstance(item, dict) or len(item) >= 2))
-                and ((not isinstance(item, dict) or len(item) <= 2))
-                and (
-                    (
-                        not isinstance(item, dict)
-                        or all(
-                            (
-                                lambda property_key: isinstance(property_key, str)
-                                and re.search('^(kind|values)$', property_key)
-                                is not None
-                            )(property_key)
-                            for property_key in item
-                        )
-                    )
-                )
-                and ((not isinstance(item, dict) or {'kind', 'values'}.issubset(item)))
-                and (
-                    (
-                        not isinstance(item, dict)
-                        or 'kind' not in item
-                        or (lambda item_property_0: item_property_0 == 'ok')(
-                            item['kind']
-                        )
-                    )
-                )
-                and (
-                    (
-                        not isinstance(item, dict)
-                        or 'values' not in item
-                        or (
-                            lambda item_property_1: (
-                                (isinstance(item_property_1, list))
-                                and (
-                                    isinstance(item_property_1, list)
-                                    and len(item_property_1) >= 2
-                                )
-                                and (
-                                    isinstance(item_property_1, list)
-                                    and len(item_property_1) <= 2
-                                )
-                            )
-                            and (
+                if (
+                    lambda item: (isinstance(item, dict))
+                    and ((not isinstance(item, dict) or len(item) >= 2))
+                    and ((not isinstance(item, dict) or len(item) <= 2))
+                    and (
+                        (
+                            not isinstance(item, dict)
+                            or all(
                                 (
-                                    not isinstance(item_property_1, list)
-                                    or all(
-                                        (
-                                            lambda extra_item: (
-                                                isinstance(extra_item, int)
-                                                and not isinstance(extra_item, bool)
-                                            )
-                                            and (
-                                                isinstance(extra_item, (int, float))
-                                                and not isinstance(extra_item, bool)
-                                                and extra_item >= 1
-                                            )
-                                        )(extra_item)
-                                        for extra_item in item_property_1
+                                    lambda property_key: isinstance(property_key, str)
+                                    and re.search('^(kind|values)$', property_key)
+                                    is not None
+                                )(property_key)
+                                for property_key in item
+                            )
+                        )
+                    )
+                    and (
+                        (
+                            not isinstance(item, dict)
+                            or {'kind', 'values'}.issubset(item)
+                        )
+                    )
+                    and (
+                        (
+                            not isinstance(item, dict)
+                            or 'kind' not in item
+                            or (lambda item_property_0: item_property_0 == 'ok')(
+                                item['kind']
+                            )
+                        )
+                    )
+                    and (
+                        (
+                            not isinstance(item, dict)
+                            or 'values' not in item
+                            or (
+                                lambda item_property_1: (
+                                    (isinstance(item_property_1, list))
+                                    and (
+                                        isinstance(item_property_1, list)
+                                        and len(item_property_1) >= 2
+                                    )
+                                    and (
+                                        isinstance(item_property_1, list)
+                                        and len(item_property_1) <= 2
                                     )
                                 )
-                            )
-                        )(item['values'])
+                                and (
+                                    (
+                                        not isinstance(item_property_1, list)
+                                        or all(
+                                            (
+                                                lambda extra_item: (
+                                                    isinstance(extra_item, int)
+                                                    and not isinstance(extra_item, bool)
+                                                )
+                                                and (
+                                                    isinstance(extra_item, (int, float))
+                                                    and not isinstance(extra_item, bool)
+                                                    and extra_item >= 1
+                                                )
+                                            )(extra_item)
+                                            for extra_item in item_property_1
+                                        )
+                                    )
+                                )
+                            )(item['values'])
+                        )
                     )
-                )
-                and ((not isinstance(item, dict) or 'blocked' not in item))
+                    and ((not isinstance(item, dict) or 'blocked' not in item))
+                )(json_schema_runtime_value(item))
             )
             if objects_match_count < 1:
                 raise ValueError(

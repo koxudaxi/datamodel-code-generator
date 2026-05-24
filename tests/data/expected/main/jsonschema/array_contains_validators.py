@@ -18,15 +18,28 @@ class ArrayContainsValidators(BaseModel):
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         if self.values is not None:
-            values_match_count = sum(1 for item in self.values if isinstance(item, str))
+            values_match_count = sum(
+                1
+                for item in self.values
+                if (lambda item: isinstance(item, str))(json_schema_runtime_value(item))
+            )
             if values_match_count < 2:
                 raise ValueError('values' + ' must contain at least 2 matching item(s)')
             if values_match_count > 2:
                 raise ValueError('values' + ' must contain at most 2 matching item(s)')
 
         if self.markers is not None:
-            markers_match_count = sum(1 for item in self.markers if item == 'primary')
+            markers_match_count = sum(
+                1
+                for item in self.markers
+                if (lambda item: item == 'primary')(json_schema_runtime_value(item))
+            )
             if markers_match_count < 1:
                 raise ValueError(
                     'markers' + ' must contain at least 1 matching item(s)'
@@ -36,8 +49,18 @@ class ArrayContainsValidators(BaseModel):
             choices_match_count = sum(
                 1
                 for item in self.choices
-                if (item == 1 and isinstance(item, int) and not isinstance(item, bool))
-                or (item == 2 and isinstance(item, int) and not isinstance(item, bool))
+                if (
+                    lambda item: (
+                        item == 1
+                        and isinstance(item, int)
+                        and not isinstance(item, bool)
+                    )
+                    or (
+                        item == 2
+                        and isinstance(item, int)
+                        and not isinstance(item, bool)
+                    )
+                )(json_schema_runtime_value(item))
             )
             if choices_match_count < 1:
                 raise ValueError(
@@ -50,15 +73,21 @@ class ArrayContainsValidators(BaseModel):
             typedChoices_match_count = sum(
                 1
                 for item in self.typedChoices
-                if (isinstance(item, int) and not isinstance(item, bool))
-                and (
-                    (item == 3 and isinstance(item, int) and not isinstance(item, bool))
-                    or (
-                        item == 5
-                        and isinstance(item, int)
-                        and not isinstance(item, bool)
+                if (
+                    lambda item: (isinstance(item, int) and not isinstance(item, bool))
+                    and (
+                        (
+                            item == 3
+                            and isinstance(item, int)
+                            and not isinstance(item, bool)
+                        )
+                        or (
+                            item == 5
+                            and isinstance(item, int)
+                            and not isinstance(item, bool)
+                        )
                     )
-                )
+                )(json_schema_runtime_value(item))
             )
             if typedChoices_match_count < 1:
                 raise ValueError(
@@ -73,7 +102,12 @@ class ArrayContainsValidators(BaseModel):
             nonStrings_match_count = sum(
                 1
                 for item in self.nonStrings
-                if sum(1 for matched in (True, isinstance(item, str)) if matched) == 1
+                if (
+                    lambda item: sum(
+                        1 for matched in (True, isinstance(item, str)) if matched
+                    )
+                    == 1
+                )(json_schema_runtime_value(item))
             )
             if nonStrings_match_count < 1:
                 raise ValueError(

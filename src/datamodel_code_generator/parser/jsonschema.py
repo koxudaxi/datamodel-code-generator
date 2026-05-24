@@ -4237,10 +4237,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return issubclass(self.data_model_root_type, PydanticV2BaseModel) and not self.data_model_root_type.IS_ALIAS
 
     def _set_root_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
-        validator = self._get_array_contains_validator("root", obj)
-        if validator:
-            validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
-            validators["array_contains"] = [validator]
+        validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+        contains_validator = self._get_array_contains_validator("root", obj)
+        if contains_validator:
+            validators["array_contains"] = [contains_validator]
+        unique_items_validator = self._get_array_unique_items_validator("root", obj)
+        if unique_items_validator:
+            validators["array_unique_items"] = [unique_items_validator]
+        if not validators:
+            self.extra_template_data[path].pop("json_schema_validators", None)
 
     def _set_root_pattern_properties_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
         if not obj.patternProperties or obj.properties or not self._supports_root_json_schema_validators():

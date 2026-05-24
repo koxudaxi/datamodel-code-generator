@@ -725,7 +725,11 @@ class BaseModel(BaseModelBase):
         variable_name = f"{field_name}_match_count"
         lines = [
             f"if self.{field_name} is not None:",
-            f"    {variable_name} = sum(1 for item in self.{field_name} if {predicate})",
+            f"    {variable_name} = sum(",
+            "        1",
+            f"        for item in self.{field_name}",
+            f"        if (lambda item: {predicate})(json_schema_runtime_value(item))",
+            "    )",
         ]
         if (min_count := validator.get("min")) is not None:
             lines.extend([
@@ -791,6 +795,7 @@ class BaseModel(BaseModelBase):
     def _get_json_schema_unique_key_lines() -> list[str]:
         return [
             "def json_schema_unique_key(value):",
+            "    value = json_schema_runtime_value(value)",
             "    if isinstance(value, bool) or value is None or isinstance(value, str):",
             "        return (type(value).__name__, value)",
             "    if isinstance(value, (int, float)):",
@@ -803,6 +808,15 @@ class BaseModel(BaseModelBase):
             "            tuple(sorted((key, json_schema_unique_key(item)) for key, item in value.items())),",
             "        )",
             "    return (type(value).__name__, value)",
+        ]
+
+    @staticmethod
+    def _get_json_schema_runtime_value_lines() -> list[str]:
+        return [
+            "def json_schema_runtime_value(value):",
+            "    if hasattr(value, 'model_dump'):",
+            "        return value.model_dump(mode='python')",
+            "    return value",
         ]
 
     @staticmethod
@@ -869,6 +883,8 @@ class BaseModel(BaseModelBase):
         if not lines:
             return
 
+        if any("json_schema_runtime_value(" in line or "json_schema_unique_key(" in line for line in lines):
+            lines = [*self._get_json_schema_runtime_value_lines(), "", *lines]
         if any("json_schema_unique_key(" in line for line in lines):
             lines = [*self._get_json_schema_unique_key_lines(), "", *lines]
 

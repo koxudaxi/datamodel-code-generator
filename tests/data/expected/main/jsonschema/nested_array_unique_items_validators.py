@@ -20,6 +20,7 @@ class NestedArrayUniqueItemsValidators(BaseModel):
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
         def json_schema_unique_key(value):
+            value = json_schema_runtime_value(value)
             if isinstance(value, bool) or value is None or isinstance(value, str):
                 return (type(value).__name__, value)
             if isinstance(value, (int, float)):
@@ -37,6 +38,11 @@ class NestedArrayUniqueItemsValidators(BaseModel):
                     ),
                 )
             return (type(value).__name__, value)
+
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
 
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         provided_keys = set(self.model_fields_set)

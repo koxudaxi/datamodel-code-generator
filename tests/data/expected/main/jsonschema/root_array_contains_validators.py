@@ -14,12 +14,23 @@ class RootArrayContainsValidators(RootModel[list[Any]]):
 
     @model_validator(mode='after')
     def validate_json_schema_constraints(self):
+        def json_schema_runtime_value(value):
+            if hasattr(value, 'model_dump'):
+                return value.model_dump(mode='python')
+            return value
+
         if self.root is not None:
             root_match_count = sum(
                 1
                 for item in self.root
-                if (isinstance(item, str))
-                or (item == 7 and isinstance(item, int) and not isinstance(item, bool))
+                if (
+                    lambda item: (isinstance(item, str))
+                    or (
+                        item == 7
+                        and isinstance(item, int)
+                        and not isinstance(item, bool)
+                    )
+                )(json_schema_runtime_value(item))
             )
             if root_match_count < 2:
                 raise ValueError('root' + ' must contain at least 2 matching item(s)')
