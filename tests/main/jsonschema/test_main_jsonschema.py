@@ -4288,6 +4288,8 @@ def test_main_jsonschema_pattern_properties_boolean(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
+            "--enum-field-as-literal",
+            "all",
         ],
         force_exec_validation=True,
     )
@@ -4304,6 +4306,8 @@ def test_main_jsonschema_pattern_properties_merge(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
+            "--enum-field-as-literal",
+            "all",
         ],
         force_exec_validation=True,
     )
@@ -4989,6 +4993,37 @@ def test_main_jsonschema_object_complex_const_field_validators(output_file: Path
             output_file,
             module_name="object_complex_const_field_validators",
             model_name="ObjectComplexConstFieldValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_object_complex_enum_field_validators(output_file: Path) -> None:
+    """Test object validators enforce enum values that cannot be represented as Literal fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_complex_enum_field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_complex_enum_field_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+            "--enum-field-as-literal",
+            "all",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"ratio":2.5,"settings":{"enabled":false,"limit":0},"choices":[3,"four"]}'
+    for invalid_json in [
+        '{"ratio":2.5,"settings":{"enabled":true,"limit":4},"choices":[3,"four"]}',
+        '{"ratio":2.5,"settings":{"enabled":false,"limit":0},"choices":[3,"four","extra"]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_complex_enum_field_validators",
+            model_name="ObjectComplexEnumFieldValidators",
             valid_json=valid_json,
             invalid_json=invalid_json,
             expected_error_type="value_error",

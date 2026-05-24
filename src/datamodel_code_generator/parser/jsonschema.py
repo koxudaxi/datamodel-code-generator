@@ -4178,19 +4178,29 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         field_names = self._field_name_mapping(fields)
         validators: list[dict[str, str]] = []
         for property_name, field_schema in obj.properties.items():
-            if not isinstance(field_schema, JsonSchemaObject) or "const" not in field_schema.extras:
-                continue
-            const_value = field_schema.extras["const"]
-            if const_value is None or isinstance(const_value, (bool, int, str)):
+            if not isinstance(field_schema, JsonSchemaObject):
                 continue
             field_name = field_names.get(property_name)
             if not field_name:
                 continue
-            validators.append({
-                "field": field_name,
-                "value": f"{field_name}_value",
-                "predicate": self._json_value_predicate(const_value, f"{field_name}_value"),
-            })
+            value_name = f"{field_name}_value"
+            if "const" in field_schema.extras:
+                const_value = field_schema.extras["const"]
+                if const_value is None or isinstance(const_value, (bool, int, str)):
+                    continue
+                predicate = self._json_value_predicate(const_value, value_name)
+            elif (
+                field_schema.enum
+                and self.should_parse_enum_as_literal(field_schema, property_name)
+                and any(isinstance(enum_value, (float, dict, list)) for enum_value in field_schema.enum)
+            ):
+                predicate = self._join_contains_predicates(
+                    [self._json_value_predicate(enum_value, value_name) for enum_value in field_schema.enum],
+                    "or",
+                )
+            else:
+                continue
+            validators.append({"field": field_name, "value": value_name, "predicate": predicate})
         return validators
 
     def _collect_additional_properties_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:

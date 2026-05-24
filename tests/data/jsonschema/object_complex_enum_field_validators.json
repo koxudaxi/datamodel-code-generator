@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "object complex enum field validators",
+  "type": "object",
+  "properties": {
+    "ratio": {
+      "enum": [
+        1.5,
+        2.5
+      ]
+    },
+    "settings": {
+      "enum": [
+        {
+          "enabled": true,
+          "limit": 3
+        },
+        {
+          "enabled": false,
+          "limit": 0
+        }
+      ]
+    },
+    "choices": {
+      "enum": [
+        [
+          1,
+          "two"
+        ],
+        [
+          3,
+          "four"
+        ]
+      ]
+    }
+  },
+  "required": [
+    "ratio",
+    "settings",
+    "choices"
+  ],
+  "additionalProperties": false
+}
