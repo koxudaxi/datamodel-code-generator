@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllofDependentSchemaMaxPropertiesCountConflict",
+  "type": "object",
+  "minProperties": 2,
+  "allOf": [
+    {
+      "propertyNames": {
+        "enum": ["trigger", "other"]
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    {
+      "dependentSchemas": {
+        "trigger": {
+          "maxProperties": 1
+        }
+      }
+    }
+  ]
+}

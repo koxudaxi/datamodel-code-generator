@@ -6,6 +6,7 @@ import json
 import math
 import warnings
 from fractions import Fraction
+from itertools import combinations
 from typing import TYPE_CHECKING, Any
 
 from jsonschema import exceptions, validators
@@ -21,6 +22,8 @@ from .constants import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT = 12
 
 
 def _any_schema_node(value: Any, predicate: Callable[[dict[str, Any]], bool]) -> bool:
@@ -743,6 +746,46 @@ def _dependency_pruned_property_name_values(schema: dict[str, Any], property_nam
         remaining_names -= removed_names
 
 
+def _dependency_accepts_property_count(dependency: Any, property_count: int) -> bool:
+    if not isinstance(dependency, dict):
+        return True
+    max_properties = dependency.get("maxProperties")
+    return not isinstance(max_properties, int) or isinstance(max_properties, bool) or property_count <= max_properties
+
+
+def _property_name_set_satisfies_dependencies(
+    selected_names: set[str],
+    dependencies: list[tuple[str, Any]],
+) -> bool:
+    return all(
+        not _dependency_excludes_property_name(dependency, name, selected_names)
+        and _dependency_accepts_property_count(dependency, len(selected_names))
+        for name in selected_names
+        for dependency_name, dependency in dependencies
+        if dependency_name == name
+    )
+
+
+def _max_dependency_satisfiable_property_count(
+    schema: dict[str, Any],
+    property_name_values: set[str],
+) -> int | None:
+    if len(property_name_values) > MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT:
+        return None
+
+    names = sorted(property_name_values)
+    dependencies = [
+        dependency for item in _iter_allof_object_schemas(schema) for dependency in _iter_dependencies(item)
+    ]
+    for count in range(len(names), -1, -1):
+        if any(
+            _property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
+            for candidate_names in combinations(names, count)
+        ):
+            return count
+    return 0
+
+
 def _has_unsatisfiable_property_count(value: Any) -> bool:
     def has_unsatisfiable_property_count(schema: dict[str, Any]) -> bool:
         properties = schema.get("properties")
@@ -754,7 +797,10 @@ def _has_unsatisfiable_property_count(value: Any) -> bool:
             return isinstance(min_properties, int) and min_properties > 0
         property_name_values = _finite_allof_property_name_values(schema)
         if property_name_values is not None:
-            max_possible_properties = len(_dependency_pruned_property_name_values(schema, property_name_values))
+            property_name_values = _dependency_pruned_property_name_values(schema, property_name_values)
+            max_possible_properties = _max_dependency_satisfiable_property_count(schema, property_name_values)
+            if max_possible_properties is None:
+                max_possible_properties = len(property_name_values)
             if isinstance(min_properties, int) and min_properties > max_possible_properties:
                 return True
         if schema.get("additionalProperties") is False:

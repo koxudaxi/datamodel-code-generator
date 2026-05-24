@@ -15,6 +15,7 @@ from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from fractions import Fraction
 from functools import cached_property, lru_cache
+from itertools import combinations
 from math import gcd, lcm
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Optional, Union
@@ -594,6 +595,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     SCHEMA_PATHS: ClassVar[list[str]] = ["#/definitions", "#/$defs"]
     SCHEMA_OBJECT_TYPE: ClassVar[type[JsonSchemaObject]] = JsonSchemaObject
+    _MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT: ClassVar[int] = 12
 
     COMPATIBLE_PYTHON_TYPES: ClassVar[dict[str, frozenset[str]]] = {
         "string": frozenset({"str", "String"}),
@@ -3696,7 +3698,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return 0
         property_name_values = cls._raw_finite_allof_property_name_values(object_schemas)
         if property_name_values is not None:
-            return len(cls._raw_dependency_pruned_property_name_values(schema_dict, property_name_values))
+            property_name_values = cls._raw_dependency_pruned_property_name_values(schema_dict, property_name_values)
+            max_dependency_property_count = cls._raw_max_dependency_satisfiable_property_count(
+                schema_dict,
+                property_name_values,
+            )
+            return (
+                max_dependency_property_count
+                if max_dependency_property_count is not None
+                else len(property_name_values)
+            )
         property_names = schema_dict.get("propertyNames")
         if property_names is False:
             return 0
@@ -3791,6 +3802,50 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return any(
             required_name not in allowed_names for required_name in cls._raw_dependency_required_names(dependency)
         )
+
+    @classmethod
+    def _raw_max_dependency_satisfiable_property_count(
+        cls,
+        schema_dict: dict[Any, Any],
+        property_name_values: set[str],
+    ) -> int | None:
+        if len(property_name_values) > cls._MAX_EXACT_PROPERTY_NAME_DEPENDENCY_COUNT:
+            return None
+
+        names = sorted(property_name_values)
+        dependencies = [
+            dependency
+            for item in cls._iter_raw_allof_object_schemas(schema_dict)
+            for dependency in cls._iter_raw_dependencies(item)
+        ]
+        for count in range(len(names), -1, -1):
+            if any(
+                cls._raw_property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
+                for candidate_names in combinations(names, count)
+            ):
+                return count
+        return 0
+
+    @classmethod
+    def _raw_property_name_set_satisfies_dependencies(
+        cls,
+        selected_names: set[str],
+        dependencies: list[tuple[str, Any]],
+    ) -> bool:
+        return all(
+            not cls._raw_dependency_excludes_property_name(dependency, name, selected_names)
+            and cls._raw_dependency_accepts_property_count(dependency, len(selected_names))
+            for name in selected_names
+            for dependency_name, dependency in dependencies
+            if dependency_name == name
+        )
+
+    @classmethod
+    def _raw_dependency_accepts_property_count(cls, dependency: Any, property_count: int) -> bool:
+        if not isinstance(dependency, dict):
+            return True
+        max_properties = cls._number_constraint_value(dependency.get("maxProperties"))
+        return max_properties is None or property_count <= max_properties
 
     @classmethod
     def _raw_dependency_allowed_property_name_values(
