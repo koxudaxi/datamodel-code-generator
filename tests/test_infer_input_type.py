@@ -86,3 +86,7 @@ def test_infer_input_type() -> None:  # noqa: PLR0912
             assert_invalid_infer_input_type(file)
             continue
         assert_infer_input_type(file, InputFileType.OpenAPI)
+
+    for file in (DATA_PATH / "xmlschema").rglob("*.xsd"):
+        result = infer_input_type(file.read_text(encoding="utf-8"))
+        assert result == InputFileType.XMLSchema, f"{file} was the wrong type!"

@@ -208,7 +208,7 @@ base_options.add_argument(
     "--input-file-type",
     help=(
         "Input file type (default: auto). "
-        "Use 'jsonschema', 'openapi', or 'graphql' for schema definitions. "
+        "Use 'jsonschema', 'openapi', 'graphql', or 'xmlschema' for schema definitions. "
         "Use 'json', 'yaml', or 'csv' for raw sample data to infer a schema automatically."
     ),
     choices=[i.value for i in InputFileType],

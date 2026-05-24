@@ -514,7 +514,7 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
     """Generate Python data models from schema definitions or structured data.
 
     This is the main entry point for code generation. Supports OpenAPI, JSON Schema,
-    GraphQL, and raw data formats (JSON, YAML, Dict, CSV) as input.
+    GraphQL, XML Schema, and raw data formats (JSON, YAML, Dict, CSV) as input.
 
     Args:
         input_: The input source (file path, string content, URL, or dict).
@@ -797,6 +797,15 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
         }
         parser_config = _create_parser_config(OpenAPIParserConfig, config, openapi_additional_options)
         parser = OpenAPIParser(source=source, config=parser_config)  # ty: ignore
+    elif input_file_type == InputFileType.XMLSchema:
+        from datamodel_code_generator.parser.xmlschema import XMLSchemaParser  # noqa: PLC0415
+
+        xmlschema_additional_options: JSONSchemaParserConfigDict = {
+            "jsonschema_version": jsonschema_version,
+            **additional_options,
+        }
+        parser_config = _create_parser_config(JSONSchemaParserConfig, config, xmlschema_additional_options)
+        parser = XMLSchemaParser(source=source, config=parser_config)  # ty: ignore
     elif input_file_type == InputFileType.GraphQL:
         from datamodel_code_generator.parser.graphql import GraphQLParser  # noqa: PLC0415
 
@@ -970,7 +979,11 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
 def infer_input_type(text: str) -> InputFileType:
     """Automatically detect the input file type from text content."""
+    from datamodel_code_generator.parser.xmlschema import is_xml_schema_text  # noqa: PLC0415
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
+
+    if is_xml_schema_text(text):
+        return InputFileType.XMLSchema
 
     try:
         data = load_yaml(text)

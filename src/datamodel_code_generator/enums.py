@@ -38,6 +38,7 @@ class InputFileType(Enum):
     Auto = "auto"
     OpenAPI = "openapi"
     JsonSchema = "jsonschema"
+    XMLSchema = "xmlschema"
     Json = "json"
     Yaml = "yaml"
     Dict = "dict"
