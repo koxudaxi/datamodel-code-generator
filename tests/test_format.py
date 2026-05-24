@@ -7,6 +7,8 @@ import warnings
 from pathlib import Path
 from unittest import mock
 
+import black
+import isort
 import pytest
 
 from datamodel_code_generator.format import (
@@ -383,8 +385,8 @@ def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
     )
 
     assert (
-        formatted_code == "from typing import TYPE_CHECKING\n"
-        "import sys  # noqa: F401\n"
+        formatted_code == "import sys  # noqa: F401\n"
+        "from typing import TYPE_CHECKING\n"
         "\n"
         "if TYPE_CHECKING:\n"
         "    VALUE = 1\n"
@@ -428,6 +430,35 @@ def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
 def test_apply_builtin_formatter_handles_simple_edge_cases(code: str, expected_code: str) -> None:
     """Test built-in formatter behavior when no import block can be rewritten."""
     assert apply_builtin_formatter(code) == expected_code
+
+
+def test_apply_builtin_formatter_matches_black_isort_for_normalized_expected_files(tmp_path: Path) -> None:
+    """Keep built-in formatting aligned with black + isort for generated model outputs."""
+    expected_path = Path(__file__).parent / "data" / "expected"
+    isort_config = isort.Config(settings_path=str(tmp_path))
+    black_mode = black.FileMode(line_length=88, string_normalization=False)
+    checked_files = 0
+    mismatches: list[str] = []
+
+    for path in sorted(expected_path.rglob("*.py")):
+        code = path.read_text(encoding="utf-8")
+        try:
+            black_isort_code = black.format_str(
+                isort.code(code, config=isort_config),
+                mode=black_mode,
+            )
+        except black.InvalidInput:
+            continue
+
+        if code != black_isort_code:
+            continue
+
+        checked_files += 1
+        if apply_builtin_formatter(code) != black_isort_code:
+            mismatches.append(path.relative_to(expected_path).as_posix())
+
+    assert checked_files > 1000
+    assert not mismatches
 
 
 def test_format_code_un_exist_custom_formatter() -> None:

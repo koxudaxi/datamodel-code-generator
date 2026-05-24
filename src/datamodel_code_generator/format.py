@@ -21,7 +21,7 @@ from warnings import warn
 from datamodel_code_generator.util import load_toml
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 
 @lru_cache(maxsize=1)
@@ -257,6 +257,23 @@ def _format_alias(alias: ast.alias) -> str:
     return alias.name
 
 
+def _alias_imported_name(alias: str) -> str:
+    if " as " in alias:
+        return alias.split(" as ", 1)[0]
+    return alias
+
+
+def _alias_sort_key(alias: str) -> tuple[int, str]:
+    name = _alias_imported_name(alias)
+    if name.isupper():
+        category = 0
+    elif name[:1].isupper():
+        category = 1
+    else:
+        category = 2
+    return category, name.lower()
+
+
 def _format_from_import(module: str, aliases: list[str], line_length: int) -> str:
     line = f"from {module} import {', '.join(aliases)}"
     if len(line) <= line_length and "*" not in aliases:
@@ -269,10 +286,12 @@ def _import_category(module: str, level: int) -> int:
     if module == "__future__":
         return 0
     if level:
-        return 3
+        return 4
     top_level_module = module.split(".", 1)[0]
     if top_level_module in sys.stdlib_module_names:
         return 1
+    if top_level_module in {"datamodel_code_generator", "tests"}:
+        return 3
     return 2
 
 
@@ -292,33 +311,125 @@ def _format_import_node_without_reordering(node: ast.Import | ast.ImportFrom, li
     return category, raw_import
 
 
+def _format_import_node(node: ast.Import | ast.ImportFrom, line_length: int) -> tuple[int, str]:
+    if isinstance(node, ast.Import):
+        lines = [f"import {_format_alias(alias)}" for alias in sorted(node.names, key=lambda alias: alias.name)]
+        category = min(_import_category(alias.name, 0) for alias in node.names)
+        return category, "\n".join(lines)
+
+    module = "." * node.level + (node.module or "")
+    category = _import_category(node.module or "", node.level)
+    if any(alias.asname is not None for alias in node.names):
+        lines = [
+            _format_from_import(module, [_format_alias(alias)], line_length)
+            for alias in sorted(node.names, key=lambda alias: _alias_sort_key(_format_alias(alias)))
+        ]
+        return category, "\n".join(lines)
+
+    aliases = sorted((_format_alias(alias) for alias in node.names), key=_alias_sort_key)
+    return category, _format_from_import(module, aliases, line_length)
+
+
+def _from_import_key(node: ast.ImportFrom) -> tuple[int, str]:
+    return node.level, node.module or ""
+
+
+def _modules_with_aliased_imports(import_nodes: list[ast.Import | ast.ImportFrom]) -> set[tuple[int, str]]:
+    return {
+        _from_import_key(node)
+        for node in import_nodes
+        if isinstance(node, ast.ImportFrom) and any(alias.asname is not None for alias in node.names)
+    }
+
+
+def _can_merge_from_imports(node: ast.ImportFrom, aliased_modules: set[tuple[int, str]]) -> bool:
+    return node.level == 0 and _from_import_key(node) not in aliased_modules
+
+
+def _iter_aliased_from_import_lines(
+    module: str,
+    aliases: list[tuple[int, str, bool]],
+    line_length: int,
+) -> Iterator[str]:
+    sorted_aliases = sorted(aliases, key=lambda item: _alias_sort_key(item[1]))
+    chunk: list[str] = []
+    chunk_group: int | None = None
+    for group_index, alias, is_aliased in sorted_aliases:
+        if is_aliased:
+            if chunk:
+                yield _format_from_import(module, chunk, line_length)
+                chunk = []
+                chunk_group = None
+            yield _format_from_import(module, [alias], line_length)
+            continue
+
+        if chunk and chunk_group != group_index:
+            yield _format_from_import(module, chunk, line_length)
+            chunk = []
+        chunk.append(alias)
+        chunk_group = group_index
+
+    if chunk:
+        yield _format_from_import(module, chunk, line_length)
+
+
+def _import_line_sort_key(line: str) -> tuple[int, int, str, str]:
+    if not line.startswith("from "):
+        return 0, 0, line.lower(), line
+
+    module, _, imported = line.removeprefix("from ").partition(" import ")
+    relative_level = len(module) - len(module.lstrip("."))
+    import_key = _alias_sort_key(imported.split(",", 1)[0].strip())
+    if relative_level:
+        return 1, -relative_level, module[relative_level:].lower(), f"{import_key!r}:{line.lower()}"
+    return 1, 0, module.lower(), f"{import_key!r}:{line.lower()}"
+
+
 def _build_builtin_import_block(
     import_nodes: list[ast.Import | ast.ImportFrom], line_length: int, lines: list[str]
 ) -> str:
     categorized_lines: defaultdict[int, set[str]] = defaultdict(set)
     grouped_from_imports: defaultdict[tuple[int, int, str], set[str]] = defaultdict(set)
+    aliased_from_imports: defaultdict[tuple[int, int, str], list[tuple[int, str, bool]]] = defaultdict(list)
+    aliased_modules = _modules_with_aliased_imports(import_nodes)
 
-    for node in import_nodes:
+    for node_index, node in enumerate(import_nodes):
         if _has_inline_comment(lines, node):
             category, raw_import = _format_import_node_without_reordering(node, lines)
             categorized_lines[category].add(raw_import)
             continue
 
-        if isinstance(node, ast.Import):
+        if isinstance(node, ast.ImportFrom) and _from_import_key(node) in aliased_modules:
+            module = "." * node.level + (node.module or "")
+            category = _import_category(node.module or "", node.level)
             for alias in node.names:
-                line = f"import {_format_alias(alias)}"
-                categorized_lines[_import_category(alias.name, 0)].add(line)
+                aliased_from_imports[category, node.level, module].append((
+                    node_index,
+                    _format_alias(alias),
+                    alias.asname is not None,
+                ))
             continue
 
-        module = "." * node.level + (node.module or "")
-        category = _import_category(node.module or "", node.level)
-        for alias in node.names:
-            grouped_from_imports[category, node.level, module].add(_format_alias(alias))
+        if isinstance(node, ast.ImportFrom) and _can_merge_from_imports(node, aliased_modules):
+            module = node.module or ""
+            category = _import_category(module, node.level)
+            for alias in node.names:
+                grouped_from_imports[category, node.level, module].add(_format_alias(alias))
+            continue
+
+        category, import_line = _format_import_node(node, line_length)
+        categorized_lines[category].add(import_line)
 
     for (category, _level, module), aliases in grouped_from_imports.items():
-        categorized_lines[category].add(_format_from_import(module, sorted(aliases), line_length))
+        categorized_lines[category].add(_format_from_import(module, sorted(aliases, key=_alias_sort_key), line_length))
+    for (category, _level, module), aliases in aliased_from_imports.items():
+        for import_line in _iter_aliased_from_import_lines(module, aliases, line_length):
+            categorized_lines[category].add(import_line)
 
-    groups = ["\n".join(sorted(categorized_lines[category])) for category in sorted(categorized_lines)]
+    groups = [
+        "\n".join(sorted(categorized_lines[category], key=_import_line_sort_key))
+        for category in sorted(categorized_lines)
+    ]
     return "\n\n".join(group for group in groups if group)
 
 
@@ -332,16 +443,20 @@ def _is_type_checking_if(node: ast.AST) -> TypeGuard[ast.If]:
     return isinstance(node, ast.If) and _is_name_or_attr(node.test, "TYPE_CHECKING")
 
 
-def _format_call_argument(keyword: ast.keyword) -> str:
+def _source_segment(source: str, node: ast.AST) -> str:
+    return ast.get_source_segment(source, node) or ast.unparse(node)
+
+
+def _format_call_argument(keyword: ast.keyword, source: str) -> str:
     if keyword.arg is None:
-        return f"**{ast.unparse(keyword.value)}"
-    return f"{keyword.arg}={ast.unparse(keyword.value)}"
+        return f"**{_source_segment(source, keyword.value)}"
+    return f"{keyword.arg}={_source_segment(source, keyword.value)}"
 
 
-def _format_call(call: ast.Call, indent: str, line_length: int) -> str:
-    call_name = ast.unparse(call.func)
-    arguments = [ast.unparse(argument) for argument in call.args]
-    arguments.extend(_format_call_argument(keyword) for keyword in call.keywords)
+def _format_call(call: ast.Call, indent: str, line_length: int, source: str) -> str:
+    call_name = _source_segment(source, call.func)
+    arguments = [_source_segment(source, argument) for argument in call.args]
+    arguments.extend(_format_call_argument(keyword, source) for keyword in call.keywords)
     if not arguments:
         return f"{call_name}()"
 
@@ -368,42 +483,42 @@ def _iter_subscript_elements(node: ast.Subscript) -> list[ast.AST]:
     return [node.slice]
 
 
-def _format_annotated(annotation: ast.Subscript, indent: str, line_length: int) -> str:
+def _format_annotated(annotation: ast.Subscript, indent: str, line_length: int, source: str) -> str:
     continuation_indent = f"{indent}    "
     formatted_lines: list[str] = ["Annotated["]
     for element in _iter_subscript_elements(annotation):
         if _is_call(element, "Field"):
-            inline_field = ast.unparse(element)
+            inline_field = _source_segment(source, element)
             if len(f"{continuation_indent}{inline_field},") <= line_length:
                 formatted_lines.append(f"{continuation_indent}{inline_field},")
                 continue
-            call_lines = _format_call(element, continuation_indent, line_length).splitlines()
+            call_lines = _format_call(element, continuation_indent, line_length, source).splitlines()
             call_lines[-1] = f"{call_lines[-1]},"
             formatted_lines.extend(
                 f"{continuation_indent}{line}" if index == 0 else line for index, line in enumerate(call_lines)
             )
         else:
-            formatted_lines.append(f"{continuation_indent}{ast.unparse(element)},")
+            formatted_lines.append(f"{continuation_indent}{_source_segment(source, element)},")
     formatted_lines.append(f"{indent}]")
     return "\n".join(formatted_lines)
 
 
-def _format_generated_class_statement(statement: ast.stmt, line: str, line_length: int) -> str | None:
+def _format_generated_class_statement(statement: ast.stmt, line: str, line_length: int, source: str) -> str | None:
     if len(line) <= line_length or "#" in line:
         return None
 
     indent = line[: len(line) - len(line.lstrip())]
     if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
         target = statement.target.id
-        annotation = ast.unparse(statement.annotation)
+        annotation = _source_segment(source, statement.annotation)
         if _is_call(statement.value, "Field"):
-            return f"{indent}{target}: {annotation} = {_format_call(statement.value, indent, line_length)}"
+            return f"{indent}{target}: {annotation} = {_format_call(statement.value, indent, line_length, source)}"
         if statement.value is None and _is_annotated(statement.annotation):
-            return f"{indent}{target}: {_format_annotated(statement.annotation, indent, line_length)}"
+            return f"{indent}{target}: {_format_annotated(statement.annotation, indent, line_length, source)}"
 
     if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and _is_call(statement.value, "ConfigDict"):
-        target = ast.unparse(statement.targets[0])
-        return f"{indent}{target} = {_format_call(statement.value, indent, line_length)}"
+        target = _source_segment(source, statement.targets[0])
+        return f"{indent}{target} = {_format_call(statement.value, indent, line_length, source)}"
 
     return None
 
@@ -422,7 +537,9 @@ def _format_type_checking_block(node: ast.If, lines: list[str], line_length: int
 _LineReplacement = tuple[int, int, list[str]]
 
 
-def _collect_builtin_replacements(tree: ast.Module, lines: list[str], line_length: int) -> list[_LineReplacement]:
+def _collect_builtin_replacements(
+    tree: ast.Module, lines: list[str], line_length: int, source: str
+) -> list[_LineReplacement]:
     replacements: list[_LineReplacement] = []
     for node in tree.body:
         if _is_type_checking_if(node):
@@ -436,12 +553,51 @@ def _collect_builtin_replacements(tree: ast.Module, lines: list[str], line_lengt
                 if statement.lineno != (statement.end_lineno or statement.lineno):
                     continue
                 formatted_statement = _format_generated_class_statement(
-                    statement, lines[statement.lineno - 1], line_length
+                    statement, lines[statement.lineno - 1], line_length, source
                 )
                 if formatted_statement is not None:
                     replacements.append((statement.lineno, statement.lineno, formatted_statement.splitlines()))
 
     return replacements
+
+
+def _module_docstring_node(tree: ast.Module) -> ast.Expr | None:
+    if not tree.body:
+        return None
+    first_node = tree.body[0]
+    if (
+        isinstance(first_node, ast.Expr)
+        and isinstance(first_node.value, ast.Constant)
+        and isinstance(first_node.value.value, str)
+    ):
+        return first_node
+    return None
+
+
+def _leading_lines_before_imports(lines: list[str], first_import_line: int, tree: ast.Module) -> list[str]:
+    leading_lines = list(lines[: first_import_line - 1])
+    docstring_node = _module_docstring_node(tree)
+    if (
+        docstring_node is not None
+        and docstring_node.end_lineno == len(leading_lines)
+        and (not leading_lines or leading_lines[-1].strip())
+    ):
+        leading_lines.append("")
+    return leading_lines
+
+
+def _iter_module_import_nodes(tree: ast.Module) -> list[ast.Import | ast.ImportFrom]:
+    body_nodes = tree.body
+    docstring_node = _module_docstring_node(tree)
+    if docstring_node is not None:
+        body_nodes = body_nodes[1:]
+
+    import_nodes: list[ast.Import | ast.ImportFrom] = []
+    for node in body_nodes:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            break
+        import_nodes.append(node)
+    return import_nodes
 
 
 def _apply_line_replacements(lines: list[str], replacements: list[_LineReplacement], *, offset: int = 0) -> list[str]:
@@ -467,12 +623,8 @@ def apply_builtin_formatter(code: str, *, line_length: int = DEFAULT_LINE_LENGTH
     except SyntaxError:
         return f"{code}\n"
 
-    replacements = _collect_builtin_replacements(tree, lines, line_length)
-    import_nodes: list[ast.Import | ast.ImportFrom] = []
-    for node in tree.body:
-        if not isinstance(node, (ast.Import, ast.ImportFrom)):
-            break
-        import_nodes.append(node)
+    replacements = _collect_builtin_replacements(tree, lines, line_length, code)
+    import_nodes = _iter_module_import_nodes(tree)
 
     if not import_nodes:
         formatted_lines = _apply_line_replacements(lines, replacements)
@@ -481,14 +633,13 @@ def apply_builtin_formatter(code: str, *, line_length: int = DEFAULT_LINE_LENGTH
 
     first_line = import_nodes[0].lineno
     last_line = import_nodes[-1].end_lineno or import_nodes[-1].lineno
-    leading = "\n".join(lines[: first_line - 1]).strip("\n")
+    leading = "\n".join(_leading_lines_before_imports(lines, first_line, tree))
     body_lines = _apply_line_replacements(lines[last_line:], replacements, offset=last_line)
     body = "\n".join(body_lines).strip("\n")
     import_block = _build_builtin_import_block(import_nodes, line_length, lines)
-    parts = [part for part in (leading, import_block) if part]
-    formatted_code = "\n\n".join(parts)
+    formatted_code = f"{leading}\n{import_block}" if leading else import_block
     if body:
-        separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ")) else "\n\n"
+        separator = "\n\n\n" if body.startswith(("class ", "def ", "async def ", "@")) else "\n\n"
         formatted_code = f"{formatted_code}{separator}{body}" if formatted_code else body
     return f"{formatted_code}\n"
 
