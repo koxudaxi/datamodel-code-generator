@@ -341,6 +341,96 @@ def _has_unsatisfiable_numeric_multiple_bounds(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_numeric_multiple_bounds)
 
 
+def _literal_schema_values(schema: dict[str, Any]) -> Iterator[Any]:
+    if "const" in schema:
+        yield schema["const"]
+        return
+    enum_values = schema.get("enum")
+    if isinstance(enum_values, list):
+        yield from enum_values
+
+
+def _json_value_matches_type(value: Any, type_value: Any) -> bool:
+    types = _type_values(type_value)
+    if types is None:
+        return True
+
+    matches = True
+    if value is None:
+        matches = "null" in types
+    elif isinstance(value, bool):
+        matches = "boolean" in types
+    elif isinstance(value, int):
+        matches = "integer" in types or "number" in types
+    elif isinstance(value, float):
+        matches = "number" in types
+    elif isinstance(value, str):
+        matches = "string" in types
+    elif isinstance(value, list):
+        matches = "array" in types
+    elif isinstance(value, dict):
+        matches = "object" in types
+    return matches
+
+
+def _json_literal_matches_schema(value: Any, schema: dict[str, Any]) -> bool:
+    if not _json_value_matches_type(value, schema.get("type")):
+        return False
+    if "const" in schema and value != schema["const"]:
+        return False
+    enum_values = schema.get("enum")
+    if isinstance(enum_values, list) and value not in enum_values:
+        return False
+    if isinstance(value, str):
+        min_length = schema.get("minLength")
+        max_length = schema.get("maxLength")
+        if isinstance(min_length, int) and len(value) < min_length:
+            return False
+        if isinstance(max_length, int) and len(value) > max_length:
+            return False
+    return True
+
+
+def _has_unsatisfiable_anyof_literal_constraints(value: Any) -> bool:
+    supported_keys = {
+        "$comment",
+        "$id",
+        "$schema",
+        "anyOf",
+        "const",
+        "description",
+        "enum",
+        "examples",
+        "maxLength",
+        "minLength",
+        "title",
+        "type",
+    }
+
+    def has_unsatisfiable_anyof_literal_constraints(schema: dict[str, Any]) -> bool:
+        any_of = schema.get("anyOf")
+        if not isinstance(any_of, list) or set(schema) - supported_keys:
+            return False
+
+        candidates: list[Any] = []
+        for branch in any_of:
+            if branch is False:
+                continue
+            if branch is True or not isinstance(branch, dict) or set(branch) - supported_keys:
+                return False
+            if "const" not in branch and not isinstance(branch.get("enum"), list):
+                return False
+            candidates.extend(
+                candidate
+                for candidate in _literal_schema_values(branch)
+                if _json_literal_matches_schema(candidate, branch)
+            )
+
+        return bool(candidates) and not any(_json_literal_matches_schema(candidate, schema) for candidate in candidates)
+
+    return _any_schema_node(value, has_unsatisfiable_anyof_literal_constraints)
+
+
 def _has_unsatisfiable_array_length(value: Any) -> bool:
     def max_item_counts(schema: dict[str, Any]) -> list[int]:
         counts: list[int] = []
@@ -432,6 +522,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "closed tuple contains maxContains bounds have no valid array payloads"
     if _has_unsatisfiable_numeric_multiple_bounds(schema):
         return "numeric multipleOf bounds have no valid payloads"
+    if _has_unsatisfiable_anyof_literal_constraints(schema):
+        return "anyOf literal constraints have no valid payloads"
     if _has_unsatisfiable_array_length(schema):
         return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):

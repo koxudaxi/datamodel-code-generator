@@ -4249,6 +4249,15 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             },
             id="anyof-const-common-length-disjoint",
         ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "string",
+                "minLength": 2,
+                "anyOf": [{"enum": ["a"]}, {"const": "b"}],
+            },
+            id="anyof-enum-common-length-disjoint",
+        ),
         pytest.param({"title": "Payload", "type": "integer", "minimum": 0, "not": {"minimum": 0}}, id="not-minimum"),
         pytest.param({"title": "Payload", "type": "string", "not": {"minLength": 0}}, id="not-min-length"),
         pytest.param(
@@ -6375,6 +6384,46 @@ def test_main_jsonschema_combined_const_common_constraints(output_file: Path) ->
         valid_json='{"code":"bb","count":2}',
         invalid_json='{"code":"bb","count":1}',
         expected_error_type="enum",
+    )
+
+
+def test_main_jsonschema_anyof_enum_common_constraints(output_file: Path) -> None:
+    """Test common constraints filter anyOf enum branches before enum extraction."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_enum_common_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_enum_common_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_enum_common_constraints",
+        model_name="AnyOfEnumCommonConstraints",
+        valid_json='{"code":"bb","count":2}',
+        invalid_json='{"code":"a","count":2}',
+        expected_error_type="enum",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_enum_common_constraints",
+        model_name="AnyOfEnumCommonConstraints",
+        valid_json='{"code":"cc","count":3}',
+        invalid_json='{"code":"cc","count":1}',
+        expected_error_type="enum",
+    )
+
+
+def test_main_jsonschema_anyof_enum_common_constraints_conflict(output_file: Path) -> None:
+    """Test anyOf enum branches filtered out by common constraints are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_enum_common_constraints_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
     )
 
 

@@ -2334,6 +2334,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 }
 
         try:
+            cls._normalize_raw_anyof_literal_constraints(normalized)
             cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_allof_dependent_constraints(normalized)
             cls._normalize_raw_allof_conditional_constraints(normalized)
@@ -2355,33 +2356,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return normalized
 
     @classmethod
+    def _normalize_raw_anyof_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        any_of = schema_dict.get("anyOf")
+        if not isinstance(any_of, list):
+            return
+
+        literal_branches = cls._raw_literal_combined_branches(any_of)
+        if literal_branches is None or not literal_branches:
+            return
+        if all("const" in branch and not isinstance(branch.get("enum"), list) for branch in literal_branches):
+            return
+        if any("title" in branch or "description" in branch for branch in literal_branches):
+            return
+
+        any_of_values: list[Any] = []
+        for branch in literal_branches:
+            for value in cls._raw_literal_branch_values(branch):
+                if cls._raw_value_matches_schema(value, branch):
+                    cls._append_unique_json_value(any_of_values, value)
+
+        if not any_of_values:
+            cls._raise_allof_literal_conflict()
+
+        schema_dict.pop("anyOf", None)
+        schema_dict["enum"] = any_of_values
+        cls._drop_enum_metadata(schema_dict)
+        cls._normalize_literal_constraints(schema_dict)
+
+    @classmethod
     def _normalize_raw_oneof_literal_constraints(cls, schema_dict: dict[Any, Any]) -> None:
         one_of = schema_dict.get("oneOf")
         if not isinstance(one_of, list):
             return
 
-        literal_branches: list[dict[Any, Any]] = []
-        for branch in one_of:
-            if branch is False:
-                continue
-            if branch is True or not isinstance(branch, dict):
-                return
-            if not cls._raw_schema_is_supported_literal_filter(branch) or not (
-                "const" in branch or isinstance(branch.get("enum"), list)
-            ):
-                return
-            literal_branches.append(branch)
-
-        if not literal_branches:
+        literal_branches = cls._raw_literal_combined_branches(one_of)
+        if literal_branches is None or not literal_branches:
             return
 
         candidates: list[Any] = []
         for branch in literal_branches:
-            if "const" in branch:
-                cls._append_unique_json_value(candidates, branch["const"])
-            else:
-                for value in branch["enum"]:
-                    cls._append_unique_json_value(candidates, value)
+            for value in cls._raw_literal_branch_values(branch):
+                cls._append_unique_json_value(candidates, value)
 
         match_counts = [
             sum(cls._raw_value_matches_schema(value, branch) for branch in literal_branches) for value in candidates
@@ -2397,6 +2412,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema_dict["enum"] = one_of_values
         cls._drop_enum_metadata(schema_dict)
         cls._normalize_literal_constraints(schema_dict)
+
+    @classmethod
+    def _raw_literal_combined_branches(cls, branches: list[Any]) -> list[dict[Any, Any]] | None:
+        literal_branches: list[dict[Any, Any]] = []
+        for branch in branches:
+            if branch is False:
+                continue
+            if branch is True or not isinstance(branch, dict):
+                return None
+            if not cls._raw_schema_is_supported_literal_filter(branch) or not (
+                "const" in branch or isinstance(branch.get("enum"), list)
+            ):
+                return None
+            literal_branches.append(branch)
+        return literal_branches
+
+    @staticmethod
+    def _raw_literal_branch_values(branch: dict[Any, Any]) -> Iterator[Any]:
+        if "const" in branch:
+            yield branch["const"]
+            return
+        enum_values = branch.get("enum")
+        if isinstance(enum_values, list):
+            yield from enum_values
 
     @classmethod
     def _append_unique_json_value(cls, values: list[Any], value: Any) -> None:
