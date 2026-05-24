@@ -155,6 +155,15 @@ def _is_json_text(text: str) -> bool:
     return False
 
 
+def _is_xml_text(text: str) -> bool:
+    """Check if text likely contains XML by examining the first non-whitespace character."""
+    for ch in text:
+        if ch in {"\ufeff", " ", "\t", "\r", "\n"}:
+            continue
+        return ch == "<"
+    return False
+
+
 def load_data(text: str) -> dict[str, YamlValue]:
     """Load text as JSON or YAML based on content.
 
@@ -979,11 +988,13 @@ def generate(  # noqa: PLR0912, PLR0914, PLR0915
 
 def infer_input_type(text: str) -> InputFileType:
     """Automatically detect the input file type from text content."""
-    from datamodel_code_generator.parser.xmlschema import is_xml_schema_text  # noqa: PLC0415
     from datamodel_code_generator.util import get_yaml_parse_errors  # noqa: PLC0415
 
-    if is_xml_schema_text(text):
-        return InputFileType.XMLSchema
+    if _is_xml_text(text):
+        from datamodel_code_generator.parser.xmlschema import is_xml_schema_text  # noqa: PLC0415
+
+        if is_xml_schema_text(text):
+            return InputFileType.XMLSchema
 
     try:
         data = load_yaml(text)

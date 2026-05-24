@@ -248,7 +248,7 @@ def test_xmlschema_converter_all_branches(tmp_path: Path) -> None:
     assert base_type["properties"]["sharedElement"]["items"]["nullable"] is True
     assert base_type["properties"]["sharedElement"]["maxItems"] == 2
     assert "left" not in base_type["required"]
-    assert "fromGroup" in base_type["required"]
+    assert "fromGroup" not in base_type["required"]
     assert base_type["properties"]["localNumber"]["default"] == 1
     assert base_type["properties"]["inlineAttribute"]["maxLength"] == 8
     assert base_type["properties"]["globalFlag"]["const"] is True
@@ -316,6 +316,11 @@ def test_xmlschema_edge_cases(tmp_path: Path) -> None:
       <xs:minLength value="bad"/>
     </xs:restriction>
   </xs:simpleType>
+  <xs:group name="optionalGroup">
+    <xs:sequence>
+      <xs:element name="optionalGrouped" type="xs:string"/>
+    </xs:sequence>
+  </xs:group>
   <xs:complexType name="NoSimpleChild">
     <xs:simpleContent/>
   </xs:complexType>
@@ -331,6 +336,9 @@ def test_xmlschema_edge_cases(tmp_path: Path) -> None:
         </xs:element>
       </xs:sequence>
     </xs:group>
+    <xs:sequence minOccurs="0">
+      <xs:group ref="optionalGroup"/>
+    </xs:sequence>
     <xs:sequence>
       <xs:annotation/>
       <xs:element/>
@@ -377,17 +385,85 @@ def test_xmlschema_edge_cases(tmp_path: Path) -> None:
     assert loose["properties"]["unknownNamespace"] == {}
     assert loose["properties"]["localGrouped"]["description"] == "Grouped attr"
     assert loose["additionalProperties"] is True
+    assert "optionalGrouped" not in loose["required"]
     assert schema["properties"]["plain"]["title"] == "Plain"
 
     nameless_element = ET.Element(f"{{{XML_SCHEMA_NAMESPACE}}}element")
     assert converter._convert_global_element_as_property(nameless_element) == {}
-    assert converter._build_definition("Loose") is converter._definitions["Loose"]
-    converter._building_definitions.add("Loop")
-    assert converter._build_definition("Loop") == {"$ref": "#/definitions/Loop"}
-    converter._building_definitions.remove("Loop")
-    assert converter._build_definition("Missing") == {"title": "Missing"}
+    loose_key = (None, "Loose")
+    assert converter._build_definition(loose_key) is converter._built_definitions[loose_key]
+    loop_key = (None, "Loop")
+    converter._building_definitions.add(loop_key)
+    assert converter._build_definition(loop_key) == {"$ref": "#/definitions/Loop"}
+    converter._building_definitions.remove(loop_key)
+    assert converter._build_definition((None, "Missing")) == {"title": "Missing"}
     assert converter._contains_ref([{"$ref": "#/definitions/Loose"}], "#/definitions/Loose")
     assert converter._schema_for_qname(None) == {}
+
+
+def test_xmlschema_import_resolves_by_namespace(tmp_path: Path) -> None:
+    """Resolve imported schema components with the QName namespace URI."""
+    (tmp_path / "external.xsd").write_text(
+        """<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="https://example.com/external">
+  <xs:simpleType name="ImportedCode">
+    <xs:restriction base="xs:string">
+      <xs:length value="5"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>
+""",
+        encoding="utf-8",
+    )
+    xsd = """<?xml version="1.0"?>
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    xmlns:ext="https://example.com/external"
+    targetNamespace="https://example.com/main">
+  <xs:import namespace="https://example.com/external" schemaLocation="external.xsd"/>
+  <xs:element name="code" type="ext:ImportedCode"/>
+</xs:schema>
+"""
+    schema = convert_xmlschema(xsd, tmp_path)
+
+    assert schema["title"] == "Code"
+    assert schema["allOf"] == [{"$ref": "#/definitions/ImportedCode"}]
+    assert schema["definitions"]["ImportedCode"]["minLength"] == 5
+    assert schema["definitions"]["ImportedCode"]["maxLength"] == 5
+
+
+def test_xmlschema_namespace_fallback_and_referenced_name_collision(tmp_path: Path) -> None:
+    """Resolve unprefixed target-namespace names and avoid duplicate referenced definitions."""
+    xsd = """<?xml version="1.0"?>
+<xs:schema
+    xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="https://example.com/main">
+  <xs:complexType name="LocalThing">
+    <xs:sequence>
+      <xs:element name="value" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Shared">
+    <xs:sequence>
+      <xs:element name="name" type="xs:string"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="Shared" type="LocalThing"/>
+  <xs:element name="holder">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element ref="Shared"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
+"""
+    schema = convert_xmlschema(xsd, tmp_path)
+
+    assert schema["properties"]["Shared"] == {"$ref": "#/definitions/LocalThing"}
+    assert schema["properties"]["holder"]["properties"]["Shared"] == {"$ref": "#/definitions/Shared"}
+    assert schema["definitions"]["LocalThing"]["properties"]["value"]["type"] == "string"
+    assert schema["definitions"]["Shared"]["properties"]["name"]["type"] == "string"
 
 
 def test_xmlschema_generate_smoke() -> None:
