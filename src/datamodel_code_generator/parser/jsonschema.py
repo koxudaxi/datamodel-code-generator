@@ -2259,6 +2259,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 }
 
         try:
+            cls._normalize_raw_dependent_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
             cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
@@ -2267,6 +2268,63 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise
 
         return normalized
+
+    @classmethod
+    def _normalize_raw_dependent_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object":
+            return
+
+        required = schema_dict.get("required")
+        if not isinstance(required, list):
+            return
+
+        while True:
+            required_names = {name for name in required if isinstance(name, str)}
+            added_required = cls._add_raw_dependent_required(schema_dict, required, required_names)
+            if not added_required:
+                return
+
+    @classmethod
+    def _add_raw_dependent_required(
+        cls,
+        schema_dict: dict[Any, Any],
+        required: list[Any],
+        required_names: set[str],
+    ) -> bool:
+        added = False
+        for dependency_name, dependency in cls._iter_raw_dependencies(schema_dict):
+            if dependency_name not in required_names:
+                continue
+            if dependency is False:
+                cls._raise_object_constraint_conflict()
+            dependency_required = cls._raw_dependency_required_names(dependency)
+            for required_name in dependency_required:
+                if required_name not in required_names:
+                    required.append(required_name)
+                    required_names.add(required_name)
+                    added = True
+        return added
+
+    @classmethod
+    def _iter_raw_dependencies(cls, schema_dict: dict[Any, Any]) -> Iterator[tuple[str, Any]]:
+        for key in ("dependentRequired", "dependentSchemas", "dependencies"):
+            dependencies = schema_dict.get(key)
+            if not isinstance(dependencies, dict):
+                continue
+            yield from (
+                (dependency_name, dependency)
+                for dependency_name, dependency in dependencies.items()
+                if isinstance(dependency_name, str)
+            )
+
+    @classmethod
+    def _raw_dependency_required_names(cls, dependency: Any) -> list[str]:
+        if isinstance(dependency, list):
+            return [name for name in dependency if isinstance(name, str)]
+        if not isinstance(dependency, dict):
+            return []
+        required = dependency.get("required")
+        return [name for name in required if isinstance(name, str)] if isinstance(required, list) else []
 
     @classmethod
     def _normalize_raw_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:

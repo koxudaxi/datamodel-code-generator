@@ -3961,6 +3961,29 @@ def test_main_jsonschema_anyof_not_intersection(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_dependent_required_intersection(output_file: Path) -> None:
+    """Test statically active dependent required constraints are generated as required fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="dependent_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="dependent_required_intersection",
+        model_name="DependentRequiredIntersection",
+        valid_json=('{"credit_card":"1","billing_address":"Main","country":"JP","tax_id":"T","legacy_code":1}'),
+        invalid_json='{"credit_card":"1","billing_address":"Main","country":"JP","tax_id":"T"}',
+        expected_error_type="missing",
+        expected_attribute_path=("legacy_code",),
+        expected_attribute_value=1,
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -3996,6 +4019,37 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": ["integer", "string"], "not": {"type": ["integer", "string"]}},
             id="type-not-same-types",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"credit_card": {"type": "string"}},
+                "required": ["credit_card"],
+                "additionalProperties": False,
+                "dependentRequired": {"credit_card": ["billing_address"]},
+            },
+            id="dependent-required-closed-missing-property",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}},
+                "required": ["kind"],
+                "dependentSchemas": {"kind": False},
+            },
+            id="dependent-schema-false-required-trigger",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}},
+                "required": ["kind"],
+                "dependencies": {"kind": False},
+            },
+            id="legacy-dependency-schema-false-required-trigger",
         ),
         pytest.param(
             {
