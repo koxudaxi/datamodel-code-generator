@@ -4374,6 +4374,29 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "allOf": [
+                    {"additionalProperties": False},
+                    {"required": ["blocked"]},
+                ],
+            },
+            id="allof-additional-properties-closed-required-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"blocked": {"type": "string"}},
+                "allOf": [
+                    {"propertyNames": {"enum": ["allowed"]}},
+                    {"required": ["blocked"]},
+                ],
+            },
+            id="allof-property-names-required-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
                 "additionalProperties": False,

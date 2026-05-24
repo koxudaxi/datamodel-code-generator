@@ -11,7 +11,7 @@ import importlib
 import json
 import re
 from collections import defaultdict
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from fractions import Fraction
 from functools import cached_property, lru_cache
@@ -2308,6 +2308,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_oneof_literal_constraints(normalized)
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
+            cls._validate_raw_allof_object_member_constraints(normalized)
             cls._normalize_raw_known_property_constraints(normalized)
             cls._normalize_raw_contains_item_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
@@ -3202,6 +3203,48 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for name in required_names
         ):
             cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _validate_raw_allof_object_member_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object":
+            return
+
+        object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
+        if len(object_schemas) == 1:
+            return
+
+        required_names = {
+            required_name for item in object_schemas for required_name in cls._raw_required_names(item.get("required"))
+        }
+        if not required_names:
+            return
+
+        for item in object_schemas:
+            property_names = item.get("propertyNames")
+            if any(not cls._raw_property_name_accepts_name(property_names, name) for name in required_names):
+                cls._raise_object_constraint_conflict()
+
+            if item.get("additionalProperties") is not False:
+                continue
+            properties = item.get("properties")
+            declared_names = set(properties) if isinstance(properties, dict) else set()
+            pattern_properties = item.get("patternProperties")
+            if any(
+                name not in declared_names
+                and not cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
+                for name in required_names
+            ):
+                cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _iter_raw_allof_object_schemas(cls, schema_dict: dict[Any, Any]) -> Iterator[dict[Any, Any]]:
+        yield schema_dict
+        all_of = schema_dict.get("allOf")
+        if not isinstance(all_of, list):
+            return
+        for item in all_of:
+            if isinstance(item, dict):
+                yield from cls._iter_raw_allof_object_schemas(item)
 
     @classmethod
     def _raw_max_possible_property_count(cls, schema_dict: dict[Any, Any]) -> int | None:
