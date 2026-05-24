@@ -1,0 +1,38 @@
+{
+  "title": "conditional boolean branch validators",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string"
+    },
+    "fallback-code": {
+      "type": "string"
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "if": {
+    "required": [
+      "mode"
+    ],
+    "properties": {
+      "mode": {
+        "const": "blocked"
+      }
+    }
+  },
+  "then": false,
+  "else": {
+    "required": [
+      "fallback-code"
+    ],
+    "properties": {
+      "fallback-code": {
+        "type": "string",
+        "pattern": "^F-"
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -74,6 +74,7 @@ EXCLUDED_FILES: dict[str, str] = {
     "jsonschema/non_dict_files/list_only.yaml": "input is YAML data, not a JSON Schema document",
     "jsonschema/non_dict_files/whitespace_only.yaml": "empty YAML fixture",
     "jsonschema/non_json_object.json": "input is JSON data, not a JSON Schema document",
+    "jsonschema/not_boolean_validator.json": "intentionally unsatisfiable schema covered by dedicated e2e validation",
     "jsonschema/null.json": "intentionally invalid JSON fixture",
     "jsonschema/ref_to_json_list/list.json": "referenced JSON data list, not a schema document",
     "jsonschema/unknown_format.json": "unknown format fixture intentionally emits a generator warning",

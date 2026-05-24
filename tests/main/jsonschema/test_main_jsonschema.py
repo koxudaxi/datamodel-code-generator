@@ -5068,6 +5068,115 @@ def test_main_jsonschema_object_context_alias_validators(output_file: Path) -> N
         )
 
 
+def test_main_jsonschema_object_boolean_context_validators(output_file: Path) -> None:
+    """Test object-context validators honor empty and boolean schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_boolean_context_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_boolean_context_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        "{}",
+        '{"default-config":"xy"}',
+        '{"default-config":"okay","legacy-mode":true}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_boolean_context_validators",
+            model_name="ObjectBooleanContextValidators",
+            valid_json='{"default-config":"okay","activation-code":"A-1"}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_conditional_boolean_branch_validators(output_file: Path) -> None:
+    """Test boolean then/else schemas generate runtime conditional validators."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_boolean_branch_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_boolean_branch_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        '{"mode":"blocked","fallback-code":"F-1"}',
+        '{"mode":"active"}',
+        '{"mode":"active","fallback-code":"L-1"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="conditional_boolean_branch_validators",
+            model_name="ConditionalBooleanBranchValidators",
+            valid_json='{"mode":"active","fallback-code":"F-1"}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_conditional_else_only_boolean_validator(output_file: Path) -> None:
+    """Test if/else without then emits syntactically valid branch code."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_else_only_boolean_validator.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_else_only_boolean_validator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        "{}",
+        '{"mode":"run"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="conditional_else_only_boolean_validator",
+            model_name="ConditionalElseOnlyBooleanValidator",
+            valid_json='{"mode":"skip"}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_not_boolean_validator(output_file: Path) -> None:
+    """Test not: true makes a generated object model unsatisfiable."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "not_boolean_validator.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="not_boolean_validator.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_invalid(
+        output_file,
+        module_name="not_boolean_validator",
+        model_name="NotBooleanValidator",
+        invalid_json='{"value":"x"}',
+        expected_error_type="value_error",
+    )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(

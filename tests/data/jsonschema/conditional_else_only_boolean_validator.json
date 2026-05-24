@@ -1,0 +1,21 @@
+{
+  "title": "conditional else only boolean validator",
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string"
+    }
+  },
+  "if": {
+    "required": [
+      "mode"
+    ],
+    "properties": {
+      "mode": {
+        "const": "skip"
+      }
+    }
+  },
+  "else": false,
+  "additionalProperties": false
+}

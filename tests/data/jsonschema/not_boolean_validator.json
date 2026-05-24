@@ -1,0 +1,11 @@
+{
+  "title": "not boolean validator",
+  "type": "object",
+  "properties": {
+    "value": {
+      "type": "string"
+    }
+  },
+  "not": true,
+  "additionalProperties": false
+}

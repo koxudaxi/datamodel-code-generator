@@ -3479,6 +3479,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 })
 
         for property_name, dependent_schema in self._iter_dependent_schema_objects(extras):
+            if not isinstance(dependent_schema, JsonSchemaObject):
+                continue
             required_names = dependent_schema.required
             if required_names:
                 dependent_required.update({
@@ -4013,22 +4015,44 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
             validators["root_pattern_properties"] = pattern_properties
 
-    def _iter_dependent_schema_objects(self, extras: dict[str, Any]) -> Iterator[tuple[str, JsonSchemaObject]]:
+    def _iter_dependent_schema_objects(
+        self,
+        extras: dict[str, Any],
+    ) -> Iterator[tuple[str, JsonSchemaObject | bool]]:
         dependent_schemas = extras.get("dependentSchemas")
         if isinstance(dependent_schemas, dict):
             for property_name, dependent_schema in dependent_schemas.items():
+                if isinstance(property_name, str) and dependent_schema is False:
+                    yield property_name, False
+                    continue
                 if isinstance(property_name, str) and isinstance(dependent_schema, dict):
                     yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
 
         dependencies = extras.get("dependencies")
         if isinstance(dependencies, dict):
             for property_name, dependent_schema in dependencies.items():
+                if isinstance(property_name, str) and dependent_schema is False:
+                    yield property_name, False
+                    continue
                 if isinstance(property_name, str) and isinstance(dependent_schema, dict):
                     yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
 
-    def _schema_condition_predicate(self, schema: JsonSchemaObject) -> str | None:
+    def _schema_condition_predicate(
+        self,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
+        *,
+        empty_schema_predicate: str | None = None,
+    ) -> str | None:
+        if schema is True:
+            return "True"
+        if schema is False:
+            return "False"
         predicates = self._schema_object_property_predicates(schema, "model_data")
-        return self._join_contains_predicates(predicates, "and") if predicates else None
+        if predicates:
+            return self._join_contains_predicates(predicates, "and")
+        if not schema.model_dump(exclude_defaults=True, exclude_none=True):
+            return empty_schema_predicate
+        return None
 
     def _collect_dependent_schema_property_validators(
         self,
@@ -4046,36 +4070,51 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _collect_conditional_validator_branch(
         self,
-        schema: JsonSchemaObject,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
     ) -> dict[str, Any]:
-        return {"condition": self._schema_condition_predicate(schema)}
+        condition = self._schema_condition_predicate(schema, empty_schema_predicate="True")
+        return {"condition": condition} if condition and condition != "True" else {}
 
     def _collect_conditional_validators(
         self,
         extras: dict[str, Any],
     ) -> list[dict[str, Any]]:
         raw_if_schema = extras.get("if")
-        if not isinstance(raw_if_schema, dict):
+        if not isinstance(raw_if_schema, (bool, dict)):
             return []
 
         raw_then_schema = extras.get("then")
         raw_else_schema = extras.get("else")
-        if not isinstance(raw_then_schema, dict) and not isinstance(raw_else_schema, dict):
+        has_then_schema = isinstance(raw_then_schema, (bool, dict))
+        has_else_schema = isinstance(raw_else_schema, (bool, dict))
+        if not has_then_schema and not has_else_schema:
             return []
 
-        if_schema = self.SCHEMA_OBJECT_TYPE.model_validate(raw_if_schema)
-        condition = self._schema_condition_predicate(if_schema)
+        if_schema = (
+            raw_if_schema if isinstance(raw_if_schema, bool) else self.SCHEMA_OBJECT_TYPE.model_validate(raw_if_schema)
+        )
+        condition = self._schema_condition_predicate(if_schema, empty_schema_predicate="True")
         if not condition:
             return []
 
         validator: dict[str, Any] = {"condition": condition}
-        if isinstance(raw_then_schema, dict):
-            validator["then"] = self._collect_conditional_validator_branch(
-                self.SCHEMA_OBJECT_TYPE.model_validate(raw_then_schema),
+        if has_then_schema:
+            then_schema = (
+                raw_then_schema
+                if isinstance(raw_then_schema, bool)
+                else self.SCHEMA_OBJECT_TYPE.model_validate(raw_then_schema)
             )
-        if isinstance(raw_else_schema, dict):
+            validator["then"] = self._collect_conditional_validator_branch(
+                then_schema,
+            )
+        if has_else_schema:
+            else_schema = (
+                raw_else_schema
+                if isinstance(raw_else_schema, bool)
+                else self.SCHEMA_OBJECT_TYPE.model_validate(raw_else_schema)
+            )
             validator["else"] = self._collect_conditional_validator_branch(
-                self.SCHEMA_OBJECT_TYPE.model_validate(raw_else_schema),
+                else_schema,
             )
         return [validator]
 
@@ -4084,6 +4123,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         extras: dict[str, Any],
     ) -> list[dict[str, str]]:
         raw_not_schema = extras.get("not")
+        if raw_not_schema is True:
+            return [{"condition": "True"}]
+        if raw_not_schema is False:
+            return []
         if not isinstance(raw_not_schema, dict):
             return []
 

@@ -552,7 +552,10 @@ class BaseModel(BaseModelBase):
             if not then_lines and not else_lines:
                 continue
             lines.append(f"if {condition}:")
-            lines.extend(f"    {line}" if line else "" for line in then_lines)
+            if then_lines:
+                lines.extend(f"    {line}" if line else "" for line in then_lines)
+            elif else_lines:
+                lines.append("    pass")
             if else_lines:
                 lines.append("else:")
                 lines.extend(f"    {line}" if line else "" for line in else_lines)
