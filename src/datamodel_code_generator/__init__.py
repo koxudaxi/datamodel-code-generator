@@ -104,6 +104,9 @@ def load_yaml(stream: str | TextIO) -> YamlValue:
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
         text = stream if isinstance(stream, str) else stream.read()
+        from datamodel_code_generator.util import warn_yaml_deprecated_bool_values  # noqa: PLC0415
+
+        warn_yaml_deprecated_bool_values(text)
         return ryaml.loads(text)
 
     import yaml  # noqa: PLC0415

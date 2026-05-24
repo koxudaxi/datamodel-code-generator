@@ -350,6 +350,239 @@ def test_apply_builtin_formatter_adds_blank_after_module_docstring() -> None:
     assert apply_builtin_formatter(code) == '"""Generated models."""\n\nimport sys\n\n\nclass Pet:\n    pass\n'
 
 
+def test_apply_builtin_formatter_collapses_top_level_decorator_blank_lines() -> None:
+    """Test built-in formatter keeps black-compatible spacing before top-level decorators."""
+    code = (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "Alias = str\n"
+        '"""Alias docs."""\n'
+        "\n"
+        "\n"
+        "\n"
+        "@dataclass\n"
+        "class Pet:\n"
+        "    name: str\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "Alias = str\n"
+        '"""Alias docs."""\n'
+        "\n"
+        "\n"
+        "@dataclass\n"
+        "class Pet:\n"
+        "    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_removes_blank_between_stacked_decorators() -> None:
+    """Test built-in formatter keeps black-compatible stacked decorator spacing."""
+    code = (
+        "from dataclasses import dataclass\n"
+        "from typing_extensions import deprecated\n"
+        "\n"
+        "\n"
+        "@deprecated('LegacyUser is deprecated.')\n"
+        "\n"
+        "@dataclass\n"
+        "class LegacyUser:\n"
+        "    name: str\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from dataclasses import dataclass\n"
+        "\n"
+        "from typing_extensions import deprecated\n"
+        "\n"
+        "\n"
+        "@deprecated('LegacyUser is deprecated.')\n"
+        "@dataclass\n"
+        "class LegacyUser:\n"
+        "    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_removes_blank_between_decorator_and_class() -> None:
+    """Test built-in formatter keeps decorators attached to decorated classes."""
+    code = "from my_module import my_decorator\n\n\n@my_decorator\n\nclass User:\n    name: str\n"
+
+    assert apply_builtin_formatter(code) == (
+        "from my_module import my_decorator\n\n\n@my_decorator\nclass User:\n    name: str\n"
+    )
+
+
+def test_apply_builtin_formatter_adds_blank_between_assignment_and_class() -> None:
+    """Test built-in formatter keeps black-compatible spacing before classes."""
+    code = '__all__ = [\n    "Model",\n]\n\nclass Model:\n    id: str\n'
+
+    assert apply_builtin_formatter(code) == '__all__ = [\n    "Model",\n]\n\n\nclass Model:\n    id: str\n'
+
+
+def test_apply_builtin_formatter_normalizes_simple_string_quotes() -> None:
+    """Test built-in formatter can match black string normalization for generated strings."""
+    code = (
+        "from typing import Literal\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        "    mode: Literal['MODE_2D'] = Field(..., alias='mapViewMode')\n"
+    )
+
+    assert apply_builtin_formatter(code, string_normalization=True) == (
+        "from typing import Literal\n"
+        "\n"
+        "from pydantic import BaseModel, Field\n"
+        "\n"
+        "\n"
+        "class Model(BaseModel):\n"
+        '    mode: Literal["MODE_2D"] = Field(..., alias="mapViewMode")\n'
+    )
+
+
+def test_apply_builtin_formatter_normalizes_blank_after_class_docstring() -> None:
+    """Test built-in formatter keeps black-compatible class docstring spacing."""
+    code = (
+        "from enum import Enum\n"
+        "\n"
+        "\n"
+        "class Shift(Enum):\n"
+        '    """\n'
+        "    Employee shift status\n"
+        '    """\n'
+        "    ON_SHIFT = 'ON_SHIFT'\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from enum import Enum\n"
+        "\n"
+        "\n"
+        "class Shift(Enum):\n"
+        '    """\n'
+        "    Employee shift status\n"
+        '    """\n'
+        "\n"
+        "    ON_SHIFT = 'ON_SHIFT'\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_type_alias_type_union() -> None:
+    """Test built-in formatter wraps generated TypeAliasType unions like black."""
+    code = (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "\n"
+        'Resource = TypeAliasType("Resource", Union[\n'
+        "    'Car',\n"
+        "    'Employee',\n"
+        "])\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "Resource = TypeAliasType(\n"
+        '    "Resource",\n'
+        "    Union[\n"
+        "        'Car',\n"
+        "        'Employee',\n"
+        "    ],\n"
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_inline_type_alias_type_union() -> None:
+    """Test built-in formatter matches black for inline Union TypeAliasType calls."""
+    code = (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "\n"
+        'JsonType = TypeAliasType("JsonType", Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]])\n'
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import TypeAliasType, Union\n"
+        "\n"
+        "JsonType = TypeAliasType(\n"
+        '    "JsonType", Union[ElementaryType, list["JsonType"], dict[str, "JsonType"]]\n'
+        ")\n"
+    )
+
+
+def test_apply_builtin_formatter_normalizes_blank_lines_without_imports() -> None:
+    """Test built-in formatter normalizes top-level blanks when no imports exist."""
+    code = "type Foo = str\n\n\n\ntype Bar = Foo\n"
+
+    assert apply_builtin_formatter(code) == "type Foo = str\n\n\ntype Bar = Foo\n"
+
+
+def test_apply_builtin_formatter_parenthesizes_short_annotated_default() -> None:
+    """Test built-in formatter matches black for short overflowing Annotated defaults."""
+    code = (
+        "from typing import Annotated, Literal\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = 'Notification'\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "from typing import Annotated, Literal\n"
+        "\n"
+        "from pydantic import Field\n"
+        "\n"
+        "\n"
+        "class Model:\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = (\n"
+        "        'Notification'\n"
+        "    )\n"
+    )
+
+
+def test_apply_builtin_formatter_parenthesizes_long_union_annotation() -> None:
+    """Test built-in formatter matches black for long generated union annotations."""
+    code = (
+        "class Model:\n"
+        "    optional_oneof_with_null_and_constraint: OptionalOneofWithNullAndConstraint | None | UnsetType = UNSET\n"
+        "    optional_nullable_with_constraint: Annotated[str, Meta(max_length=50)] | UnsetType = UNSET\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Model:\n"
+        "    optional_oneof_with_null_and_constraint: (\n"
+        "        OptionalOneofWithNullAndConstraint | None | UnsetType\n"
+        "    ) = UNSET\n"
+        "    optional_nullable_with_constraint: (\n"
+        "        Annotated[str, Meta(max_length=50)] | UnsetType\n"
+        "    ) = UNSET\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_union_subscript_annotation() -> None:
+    """Test built-in formatter matches black for generated Union annotations."""
+    code = (
+        "class Api(Struct):\n"
+        "    apiKey: Union[Annotated[str, Meta(description='To be used as a dataset parameter value')], "
+        "UnsetType] = UNSET\n"
+        "    optional_nullable_with_constraint: Union[Annotated[str, Meta(max_length=50)], UnsetType] = UNSET\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Api(Struct):\n"
+        "    apiKey: Union[\n"
+        "        Annotated[str, Meta(description='To be used as a dataset parameter value')],\n"
+        "        UnsetType,\n"
+        "    ] = UNSET\n"
+        "    optional_nullable_with_constraint: Union[\n"
+        "        Annotated[str, Meta(max_length=50)], UnsetType\n"
+        "    ] = UNSET\n"
+    )
+
+
 def test_format_code_builtin_formatter_wraps_generated_model_statements(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -405,6 +638,7 @@ def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
         formatters=[Formatter.BUILTIN],
         builtin_format_line_length=72,
     )
+    long_pattern = "a" * 80
 
     formatted_code = formatter.format_code(
         "import sys  # noqa: F401\n"
@@ -425,6 +659,11 @@ def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
         "    metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength]\n"
         "    defaulted_metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
         "Field(description='kept as-is because it already has a default')] = None\n"
+        "    typename__: Annotated[Literal['Notification'] | None, Field(alias='__typename')] = 'Notification'\n"
+        f"    hostName: constr(pattern=r'{long_pattern}', strict=True) | None = None\n"
+        "    optional_nested_value: list[list[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength | None] "
+        "| None] "
+        "| None = None\n"
         "    nested: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
         "Field(description='This nested field is long enough to wrap inside Annotated')]\n"
     )
@@ -450,16 +689,59 @@ def test_format_code_builtin_formatter_handles_additional_generated_model_edges(
         "        description='already wrapped',\n"
         "    )\n"
         "    metadata: Annotated[\n"
-        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength\n"
         "    ]\n"
-        "    defaulted_metadata: Annotated[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength, "
-        "Field(description='kept as-is because it already has a default')] = None\n"
+        "    defaulted_metadata: Annotated[\n"
+        "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
+        "        Field(\n"
+        "            description='kept as-is because it already has a default'\n"
+        "        ),\n"
+        "    ] = None\n"
+        "    typename__: Annotated[\n"
+        "        Literal['Notification'] | None, Field(alias='__typename')\n"
+        "    ] = 'Notification'\n"
+        "    hostName: (\n"
+        "        constr(\n"
+        f"            pattern=r'{long_pattern}',\n"
+        "            strict=True,\n"
+        "        )\n"
+        "        | None\n"
+        "    ) = None\n"
+        "    optional_nested_value: list[list[VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength | None] "
+        "| None] "
+        "| None = (\n"
+        "        None\n"
+        "    )\n"
         "    nested: Annotated[\n"
         "        VeryLongGeneratedTypeNameThatExceedsTheConfiguredLineLength,\n"
         "        Field(\n"
-        "            description='This nested field is long enough to wrap inside Annotated',\n"
+        "            description='This nested field is long enough to wrap inside Annotated'\n"
         "        ),\n"
         "    ]\n"
+    )
+
+
+def test_apply_builtin_formatter_wraps_msgspec_field_default_factory() -> None:
+    """Test built-in formatter matches black for generated msgspec field defaults."""
+    code = (
+        "class Bar(Struct):\n"
+        "    original_foo: Foo_1 | UnsetType = field(default_factory=lambda: "
+        "convert({'text': 'abc', 'number': 123}, type=Foo_1))\n"
+        "    baz: list[Foo_1] | UnsetType = field(default_factory=lambda: "
+        "convert([{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}], type=list[Foo_1]))\n"
+    )
+
+    assert apply_builtin_formatter(code) == (
+        "class Bar(Struct):\n"
+        "    original_foo: Foo_1 | UnsetType = field(\n"
+        "        default_factory=lambda: convert({'text': 'abc', 'number': 123}, type=Foo_1)\n"
+        "    )\n"
+        "    baz: list[Foo_1] | UnsetType = field(\n"
+        "        default_factory=lambda: convert(\n"
+        "            [{'text': 'abc', 'number': 123}, {'text': 'efg', 'number': 456}],\n"
+        "            type=list[Foo_1],\n"
+        "        )\n"
+        "    )\n"
     )
 
 
