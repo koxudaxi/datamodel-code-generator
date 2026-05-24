@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AllofWrappedAnyofPropertyNamesCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["a", "b"]
+  },
+  "minProperties": 2,
+  "anyOf": [
+    {
+      "allOf": [
+        {
+          "required": ["a"]
+        },
+        {
+          "maxProperties": 1
+        }
+      ]
+    },
+    false
+  ],
+  "additionalProperties": {
+    "type": "string"
+  }
+}

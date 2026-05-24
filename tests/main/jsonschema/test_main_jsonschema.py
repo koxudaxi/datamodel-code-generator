@@ -4027,6 +4027,17 @@ def test_main_jsonschema_not_property_names_count_conflict(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_allof_wrapped_not_property_names_count_conflict(output_file: Path) -> None:
+    """Test not allOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_wrapped_not_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_not_number_type_intersection(output_file: Path) -> None:
     """Test not number removes integer from mixed type lists."""
     run_main_and_assert(
@@ -4152,6 +4163,17 @@ def test_main_jsonschema_dependent_schema_property_names_count_conflict(output_f
     )
 
 
+def test_main_jsonschema_dependent_schema_allof_property_names_count_conflict(output_file: Path) -> None:
+    """Test dependent schema allOf branches can make finite propertyNames impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_allof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_max_properties_count_conflict(output_file: Path) -> None:
     """Test dependent schema maxProperties can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -4174,6 +4196,28 @@ def test_main_jsonschema_conditional_property_names_count_conflict(output_file: 
     )
 
 
+def test_main_jsonschema_conditional_allof_property_names_count_conflict(output_file: Path) -> None:
+    """Test conditional allOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_allof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_conditional_if_allof_property_names_count_conflict(output_file: Path) -> None:
+    """Test conditional if allOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_if_allof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_anyof_property_names_count_conflict(output_file: Path) -> None:
     """Test anyOf branches can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -4185,10 +4229,32 @@ def test_main_jsonschema_anyof_property_names_count_conflict(output_file: Path) 
     )
 
 
+def test_main_jsonschema_allof_wrapped_anyof_property_names_count_conflict(output_file: Path) -> None:
+    """Test anyOf allOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_wrapped_anyof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_oneof_property_names_count_conflict(output_file: Path) -> None:
     """Test oneOf branches can make finite propertyNames counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "oneof_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_wrapped_oneof_property_names_count_conflict(output_file: Path) -> None:
+    """Test oneOf allOf branches can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_wrapped_oneof_property_names_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
@@ -5508,6 +5574,72 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "maxProperties": 1,
             },
             id="object-required-max-properties-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["a", "b"]},
+                "minProperties": 2,
+                "not": {"allOf": [{"required": ["a"]}, {"required": ["b"]}]},
+            },
+            id="object-finite-property-names-not-allof-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["a", "b"]},
+                "minProperties": 2,
+                "anyOf": [{"allOf": [{"required": ["a"]}, {"maxProperties": 1}]}, False],
+            },
+            id="object-finite-property-names-anyof-allof-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["a", "b"]},
+                "minProperties": 2,
+                "oneOf": [{"allOf": [{"required": ["a"]}]}, {"allOf": [{"required": ["b"]}]}],
+            },
+            id="object-finite-property-names-oneof-allof-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger", "other"]},
+                "minProperties": 2,
+                "if": {"required": ["trigger"]},
+                "then": {"allOf": [{"maxProperties": 1}]},
+            },
+            id="object-finite-property-names-conditional-allof-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger", "other"]},
+                "minProperties": 2,
+                "if": {"allOf": [{"required": ["trigger"]}]},
+                "then": {"maxProperties": 1},
+            },
+            id="object-finite-property-names-conditional-if-allof-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger", "required_peer"]},
+                "minProperties": 2,
+                "dependentSchemas": {
+                    "trigger": {
+                        "allOf": [{"required": ["required_peer"]}, {"maxProperties": 1}],
+                    },
+                },
+            },
+            id="object-finite-property-names-dependent-schema-allof-disjoint",
         ),
     ],
 )

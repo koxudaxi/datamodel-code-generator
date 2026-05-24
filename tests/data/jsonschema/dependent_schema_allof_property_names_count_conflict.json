@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DependentSchemaAllofPropertyNamesCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["trigger", "required_peer"]
+  },
+  "minProperties": 2,
+  "dependentSchemas": {
+    "trigger": {
+      "allOf": [
+        {
+          "required": ["required_peer"]
+        },
+        {
+          "maxProperties": 1
+        }
+      ]
+    }
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

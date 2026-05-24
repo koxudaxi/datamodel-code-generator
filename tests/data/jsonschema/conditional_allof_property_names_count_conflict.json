@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConditionalAllofPropertyNamesCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["trigger", "other"]
+  },
+  "minProperties": 2,
+  "if": {
+    "required": ["trigger"]
+  },
+  "then": {
+    "allOf": [
+      {
+        "maxProperties": 1
+      }
+    ]
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

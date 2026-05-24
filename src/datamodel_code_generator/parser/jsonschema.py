@@ -3855,6 +3855,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return all(
             not cls._raw_dependency_excludes_property_name(dependency, name, selected_names)
             and cls._raw_dependency_accepts_property_count(dependency, len(selected_names))
+            and (
+                not isinstance(dependency, dict)
+                or cls._raw_property_name_set_satisfies_object_schema(selected_names, dependency)
+            )
             for name in selected_names
             for dependency_name, dependency in dependencies
             if dependency_name == name
@@ -3883,19 +3887,39 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return True
 
     @classmethod
-    def _raw_property_name_set_conditional_result(cls, selected_names: set[str], condition_schema: Any) -> bool | None:
+    def _raw_property_name_set_conditional_result(  # noqa: PLR0911
+        cls, selected_names: set[str], condition_schema: Any
+    ) -> bool | None:
         if condition_schema is True or condition_schema == {}:
             return True
         if condition_schema is False:
             return False
         if not isinstance(condition_schema, dict):
             return None
-        if set(condition_schema) - {"required", "type"}:
+        metadata_keys = {
+            "$comment",
+            "$id",
+            "$schema",
+            "description",
+            "examples",
+            "title",
+        }
+        if set(condition_schema) - (metadata_keys | {"allOf", "required", "type"}):
             return None
         condition_type = condition_schema.get("type")
         if condition_type is not None and not cls._raw_type_accepts_object(condition_type):
             return False
-        return cls._raw_required_names(condition_schema.get("required")) <= selected_names
+        if not cls._raw_required_names(condition_schema.get("required")) <= selected_names:
+            return False
+        all_of = condition_schema.get("allOf")
+        if not isinstance(all_of, list):
+            return True
+        branch_results = [cls._raw_property_name_set_conditional_result(selected_names, item) for item in all_of]
+        if any(result is False for result in branch_results):
+            return False
+        if any(result is None for result in branch_results):
+            return None
+        return True
 
     @classmethod
     def _raw_property_name_set_satisfies_object_schema(  # noqa: PLR0911
@@ -3918,7 +3942,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
         if not cls._raw_required_names(schema.get("required")) <= selected_names:
             return False
-        return all(cls._raw_property_name_set_accepts_name(schema, name) for name in selected_names)
+        all_of = schema.get("allOf")
+        return all(cls._raw_property_name_set_accepts_name(schema, name) for name in selected_names) and (
+            not isinstance(all_of, list)
+            or all(cls._raw_property_name_set_satisfies_object_schema(selected_names, item) for item in all_of)
+        )
 
     @classmethod
     def _raw_property_name_set_accepts_name(cls, schema: dict[Any, Any], name: str) -> bool:
@@ -3960,13 +3988,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         }
         key_only_keys = {
             "additionalProperties",
+            "allOf",
             "maxProperties",
             "minProperties",
             "propertyNames",
             "required",
             "type",
         }
-        return set(schema) <= metadata_keys | key_only_keys
+        if not set(schema) <= metadata_keys | key_only_keys:
+            return False
+        all_of = schema.get("allOf")
+        return not isinstance(all_of, list) or all(
+            item is True
+            or item is False
+            or (isinstance(item, dict) and cls._raw_property_name_set_not_schema_is_key_only(item))
+            for item in all_of
+        )
 
     @classmethod
     def _raw_property_name_set_satisfies_anyof_schemas(

@@ -760,25 +760,46 @@ def _property_name_set_satisfies_dependencies(
     return all(
         not _dependency_excludes_property_name(dependency, name, selected_names)
         and _dependency_accepts_property_count(dependency, len(selected_names))
+        and (not isinstance(dependency, dict) or _property_name_set_satisfies_object_schema(selected_names, dependency))
         for name in selected_names
         for dependency_name, dependency in dependencies
         if dependency_name == name
     )
 
 
-def _property_name_set_conditional_result(selected_names: set[str], condition_schema: Any) -> bool | None:
+def _property_name_set_conditional_result(  # noqa: PLR0911
+    selected_names: set[str], condition_schema: Any
+) -> bool | None:
     if condition_schema is True or condition_schema == {}:
         return True
     if condition_schema is False:
         return False
     if not isinstance(condition_schema, dict):
         return None
-    if set(condition_schema) - {"required", "type"}:
+    metadata_keys = {
+        "$comment",
+        "$id",
+        "$schema",
+        "description",
+        "examples",
+        "title",
+    }
+    if set(condition_schema) - (metadata_keys | {"allOf", "required", "type"}):
         return None
     condition_types = _type_values(condition_schema.get("type"))
     if condition_types is not None and "object" not in condition_types:
         return False
-    return set(condition_schema.get("required", [])) <= selected_names
+    if not set(condition_schema.get("required", [])) <= selected_names:
+        return False
+    all_of = condition_schema.get("allOf")
+    if not isinstance(all_of, list):
+        return True
+    branch_results = [_property_name_set_conditional_result(selected_names, item) for item in all_of]
+    if any(result is False for result in branch_results):
+        return False
+    if any(result is None for result in branch_results):
+        return None
+    return True
 
 
 def _property_name_set_accepts_name(schema: dict[str, Any], name: str) -> bool:
@@ -819,7 +840,11 @@ def _property_name_set_satisfies_object_schema(selected_names: set[str], schema:
         return False
     if not set(schema.get("required", [])) <= selected_names:
         return False
-    return all(_property_name_set_accepts_name(schema, name) for name in selected_names)
+    all_of = schema.get("allOf")
+    return all(_property_name_set_accepts_name(schema, name) for name in selected_names) and (
+        not isinstance(all_of, list)
+        or all(_property_name_set_satisfies_object_schema(selected_names, item) for item in all_of)
+    )
 
 
 def _property_name_set_satisfies_conditionals(
@@ -847,13 +872,20 @@ def _property_name_set_not_schema_is_key_only(schema: dict[str, Any]) -> bool:
     }
     key_only_keys = {
         "additionalProperties",
+        "allOf",
         "maxProperties",
         "minProperties",
         "propertyNames",
         "required",
         "type",
     }
-    return set(schema) <= metadata_keys | key_only_keys
+    if not set(schema) <= metadata_keys | key_only_keys:
+        return False
+    all_of = schema.get("allOf")
+    return not isinstance(all_of, list) or all(
+        item is True or item is False or (isinstance(item, dict) and _property_name_set_not_schema_is_key_only(item))
+        for item in all_of
+    )
 
 
 def _property_name_set_satisfies_not_schemas(selected_names: set[str], not_schemas: list[Any]) -> bool:
