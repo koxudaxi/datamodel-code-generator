@@ -463,6 +463,23 @@ def _has_unsatisfiable_not_type_constraints(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_not_type_constraints)
 
 
+def _has_unsatisfiable_conditional_type_constraints(value: Any) -> bool:
+    def has_unsatisfiable_conditional_type_constraints(schema: dict[str, Any]) -> bool:
+        condition = schema.get("if")
+        if not isinstance(condition, dict) or set(condition) - {"type"}:
+            return False
+        then_schema = schema.get("then", True)
+        if then_schema is not False:
+            return False
+        type_values = _type_values(schema.get("type"))
+        condition_types = _type_values(condition.get("type"))
+        if type_values is None or condition_types is None:
+            return False
+        return _type_intersection(type_values, condition_types) == _simplify_types(type_values)
+
+    return _any_schema_node(value, has_unsatisfiable_conditional_type_constraints)
+
+
 def _has_unsatisfiable_array_length(value: Any) -> bool:
     def max_item_counts(schema: dict[str, Any]) -> list[int]:
         counts: list[int] = []
@@ -558,6 +575,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "anyOf literal constraints have no valid payloads"
     if _has_unsatisfiable_not_type_constraints(schema):
         return "not type constraints have no valid payloads"
+    if _has_unsatisfiable_conditional_type_constraints(schema):
+        return "conditional type constraints have no valid payloads"
     if _has_unsatisfiable_array_length(schema):
         return "array length constraints have no valid payloads"
     if _has_unsatisfiable_property_count(schema):

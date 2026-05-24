@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConditionalIntegerNumberIntersection",
+  "type": "integer",
+  "if": {
+    "type": "number"
+  },
+  "then": {
+    "minimum": 2
+  },
+  "else": {
+    "maximum": 0
+  }
+}

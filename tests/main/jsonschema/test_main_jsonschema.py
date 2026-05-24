@@ -4234,6 +4234,40 @@ def test_main_jsonschema_conditional_type_else_intersection(output_file: Path) -
     )
 
 
+def test_main_jsonschema_conditional_integer_number_intersection(output_file: Path) -> None:
+    """Test integer parent schemas satisfy number type conditions."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_integer_number_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_integer_number_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="conditional_integer_number_intersection",
+        model_name="ConditionalIntegerNumberIntersection",
+        valid_json="2",
+        invalid_json="1",
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("root",),
+        expected_attribute_value=2,
+    )
+
+
+def test_main_jsonschema_conditional_integer_number_conflict(output_file: Path) -> None:
+    """Test integer parent schemas with number condition and false then are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_integer_number_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -4671,6 +4705,10 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "then": False,
             },
             id="conditional-object-then-false",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "integer", "if": {"type": "number"}, "then": False},
+            id="conditional-integer-number-then-false",
         ),
         pytest.param(
             {

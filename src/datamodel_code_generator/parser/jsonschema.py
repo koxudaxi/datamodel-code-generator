@@ -2520,9 +2520,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         condition_types = cls._type_values(condition_type)
         if type_values is None or condition_types is None:
             return None
-        if type_values <= condition_types:
+        intersected_types = cls._intersect_type_values(type_values, condition_types)
+        if intersected_types == cls._simplify_type_values(type_values):
             return True
-        if not type_values & condition_types:
+        if not intersected_types:
             return False
         return None
 
