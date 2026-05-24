@@ -3953,6 +3953,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         name: str,
         pattern_properties: dict[str, JsonSchemaObject | bool],
         path: list[str],
+        *,
+        property_names: JsonSchemaObject | bool | None = None,
     ) -> DataType:
         """Parse patternProperties into a dict data type with regex keys."""
         pattern_value_pairs: list[tuple[str, DataType]] = []
@@ -3986,14 +3988,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         data_types: list[DataType] = []
         for patterns, value_type in groups.values():
             merged_pattern = patterns[0] if len(patterns) == 1 else "|".join(patterns)
+            key_type = self.data_type_manager.get_data_type(
+                Types.string,
+                pattern=merged_pattern,
+            )
+            if isinstance(property_names, JsonSchemaObject):
+                pattern_schema = self.SCHEMA_OBJECT_TYPE(type="string", pattern=merged_pattern)
+                key_type = self._parse_property_name_key_schema(
+                    self._merge_primitive_schemas([property_names, pattern_schema])
+                )
             data_types.append(
                 self.data_type(
                     data_types=[value_type],
                     is_dict=True,
-                    dict_key=self.data_type_manager.get_data_type(
-                        Types.string,
-                        pattern=merged_pattern,
-                    ),
+                    dict_key=key_type,
                 )
             )
 
@@ -4279,7 +4287,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return self.parse_object(name, item, object_path, singular_name=singular_name)
             if item.patternProperties:
                 # support only single key dict.
-                return self.parse_pattern_properties(name, item.patternProperties, object_path)
+                return self.parse_pattern_properties(
+                    name, item.patternProperties, object_path, property_names=item.propertyNames
+                )
             if item.propertyNames is not None:
                 return self.parse_property_names(
                     name, item.propertyNames, item.additionalProperties, object_path, parent_obj=item
@@ -4545,7 +4555,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if data_type is None:  # pragma: no cover
                 data_type = self.data_type_manager.get_data_type(Types.any)
         elif obj.patternProperties:
-            data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
+            data_type = self.parse_pattern_properties(
+                name, obj.patternProperties, path, property_names=obj.propertyNames
+            )
         elif obj.propertyNames is not None:
             data_type = self.parse_property_names(
                 name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
