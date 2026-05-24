@@ -13,6 +13,7 @@ import re
 from collections import defaultdict
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
+from copy import deepcopy
 from fractions import Fraction
 from functools import cached_property, lru_cache
 from itertools import combinations
@@ -2346,6 +2347,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._validate_raw_allof_object_member_constraints(normalized)
             cls._normalize_raw_known_property_constraints(normalized)
             cls._normalize_raw_contains_item_constraints(normalized)
+            cls._normalize_raw_nullable_type_constraints(normalized)
             cls._validate_raw_numeric_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
             cls._validate_raw_array_constraints(normalized)
@@ -3211,6 +3213,54 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     cls._raise_object_constraint_conflict()
                 continue
             properties[property_name] = merged_schema
+
+    @classmethod
+    def _normalize_raw_nullable_type_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values == {"object", "null"}:
+            cls._normalize_raw_nullable_branch_constraints(
+                schema_dict,
+                "object",
+                (
+                    cls._normalize_raw_allof_dependent_constraints,
+                    cls._normalize_raw_allof_conditional_constraints,
+                    cls._normalize_raw_dependent_constraints,
+                    cls._normalize_raw_conditional_constraints,
+                    cls._validate_raw_allof_object_member_constraints,
+                    cls._normalize_raw_known_property_constraints,
+                    cls._validate_raw_object_constraints,
+                ),
+            )
+        elif type_values == {"array", "null"}:
+            cls._normalize_raw_nullable_branch_constraints(
+                schema_dict,
+                "array",
+                (
+                    cls._normalize_raw_contains_item_constraints,
+                    cls._validate_raw_array_constraints,
+                ),
+            )
+
+    @classmethod
+    def _normalize_raw_nullable_branch_constraints(
+        cls,
+        schema_dict: dict[Any, Any],
+        branch_type: str,
+        normalizers: Iterable[Callable[[dict[Any, Any]], None]],
+    ) -> None:
+        original_type = schema_dict.get("type")
+        branch_schema = deepcopy(schema_dict)
+        branch_schema["type"] = branch_type
+
+        try:
+            for normalizer in normalizers:
+                normalizer(branch_schema)
+        except SchemaParseError:
+            return
+
+        branch_schema["type"] = original_type
+        schema_dict.clear()
+        schema_dict.update(branch_schema)
 
     @classmethod
     def _drop_raw_properties_rejected_by_property_names(

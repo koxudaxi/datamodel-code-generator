@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableObjectAllofConditionalRequiredIntersection",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": ["object", "null"],
+      "allOf": [
+        {
+          "properties": {
+            "kind": {
+              "type": "string"
+            },
+            "code": {
+              "type": "integer"
+            }
+          },
+          "required": ["kind"]
+        },
+        {
+          "if": {
+            "required": ["kind"]
+          },
+          "then": {
+            "required": ["code"]
+          }
+        }
+      ]
+    }
+  },
+  "required": ["payload"]
+}

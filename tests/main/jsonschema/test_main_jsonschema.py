@@ -4285,6 +4285,31 @@ def test_main_jsonschema_type_array_object_dependent_required_intersection(outpu
     )
 
 
+def test_main_jsonschema_nullable_object_dependent_required_intersection(output_file: Path) -> None:
+    """Test nullable object branches normalize dependent required fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_object_dependent_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_object_dependent_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_object_dependent_required_intersection",
+        model_name="NullableObjectDependentRequiredIntersection",
+        valid_json=(
+            '{"payload":{"credit_card":"1","billing_address":"Main","country":"JP","tax_id":"T","legacy_code":1}}'
+        ),
+        invalid_json='{"payload":{"credit_card":"1","billing_address":"Main","country":"JP","tax_id":"T"}}',
+        expected_error_type="missing",
+        expected_attribute_path=("payload", "legacy_code"),
+        expected_attribute_value=1,
+    )
+
+
 def test_main_jsonschema_dependent_required_property_names_count_conflict(output_file: Path) -> None:
     """Test dependent required keys can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -4640,6 +4665,52 @@ def test_main_jsonschema_type_array_object_allof_conditional_required_intersecti
         invalid_json='{"kind":"card"}',
         expected_error_type="missing",
         expected_attribute_path=("code",),
+        expected_attribute_value=5,
+    )
+
+
+def test_main_jsonschema_nullable_object_conditional_required_intersection(output_file: Path) -> None:
+    """Test nullable object branches normalize direct conditional required fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_object_conditional_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_object_conditional_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_object_conditional_required_intersection",
+        model_name="NullableObjectConditionalRequiredIntersection",
+        valid_json='{"payload":{"kind":"card","code":5}}',
+        invalid_json='{"payload":{"kind":"card","code":6}}',
+        expected_error_type="less_than_equal",
+        expected_attribute_path=("payload", "code"),
+        expected_attribute_value=5,
+    )
+
+
+def test_main_jsonschema_nullable_object_allof_conditional_required_intersection(output_file: Path) -> None:
+    """Test nullable object branches normalize allOf conditional required fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_object_allof_conditional_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_object_allof_conditional_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_object_allof_conditional_required_intersection",
+        model_name="NullableObjectAllofConditionalRequiredIntersection",
+        valid_json='{"payload":{"kind":"card","code":5}}',
+        invalid_json='{"payload":{"kind":"card"}}',
+        expected_error_type="missing",
+        expected_attribute_path=("payload", "code"),
         expected_attribute_value=5,
     )
 
