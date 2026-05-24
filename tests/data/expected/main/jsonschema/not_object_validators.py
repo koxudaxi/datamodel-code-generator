@@ -20,19 +20,35 @@ class NotObjectValidators(BaseModel):
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
+        model_data = {
+            field_name: getattr(self, field_name)
+            for field_name in self.model_fields_set
+        }
+        model_data.update(extra_values)
 
         if (
-            ({'status', 'archived'}.issubset(provided_keys))
-            and (
+            (
                 (
-                    'status' not in provided_keys
-                    or (lambda status_value: status_value == 'closed')(self.status)
+                    not isinstance(model_data, dict)
+                    or {'status', 'archived'}.issubset(model_data)
                 )
             )
             and (
                 (
-                    'archived' not in provided_keys
-                    or (lambda archived_value: archived_value is False)(self.archived)
+                    not isinstance(model_data, dict)
+                    or 'status' not in model_data
+                    or (
+                        lambda model_data_property_0: model_data_property_0 == 'closed'
+                    )(model_data['status'])
+                )
+            )
+            and (
+                (
+                    not isinstance(model_data, dict)
+                    or 'archived' not in model_data
+                    or (lambda model_data_property_1: model_data_property_1 is False)(
+                        model_data['archived']
+                    )
                 )
             )
         ):

@@ -4997,6 +4997,42 @@ def test_main_jsonschema_not_object_validators(output_file: Path) -> None:
         )
 
 
+def test_main_jsonschema_object_context_schema_validators(output_file: Path) -> None:
+    """Test dependent, conditional, and not validators honor whole-object schema constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_schema_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_schema_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"mode":"strict","code":"S-1","x-a":1}'
+    for invalid_json in [
+        '{"mode":"strict","x-a":1}',
+        '{"mode":"strict","code":"L-1","x-a":1}',
+        '{"mode":"strict","code":"S-1","x-a":0}',
+        '{"mode":"strict","code":"S-1","other":1}',
+        '{"flag":true,"code":"L-1","x-a":0}',
+        '{"flag":true,"code":"L-1","other":1}',
+        '{"mode":"loose","code":"S-1"}',
+        '{"mode":"loose","code":"L-1","extra":-1}',
+        '{"bad":1}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_schema_validators",
+            model_name="ObjectContextSchemaValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(

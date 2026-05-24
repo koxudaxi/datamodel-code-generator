@@ -22,59 +22,101 @@ class ConditionalObjectValidators(BaseModel):
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
+        model_data = {
+            field_name: getattr(self, field_name)
+            for field_name in self.model_fields_set
+        }
+        model_data.update(extra_values)
 
-        if ({'kind'}.issubset(provided_keys)) and (
+        if ((not isinstance(model_data, dict) or {'kind'}.issubset(model_data))) and (
             (
-                'kind' not in provided_keys
-                or (lambda kind_value: kind_value == 'business')(self.kind)
+                not isinstance(model_data, dict)
+                or 'kind' not in model_data
+                or (lambda model_data_property_0: model_data_property_0 == 'business')(
+                    model_data['kind']
+                )
             )
         ):
-            missing = {'seats', 'contact'} - provided_keys
-            if missing:
-                raise ValueError(
-                    'then schema requires properties: ' + ', '.join(sorted(missing))
+            if not (
+                (
+                    (
+                        not isinstance(model_data, dict)
+                        or {'seats', 'contact'}.issubset(model_data)
+                    )
                 )
-            if 'seats' in provided_keys:
-                seats_value = self.seats
-                if not (
-                    (isinstance(seats_value, int) and not isinstance(seats_value, bool))
-                    and (
-                        isinstance(seats_value, (int, float))
-                        and not isinstance(seats_value, bool)
-                        and seats_value >= 2
+                and (
+                    (
+                        not isinstance(model_data, dict)
+                        or 'seats' not in model_data
+                        or (
+                            lambda model_data_property_0: (
+                                isinstance(model_data_property_0, int)
+                                and not isinstance(model_data_property_0, bool)
+                            )
+                            and (
+                                isinstance(model_data_property_0, (int, float))
+                                and not isinstance(model_data_property_0, bool)
+                                and model_data_property_0 >= 2
+                            )
+                            and (
+                                isinstance(model_data_property_0, (int, float))
+                                and not isinstance(model_data_property_0, bool)
+                                and model_data_property_0 <= 8
+                            )
+                        )(model_data['seats'])
                     )
-                    and (
-                        isinstance(seats_value, (int, float))
-                        and not isinstance(seats_value, bool)
-                        and seats_value <= 8
+                )
+                and (
+                    (
+                        not isinstance(model_data, dict)
+                        or 'contact' not in model_data
+                        or (
+                            lambda model_data_property_1: (
+                                isinstance(model_data_property_1, str)
+                            )
+                            and (
+                                isinstance(model_data_property_1, str)
+                                and len(model_data_property_1) >= 3
+                            )
+                        )(model_data['contact'])
                     )
-                ):
-                    raise ValueError('then schema requires seats' + ' to match schema')
-            if 'contact' in provided_keys:
-                contact_value = self.contact
-                if not (
-                    (isinstance(contact_value, str))
-                    and (isinstance(contact_value, str) and len(contact_value) >= 3)
-                ):
-                    raise ValueError(
-                        'then schema requires contact' + ' to match schema'
-                    )
+                )
+            ):
+                raise ValueError('then schema must match')
         else:
-            missing = {'reason'} - provided_keys
-            if missing:
-                raise ValueError(
-                    'else schema requires properties: ' + ', '.join(sorted(missing))
+            if not (
+                ((not isinstance(model_data, dict) or {'reason'}.issubset(model_data)))
+                and (
+                    (
+                        not isinstance(model_data, dict)
+                        or 'reason' not in model_data
+                        or (
+                            lambda model_data_property_0: (
+                                model_data_property_0 == 'personal'
+                            )
+                            or (model_data_property_0 == 'trial')
+                        )(model_data['reason'])
+                    )
                 )
-            if 'reason' in provided_keys:
-                reason_value = self.reason
-                if not ((reason_value == 'personal') or (reason_value == 'trial')):
-                    raise ValueError('else schema requires reason' + ' to match schema')
-            if 'tags' in provided_keys:
-                tags_value = self.tags
-                if not (
-                    (isinstance(tags_value, list))
-                    and (isinstance(tags_value, list) and len(tags_value) >= 1)
-                    and (isinstance(tags_value, list) and len(tags_value) <= 2)
-                ):
-                    raise ValueError('else schema requires tags' + ' to match schema')
+                and (
+                    (
+                        not isinstance(model_data, dict)
+                        or 'tags' not in model_data
+                        or (
+                            lambda model_data_property_1: (
+                                isinstance(model_data_property_1, list)
+                            )
+                            and (
+                                isinstance(model_data_property_1, list)
+                                and len(model_data_property_1) >= 1
+                            )
+                            and (
+                                isinstance(model_data_property_1, list)
+                                and len(model_data_property_1) <= 2
+                            )
+                        )(model_data['tags'])
+                    )
+                )
+            ):
+                raise ValueError('else schema must match')
         return self

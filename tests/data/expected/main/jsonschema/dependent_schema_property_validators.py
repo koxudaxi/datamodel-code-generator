@@ -23,6 +23,11 @@ class DependentSchemaPropertyValidators(BaseModel):
         extra_values = getattr(self, '__pydantic_extra__', None) or {}
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
+        model_data = {
+            field_name: getattr(self, field_name)
+            for field_name in self.model_fields_set
+        }
+        model_data.update(extra_values)
         if 'plan' in provided_keys:
             missing = {'quota'} - provided_keys
             if missing:
@@ -35,44 +40,73 @@ class DependentSchemaPropertyValidators(BaseModel):
                 raise ValueError(
                     'legacy' + ' requires properties: ' + ', '.join(sorted(missing))
                 )
-        if 'plan' in provided_keys and 'quota' in provided_keys:
-            quota_value = self.quota
-            if not (
-                (isinstance(quota_value, int) and not isinstance(quota_value, bool))
-                and (
-                    isinstance(quota_value, (int, float))
-                    and not isinstance(quota_value, bool)
-                    and quota_value >= 1
+        if 'plan' in provided_keys and not (
+            ((not isinstance(model_data, dict) or {'quota'}.issubset(model_data)))
+            and (
+                (
+                    not isinstance(model_data, dict)
+                    or 'quota' not in model_data
+                    or (
+                        lambda model_data_property_0: (
+                            isinstance(model_data_property_0, int)
+                            and not isinstance(model_data_property_0, bool)
+                        )
+                        and (
+                            isinstance(model_data_property_0, (int, float))
+                            and not isinstance(model_data_property_0, bool)
+                            and model_data_property_0 >= 1
+                        )
+                        and (
+                            isinstance(model_data_property_0, (int, float))
+                            and not isinstance(model_data_property_0, bool)
+                            and model_data_property_0 <= 10
+                        )
+                    )(model_data['quota'])
                 )
-                and (
-                    isinstance(quota_value, (int, float))
-                    and not isinstance(quota_value, bool)
-                    and quota_value <= 10
+            )
+            and (
+                (
+                    not isinstance(model_data, dict)
+                    or 'region' not in model_data
+                    or (
+                        lambda model_data_property_1: (model_data_property_1 == 'us')
+                        or (model_data_property_1 == 'eu')
+                    )(model_data['region'])
                 )
-            ):
-                raise ValueError(
-                    'plan' + ' requires quota' + ' to match dependent schema'
+            )
+        ):
+            raise ValueError('plan' + ' requires dependent schema to match')
+        if 'zone' in provided_keys and not (
+            (
+                not isinstance(model_data, dict)
+                or 'tags' not in model_data
+                or (
+                    lambda model_data_property_0: (
+                        isinstance(model_data_property_0, list)
+                    )
+                    and (
+                        isinstance(model_data_property_0, list)
+                        and len(model_data_property_0) >= 2
+                    )
+                    and (
+                        isinstance(model_data_property_0, list)
+                        and len(model_data_property_0) <= 3
+                    )
+                )(model_data['tags'])
+            )
+        ):
+            raise ValueError('zone' + ' requires dependent schema to match')
+        if 'legacy' in provided_keys and not (
+            ((not isinstance(model_data, dict) or {'region'}.issubset(model_data)))
+            and (
+                (
+                    not isinstance(model_data, dict)
+                    or 'region' not in model_data
+                    or (
+                        lambda model_data_property_0: model_data_property_0 == 'legacy'
+                    )(model_data['region'])
                 )
-        if 'plan' in provided_keys and 'region' in provided_keys:
-            region_value = self.region
-            if not ((region_value == 'us') or (region_value == 'eu')):
-                raise ValueError(
-                    'plan' + ' requires region' + ' to match dependent schema'
-                )
-        if 'zone' in provided_keys and 'tags' in provided_keys:
-            tags_value = self.tags
-            if not (
-                (isinstance(tags_value, list))
-                and (isinstance(tags_value, list) and len(tags_value) >= 2)
-                and (isinstance(tags_value, list) and len(tags_value) <= 3)
-            ):
-                raise ValueError(
-                    'zone' + ' requires tags' + ' to match dependent schema'
-                )
-        if 'legacy' in provided_keys and 'region' in provided_keys:
-            region_value = self.region
-            if not (region_value == 'legacy'):
-                raise ValueError(
-                    'legacy' + ' requires region' + ' to match dependent schema'
-                )
+            )
+        ):
+            raise ValueError('legacy' + ' requires dependent schema to match')
         return self

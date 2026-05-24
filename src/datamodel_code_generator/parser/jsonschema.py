@@ -3489,6 +3489,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _field_name_mapping(self, fields: list[DataModelFieldBase]) -> dict[str, str]:  # noqa: PLR6301
         return {field.original_name or field.name: field.name for field in fields if field.name}
 
+    def _mapped_property_names(self, names: Iterable[str], field_names: dict[str, str]) -> list[str]:  # noqa: PLR6301
+        return [field_names.get(name, name) for name in names if isinstance(name, str)]
+
     def _json_value_predicate(self, value: Any, variable_name: str = "item") -> str:  # noqa: PLR6301
         if value is None:
             return f"{variable_name} is None"
@@ -3681,7 +3684,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             schema = self._load_ref_schema_object(schema.ref)
         return self._schema_runtime_value_predicate(schema, variable_name)
 
-    def _schema_object_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+    def _schema_object_size_and_name_predicates(
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+    ) -> list[str]:
         predicates: list[str] = []
         if schema.minProperties is not None:
             predicates.append(
@@ -3700,27 +3707,127 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     f"(not isinstance({variable_name}, dict) "
                     f"or all((lambda property_key: {predicate})(property_key) for property_key in {variable_name}))"
                 )
+        return predicates
+
+    def _schema_explicit_property_predicates(
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+        *,
+        field_names: dict[str, str] | None,
+    ) -> list[str]:
+        predicates: list[str] = []
         if schema.required:
-            required_set = "{" + ", ".join(repr(required_name) for required_name in schema.required) + "}"
+            required_names = self._mapped_property_names(schema.required, field_names or {})
+            required_set = "{" + ", ".join(repr(required_name) for required_name in required_names) + "}"
             predicates.append(f"(not isinstance({variable_name}, dict) or {required_set}.issubset({variable_name}))")
-        if schema.properties:
-            for index, (property_name, property_schema) in enumerate(schema.properties.items()):
-                if property_schema is False:
-                    predicates.append(
-                        f"(not isinstance({variable_name}, dict) or {property_name!r} not in {variable_name})"
-                    )
-                    continue
-                if not isinstance(property_schema, JsonSchemaObject):
-                    continue
-                property_variable = f"{variable_name}_property_{index}"
-                predicate = self._schema_value_predicate_from_value(property_schema, property_variable)
-                if predicate:
+        if not schema.properties:
+            return predicates
+        for index, (property_name, property_schema) in enumerate(schema.properties.items()):
+            mapped_property_name = field_names.get(property_name, property_name) if field_names else property_name
+            if property_schema is False:
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) or {mapped_property_name!r} not in {variable_name})"
+                )
+                continue
+            if not isinstance(property_schema, JsonSchemaObject):
+                continue
+            property_variable = f"{variable_name}_property_{index}"
+            predicate = self._schema_value_predicate_from_value(property_schema, property_variable)
+            if predicate:
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) "
+                    f"or {mapped_property_name!r} not in {variable_name} "
+                    f"or (lambda {property_variable}: {predicate})({variable_name}[{mapped_property_name!r}]))"
+                )
+        return predicates
+
+    def _schema_pattern_property_predicates(
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+    ) -> tuple[list[str], list[str]]:
+        predicates: list[str] = []
+        pattern_match_expressions: list[str] = []
+        if schema.patternProperties:
+            for index, (pattern, pattern_schema) in enumerate(schema.patternProperties.items()):
+                pattern_match = f"re.search({pattern!r}, extra_key) is not None"
+                pattern_match_expressions.append(pattern_match)
+                if pattern_schema is False:
                     predicates.append(
                         f"(not isinstance({variable_name}, dict) "
-                        f"or {property_name!r} not in {variable_name} "
-                        f"or (lambda {property_variable}: {predicate})({variable_name}[{property_name!r}]))"
+                        f"or all(re.search({pattern!r}, extra_key) is None for extra_key in {variable_name}))"
                     )
+                    continue
+                if not isinstance(pattern_schema, JsonSchemaObject):
+                    continue
+                value_variable = f"{variable_name}_pattern_property_{index}"
+                predicate = self._schema_value_predicate_from_value(pattern_schema, value_variable)
+                if predicate and predicate != "True":
+                    predicates.append(
+                        f"(not isinstance({variable_name}, dict) "
+                        f"or all(re.search({pattern!r}, extra_key) is None "
+                        f"or (lambda {value_variable}: {predicate})(extra_value) "
+                        f"for extra_key, extra_value in {variable_name}.items()))"
+                    )
+        return predicates, pattern_match_expressions
+
+    def _schema_additional_property_predicates(
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+        *,
+        field_names: dict[str, str] | None,
+        pattern_match_expressions: list[str],
+    ) -> list[str]:
+        predicates: list[str] = []
+        allowed_names = self._mapped_property_names((schema.properties or {}).keys(), field_names or {})
+        allowed_set = "{" + ", ".join(repr(property_name) for property_name in allowed_names) + "}"
+        unmatched_key_conditions = [f"extra_key in {allowed_set}", *pattern_match_expressions]
+        matched_known_key = " or ".join(f"({condition})" for condition in unmatched_key_conditions) or "False"
+        if schema.additionalProperties is False:
+            predicates.append(
+                f"(not isinstance({variable_name}, dict) or all({matched_known_key} for extra_key in {variable_name}))"
+            )
+        elif isinstance(schema.additionalProperties, JsonSchemaObject):
+            predicate = self._schema_value_predicate_from_value(schema.additionalProperties, "extra_value")
+            if predicate and predicate != "True":
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) "
+                    f"or all((lambda extra_value: {predicate})(extra_value) "
+                    f"for extra_key, extra_value in {variable_name}.items() "
+                    f"if not ({matched_known_key})))"
+                )
         return predicates
+
+    def _schema_object_property_predicates(
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+        *,
+        field_names: dict[str, str] | None = None,
+    ) -> list[str]:
+        predicates = [
+            *self._schema_object_size_and_name_predicates(schema, variable_name),
+            *self._schema_explicit_property_predicates(schema, variable_name, field_names=field_names),
+        ]
+        pattern_predicates, pattern_match_expressions = self._schema_pattern_property_predicates(
+            schema,
+            variable_name,
+        )
+        predicates.extend(pattern_predicates)
+        predicates.extend(
+            self._schema_additional_property_predicates(
+                schema,
+                variable_name,
+                field_names=field_names,
+                pattern_match_expressions=pattern_match_expressions,
+            )
+        )
+        return predicates
+
+    def _schema_object_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        return self._schema_object_property_predicates(schema, variable_name)
 
     def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
@@ -3912,46 +4019,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 if isinstance(property_name, str) and isinstance(dependent_schema, dict):
                     yield property_name, self.SCHEMA_OBJECT_TYPE.model_validate(dependent_schema)
 
-    def _schema_required_fields(self, schema: JsonSchemaObject, field_names: dict[str, str]) -> list[str]:  # noqa: PLR6301
-        return [field_names.get(required_name, required_name) for required_name in schema.required]
-
-    def _collect_schema_property_predicates(
-        self,
-        schema: JsonSchemaObject,
-        field_names: dict[str, str],
-    ) -> list[dict[str, str]]:
-        validators: list[dict[str, str]] = []
-        if not schema.properties:
-            return validators
-        for property_name, property_schema in schema.properties.items():
-            if not isinstance(property_schema, JsonSchemaObject):
-                continue
-            field_name = field_names.get(property_name)
-            if not field_name:
-                continue
-            value_name = f"{field_name}_value"
-            predicate = self._schema_value_predicate(property_schema, value_name)
-            if predicate:
-                validators.append({
-                    "field": field_name,
-                    "value": value_name,
-                    "predicate": predicate,
-                })
-        return validators
-
     def _schema_condition_predicate(self, schema: JsonSchemaObject, field_names: dict[str, str]) -> str | None:
-        required_fields = self._schema_required_fields(schema, field_names)
-        predicates = []
-        if required_fields:
-            required_set = "{" + ", ".join(repr(field_name) for field_name in required_fields) + "}"
-            predicates.append(f"{required_set}.issubset(provided_keys)")
-        for validator in self._collect_schema_property_predicates(schema, field_names):
-            field_name = validator["field"]
-            value_name = validator["value"]
-            predicate = validator["predicate"]
-            predicates.append(
-                f"({field_name!r} not in provided_keys or (lambda {value_name}: {predicate})(self.{field_name}))"
-            )
+        predicates = self._schema_object_property_predicates(schema, "model_data", field_names=field_names)
         return self._join_contains_predicates(predicates, "and") if predicates else None
 
     def _collect_dependent_schema_property_validators(
@@ -3963,10 +4032,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         validators: list[dict[str, str]] = []
         for property_name, dependent_schema in self._iter_dependent_schema_objects(extras):
             trigger_field = field_names.get(property_name, property_name)
-            validators.extend(
-                {"trigger": trigger_field, **validator}
-                for validator in self._collect_schema_property_predicates(dependent_schema, field_names)
-            )
+            condition = self._schema_condition_predicate(dependent_schema, field_names)
+            if condition:
+                validators.append({"trigger": trigger_field, "condition": condition})
         return validators
 
     def _collect_conditional_validator_branch(
@@ -3974,10 +4042,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         schema: JsonSchemaObject,
         field_names: dict[str, str],
     ) -> dict[str, Any]:
-        return {
-            "required": self._schema_required_fields(schema, field_names),
-            "properties": self._collect_schema_property_predicates(schema, field_names),
-        }
+        return {"condition": self._schema_condition_predicate(schema, field_names)}
 
     def _collect_conditional_validators(
         self,

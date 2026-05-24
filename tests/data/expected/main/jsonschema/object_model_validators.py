@@ -28,6 +28,11 @@ class ObjectModelValidators(BaseModel):
 
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
+        model_data = {
+            field_name: getattr(self, field_name)
+            for field_name in self.model_fields_set
+        }
+        model_data.update(extra_values)
         if 'credit_card' in provided_keys:
             missing = {'billing_address'} - provided_keys
             if missing:
@@ -48,4 +53,8 @@ class ObjectModelValidators(BaseModel):
                 raise ValueError(
                     'memo' + ' requires properties: ' + ', '.join(sorted(missing))
                 )
+        if 'memo' in provided_keys and not (
+            (not isinstance(model_data, dict) or {'note'}.issubset(model_data))
+        ):
+            raise ValueError('memo' + ' requires dependent schema to match')
         return self

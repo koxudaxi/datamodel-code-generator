@@ -421,6 +421,8 @@ class BaseModel(BaseModelBase):
         lines.extend([
             "provided_keys = set(self.model_fields_set)",
             "provided_keys.update(extra_values)",
+            "model_data = {field_name: getattr(self, field_name) for field_name in self.model_fields_set}",
+            "model_data.update(extra_values)",
         ])
         return lines
 
@@ -452,6 +454,15 @@ class BaseModel(BaseModelBase):
             if not isinstance(validator, dict):
                 continue
             trigger = validator.get("trigger")
+            condition = validator.get("condition")
+            if isinstance(trigger, str) and isinstance(condition, str):
+                lines.extend([
+                    f"if {trigger!r} in provided_keys and not ({condition}):",
+                    "    raise ValueError(",
+                    f"        {trigger!r} + ' requires dependent schema to match'",
+                    "    )",
+                ])
+                continue
             field_name = validator.get("field")
             value_name = validator.get("value")
             predicate = validator.get("predicate")
@@ -473,6 +484,13 @@ class BaseModel(BaseModelBase):
             return []
 
         lines: list[str] = []
+        condition = branch.get("condition")
+        if isinstance(condition, str):
+            lines.extend([
+                f"if not ({condition}):",
+                f"    raise ValueError('{branch_name} schema must match')",
+            ])
+
         required_names = branch.get("required")
         if isinstance(required_names, list) and required_names:
             required_set = "{" + ", ".join(repr(name) for name in required_names if isinstance(name, str)) + "}"
