@@ -1041,7 +1041,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             max_items.append(len(obj.prefixItems))
         if obj.additionalItems is False and isinstance(obj.items, list):
             max_items.append(len(obj.items))
-        if obj.unevaluatedItems is False and obj.items is None:
+        if (
+            obj.unevaluatedItems is False
+            and obj.items is None
+            and not cls._contains_can_evaluate_unevaluated_items(obj)
+        ):
             max_items.append(len(obj.prefixItems or []))
         return max_items
 
@@ -1049,6 +1053,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _contains_matches_every_item(obj: JsonSchemaObject) -> bool:
         contains = obj.extras.get("contains")
         return contains is True or contains == {}
+
+    @classmethod
+    def _contains_can_evaluate_unevaluated_items(cls, obj: JsonSchemaObject) -> bool:
+        contains = obj.extras.get("contains")
+        return cls._contains_matches_every_item(obj) or isinstance(contains, dict)
 
     @classmethod
     def _get_contains_count_constraints(cls, obj: JsonSchemaObject) -> tuple[int | None, int | None]:
@@ -2302,6 +2311,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     item_schemas.append(schema.unevaluatedItems)
                 elif schema.unevaluatedItems is True:
                     item_schemas.append(True)
+                elif schema.unevaluatedItems is False:
+                    contains = schema.extras.get("contains")
+                    if isinstance(contains, dict):
+                        item_schemas.append(self.SCHEMA_OBJECT_TYPE.model_validate(contains))
+                    elif self._contains_matches_every_item(schema):
+                        item_schemas.append(True)
         elif isinstance(schema.items, JsonSchemaObject):
             item_schemas = [schema.items]
         elif isinstance(schema.items, list):
@@ -3725,6 +3740,56 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             schema = self._load_ref_schema_object(schema.ref)
         return self._schema_runtime_value_predicate(schema, variable_name)
 
+    def _schema_contains_ref(  # noqa: PLR0912
+        self,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
+        visited: frozenset[int] = frozenset(),
+    ) -> bool:
+        if not isinstance(schema, JsonSchemaObject):
+            return False
+        schema_id = id(schema)
+        if schema_id in visited:
+            return False
+        visited |= {schema_id}
+        if schema.ref:
+            return True
+
+        child_schemas: list[JsonSchemaObject | bool] = []
+        for child in (
+            schema.items,
+            schema.additionalItems,
+            schema.additionalProperties,
+            schema.unevaluatedProperties,
+            schema.unevaluatedItems,
+            schema.propertyNames,
+        ):
+            if isinstance(child, (JsonSchemaObject, bool)):
+                child_schemas.append(child)
+            elif isinstance(child, list):
+                child_schemas.extend(item for item in child if isinstance(item, (JsonSchemaObject, bool)))
+
+        if schema.prefixItems:
+            child_schemas.extend(schema.prefixItems)
+        if schema.properties:
+            child_schemas.extend(schema.properties.values())
+        if schema.patternProperties:
+            child_schemas.extend(schema.patternProperties.values())
+        child_schemas.extend(schema.anyOf)
+        child_schemas.extend(schema.oneOf)
+        child_schemas.extend(schema.allOf)
+
+        for keyword in ("contains", "not", "if", "then", "else"):
+            raw_schema = schema.extras.get(keyword)
+            if isinstance(raw_schema, bool):
+                child_schemas.append(raw_schema)
+            elif isinstance(raw_schema, dict):
+                child_schemas.append(self.SCHEMA_OBJECT_TYPE.model_validate(raw_schema))
+
+        for _, dependent_schema in self._iter_dependent_schema_objects(schema.extras):
+            child_schemas.append(dependent_schema)
+
+        return any(self._schema_contains_ref(child_schema, visited) for child_schema in child_schemas)
+
     def _schema_not_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
         raw_not_schema = schema.extras.get("not")
         if raw_not_schema is None:
@@ -4031,7 +4096,77 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             )
         ]
 
-    def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+    def _schema_array_unevaluated_items_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        if (
+            schema.prefixItems is None
+            or schema.items is not None
+            or schema.unevaluatedItems is not False
+            or not isinstance(schema.extras.get("contains"), dict)
+            or self._get_first_false_schema_index(schema.prefixItems) is not None
+        ):
+            return []
+
+        contains_predicate = self._schema_runtime_predicate_from_raw(
+            schema.extras["contains"],
+            "extra_item",
+            empty_schema_predicate="True",
+        )
+        if not contains_predicate or contains_predicate == "True":
+            return []
+        return [
+            (
+                f"(not isinstance({variable_name}, list) "
+                f"or all((lambda extra_item: {contains_predicate})(extra_item) "
+                f"for extra_item in {variable_name}[{len(schema.prefixItems)}:]))"
+            )
+        ]
+
+    def _array_item_validator_candidate_schemas(
+        self,
+        schema: JsonSchemaObject,
+    ) -> list[JsonSchemaObject | bool]:
+        item_schemas = schema.prefixItems if schema.prefixItems is not None else schema.items
+        candidates: list[JsonSchemaObject | bool] = []
+        if isinstance(item_schemas, list):
+            candidates.extend(item_schemas)
+            tail_schema = schema.items if schema.prefixItems is not None else schema.additionalItems
+            if isinstance(tail_schema, (JsonSchemaObject, bool)):
+                candidates.append(tail_schema)
+        elif isinstance(schema.items, (JsonSchemaObject, bool)):
+            candidates.append(schema.items)
+
+        if (
+            schema.prefixItems is not None
+            and schema.items is None
+            and schema.unevaluatedItems is False
+            and isinstance(schema.extras.get("contains"), dict)
+        ):
+            candidates.append(self.SCHEMA_OBJECT_TYPE.model_validate(schema.extras["contains"]))
+        return candidates
+
+    def _can_inline_array_item_predicate(
+        self,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
+        visited: frozenset[int] = frozenset(),
+    ) -> bool:
+        if isinstance(schema, bool):
+            return True
+        schema_id = id(schema)
+        if schema_id in visited:
+            return True
+        visited |= {schema_id}
+        if schema.ref or schema.is_object or schema.is_array:
+            return False
+        if isinstance(schema.extras.get("const"), (dict, list)):
+            return False
+        if schema.enum:
+            return False
+        return all(
+            self._can_inline_array_item_predicate(child_schema, visited)
+            for child_schema in [*schema.anyOf, *schema.oneOf, *schema.allOf]
+        )
+
+    def _schema_array_item_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
         item_schemas = schema.prefixItems if schema.prefixItems is not None else schema.items
         if isinstance(item_schemas, list):
@@ -4039,7 +4174,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 predicate = self._schema_value_predicate_from_value(item_schema, "extra_item")
                 if predicate == "False":
                     predicates.append(f"(not isinstance({variable_name}, list) or len({variable_name}) <= {index})")
-                elif predicate:
+                elif predicate and predicate != "True":
                     predicates.append(
                         f"(not isinstance({variable_name}, list) "
                         f"or len({variable_name}) <= {index} "
@@ -4068,6 +4203,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
         elif schema.items is False:
             predicates.append(f"(not isinstance({variable_name}, list) or not {variable_name})")
+        predicates.extend(self._schema_array_unevaluated_items_predicates(schema, variable_name))
+        return predicates
+
+    def _schema_array_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
+        predicates = self._schema_array_item_predicates(schema, variable_name)
         predicates.extend(self._schema_array_contains_predicates(schema, variable_name))
         predicates.extend(self._schema_array_unique_items_predicates(schema, variable_name))
         return predicates
@@ -4145,6 +4285,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         )
         return {"field": field_name, "predicate": predicate} if predicate else None
 
+    def _schema_needs_array_item_validator(self, schema: JsonSchemaObject) -> bool:
+        if not schema.is_array:
+            return False
+        needs_validator = (
+            (schema.prefixItems is not None and not self._is_fixed_length_tuple(schema))
+            or (isinstance(schema.items, list) and not self._is_fixed_length_tuple(schema))
+            or bool(self._schema_array_unevaluated_items_predicates(schema, "value"))
+        )
+        return needs_validator and all(
+            self._can_inline_array_item_predicate(candidate_schema)
+            for candidate_schema in self._array_item_validator_candidate_schemas(schema)
+        )
+
+    def _get_array_value_validator(self, field_name: str, field: JsonSchemaObject) -> dict[str, str] | None:
+        if not self._schema_needs_array_item_validator(field):
+            return None
+        predicate = self._join_contains_predicates(
+            self._schema_array_item_predicates(field, f"self.{field_name}"), "and"
+        )
+        return {"field": field_name, "predicate": predicate} if predicate and predicate != "True" else None
+
     def _field_data_type_uses_set(self, field: DataModelFieldBase) -> bool:  # noqa: PLR6301
         return any(data_type.is_set or data_type.is_frozen_set for data_type in field.data_type.all_data_types)
 
@@ -4189,6 +4350,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 validators.append(validator)
         return validators
 
+    def _collect_array_value_validators(
+        self,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        if not obj.properties:
+            return []
+        field_names = self._field_name_mapping(fields)
+        validators: list[dict[str, str]] = []
+        for property_name, field_schema in obj.properties.items():
+            if not isinstance(field_schema, JsonSchemaObject):
+                continue
+            field_name = field_names.get(property_name)
+            if field_name and (validator := self._get_array_value_validator(field_name, field_schema)):
+                validators.append(validator)
+        return validators
+
     def _set_object_array_validators(
         self,
         validators: dict[str, Any],
@@ -4202,6 +4380,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         array_unique_items = self._collect_array_unique_items_validators(obj, fields)
         if array_unique_items:
             validators["array_unique_items"] = array_unique_items
+
+        array_values = self._collect_array_value_validators(obj, fields)
+        if array_values:
+            validators["array_values"] = array_values
 
     def _schema_type_includes(self, schema: Any, schema_type: str) -> bool:  # noqa: PLR6301
         if not isinstance(schema, JsonSchemaObject):
@@ -4362,6 +4544,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         unique_items_validator = self._get_array_unique_items_validator("root", obj)
         if unique_items_validator:
             validators["array_unique_items"] = [unique_items_validator]
+        array_value_validator = self._get_array_value_validator("root", obj)
+        if array_value_validator:
+            validators["array_values"] = [array_value_validator]
         if not validators:
             self.extra_template_data[path].pop("json_schema_validators", None)
 
@@ -5094,6 +5279,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 items = [*items, obj.items]
             elif false_prefix_index is None and isinstance(obj.unevaluatedItems, JsonSchemaObject):
                 items = [*items, obj.unevaluatedItems]
+            elif false_prefix_index is None and obj.unevaluatedItems is False:
+                contains = obj.extras.get("contains")
+                if isinstance(contains, dict):
+                    items = [*items, self.SCHEMA_OBJECT_TYPE.model_validate(contains)]
+                elif contains is True or contains == {}:
+                    items = [*items, True]
         elif isinstance(obj.items, JsonSchemaObject):
             items = [obj.items]
         elif isinstance(obj.items, list):

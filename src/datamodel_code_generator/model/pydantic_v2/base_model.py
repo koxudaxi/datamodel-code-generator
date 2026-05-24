@@ -850,6 +850,22 @@ class BaseModel(BaseModelBase):
             lines.extend(validator_lines)
         return lines
 
+    def _get_array_value_validators_lines(self, array_values: Any) -> list[str]:
+        if not isinstance(array_values, list):
+            return []
+
+        lines: list[str] = []
+        for validator in array_values:
+            if not isinstance(validator, dict):
+                continue
+            validator_lines = self._get_array_unique_items_validator_lines(validator)
+            if not validator_lines:
+                continue
+            if lines:
+                lines.append("")
+            lines.extend(validator_lines)
+        return lines
+
     @staticmethod
     def _get_json_schema_unique_key_lines() -> list[str]:
         return [
@@ -953,6 +969,7 @@ class BaseModel(BaseModelBase):
         self._extend_validator_lines(
             lines, self._get_array_unique_items_validators_lines(validators.get("array_unique_items"))
         )
+        self._extend_validator_lines(lines, self._get_array_value_validators_lines(validators.get("array_values")))
 
         if not lines:
             return

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "array unevaluated items contains validators",
+  "type": "object",
+  "properties": {
+    "values": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "string"
+        }
+      ],
+      "contains": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minContains": 1,
+      "unevaluatedItems": false
+    }
+  },
+  "required": [
+    "values"
+  ]
+}

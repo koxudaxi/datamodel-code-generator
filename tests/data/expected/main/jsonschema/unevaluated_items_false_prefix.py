@@ -4,8 +4,32 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class UnevaluatedItemsFalsePrefix(BaseModel):
     values: list[int | str] = Field(..., max_length=2)
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if self.values is not None and not (
+            (
+                (
+                    not isinstance(self.values, list)
+                    or len(self.values) <= 0
+                    or (
+                        lambda extra_item: isinstance(extra_item, int)
+                        and not isinstance(extra_item, bool)
+                    )(self.values[0])
+                )
+            )
+            and (
+                (
+                    not isinstance(self.values, list)
+                    or len(self.values) <= 1
+                    or (lambda extra_item: isinstance(extra_item, str))(self.values[1])
+                )
+            )
+        ):
+            raise ValueError('values' + ' does not match array schema')
+        return self

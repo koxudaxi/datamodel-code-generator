@@ -5768,6 +5768,36 @@ def test_main_jsonschema_nested_array_contains_validators(output_file: Path) -> 
         )
 
 
+def test_main_jsonschema_array_unevaluated_items_contains_validators(output_file: Path) -> None:
+    """Test contains-evaluated tail items satisfy unevaluatedItems false."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "array_unevaluated_items_contains_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="array_unevaluated_items_contains_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"values":["head",1,2]}'
+    for invalid_json in [
+        '{"values":[1,1]}',
+        '{"values":["head","tail"]}',
+        '{"values":["head",1,"tail"]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="array_unevaluated_items_contains_validators",
+            model_name="ArrayUnevaluatedItemsContainsValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_nested_array_unique_items_validators(output_file: Path) -> None:
     """Test nested runtime array predicates honor uniqueItems."""
     run_main_and_assert(
@@ -5826,6 +5856,36 @@ def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> No
             module_name="root_array_contains_validators",
             model_name="RootArrayContainsValidators",
             valid_json='["x", 7, false]',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
+def test_main_jsonschema_root_array_unevaluated_items_contains_validators(output_file: Path) -> None:
+    """Test RootModel contains-evaluated tail items satisfy unevaluatedItems false."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_array_unevaluated_items_contains_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_array_unevaluated_items_contains_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '["head",1,2]'
+    for invalid_json in [
+        "[1,1]",
+        '["head","tail"]',
+        '["head",1,"tail"]',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_array_unevaluated_items_contains_validators",
+            model_name="RootArrayUnevaluatedItemsContainsValidators",
+            valid_json=valid_json,
             invalid_json=invalid_json,
             expected_error_type="value_error",
         )
