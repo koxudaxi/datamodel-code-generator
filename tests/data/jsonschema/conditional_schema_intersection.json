@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConditionalSchemaIntersection",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "card"
+    },
+    "amount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": ["kind", "amount"],
+  "if": {
+    "type": "object",
+    "properties": {
+      "kind": {
+        "const": "card"
+      }
+    },
+    "required": ["kind"]
+  },
+  "then": {
+    "properties": {
+      "amount": {
+        "maximum": 10
+      },
+      "note": {
+        "const": "approved"
+      }
+    },
+    "required": ["note"],
+    "additionalProperties": false
+  },
+  "else": false
+}

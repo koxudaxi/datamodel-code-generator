@@ -2260,6 +2260,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         try:
             cls._normalize_raw_dependent_constraints(normalized)
+            cls._normalize_raw_conditional_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
             cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
@@ -2268,6 +2269,201 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             raise
 
         return normalized
+
+    @classmethod
+    def _normalize_raw_conditional_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if "if" not in schema_dict:
+            return
+
+        active_schema = cls._get_raw_active_conditional_schema(schema_dict)
+        if active_schema is None:
+            return
+        if active_schema is True:
+            for key in ("else", "if", "then"):
+                schema_dict.pop(key, None)
+            return
+        if active_schema is False:
+            cls._raise_object_constraint_conflict()
+        if not isinstance(active_schema, dict):
+            return
+
+        base_schema = {key: value for key, value in schema_dict.items() if key not in {"else", "if", "then"}}
+        merged_schema = cls._merge_raw_schema_intersection(base_schema, active_schema)
+        schema_dict.clear()
+        schema_dict.update(merged_schema)
+
+    @classmethod
+    def _get_raw_active_conditional_schema(cls, schema_dict: dict[Any, Any]) -> Any:  # noqa: PLR0911
+        condition_schema = schema_dict.get("if")
+        if condition_schema is True or condition_schema == {}:
+            return schema_dict.get("then", True)
+        if condition_schema is False:
+            return schema_dict.get("else", True)
+        if not isinstance(condition_schema, dict):
+            return None
+
+        literal_condition = cls._get_raw_literal_conditional_result(schema_dict, condition_schema)
+        if literal_condition is not None:
+            return schema_dict.get("then" if literal_condition else "else", True)
+
+        type_condition = cls._get_raw_type_conditional_result(schema_dict, condition_schema)
+        if type_condition is not None:
+            return schema_dict.get("then" if type_condition else "else", True)
+
+        object_condition = cls._get_raw_object_conditional_result(schema_dict, condition_schema)
+        if object_condition is not None:
+            return schema_dict.get("then" if object_condition else "else", True)
+
+        return None
+
+    @classmethod
+    def _get_raw_literal_conditional_result(
+        cls,
+        schema_dict: dict[Any, Any],
+        condition_schema: dict[Any, Any],
+    ) -> bool | None:
+        if not cls._raw_schema_is_supported_literal_filter(condition_schema):
+            return None
+        if "const" in schema_dict:
+            return cls._raw_value_matches_schema(schema_dict["const"], condition_schema)
+        enum_values = schema_dict.get("enum")
+        if isinstance(enum_values, list):
+            matching_values = [value for value in enum_values if cls._raw_value_matches_schema(value, condition_schema)]
+            if len(matching_values) == len(enum_values):
+                return True
+            if not matching_values:
+                return False
+        return None
+
+    @classmethod
+    def _get_raw_type_conditional_result(
+        cls,
+        schema_dict: dict[Any, Any],
+        condition_schema: dict[Any, Any],
+    ) -> bool | None:
+        condition_type = condition_schema.get("type")
+        if condition_type is None or set(condition_schema) - {"type"}:
+            return None
+        type_values = cls._type_values(schema_dict.get("type"))
+        condition_types = cls._type_values(condition_type)
+        if type_values is None or condition_types is None:
+            return None
+        if type_values <= condition_types:
+            return True
+        if not type_values & condition_types:
+            return False
+        return None
+
+    @classmethod
+    def _get_raw_object_conditional_result(  # noqa: PLR0911
+        cls,
+        schema_dict: dict[Any, Any],
+        condition_schema: dict[Any, Any],
+    ) -> bool | None:
+        if set(condition_schema) - {"properties", "required", "type"}:
+            return None
+
+        condition_type_values = cls._type_values(condition_schema.get("type"))
+        if condition_type_values != {"object"}:
+            return None
+
+        parent_type_values = cls._type_values(schema_dict.get("type"))
+        if parent_type_values is None or "object" not in parent_type_values:
+            return False if parent_type_values is not None else None
+        if parent_type_values != {"object"}:
+            return None
+
+        condition_required = cls._raw_required_names(condition_schema.get("required"))
+        condition_properties = condition_schema.get("properties")
+        if condition_properties is None:
+            return condition_required <= cls._raw_required_names(schema_dict.get("required"))
+        if not isinstance(condition_properties, dict):
+            return None
+
+        parent_required = cls._raw_required_names(schema_dict.get("required"))
+        parent_properties = schema_dict.get("properties")
+        if not isinstance(parent_properties, dict):
+            parent_properties = {}
+
+        if cls._raw_required_property_is_disjoint(
+            parent_properties,
+            parent_required,
+            condition_properties,
+            condition_required,
+            schema_dict.get("additionalProperties"),
+        ):
+            return False
+
+        condition_property_names = {name for name in condition_properties if isinstance(name, str)}
+        if not condition_property_names <= condition_required:
+            return None
+        if not condition_required <= parent_required:
+            return None
+        if all(
+            cls._raw_schema_implies_supported_filter(parent_properties.get(name, True), condition_properties[name])
+            for name in condition_property_names
+        ):
+            return True
+        return None
+
+    @classmethod
+    def _raw_required_property_is_disjoint(
+        cls,
+        parent_properties: dict[Any, Any],
+        parent_required: set[str],
+        condition_properties: dict[Any, Any],
+        condition_required: set[str],
+        additional_properties: Any,
+    ) -> bool:
+        for required_name in condition_required & parent_required:
+            if required_name not in parent_properties and additional_properties is False:
+                return True
+            if required_name in condition_properties and cls._raw_schema_is_disjoint_from_supported_filter(
+                parent_properties.get(required_name, True),
+                condition_properties[required_name],
+            ):
+                return True
+        return False
+
+    @classmethod
+    def _raw_schema_implies_supported_filter(cls, schema: Any, filter_schema: Any) -> bool:
+        if filter_schema is True or filter_schema == {}:
+            return True
+        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+            return False
+        if not cls._raw_schema_is_supported_literal_filter(filter_schema):
+            return False
+        if "const" in schema:
+            return cls._raw_value_matches_schema(schema["const"], filter_schema)
+        enum_values = schema.get("enum")
+        if isinstance(enum_values, list):
+            return all(cls._raw_value_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
+        schema_types = cls._type_values(schema.get("type"))
+        filter_types = cls._type_values(filter_schema.get("type"))
+        return schema_types is not None and filter_types is not None and schema_types <= filter_types
+
+    @classmethod
+    def _raw_schema_is_disjoint_from_supported_filter(cls, schema: Any, filter_schema: Any) -> bool:  # noqa: PLR0911
+        if schema is False:
+            return True
+        if filter_schema is False:
+            return True
+        if not isinstance(schema, dict) or not isinstance(filter_schema, dict):
+            return False
+        if not cls._raw_schema_is_supported_literal_filter(filter_schema):
+            return False
+        if "const" in schema:
+            return not cls._raw_value_matches_schema(schema["const"], filter_schema)
+        enum_values = schema.get("enum")
+        if isinstance(enum_values, list):
+            return not any(cls._raw_value_matches_schema(enum_value, filter_schema) for enum_value in enum_values)
+        schema_types = cls._type_values(schema.get("type"))
+        filter_types = cls._type_values(filter_schema.get("type"))
+        return schema_types is not None and filter_types is not None and not schema_types & filter_types
+
+    @staticmethod
+    def _raw_required_names(value: Any) -> set[str]:
+        return {name for name in value if isinstance(name, str)} if isinstance(value, list) else set()
 
     @classmethod
     def _normalize_raw_dependent_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -2384,7 +2580,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return merged
 
     @classmethod
-    def _merge_raw_schema_keyword(cls, merged: dict[Any, Any], key: Any, value: Any) -> None:
+    def _merge_raw_schema_keyword(cls, merged: dict[Any, Any], key: Any, value: Any) -> None:  # noqa: PLR0912
         if key == "const":
             if not cls._json_schema_values_equal(merged[key], value):
                 cls._raise_allof_literal_conflict()
@@ -2412,6 +2608,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                         merged[key].get(property_name, True),
                         property_schema,
                     )
+        elif key == "required" and isinstance(merged[key], list) and isinstance(value, list):
+            merged[key] = list(dict.fromkeys([*merged[key], *value]))
+        elif key == "additionalProperties" and isinstance(merged[key], bool) and isinstance(value, bool):
+            merged[key] = merged[key] and value
 
     @classmethod
     def _normalize_raw_not_constraints(cls, schema_dict: dict[Any, Any]) -> None:

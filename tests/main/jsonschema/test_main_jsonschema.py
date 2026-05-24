@@ -4007,6 +4007,75 @@ def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> Non
     )
 
 
+def test_main_jsonschema_conditional_schema_intersection(output_file: Path) -> None:
+    """Test statically true conditional schemas intersect generated object constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_schema_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_schema_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="conditional_schema_intersection",
+        model_name="ConditionalSchemaIntersection",
+        valid_json='{"kind":"card","amount":10,"note":"approved"}',
+        invalid_json='{"kind":"card","amount":11,"note":"approved"}',
+        expected_error_type="less_than_equal",
+        expected_attribute_path=("amount",),
+        expected_attribute_value=10,
+    )
+
+
+def test_main_jsonschema_conditional_else_intersection(output_file: Path) -> None:
+    """Test statically false conditional schemas intersect the else branch."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_else_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_else_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="conditional_else_intersection",
+        model_name="ConditionalElseIntersection",
+        valid_json='{"kind":"cash","amount":1,"receipt":"abc"}',
+        invalid_json='{"kind":"cash","amount":0,"receipt":"abc"}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("amount",),
+        expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_conditional_type_else_intersection(output_file: Path) -> None:
+    """Test disjoint conditional types intersect the else branch."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_type_else_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_type_else_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="conditional_type_else_intersection",
+        model_name="ConditionalTypeElseIntersection",
+        valid_json="2",
+        invalid_json="1",
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("root",),
+        expected_attribute_value=2,
+    )
+
+
 def test_main_jsonschema_anyof_with_false_schema(output_file: Path) -> None:
     """Test false schemas inside anyOf are accepted and ignored as unreachable branches."""
     run_main_and_assert(
@@ -4093,6 +4162,31 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "dependentSchemas": {"method": {"properties": {"method": {"type": "string", "const": "cash"}}}},
             },
             id="dependent-schema-property-const-disjoint",
+        ),
+        pytest.param({"title": "Payload", "if": True, "then": False}, id="conditional-true-then-false"),
+        pytest.param({"title": "Payload", "if": False, "else": False}, id="conditional-false-else-false"),
+        pytest.param(
+            {"title": "Payload", "type": "string", "const": "x", "if": {"const": "x"}, "then": False},
+            id="conditional-const-then-false",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "string", "enum": ["x"], "if": {"const": "y"}, "else": False},
+            id="conditional-enum-else-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string", "const": "card"}},
+                "required": ["kind"],
+                "if": {
+                    "type": "object",
+                    "properties": {"kind": {"const": "card"}},
+                    "required": ["kind"],
+                },
+                "then": False,
+            },
+            id="conditional-object-then-false",
         ),
         pytest.param(
             {
