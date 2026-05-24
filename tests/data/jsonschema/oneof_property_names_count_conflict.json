@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OneofPropertyNamesCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["allowed"]
+  },
+  "minProperties": 1,
+  "oneOf": [
+    {
+      "required": ["allowed"]
+    },
+    {
+      "minProperties": 1
+    }
+  ],
+  "additionalProperties": {
+    "type": "string"
+  }
+}

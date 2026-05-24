@@ -3829,12 +3829,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for item in cls._iter_raw_allof_object_schemas(schema_dict)
             if isinstance(item.get("anyOf"), list)
         ]
+        oneof_schemas = [
+            item["oneOf"]
+            for item in cls._iter_raw_allof_object_schemas(schema_dict)
+            if isinstance(item.get("oneOf"), list)
+        ]
         for count in range(len(names), -1, -1):
             if any(
                 cls._raw_property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
                 and cls._raw_property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
                 and cls._raw_property_name_set_satisfies_not_schemas(set(candidate_names), not_schemas)
                 and cls._raw_property_name_set_satisfies_anyof_schemas(set(candidate_names), anyof_schemas)
+                and cls._raw_property_name_set_satisfies_oneof_schemas(set(candidate_names), oneof_schemas)
                 for candidate_names in combinations(names, count)
             ):
                 return count
@@ -3986,6 +3992,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 return True
             known_branch_results.append(cls._raw_property_name_set_satisfies_object_schema(selected_names, branch))
         return any(known_branch_results)
+
+    @classmethod
+    def _raw_property_name_set_satisfies_oneof_schemas(
+        cls,
+        selected_names: set[str],
+        oneof_schemas: list[list[Any]],
+    ) -> bool:
+        for one_of in oneof_schemas:
+            if not cls._raw_property_name_set_satisfies_oneof_schema(selected_names, one_of):
+                return False
+        return True
+
+    @classmethod
+    def _raw_property_name_set_satisfies_oneof_schema(cls, selected_names: set[str], one_of: list[Any]) -> bool:
+        known_branch_results: list[bool] = []
+        for branch in one_of:
+            if branch is True or branch == {}:
+                known_branch_results.append(True)
+                continue
+            if branch is False:
+                known_branch_results.append(False)
+                continue
+            if not isinstance(branch, dict) or not cls._raw_property_name_set_not_schema_is_key_only(branch):
+                return True
+            known_branch_results.append(cls._raw_property_name_set_satisfies_object_schema(selected_names, branch))
+        return sum(known_branch_results) == 1
 
     @classmethod
     def _raw_dependency_allowed_property_name_values(
