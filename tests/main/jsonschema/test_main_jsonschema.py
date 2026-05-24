@@ -5033,6 +5033,41 @@ def test_main_jsonschema_object_context_schema_validators(output_file: Path) -> 
         )
 
 
+def test_main_jsonschema_object_context_alias_validators(output_file: Path) -> None:
+    """Test whole-object schema validators evaluate alias property names."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_alias_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_alias_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"credit-card":1,"billing-address":"home","x-count":1}'
+    for invalid_json in [
+        '{"credit-card":1,"x-count":1}',
+        '{"credit-card":1,"billing-address":"hi","x-count":1}',
+        '{"credit-card":1,"billing-address":"home","x-count":0}',
+        '{"credit-card":1,"billing-address":"home","other":1}',
+        '{"mode-type":"strict","x-count":1}',
+        '{"mode-type":"strict","service-code":"L-1","x-count":1}',
+        '{"mode-type":"strict","service-code":"S-1","credit-card":1}',
+        '{"bad-code":true}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_alias_validators",
+            model_name="ObjectContextAliasValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for schema-valued contains constraints."""
     run_main_and_assert(

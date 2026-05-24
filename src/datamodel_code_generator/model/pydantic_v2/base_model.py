@@ -412,7 +412,13 @@ class BaseModel(BaseModelBase):
         )
 
     @classmethod
-    def _get_provided_keys_validator_lines(cls, property_count: Any, *, has_prior_lines: bool) -> list[str]:
+    def _get_provided_keys_validator_lines(
+        cls,
+        property_count: Any,
+        *,
+        has_prior_lines: bool,
+        field_original_names: Any = None,
+    ) -> list[str]:
         lines: list[str] = []
         if has_prior_lines:
             lines.append("")
@@ -421,9 +427,18 @@ class BaseModel(BaseModelBase):
         lines.extend([
             "provided_keys = set(self.model_fields_set)",
             "provided_keys.update(extra_values)",
-            "model_data = {field_name: getattr(self, field_name) for field_name in self.model_fields_set}",
-            "model_data.update(extra_values)",
         ])
+        if isinstance(field_original_names, dict) and field_original_names:
+            lines.extend([
+                f"field_original_names = {field_original_names!r}",
+                "model_data = {",
+                "    field_original_names.get(field_name, field_name): getattr(self, field_name)",
+                "    for field_name in self.model_fields_set",
+                "}",
+            ])
+        else:
+            lines.append("model_data = {field_name: getattr(self, field_name) for field_name in self.model_fields_set}")
+        lines.append("model_data.update(extra_values)")
         return lines
 
     @staticmethod
@@ -758,7 +773,13 @@ class BaseModel(BaseModelBase):
         dependent_context_lines = [dependent_required_lines, dependent_schema_properties_lines]
         context_validator_lines = [*dependent_context_lines, conditional_lines, not_validator_lines]
         if any(context_validator_lines):
-            lines.extend(self._get_provided_keys_validator_lines(property_count, has_prior_lines=bool(lines)))
+            lines.extend(
+                self._get_provided_keys_validator_lines(
+                    property_count,
+                    has_prior_lines=bool(lines),
+                    field_original_names=validators.get("field_original_names"),
+                )
+            )
 
         for validator_lines in dependent_context_lines:
             lines.extend(validator_lines)

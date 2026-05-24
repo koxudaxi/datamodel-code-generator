@@ -28,8 +28,12 @@ class ObjectModelValidators(BaseModel):
 
         provided_keys = set(self.model_fields_set)
         provided_keys.update(extra_values)
+        field_original_names = {
+            'credit_card': 'credit-card',
+            'billing_address': 'billing-address',
+        }
         model_data = {
-            field_name: getattr(self, field_name)
+            field_original_names.get(field_name, field_name): getattr(self, field_name)
             for field_name in self.model_fields_set
         }
         model_data.update(extra_values)
