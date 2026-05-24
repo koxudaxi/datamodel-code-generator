@@ -5035,6 +5035,44 @@ def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
         )
 
 
+def test_main_jsonschema_contains_runtime_value_predicates(output_file: Path) -> None:
+    """Test contains validators honor nested runtime-only schema predicates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_runtime_value_predicates.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_runtime_value_predicates.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"numbers":[2,1],"names":["Alice","Bob"],'
+        '"objects":[{"kind":"ok","values":[1,2]},{"kind":"no","values":[1,2]}]}'
+    )
+    for invalid_json in [
+        '{"numbers":[1,3],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2]}]}',
+        '{"numbers":[2,4],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2]}]}',
+        '{"numbers":[2],"names":["A","Bob"],"objects":[{"kind":"ok","values":[1,2]}]}',
+        '{"numbers":[2],"names":["Alice","Ann"],"objects":[{"kind":"ok","values":[1,2]}]}',
+        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok"}]}',
+        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[0,2]}]}',
+        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2],"extra":1}]}',
+        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2],"blocked":true}]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="contains_runtime_value_predicates",
+            model_name="ContainsRuntimeValuePredicates",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> None:
     """Test RootModel validators for schema-valued contains constraints."""
     run_main_and_assert(

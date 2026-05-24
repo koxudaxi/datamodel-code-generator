@@ -3573,14 +3573,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _contains_predicate_from_schema(self, schema: JsonSchemaObject) -> str | None:
         predicates: list[str] = []
-        if "const" in schema.extras:
-            predicates.append(self._json_value_predicate(schema.extras["const"]))
-        if schema.enum:
-            predicates.append(
-                self._join_contains_predicates([self._json_value_predicate(value) for value in schema.enum], "or")
-            )
-        if type_predicate := self._schema_type_predicate(schema, "item"):
-            predicates.append(type_predicate)
+        if value_predicate := self._schema_runtime_value_predicate(schema, "item"):
+            predicates.append(value_predicate)
         if schema.anyOf and (predicate := self._contains_combined_predicate(schema.anyOf, "anyOf")):
             predicates.append(predicate)
         if schema.oneOf and (predicate := self._contains_combined_predicate(schema.oneOf, "oneOf")):
@@ -3631,6 +3625,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             predicates.append(f"isinstance({variable_name}, list) and len({variable_name}) <= {schema.maxItems}")
         return predicates
 
+    def _schema_string_pattern_predicates(  # noqa: PLR6301
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+    ) -> list[str]:
+        if schema.pattern is None:
+            return []
+        return [f"isinstance({variable_name}, str) and re.search({schema.pattern!r}, {variable_name}) is not None"]
+
+    def _schema_multiple_of_predicates(  # noqa: PLR6301
+        self,
+        schema: JsonSchemaObject,
+        variable_name: str,
+    ) -> list[str]:
+        if not schema.multipleOf:
+            return []
+        return [
+            (
+                f"isinstance({variable_name}, (int, float)) "
+                f"and not isinstance({variable_name}, bool) "
+                f"and ({variable_name} / {schema.multipleOf!r}).is_integer()"
+            )
+        ]
+
     def _schema_value_predicate(self, schema: JsonSchemaObject, variable_name: str) -> str | None:
         predicates: list[str] = []
         if "const" in schema.extras:
@@ -3646,6 +3664,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             predicates.append(type_predicate)
         predicates.extend(self._schema_number_range_predicates(schema, variable_name))
         predicates.extend(self._schema_size_predicates(schema, variable_name))
+        predicates.extend(self._schema_string_pattern_predicates(schema, variable_name))
+        predicates.extend(self._schema_multiple_of_predicates(schema, variable_name))
         return self._join_contains_predicates(predicates, "and") if predicates else None
 
     def _schema_value_predicate_from_value(
@@ -3663,11 +3683,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _schema_object_value_predicates(self, schema: JsonSchemaObject, variable_name: str) -> list[str]:
         predicates: list[str] = []
+        if schema.minProperties is not None:
+            predicates.append(
+                f"(not isinstance({variable_name}, dict) or len({variable_name}) >= {schema.minProperties})"
+            )
+        if schema.maxProperties is not None:
+            predicates.append(
+                f"(not isinstance({variable_name}, dict) or len({variable_name}) <= {schema.maxProperties})"
+            )
+        if schema.propertyNames is False:
+            predicates.append(f"(not isinstance({variable_name}, dict) or not {variable_name})")
+        elif isinstance(schema.propertyNames, JsonSchemaObject):
+            predicate = self._schema_value_predicate_from_value(schema.propertyNames, "property_key")
+            if predicate and predicate != "True":
+                predicates.append(
+                    f"(not isinstance({variable_name}, dict) "
+                    f"or all((lambda property_key: {predicate})(property_key) for property_key in {variable_name}))"
+                )
         if schema.required:
             required_set = "{" + ", ".join(repr(required_name) for required_name in schema.required) + "}"
             predicates.append(f"(not isinstance({variable_name}, dict) or {required_set}.issubset({variable_name}))")
         if schema.properties:
             for index, (property_name, property_schema) in enumerate(schema.properties.items()):
+                if property_schema is False:
+                    predicates.append(
+                        f"(not isinstance({variable_name}, dict) or {property_name!r} not in {variable_name})"
+                    )
+                    continue
                 if not isinstance(property_schema, JsonSchemaObject):
                     continue
                 property_variable = f"{variable_name}_property_{index}"

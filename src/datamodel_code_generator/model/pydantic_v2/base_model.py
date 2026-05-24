@@ -775,7 +775,7 @@ class BaseModel(BaseModelBase):
             }
         ]
         self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
-        if pattern_properties_lines or root_pattern_properties_lines:
+        if pattern_properties_lines or root_pattern_properties_lines or any("re.search(" in line for line in lines):
             self._additional_imports.append(Import(import_="re"))
 
     def _process_validators(self) -> None:
