@@ -27,7 +27,8 @@ class NotObjectValidators(BaseModel):
         model_data.update(extra_values)
 
         if (
-            (
+            (isinstance(model_data, dict))
+            and (
                 (
                     not isinstance(model_data, dict)
                     or {'status', 'archived'}.issubset(model_data)

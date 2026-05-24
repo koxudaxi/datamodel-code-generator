@@ -5068,6 +5068,42 @@ def test_main_jsonschema_object_context_alias_validators(output_file: Path) -> N
         )
 
 
+def test_main_jsonschema_object_context_composed_condition_validators(output_file: Path) -> None:
+    """Test object-context conditions honor composed schema keywords."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_context_composed_condition_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_context_composed_condition_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"plan":"pro","quota":5,"mode":"secure","token":"T-1"}'
+    for invalid_json in [
+        '{"plan":"pro"}',
+        '{"plan":"pro","quota":4}',
+        '{"plan":"pro","quota":5,"blocked":true}',
+        '{"mode":"secure"}',
+        '{"mode":"secure","token":"bad"}',
+        '{"mode":"secure","marker":true,"token":"T-1"}',
+        '{"mode":"public","token":"T-1"}',
+        '{"forbidden":true}',
+        '{"region":"blocked"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_context_composed_condition_validators",
+            model_name="ObjectContextComposedConditionValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_runtime_composed_schema_validators(output_file: Path) -> None:
     """Test runtime validators honor composed schemas in nested value predicates."""
     run_main_and_assert(

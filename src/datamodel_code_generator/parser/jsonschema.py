@@ -4155,12 +4155,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return "True"
         if schema is False:
             return "False"
-        predicates = self._schema_object_property_predicates(schema, "model_data")
-        if predicates:
-            return self._join_contains_predicates(predicates, "and")
         if not schema.model_dump(exclude_defaults=True, exclude_none=True):
             return empty_schema_predicate
-        return None
+        return self._schema_runtime_value_predicate(schema, "model_data")
 
     def _collect_dependent_schema_property_validators(
         self,

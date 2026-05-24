@@ -1,0 +1,129 @@
+{
+  "title": "object context composed condition validators",
+  "type": "object",
+  "properties": {
+    "plan": {
+      "type": "string"
+    },
+    "quota": {
+      "type": "integer"
+    },
+    "region": {
+      "type": "string"
+    },
+    "mode": {
+      "type": "string"
+    },
+    "marker": {
+      "type": "boolean"
+    },
+    "token": {
+      "type": "string"
+    }
+  },
+  "dependentSchemas": {
+    "plan": {
+      "allOf": [
+        {
+          "anyOf": [
+            {
+              "required": [
+                "quota"
+              ],
+              "properties": {
+                "quota": {
+                  "type": "integer",
+                  "minimum": 5
+                }
+              }
+            },
+            {
+              "required": [
+                "region"
+              ],
+              "properties": {
+                "region": {
+                  "const": "internal"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "not": {
+            "required": [
+              "blocked"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "if": {
+    "oneOf": [
+      {
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "const": "secure"
+          }
+        }
+      },
+      {
+        "required": [
+          "marker"
+        ],
+        "properties": {
+          "marker": {
+            "const": true
+          }
+        }
+      }
+    ]
+  },
+  "then": {
+    "required": [
+      "token"
+    ],
+    "properties": {
+      "token": {
+        "type": "string",
+        "pattern": "^T-"
+      }
+    }
+  },
+  "else": {
+    "not": {
+      "required": [
+        "token"
+      ]
+    }
+  },
+  "not": {
+    "anyOf": [
+      {
+        "required": [
+          "forbidden"
+        ],
+        "properties": {
+          "forbidden": {
+            "const": true
+          }
+        }
+      },
+      {
+        "required": [
+          "region"
+        ],
+        "properties": {
+          "region": {
+            "const": "blocked"
+          }
+        }
+      }
+    ]
+  },
+  "additionalProperties": true
+}
