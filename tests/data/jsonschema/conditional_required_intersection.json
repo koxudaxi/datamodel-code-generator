@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConditionalRequiredIntersection",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "code": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": ["kind"],
+  "if": {
+    "required": ["kind"]
+  },
+  "then": {
+    "properties": {
+      "code": {
+        "maximum": 5
+      }
+    },
+    "required": ["code"]
+  },
+  "else": false
+}

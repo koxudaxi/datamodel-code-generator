@@ -2536,15 +2536,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if set(condition_schema) - {"properties", "required", "type"}:
             return None
 
-        condition_type_values = cls._type_values(condition_schema.get("type"))
-        if condition_type_values != {"object"}:
-            return None
-
-        parent_type_values = cls._type_values(schema_dict.get("type"))
-        if parent_type_values is None or "object" not in parent_type_values:
-            return False if parent_type_values is not None else None
-        if parent_type_values != {"object"}:
-            return None
+        parent_object_result = cls._raw_object_condition_parent_result(schema_dict, condition_schema)
+        if parent_object_result is not True:
+            return parent_object_result
 
         condition_required = cls._raw_required_names(condition_schema.get("required"))
         condition_properties = condition_schema.get("properties")
@@ -2578,6 +2572,30 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         ):
             return True
         return None
+
+    @classmethod
+    def _raw_object_condition_parent_result(
+        cls,
+        schema_dict: dict[Any, Any],
+        condition_schema: dict[Any, Any],
+    ) -> bool | None:
+        parent_type_values = cls._type_values(schema_dict.get("type"))
+        if parent_type_values is None:
+            return None
+
+        condition_type_values = cls._type_values(condition_schema.get("type"))
+        if condition_type_values is not None:
+            type_intersection = cls._intersect_type_values(parent_type_values, condition_type_values)
+            if not type_intersection:
+                return False
+            if type_intersection != cls._simplify_type_values(parent_type_values):
+                return None
+        elif "object" not in parent_type_values:
+            return True
+
+        if parent_type_values != {"object"}:
+            return None
+        return True
 
     @classmethod
     def _raw_required_property_is_disjoint(

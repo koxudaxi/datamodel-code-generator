@@ -4234,6 +4234,40 @@ def test_main_jsonschema_conditional_type_else_intersection(output_file: Path) -
     )
 
 
+def test_main_jsonschema_conditional_required_intersection(output_file: Path) -> None:
+    """Test required-only object conditions intersect active then schemas."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="conditional_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="conditional_required_intersection",
+        model_name="ConditionalRequiredIntersection",
+        valid_json='{"kind":"card","code":5}',
+        invalid_json='{"kind":"card","code":6}',
+        expected_error_type="less_than_equal",
+        expected_attribute_path=("code",),
+        expected_attribute_value=5,
+    )
+
+
+def test_main_jsonschema_conditional_required_conflict(output_file: Path) -> None:
+    """Test required-only object conditions with false then are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_required_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_conditional_integer_number_intersection(output_file: Path) -> None:
     """Test integer parent schemas satisfy number type conditions."""
     run_main_and_assert(
@@ -4686,6 +4720,17 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": "string", "const": "x", "if": {"const": "x"}, "then": False},
             id="conditional-const-then-false",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"kind": {"type": "string"}},
+                "required": ["kind"],
+                "if": {"required": ["kind"]},
+                "then": False,
+            },
+            id="conditional-required-only-then-false",
         ),
         pytest.param(
             {"title": "Payload", "type": "string", "enum": ["x"], "if": {"const": "y"}, "else": False},
