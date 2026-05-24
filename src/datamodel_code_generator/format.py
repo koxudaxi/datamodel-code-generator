@@ -792,6 +792,12 @@ def _format_annotated(  # noqa: PLR0913
     return "\n".join(formatted_lines)
 
 
+def _config_dict_assignment(statement: ast.stmt) -> tuple[ast.Assign, ast.Call] | None:
+    if isinstance(statement, ast.Assign) and len(statement.targets) == 1 and _is_call(statement.value, "ConfigDict"):
+        return statement, statement.value
+    return None
+
+
 def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
     statement: ast.stmt,
     line: str,
@@ -800,16 +806,14 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
     *,
     wrap_string_literal: bool,
 ) -> str | None:
-    is_config_dict_assign = (
-        isinstance(statement, ast.Assign) and len(statement.targets) == 1 and _is_call(statement.value, "ConfigDict")
-    )
-    config_dict_needs_formatting = is_config_dict_assign and (
+    config_dict = _config_dict_assignment(statement)
+    config_dict_needs_formatting = config_dict is not None and (
         len(line) > line_length
         or any(
             isinstance(keyword.value, ast.Dict)
             and len(f"{line[: len(line) - len(line.lstrip())]}    {_format_call_argument(keyword, source)}")
             > line_length
-            for keyword in statement.value.keywords
+            for keyword in config_dict[1].keywords
         )
     )
     if (len(line) <= line_length and not config_dict_needs_formatting) or "#" in line:
@@ -834,6 +838,7 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
             line_length,
             source,
         ):
+            assert statement.value is not None
             value = _source_segment(source, statement.value)
             return (
                 f"{indent}{target}: "
@@ -863,6 +868,7 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
             f"{indent}{target}: {annotation}",
             line_length,
         ):
+            assert statement.value is not None
             value = _source_segment(source, statement.value)
             return (
                 f"{indent}{target}: "
@@ -957,10 +963,10 @@ def _format_generated_class_statement(  # noqa: PLR0911, PLR0912
             value = _source_segment(source, statement.value)
             return f"{indent}{target}: {annotation} = (\n{indent}    {value}\n{indent})"
 
-    if config_dict_needs_formatting:
-        target = _source_segment(source, statement.targets[0])
+    if config_dict is not None and config_dict_needs_formatting:
+        target = _source_segment(source, config_dict[0].targets[0])
         formatted_value = _format_call(
-            statement.value,
+            config_dict[1],
             indent,
             line_length,
             source,
@@ -1164,10 +1170,9 @@ def _format_generated_module_statement(  # noqa: PLR0911
 ) -> str | None:
     if "#" in line:
         return None
-    type_alias_node = getattr(ast, "TypeAlias", None)
     if (
-        type_alias_node is not None
-        and isinstance(statement, type_alias_node)
+        sys.version_info >= (3, 12)
+        and isinstance(statement, ast.TypeAlias)
         and _is_annotated(statement.value)
         and len(line) > line_length
     ):
