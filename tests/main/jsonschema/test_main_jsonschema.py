@@ -5122,6 +5122,24 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "propertyNames": {"enum": ["a", "b"], "not": {"const": "a"}},
+                "minProperties": 2,
+            },
+            id="object-property-names-enum-not-filtered-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"not": {"type": "string"}},
+                "minProperties": 1,
+            },
+            id="object-property-names-not-string-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "propertyNames": {"anyOf": [{"const": "a"}, {"enum": ["b"]}]},
                 "minProperties": 3,
             },
@@ -6145,6 +6163,46 @@ def test_main_jsonschema_property_names_combined(output_file: Path) -> None:
         expected_error_type="too_long",
         expected_attribute_path=("allFalseMap",),
         expected_attribute_value={},
+    )
+
+
+def test_main_jsonschema_property_names_not_intersection(output_file: Path) -> None:
+    """Test propertyNames not filters finite key candidates."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_not_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="property_names_not_intersection.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="property_names_not_intersection",
+        model_name="PropertyNamesNotIntersection",
+        valid_json='{"allowed":1}',
+        invalid_json='{"blocked":1}',
+        expected_error_type="literal_error",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"allowed": 1},
+    )
+
+
+def test_main_jsonschema_property_names_not_conflict(output_file: Path) -> None:
+    """Test propertyNames not rejects impossible object property counts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_not_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        expected_exit=Exit.ERROR,
     )
 
 

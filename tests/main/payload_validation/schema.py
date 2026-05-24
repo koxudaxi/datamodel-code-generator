@@ -539,12 +539,66 @@ def _has_unsatisfiable_array_length(value: Any) -> bool:
     return _any_schema_node(value, has_unsatisfiable_array_length)
 
 
+def _schema_accepts_every_property_name(schema: Any) -> bool:
+    if schema is True or schema == {}:
+        return True
+    if not isinstance(schema, dict):
+        return False
+    metadata_keys = {
+        "$comment",
+        "$id",
+        "$schema",
+        "description",
+        "examples",
+        "title",
+    }
+    supported_keys = metadata_keys | {"minLength", "type"}
+    if not set(schema) <= supported_keys:
+        return False
+    type_values = _type_values(schema.get("type"))
+    if type_values is not None and "string" not in type_values:
+        return False
+    min_length = schema.get("minLength")
+    return not isinstance(min_length, int) or min_length <= 0
+
+
+def _property_names_forbids_all_names(property_names: Any) -> bool:  # noqa: PLR0911
+    if property_names is False:
+        return True
+    if not isinstance(property_names, dict):
+        return False
+    any_of = property_names.get("anyOf")
+    if isinstance(any_of, list) and all(_property_names_forbids_all_names(item) for item in any_of):
+        return True
+    all_of = property_names.get("allOf")
+    if isinstance(all_of, list) and any(_property_names_forbids_all_names(item) for item in all_of):
+        return True
+    one_of = property_names.get("oneOf")
+    if isinstance(one_of, list) and all(_property_names_forbids_all_names(item) for item in one_of):
+        return True
+    if _schema_accepts_every_property_name(property_names.get("not")):
+        return True
+    type_values = _type_values(property_names.get("type"))
+    if type_values is not None and "string" not in type_values:
+        return True
+    enum_values = property_names.get("enum")
+    if isinstance(enum_values, list) and not any(isinstance(item, str) for item in enum_values):
+        return True
+    if "const" in property_names and not isinstance(property_names["const"], str):
+        return True
+    min_length = property_names.get("minLength")
+    max_length = property_names.get("maxLength")
+    return isinstance(min_length, int) and isinstance(max_length, int) and min_length > max_length
+
+
 def _has_unsatisfiable_property_count(value: Any) -> bool:
     def has_unsatisfiable_property_count(schema: dict[str, Any]) -> bool:
         properties = schema.get("properties")
         property_count = len(properties) if isinstance(properties, dict) else 0
         min_properties = schema.get("minProperties")
         max_properties = schema.get("maxProperties")
+        if _property_names_forbids_all_names(schema.get("propertyNames")):
+            return isinstance(min_properties, int) and min_properties > 0
         if schema.get("additionalProperties") is False:
             if isinstance(min_properties, int) and min_properties > property_count:
                 return True

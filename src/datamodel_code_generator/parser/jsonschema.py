@@ -3803,6 +3803,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         one_of = property_names.get("oneOf")
         if isinstance(one_of, list) and all(cls._raw_property_names_forbids_all_names(item) for item in one_of):
             return True
+        not_schema = property_names.get("not")
+        if cls._raw_schema_accepts_every_property_name(not_schema):
+            return True
         if not cls._raw_type_accepts_string(property_names.get("type")):
             return True
         enum_values = property_names.get("enum")
@@ -3816,11 +3819,33 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return min_length is not None and max_length is not None and min_length > max_length
 
     @classmethod
+    def _raw_schema_accepts_every_property_name(cls, schema: Any) -> bool:
+        if schema is True or schema == {}:
+            return True
+        if not isinstance(schema, dict):
+            return False
+        metadata_keys = {
+            "$comment",
+            "$id",
+            "$schema",
+            "description",
+            "examples",
+            "title",
+        }
+        supported_keys = metadata_keys | {"minLength", "type"}
+        if not set(schema) <= supported_keys or not cls._raw_type_accepts_string(schema.get("type")):
+            return False
+        min_length = cls._number_constraint_value(schema.get("minLength"))
+        return min_length is None or min_length <= 0
+
+    @classmethod
     def _raw_property_name_accepts_name(cls, property_names: Any, name: str) -> bool:
         return cls._raw_property_name_acceptance(property_names, name) is not False
 
     @classmethod
-    def _raw_property_name_acceptance(cls, property_names: Any, name: str) -> bool | None:  # noqa: PLR0911, PLR0912
+    def _raw_property_name_acceptance(  # noqa: PLR0911, PLR0912, PLR0915
+        cls, property_names: Any, name: str
+    ) -> bool | None:
         if property_names is None or property_names is True:
             return True
         if property_names is False:
@@ -3862,6 +3887,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if combined_result is False:
             return False
 
+        if "not" in property_names:
+            not_result = cls._raw_property_name_acceptance(property_names["not"], name)
+            if not_result is True:
+                return False
+            if not_result is None:
+                combined_result = None
+
         type_value = property_names.get("type")
         if not cls._raw_type_accepts_string(type_value):
             return False
@@ -3895,6 +3927,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "anyOf",
             "maxLength",
             "minLength",
+            "not",
             "oneOf",
             "pattern",
             "title",

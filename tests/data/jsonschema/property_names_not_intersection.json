@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyNamesNotIntersection",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["allowed", "blocked"],
+    "not": {
+      "const": "blocked"
+    }
+  },
+  "additionalProperties": {
+    "type": "integer"
+  }
+}
