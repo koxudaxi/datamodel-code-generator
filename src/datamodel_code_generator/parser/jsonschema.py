@@ -4290,7 +4290,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not pattern_validators:
             return {}
         validators: dict[str, Any] = {
-            "allow_unmatched": obj.additionalProperties is not False,
+            "allow_unmatched": not self._object_unmatched_properties_are_forbidden(obj),
             "patterns": pattern_validators,
         }
         if include_unmatched_schema:
@@ -4301,11 +4301,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     validators["unmatched_predicate"] = predicate
         return validators
 
+    def _object_unmatched_properties_are_forbidden(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        return obj.additionalProperties is False or (
+            obj.additionalProperties is None and obj.unevaluatedProperties is False
+        )
+
     def _pattern_properties_require_allowed_extra(self, obj: JsonSchemaObject) -> bool:
         return (
             bool(obj.properties)
             and bool(obj.patternProperties)
-            and obj.additionalProperties is False
+            and self._object_unmatched_properties_are_forbidden(obj)
             and issubclass(self.data_model_type, PydanticV2BaseModel)
         )
 
