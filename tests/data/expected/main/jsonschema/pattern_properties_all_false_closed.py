@@ -4,10 +4,34 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from pydantic import Field, RootModel
+from pydantic import Field, RootModel, model_validator
 
 
 class NoKeys(RootModel[dict[str, Any]]):
-    root: dict[str, Any] = Field(..., max_length=0, title='NoKeys')
+    root: dict[str, Any] = Field(..., title='NoKeys')
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^x-', extra_key):
+                    matched_pattern = True
+                    raise ValueError(
+                        'root property ' + extra_key + ' matches forbidden pattern'
+                    )
+                if re.search('^internal-', extra_key):
+                    matched_pattern = True
+                    raise ValueError(
+                        'root property ' + extra_key + ' matches forbidden pattern'
+                    )
+                if not matched_pattern:
+                    raise ValueError(
+                        'root property '
+                        + extra_key
+                        + ' does not match any allowed pattern'
+                    )
+        return self

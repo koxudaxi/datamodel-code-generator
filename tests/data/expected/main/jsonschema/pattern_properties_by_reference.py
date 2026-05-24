@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
+from pydantic import BaseModel, ConfigDict, Field, RootModel, constr, model_validator
 
 
 class Stt(BaseModel):
@@ -16,8 +17,25 @@ class Stt(BaseModel):
     timeout: float | None = Field(None, title='STT Timeout')
 
 
-class TextResponse(RootModel[dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]]):
-    root: dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]
+class TextResponse(
+    RootModel[dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any] | dict[str, Any]]
+):
+    root: dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any] | dict[str, Any]
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^[a-z]{1}[0-9]{1}$', extra_key):
+                    matched_pattern = True
+                if not matched_pattern:
+                    raise ValueError(
+                        'root property '
+                        + extra_key
+                        + ' does not match any allowed pattern'
+                    )
+        return self
 
 
 class SomeschemaSchema(BaseModel):

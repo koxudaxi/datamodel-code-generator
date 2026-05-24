@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "root pattern properties validators",
+  "type": "object",
+  "patternProperties": {
+    "^a": {
+      "type": "string"
+    },
+    "a$": {
+      "type": "string",
+      "minLength": 3
+    },
+    "^n": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "^blocked": false
+  },
+  "additionalProperties": false
+}

@@ -4339,6 +4339,36 @@ def test_main_jsonschema_pattern_properties_closed_object_validators(output_file
         )
 
 
+def test_main_jsonschema_root_pattern_properties_validators(output_file: Path) -> None:
+    """Test root patternProperties validates every matching pattern and closed unmatched keys."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_pattern_properties_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_pattern_properties_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in [
+        '{"a":"ok"}',
+        '{"n1":0}',
+        '{"blocked1":"value"}',
+        '{"other":"value"}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_pattern_properties_validators",
+            model_name="RootPatternPropertiesValidators",
+            valid_json='{"a":"okay","n1":1}',
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
     """Test patternProperties with all false values fall back to object type."""
     run_main_and_assert(
@@ -4351,6 +4381,15 @@ def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="pattern_properties_all_false",
+        model_name="Model",
+        valid_json='{"ok":1}',
+        invalid_json='{"x-test":1}',
+        expected_error_type="value_error",
     )
 
 
@@ -4366,6 +4405,15 @@ def test_main_jsonschema_pattern_properties_all_false_closed(output_file: Path) 
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="pattern_properties_all_false_closed",
+        model_name="NoKeys",
+        valid_json="{}",
+        invalid_json='{"ok":1}',
+        expected_error_type="value_error",
     )
 
 

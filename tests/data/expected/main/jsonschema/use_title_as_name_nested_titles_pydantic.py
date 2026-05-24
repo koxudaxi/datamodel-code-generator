@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from pydantic import BaseModel, Field, RootModel, constr
+from pydantic import BaseModel, Field, RootModel, constr, model_validator
 
 
 class Model(RootModel[Any]):
@@ -61,10 +62,27 @@ class MyPatternValue(RootModel[str]):
     root: str = Field(..., title='MyPatternValue')
 
 
-class MyPatternObj(RootModel[dict[constr(pattern=r'^S_'), MyPatternValue]]):
-    root: dict[constr(pattern=r'^S_'), MyPatternValue] = Field(
+class MyPatternObj(
+    RootModel[dict[constr(pattern=r'^S_'), MyPatternValue] | dict[str, Any]]
+):
+    root: dict[constr(pattern=r'^S_'), MyPatternValue] | dict[str, Any] = Field(
         ..., title='MyPatternObj'
     )
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^S_', extra_key):
+                    matched_pattern = True
+                    if not (isinstance(extra_value, str)):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+        return self
 
 
 class MyPropValue(RootModel[int]):

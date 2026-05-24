@@ -4,17 +4,41 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
+import re
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, RootModel, constr, model_validator
 
 
-class LookaroundKeyDict(RootModel[dict[str, str]]):
+class LookaroundKeyDict(RootModel[dict[str, str] | dict[str, Any]]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: dict[constr(pattern=r'^(?=.*[A-Z]).+$'), str] = Field(
+    root: dict[constr(pattern=r'^(?=.*[A-Z]).+$'), str] | dict[str, Any] = Field(
         ...,
         description='Dict with lookaround pattern on key constraint via patternProperties.',
     )
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^(?=.*[A-Z]).+$', extra_key):
+                    matched_pattern = True
+                    if not (isinstance(extra_value, str)):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+                if not matched_pattern:
+                    raise ValueError(
+                        'root property '
+                        + extra_key
+                        + ' does not match any allowed pattern'
+                    )
+        return self
 
 
 class Model(BaseModel):

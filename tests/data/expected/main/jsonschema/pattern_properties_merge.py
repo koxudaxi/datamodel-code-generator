@@ -4,10 +4,55 @@
 
 from __future__ import annotations
 
-from pydantic import RootModel, constr
+import re
+from typing import Any
+
+from pydantic import RootModel, constr, model_validator
 
 
 class Model(
-    RootModel[dict[constr(pattern=r'^i-|^t-'), str] | dict[constr(pattern=r'^n-'), int]]
+    RootModel[
+        dict[constr(pattern=r'^i-|^t-'), str]
+        | dict[constr(pattern=r'^n-'), int]
+        | dict[str, Any]
+    ]
 ):
-    root: dict[constr(pattern=r'^i-|^t-'), str] | dict[constr(pattern=r'^n-'), int]
+    root: (
+        dict[constr(pattern=r'^i-|^t-'), str]
+        | dict[constr(pattern=r'^n-'), int]
+        | dict[str, Any]
+    )
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^i-', extra_key):
+                    matched_pattern = True
+                    if not (isinstance(extra_value, str)):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+                if re.search('^t-', extra_key):
+                    matched_pattern = True
+                    if not (isinstance(extra_value, str)):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+                if re.search('^n-', extra_key):
+                    matched_pattern = True
+                    if not (
+                        isinstance(extra_value, int)
+                        and not isinstance(extra_value, bool)
+                    ):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+        return self

@@ -3783,8 +3783,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         predicate = self._schema_value_predicate_from_value(extra_value_schema, "extra_value")
         return [{"predicate": predicate}] if predicate and predicate != "True" else []
 
-    def _collect_pattern_properties_validators(self, obj: JsonSchemaObject) -> dict[str, Any]:
-        if not obj.patternProperties or not obj.properties:
+    def _get_unmatched_property_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR6301
+        if isinstance(obj.additionalProperties, JsonSchemaObject):
+            return obj.additionalProperties
+        return obj.unevaluatedProperties if obj.additionalProperties is None else None
+
+    def _collect_pattern_properties_validators(
+        self,
+        obj: JsonSchemaObject,
+        *,
+        require_properties: bool = True,
+        include_unmatched_schema: bool = False,
+    ) -> dict[str, Any]:
+        if not obj.patternProperties or (require_properties and not obj.properties):
             return {}
 
         pattern_validators: list[dict[str, Any]] = []
@@ -3800,10 +3811,17 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         if not pattern_validators:
             return {}
-        return {
+        validators: dict[str, Any] = {
             "allow_unmatched": obj.additionalProperties is not False,
             "patterns": pattern_validators,
         }
+        if include_unmatched_schema:
+            extra_value_schema = self._get_unmatched_property_schema(obj)
+            if isinstance(extra_value_schema, JsonSchemaObject):
+                predicate = self._schema_value_predicate_from_value(extra_value_schema, "extra_value")
+                if predicate and predicate != "True":
+                    validators["unmatched_predicate"] = predicate
+        return validators
 
     def _pattern_properties_require_allowed_extra(self, obj: JsonSchemaObject) -> bool:
         return (
@@ -3817,10 +3835,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if self._pattern_properties_require_allowed_extra(obj):
             self.extra_template_data[path]["additionalProperties"] = True
 
+    def _supports_root_json_schema_validators(self) -> bool:
+        return issubclass(self.data_model_root_type, PydanticV2BaseModel) and not self.data_model_root_type.IS_ALIAS
+
     def _set_root_array_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
         validator = self._get_array_contains_validator("root", obj)
         if validator:
-            self.extra_template_data[path]["json_schema_validators"] = {"array_contains": [validator]}
+            validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+            validators["array_contains"] = [validator]
+
+    def _set_root_pattern_properties_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
+        if not obj.patternProperties or obj.properties or not self._supports_root_json_schema_validators():
+            return
+
+        pattern_properties = self._collect_pattern_properties_validators(
+            obj,
+            require_properties=False,
+            include_unmatched_schema=True,
+        )
+        if pattern_properties:
+            validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+            validators["root_pattern_properties"] = pattern_properties
 
     def _iter_dependent_schema_objects(self, extras: dict[str, Any]) -> Iterator[tuple[str, JsonSchemaObject]]:
         dependent_schemas = extras.get("dependentSchemas")
@@ -4098,6 +4133,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             data_model_type_class = self.data_model_root_type
 
         self._set_schema_metadata(reference.path, obj)
+        self._set_root_pattern_properties_model_validators(reference.path, obj)
         self._set_pattern_properties_extra_allowance(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 
@@ -4136,6 +4172,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         name: str,
         pattern_properties: dict[str, JsonSchemaObject | bool],
         path: list[str],
+        parent_obj: JsonSchemaObject | None = None,
     ) -> DataType:
         """Parse patternProperties into a dict data type with regex keys."""
         pattern_value_pairs: list[tuple[str, DataType]] = []
@@ -4153,12 +4190,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
             pattern_value_pairs.append((pattern, value_type))
 
-        if not pattern_value_pairs:
-            return self.data_type(
-                data_types=[self.data_type_manager.get_data_type(Types.any)],
-                is_dict=True,
-            )
-
+        data_types: list[DataType] = []
         groups: dict[str, tuple[list[str], DataType]] = {}
         for pattern, value_type in pattern_value_pairs:
             key = value_type.type_hint
@@ -4166,7 +4198,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 groups[key] = ([], value_type)
             groups[key][0].append(pattern)
 
-        data_types: list[DataType] = []
         for patterns, value_type in groups.values():
             merged_pattern = patterns[0] if len(patterns) == 1 else "|".join(patterns)
             data_types.append(
@@ -4180,7 +4211,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 )
             )
 
-        return self.data_type(data_types=data_types)
+        if parent_obj and self._supports_root_json_schema_validators():
+            extra_value_schema = self._get_unmatched_property_schema(parent_obj)
+            if isinstance(extra_value_schema, JsonSchemaObject):
+                extra_value_type = self.parse_item(
+                    name,
+                    extra_value_schema,
+                    get_special_path("additionalProperties", path),
+                )
+            else:
+                extra_value_type = self.data_type_manager.get_data_type(Types.any)
+            data_types.append(
+                self.data_type(
+                    data_types=[extra_value_type],
+                    is_dict=True,
+                    dict_key=self.data_type_manager.get_data_type(Types.string),
+                )
+            )
+
+        if data_types:
+            return self.data_type(data_types=data_types)
+
+        return self.data_type(
+            data_types=[self.data_type_manager.get_data_type(Types.any)],
+            is_dict=True,
+        )
 
     def parse_property_names(  # noqa: PLR0912
         self,
@@ -4695,7 +4750,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if data_type is None:  # pragma: no cover
                 data_type = self.data_type_manager.get_data_type(Types.any)
         elif obj.patternProperties:
-            data_type = self.parse_pattern_properties(name, obj.patternProperties, path)
+            data_type = self.parse_pattern_properties(name, obj.patternProperties, path, parent_obj=obj)
         elif obj.propertyNames is not None:
             data_type = self.parse_property_names(
                 name, obj.propertyNames, obj.additionalProperties, path, parent_obj=obj
@@ -4748,6 +4803,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         self.set_schema_extensions(reference.path, obj)
         if obj.is_array:
             self._set_root_array_model_validators(reference.path, obj)
+        self._set_root_pattern_properties_model_validators(reference.path, obj)
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):
             constraints = {}

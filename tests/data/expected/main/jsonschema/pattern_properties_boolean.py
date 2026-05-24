@@ -4,12 +4,43 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
-from pydantic import RootModel, constr
+from pydantic import RootModel, constr, model_validator
 
 
 class Model(
-    RootModel[dict[constr(pattern=r'^x-'), Any] | dict[constr(pattern=r'^name'), str]]
+    RootModel[
+        dict[constr(pattern=r'^x-'), Any]
+        | dict[constr(pattern=r'^name'), str]
+        | dict[str, Any]
+    ]
 ):
-    root: dict[constr(pattern=r'^x-'), Any] | dict[constr(pattern=r'^name'), str]
+    root: (
+        dict[constr(pattern=r'^x-'), Any]
+        | dict[constr(pattern=r'^name'), str]
+        | dict[str, Any]
+    )
+
+    @model_validator(mode='after')
+    def validate_json_schema_constraints(self):
+        if isinstance(self.root, dict):
+            for extra_key, extra_value in self.root.items():
+                matched_pattern = False
+                if re.search('^x-', extra_key):
+                    matched_pattern = True
+                if re.search('^name', extra_key):
+                    matched_pattern = True
+                    if not (isinstance(extra_value, str)):
+                        raise ValueError(
+                            'root property '
+                            + extra_key
+                            + ' does not match pattern schema'
+                        )
+                if re.search('^invalid', extra_key):
+                    matched_pattern = True
+                    raise ValueError(
+                        'root property ' + extra_key + ' matches forbidden pattern'
+                    )
+        return self
