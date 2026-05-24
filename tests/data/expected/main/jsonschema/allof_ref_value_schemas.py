@@ -4,11 +4,15 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, RootModel, constr
+from pydantic import BaseModel, Field, RootModel, constr
 
 
 class Tags(RootModel[list[str]]):
-    root: list[str]
+    root: list[str] = Field(..., min_length=1)
+
+
+class LimitedTags(RootModel[list[str]]):
+    root: list[str] = Field(..., max_length=2)
 
 
 class InlineCode(RootModel[constr(min_length=2, max_length=8)]):
@@ -16,7 +20,11 @@ class InlineCode(RootModel[constr(min_length=2, max_length=8)]):
 
 
 class Metadata(RootModel[dict[constr(pattern=r'^x_'), int]]):
-    root: dict[constr(pattern=r'^x_'), int]
+    root: dict[constr(pattern=r'^x_'), int] = Field(..., min_length=1)
+
+
+class LimitedMetadata(RootModel[dict[constr(pattern=r'^x_'), int]]):
+    root: dict[constr(pattern=r'^x_'), int] = Field(..., max_length=2)
 
 
 class Code(RootModel[constr(min_length=2, max_length=8)]):
@@ -25,9 +33,15 @@ class Code(RootModel[constr(min_length=2, max_length=8)]):
 
 class AllofRefValueSchemas(BaseModel):
     tags: Tags | None = None
+    limitedTags: LimitedTags | None = None
     inlineCode: InlineCode | None = None
     metadata: Metadata | None = None
+    limitedMetadata: LimitedMetadata | None = None
     code: Code | None = None
+
+
+class TagsModel(RootModel[list[str]]):
+    root: list[str]
 
 
 class PrefixedMap(RootModel[dict[constr(pattern=r'^x_'), int]]):

@@ -2883,6 +2883,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or self._allof_item_is_map_root_schema(item)
             or self._allof_item_has_value_shape(item)
             or item.format
+            or item.minProperties is not None
+            or item.maxProperties is not None
         )
 
     def _allof_schema_types_are_compatible(  # noqa: PLR6301
@@ -4352,8 +4354,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             constraints = {}
         elif self.field_constraints and obj.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
-        if data_type.is_dict or data_type.is_mapping:
+        container_type = data_type
+        if (
+            not (container_type.is_dict or container_type.is_mapping or container_type.is_list)
+            and len(container_type.data_types) == 1
+        ):
+            container_type = container_type.data_types[0]
+        if container_type.is_dict or container_type.is_mapping:
             constraints.update(self._get_property_count_constraints(obj))
+        if container_type.is_list:
+            if obj.minItems is not None:
+                constraints["minItems"] = obj.minItems
+            if obj.maxItems is not None:
+                constraints["maxItems"] = obj.maxItems
+            if obj.uniqueItems is not None:
+                constraints["uniqueItems"] = obj.uniqueItems
+            constraints.update(self._get_array_items_constraints(obj))
         data_model_root_type = self.data_model_root_type(
             reference=reference,
             fields=[

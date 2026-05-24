@@ -89,7 +89,9 @@ class ArrayDatatype(RootModel[list[str]]):
 
 
 class RefToArrayAllOf(RootModel[list[str]]):
-    root: list[str] = Field(..., description='Ref to array - not a root model.')
+    root: list[str] = Field(
+        ..., description='Ref to array - not a root model.', min_length=1
+    )
 
 
 class ObjectNoPropsDatatype(BaseModel):
@@ -106,7 +108,7 @@ class PatternPropsDatatype(RootModel[dict[constr(pattern=r'^S_'), str]]):
 
 class RefToPatternPropsAllOf(RootModel[dict[constr(pattern=r'^S_'), str]]):
     root: dict[constr(pattern=r'^S_'), str] = Field(
-        ..., description='Ref to patternProperties - not a root model.'
+        ..., description='Ref to patternProperties - not a root model.', min_length=1
     )
 
 

@@ -39,6 +39,16 @@
         }
       ]
     },
+    "limitedTags": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/Tags"
+        },
+        {
+          "maxItems": 2
+        }
+      ]
+    },
     "inlineCode": {
       "allOf": [
         {
@@ -54,6 +64,16 @@
         },
         {
           "minProperties": 1
+        }
+      ]
+    },
+    "limitedMetadata": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/PrefixedMap"
+        },
+        {
+          "maxProperties": 2
         }
       ]
     },

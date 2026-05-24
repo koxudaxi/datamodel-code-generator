@@ -5978,6 +5978,83 @@ def test_main_jsonschema_allof_value_schemas(
     )
 
 
+def test_main_jsonschema_allof_ref_value_schema_container_constraints(output_file: Path) -> None:
+    """Test allOf ref value schemas keep array and map length constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_ref_value_schemas.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_ref_value_schemas.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":[],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="too_short",
+        expected_attribute_path=("tags", "root"),
+        expected_attribute_value=["a"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="too_short",
+        expected_attribute_path=("metadata", "root"),
+        expected_attribute_value={"x_a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b","c"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="too_long",
+        expected_attribute_path=("limitedTags", "root"),
+        expected_attribute_value=["a", "b"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2,"x_c":3},"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="too_long",
+        expected_attribute_path=("limitedMetadata", "root"),
+        expected_attribute_value={"x_a": 1, "x_b": 2},
+    )
+
+
 def test_force_optional_required(output_file: Path) -> None:
     """Test --force-optional makes required fields optional."""
     run_main_and_assert(

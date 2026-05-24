@@ -8,7 +8,9 @@ from pydantic import Field, RootModel, constr
 
 
 class Model(RootModel[dict[constr(pattern=r'^[a-z]+$'), str]]):
-    root: dict[constr(pattern=r'^[a-z]+$'), str] = Field(..., title='Model')
+    root: dict[constr(pattern=r'^[a-z]+$'), str] = Field(
+        ..., min_length=1, title='Model'
+    )
 
 
 class DictWithPropertyNames(RootModel[dict[constr(pattern=r'^[a-z]+$'), str]]):
