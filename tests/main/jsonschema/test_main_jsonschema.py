@@ -4078,6 +4078,51 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             },
             id="property-allof-length-bound-disjoint",
         ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "integer", "enum": [1]},
+                            {"minimum": 2},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-enum-minimum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "integer", "const": 1},
+                            {"minimum": 2},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-const-minimum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "allOf": [
+                            {"type": "string", "enum": ["a"]},
+                            {"minLength": 2},
+                        ]
+                    }
+                },
+            },
+            id="property-allof-enum-length-disjoint",
+        ),
     ],
 )
 def test_main_jsonschema_false_schema_errors(schema: dict[str, object], output_file: Path) -> None:
@@ -6368,6 +6413,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_type_intersection.json", "allof_type_intersection.py"),
         ("allof_type_literal_intersection.json", "allof_type_literal_intersection.py"),
         ("allof_bound_intersection.json", "allof_bound_intersection.py"),
+        ("allof_literal_bound_intersection.json", "allof_literal_bound_intersection.py"),
     ],
 )
 def test_main_jsonschema_allof_value_schemas(
@@ -6497,6 +6543,29 @@ def test_main_jsonschema_allof_bound_intersection(output_file: Path) -> None:
         valid_json='{"value":2,"exclusive":5.5,"text":"abc"}',
         invalid_json='{"value":1,"exclusive":5.5,"text":"abc"}',
         expected_error_type="greater_than_equal",
+        expected_attribute_path=("value", "root"),
+        expected_attribute_value=2,
+    )
+
+
+def test_main_jsonschema_allof_literal_bound_intersection(output_file: Path) -> None:
+    """Test allOf bounds filter enum and const literal values."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_literal_bound_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_literal_bound_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_literal_bound_intersection",
+        model_name="AllOfLiteralBoundIntersection",
+        valid_json='{"value":2,"text":"xy","same":2}',
+        invalid_json='{"value":1,"text":"xy","same":2}',
+        expected_error_type="literal_error",
         expected_attribute_path=("value", "root"),
         expected_attribute_value=2,
     )

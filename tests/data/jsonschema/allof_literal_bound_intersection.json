@@ -1,0 +1,61 @@
+{
+  "title": "AllOfLiteralBoundIntersection",
+  "type": "object",
+  "properties": {
+    "value": {
+      "allOf": [
+        {
+          "type": "integer",
+          "enum": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "minimum": 2
+        },
+        {
+          "maximum": 2
+        }
+      ]
+    },
+    "text": {
+      "allOf": [
+        {
+          "type": "string",
+          "enum": [
+            "a",
+            "abcd",
+            "xy"
+          ]
+        },
+        {
+          "minLength": 2
+        },
+        {
+          "maxLength": 3
+        }
+      ]
+    },
+    "same": {
+      "allOf": [
+        {
+          "type": "integer",
+          "const": 2
+        },
+        {
+          "minimum": 2
+        },
+        {
+          "maximum": 2
+        }
+      ]
+    }
+  },
+  "required": [
+    "value",
+    "text",
+    "same"
+  ]
+}

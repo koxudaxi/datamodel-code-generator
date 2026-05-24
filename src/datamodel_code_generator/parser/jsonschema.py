@@ -2017,6 +2017,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             result[key] = value
             if key in {"const", "enum", "type"}:
                 self._normalize_literal_constraints(result)
+        self._normalize_literal_constraints(result)
         JsonSchemaParser._validate_allof_intersected_constraints(result)
         return result
 
@@ -2158,12 +2159,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 enum_value
                 for enum_value in schema_dict["enum"]
                 if cls._json_value_matches_type_constraint(enum_value, type_value)
+                and cls._json_value_matches_schema_constraints(enum_value, schema_dict)
             ]
             if not filtered_enum:
                 cls._raise_allof_literal_conflict()
             if len(filtered_enum) != len(schema_dict["enum"]):
                 schema_dict["enum"] = filtered_enum
                 cls._drop_enum_metadata(schema_dict)
+        if "const" in schema_dict and not cls._json_value_matches_schema_constraints(schema_dict["const"], schema_dict):
+            cls._raise_allof_literal_conflict()
 
     def _merge_primitive_literal_constraints(self, base_dict: dict[str, Any], items: list[JsonSchemaObject]) -> None:
         enum_values = [item.enum for item in items if item.enum]
@@ -2195,6 +2199,56 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         with suppress(TypeError, ValueError):
             return float(value)
         return None
+
+    @classmethod
+    def _json_number_matches_bounds(cls, value: float, schema_dict: dict[Any, Any]) -> bool:
+        numeric_value = cls._number_constraint_value(value)
+        if numeric_value is None:
+            return True
+        lower_bound = cls._get_effective_numeric_bound(schema_dict, "minimum", "exclusiveMinimum", lower=True)
+        upper_bound = cls._get_effective_numeric_bound(schema_dict, "maximum", "exclusiveMaximum", lower=False)
+        if lower_bound is not None:
+            lower_value, lower_exclusive = lower_bound
+            if numeric_value < lower_value or (lower_exclusive and numeric_value == lower_value):
+                return False
+        if upper_bound is not None:
+            upper_value, upper_exclusive = upper_bound
+            if numeric_value > upper_value or (upper_exclusive and numeric_value == upper_value):
+                return False
+        multiple_of = cls._number_constraint_value(schema_dict.get("multipleOf"))
+        if multiple_of is None:
+            return True
+        with suppress(TypeError, ValueError, ZeroDivisionError):
+            return Fraction(str(numeric_value)) % Fraction(str(multiple_of)) == 0
+        return True
+
+    @classmethod
+    def _json_sized_value_matches_bounds(
+        cls,
+        value: str | list[Any] | dict[Any, Any],
+        schema_dict: dict[Any, Any],
+    ) -> bool:
+        if isinstance(value, str):
+            min_key, max_key = "minLength", "maxLength"
+        elif isinstance(value, list):
+            min_key, max_key = "minItems", "maxItems"
+        else:
+            min_key, max_key = "minProperties", "maxProperties"
+        min_value = cls._number_constraint_value(schema_dict.get(min_key))
+        max_value = cls._number_constraint_value(schema_dict.get(max_key))
+        length = len(value)
+        return not ((min_value is not None and length < min_value) or (max_value is not None and length > max_value))
+
+    @classmethod
+    def _json_value_matches_schema_constraints(cls, value: Any, schema_dict: dict[Any, Any]) -> bool:
+        if not isinstance(value, bool) and isinstance(value, (int, float)):
+            return cls._json_number_matches_bounds(value, schema_dict)
+        if isinstance(value, (str, list, dict)):
+            if not cls._json_sized_value_matches_bounds(value, schema_dict):
+                return False
+            if isinstance(value, list) and schema_dict.get("uniqueItems") is True:
+                return len(value) == len({json.dumps(item, sort_keys=True) for item in value})
+        return True
 
     @classmethod
     def _get_effective_numeric_bound(
