@@ -594,16 +594,58 @@ def _property_names_forbids_all_names(property_names: Any) -> bool:  # noqa: PLR
     return isinstance(min_length, int) and isinstance(max_length, int) and min_length > max_length
 
 
-def _property_name_accepts_name(property_names: Any, name: str) -> bool:  # noqa: PLR0911
+def _property_name_accepts_name(property_names: Any, name: str) -> bool:
+    return _property_name_acceptance(property_names, name) is not False
+
+
+def _property_name_acceptance(property_names: Any, name: str) -> bool | None:  # noqa: PLR0911, PLR0912
     if property_names is None or property_names is True:
         return True
     if property_names is False:
         return False
     if not isinstance(property_names, dict):
-        return True
-    not_schema = property_names.get("not")
-    if not_schema is not None and _property_name_accepts_name(not_schema, name):
+        return None
+
+    combined_result: bool | None = True
+    any_of = property_names.get("anyOf")
+    if isinstance(any_of, list):
+        branch_results = [_property_name_acceptance(branch, name) for branch in any_of]
+        if any(result is True for result in branch_results):
+            combined_result = True
+        elif all(result is False for result in branch_results):
+            combined_result = False
+        else:
+            combined_result = None
+
+    all_of = property_names.get("allOf")
+    if isinstance(all_of, list):
+        branch_results = [_property_name_acceptance(branch, name) for branch in all_of]
+        if any(result is False for result in branch_results):
+            combined_result = False
+        elif any(result is None for result in branch_results):
+            combined_result = None if combined_result is not False else False
+
+    one_of = property_names.get("oneOf")
+    if isinstance(one_of, list):
+        branch_results = [_property_name_acceptance(branch, name) for branch in one_of]
+        true_count = sum(result is True for result in branch_results)
+        if true_count > 1:
+            combined_result = False
+        elif any(result is None for result in branch_results):
+            combined_result = None if combined_result is not False else False
+        else:
+            combined_result = (true_count == 1) if combined_result is not False else False
+    if combined_result is False:
         return False
+
+    not_schema = property_names.get("not")
+    if not_schema is not None:
+        not_result = _property_name_acceptance(not_schema, name)
+        if not_result is True:
+            return False
+        if not_result is None:
+            combined_result = None
+
     type_values = _type_values(property_names.get("type"))
     if type_values is not None and "string" not in type_values:
         return False
@@ -614,15 +656,19 @@ def _property_name_accepts_name(property_names: Any, name: str) -> bool:  # noqa
         return False
     min_length = property_names.get("minLength")
     max_length = property_names.get("maxLength")
-    return not (
-        (isinstance(min_length, int) and len(name) < min_length)
-        or (isinstance(max_length, int) and len(name) > max_length)
-    )
+    if (isinstance(min_length, int) and len(name) < min_length) or (
+        isinstance(max_length, int) and len(name) > max_length
+    ):
+        return False
+    return combined_result
 
 
 def _finite_property_name_values(property_names: Any) -> set[str] | None:
     if not isinstance(property_names, dict):
         return None
+    combined_values = _finite_combined_property_name_values(property_names)
+    if combined_values is not None:
+        return combined_values
     enum_values = property_names.get("enum")
     if isinstance(enum_values, list):
         return {
@@ -636,6 +682,54 @@ def _finite_property_name_values(property_names: Any) -> set[str] | None:
         if isinstance(const_value, str) and _property_name_accepts_name(property_names, const_value)
         else set()
     )
+
+
+def _finite_combined_property_name_values(property_names: dict[str, Any]) -> set[str] | None:  # noqa: PLR0911
+    any_of = property_names.get("anyOf")
+    one_of = property_names.get("oneOf")
+    all_of = property_names.get("allOf")
+
+    combined_key_count = sum(isinstance(value, list) for value in (any_of, one_of, all_of))
+    if combined_key_count != 1:
+        return None
+
+    if isinstance(any_of, list):
+        branch_values = [_finite_property_name_branch_values(branch) for branch in any_of]
+        if any(values is None for values in branch_values):
+            return None
+        return {
+            name
+            for values in branch_values
+            for name in values or set()
+            if _property_name_accepts_name(property_names, name)
+        }
+
+    if isinstance(one_of, list):
+        branch_values = [_finite_property_name_branch_values(branch) for branch in one_of]
+        if any(values is None for values in branch_values):
+            return None
+        return {
+            name
+            for values in branch_values
+            for name in values or set()
+            if _property_name_accepts_name(property_names, name)
+        }
+
+    if isinstance(all_of, list):
+        branch_values = [_finite_property_name_branch_values(branch) for branch in all_of]
+        finite_values = [values for values in branch_values if values is not None]
+        if not finite_values:
+            return None
+        candidate_names = set.intersection(*finite_values) if len(finite_values) > 1 else set(finite_values[0])
+        return {name for name in candidate_names if _property_name_accepts_name(property_names, name)}
+
+    return None
+
+
+def _finite_property_name_branch_values(property_names: Any) -> set[str] | None:
+    if property_names is False:
+        return set()
+    return _finite_property_name_values(property_names)
 
 
 def _iter_allof_object_schemas(schema: dict[str, Any]) -> Iterator[dict[str, Any]]:

@@ -4139,7 +4139,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
 
         if isinstance(any_of, list):
-            branch_values = [cls._raw_finite_property_name_values(branch) for branch in any_of]
+            branch_values = [cls._raw_finite_property_name_branch_values(branch) for branch in any_of]
             if any(values is None for values in branch_values):
                 return None
             return {
@@ -4150,7 +4150,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             }
 
         if isinstance(one_of, list):
-            branch_values = [cls._raw_finite_property_name_values(branch) for branch in one_of]
+            branch_values = [cls._raw_finite_property_name_branch_values(branch) for branch in one_of]
             if any(values is None for values in branch_values):
                 return None
             return {
@@ -4161,7 +4161,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             }
 
         if isinstance(all_of, list):
-            branch_values = [cls._raw_finite_property_name_values(branch) for branch in all_of]
+            branch_values = [cls._raw_finite_property_name_branch_values(branch) for branch in all_of]
             finite_values = [values for values in branch_values if values is not None]
             if not finite_values:
                 return None
@@ -4169,6 +4169,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return {name for name in candidate_names if cls._raw_property_name_accepts_name(property_names, name)}
 
         return None
+
+    @classmethod
+    def _raw_finite_property_name_branch_values(cls, property_names: Any) -> set[str] | None:
+        if property_names is False:
+            return set()
+        return cls._raw_finite_property_name_values(property_names)
 
     @classmethod
     def _raw_required_name_allowed_by_pattern_properties(cls, name: str, pattern_properties: Any) -> bool:

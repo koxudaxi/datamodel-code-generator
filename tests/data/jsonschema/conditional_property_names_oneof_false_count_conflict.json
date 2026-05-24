@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConditionalPropertyNamesOneofFalseCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "oneOf": [
+      false,
+      {
+        "enum": ["trigger", "other"]
+      }
+    ]
+  },
+  "minProperties": 2,
+  "if": {
+    "required": ["trigger"]
+  },
+  "then": {
+    "maxProperties": 1
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

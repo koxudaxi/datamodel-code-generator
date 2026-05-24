@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DependentSchemaPropertyNamesOneofFalseCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "oneOf": [
+      false,
+      {
+        "enum": ["trigger"]
+      }
+    ]
+  },
+  "minProperties": 1,
+  "dependentSchemas": {
+    "trigger": {
+      "minProperties": 2
+    }
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

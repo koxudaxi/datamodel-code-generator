@@ -4027,6 +4027,17 @@ def test_main_jsonschema_not_property_names_count_conflict(output_file: Path) ->
     )
 
 
+def test_main_jsonschema_property_names_oneof_false_count_conflict(output_file: Path) -> None:
+    """Test propertyNames oneOf false branches keep finite name counts."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "property_names_oneof_false_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_allof_wrapped_not_property_names_count_conflict(output_file: Path) -> None:
     """Test not allOf branches can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -4174,6 +4185,17 @@ def test_main_jsonschema_dependent_schema_property_names_count_conflict(output_f
     )
 
 
+def test_main_jsonschema_dependent_schema_property_names_oneof_false_count_conflict(output_file: Path) -> None:
+    """Test dependent schemas and propertyNames oneOf false branches can make counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_property_names_oneof_false_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_allof_property_names_count_conflict(output_file: Path) -> None:
     """Test dependent schema allOf branches can make finite propertyNames impossible."""
     run_main_and_assert(
@@ -4211,6 +4233,17 @@ def test_main_jsonschema_conditional_property_names_count_conflict(output_file: 
     """Test conditional maxProperties can make finite propertyNames counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "conditional_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_conditional_property_names_oneof_false_count_conflict(output_file: Path) -> None:
+    """Test conditional schemas and propertyNames oneOf false branches can make counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_property_names_oneof_false_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
@@ -5526,6 +5559,36 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "minProperties": 2,
             },
             id="object-property-names-oneof-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"oneOf": [False, {"enum": ["allowed"]}]},
+                "minProperties": 2,
+            },
+            id="object-property-names-oneof-false-finite-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"oneOf": [False, {"enum": ["trigger", "other"]}]},
+                "minProperties": 2,
+                "if": {"required": ["trigger"]},
+                "then": {"maxProperties": 1},
+            },
+            id="object-property-names-oneof-false-conditional-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"oneOf": [False, {"enum": ["trigger"]}]},
+                "minProperties": 1,
+                "dependentSchemas": {"trigger": {"minProperties": 2}},
+            },
+            id="object-property-names-oneof-false-dependent-schema-disjoint",
         ),
         pytest.param(
             {
