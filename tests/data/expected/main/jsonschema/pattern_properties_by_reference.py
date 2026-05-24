@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, RootModel, constr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
 
 
 class Stt(BaseModel):
@@ -17,39 +16,8 @@ class Stt(BaseModel):
     timeout: float | None = Field(None, title='STT Timeout')
 
 
-class TextResponse(
-    RootModel[dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any] | dict[str, Any]]
-):
-    root: dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any] | dict[str, Any]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        if isinstance(self.root, dict):
-            for extra_key, extra_value in self.root.items():
-                extra_value = json_schema_runtime_value(extra_value)
-                matched_pattern = False
-                if re.search('^[a-z]{1}[0-9]{1}$', extra_key):
-                    matched_pattern = True
-                if not matched_pattern:
-                    raise ValueError(
-                        'root property '
-                        + extra_key
-                        + ' does not match any allowed pattern'
-                    )
-        return self
+class TextResponse(RootModel[dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]]):
+    root: dict[constr(pattern=r'^[a-z]{1}[0-9]{1}$'), Any]
 
 
 class SomeschemaSchema(BaseModel):

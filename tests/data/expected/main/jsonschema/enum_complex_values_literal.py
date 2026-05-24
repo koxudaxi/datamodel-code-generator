@@ -4,82 +4,10 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel
 
 
 class EnumComplexValuesLiteral(BaseModel):
     ratio: float
     settings: dict[str, bool | int]
     choices: list[int | str]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_unique_key(value):
-            value = json_schema_runtime_value(value)
-            if isinstance(value, bool) or value is None or isinstance(value, str):
-                return (type(value).__name__, value)
-            if isinstance(value, (int, float)):
-                return ('number', value)
-            if isinstance(value, list):
-                return ('array', tuple(json_schema_unique_key(item) for item in value))
-            if isinstance(value, dict):
-                return (
-                    'object',
-                    tuple(
-                        sorted(
-                            (key, json_schema_unique_key(item))
-                            for key, item in value.items()
-                        )
-                    ),
-                )
-            return (type(value).__name__, value)
-
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        extra_values = getattr(self, '__pydantic_extra__', None) or {}
-        provided_keys = set(self.model_fields_set)
-        provided_keys.update(extra_values)
-        model_data = {
-            field_name: json_schema_runtime_value(getattr(self, field_name))
-            for field_name in self.model_fields_set
-        }
-        model_data.update(
-            {
-                key: json_schema_runtime_value(value)
-                for key, value in extra_values.items()
-            }
-        )
-        if 'ratio' in provided_keys:
-            ratio_value = json_schema_runtime_value(self.ratio)
-            if not (
-                ratio_value == 1.5
-                and isinstance(ratio_value, (int, float))
-                and not isinstance(ratio_value, bool)
-            ):
-                raise ValueError('ratio' + ' does not match const value')
-        if 'settings' in provided_keys:
-            settings_value = json_schema_runtime_value(self.settings)
-            if not (
-                json_schema_unique_key(settings_value)
-                == json_schema_unique_key({'enabled': True, 'limit': 3})
-            ):
-                raise ValueError('settings' + ' does not match const value')
-        if 'choices' in provided_keys:
-            choices_value = json_schema_runtime_value(self.choices)
-            if not (
-                json_schema_unique_key(choices_value)
-                == json_schema_unique_key([1, 'two'])
-            ):
-                raise ValueError('choices' + ' does not match const value')
-        return self

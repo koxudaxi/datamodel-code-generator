@@ -4,104 +4,18 @@
 
 from __future__ import annotations
 
-import re
-
-from pydantic import BaseModel, ConfigDict, constr, model_validator
+from pydantic import BaseModel, ConfigDict, constr
 
 
 class Network(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra='forbid',
     )
     name: str | None = None
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        extra_values = getattr(self, '__pydantic_extra__', None) or {}
-        provided_keys = set(self.model_fields_set)
-        provided_keys.update(extra_values)
-        model_data = {
-            field_name: json_schema_runtime_value(getattr(self, field_name))
-            for field_name in self.model_fields_set
-        }
-        model_data.update(
-            {
-                key: json_schema_runtime_value(value)
-                for key, value in extra_values.items()
-            }
-        )
-
-        for extra_key, extra_value in model_data.items():
-            extra_value = json_schema_runtime_value(extra_value)
-            matched_pattern = False
-            if re.search('^x-', extra_key):
-                matched_pattern = True
-            if not matched_pattern and extra_key in extra_values:
-                raise ValueError(
-                    'additional property '
-                    + extra_key
-                    + ' does not match any allowed pattern'
-                )
-        return self
 
 
 class Model(BaseModel):
     model_config = ConfigDict(
-        extra='allow',
+        extra='forbid',
     )
     networks: dict[constr(pattern=r'^[a-zA-Z0-9._-]+$'), Network | None]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        extra_values = getattr(self, '__pydantic_extra__', None) or {}
-        provided_keys = set(self.model_fields_set)
-        provided_keys.update(extra_values)
-        model_data = {
-            field_name: json_schema_runtime_value(getattr(self, field_name))
-            for field_name in self.model_fields_set
-        }
-        model_data.update(
-            {
-                key: json_schema_runtime_value(value)
-                for key, value in extra_values.items()
-            }
-        )
-
-        for extra_key, extra_value in model_data.items():
-            extra_value = json_schema_runtime_value(extra_value)
-            matched_pattern = False
-            if re.search('^x-', extra_key):
-                matched_pattern = True
-            if not matched_pattern and extra_key in extra_values:
-                raise ValueError(
-                    'additional property '
-                    + extra_key
-                    + ' does not match any allowed pattern'
-                )
-        return self

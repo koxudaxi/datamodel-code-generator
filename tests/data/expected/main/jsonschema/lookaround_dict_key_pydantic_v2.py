@@ -4,55 +4,17 @@
 
 from __future__ import annotations
 
-import re
-from typing import Any
-
-from pydantic import BaseModel, ConfigDict, Field, RootModel, constr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, RootModel, constr
 
 
-class LookaroundKeyDict(RootModel[dict[str, str] | dict[str, Any]]):
+class LookaroundKeyDict(RootModel[dict[str, str]]):
     model_config = ConfigDict(
         regex_engine="python-re",
     )
-    root: dict[constr(pattern=r'^(?=.*[A-Z]).+$'), str] | dict[str, Any] = Field(
+    root: dict[constr(pattern=r'^(?=.*[A-Z]).+$'), str] = Field(
         ...,
         description='Dict with lookaround pattern on key constraint via patternProperties.',
     )
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        if isinstance(self.root, dict):
-            for extra_key, extra_value in self.root.items():
-                extra_value = json_schema_runtime_value(extra_value)
-                matched_pattern = False
-                if re.search('^(?=.*[A-Z]).+$', extra_key):
-                    matched_pattern = True
-                    if not (isinstance(extra_value, str)):
-                        raise ValueError(
-                            'root property '
-                            + extra_key
-                            + ' does not match pattern schema'
-                        )
-                if not matched_pattern:
-                    raise ValueError(
-                        'root property '
-                        + extra_key
-                        + ' does not match any allowed pattern'
-                    )
-        return self
 
 
 class Model(BaseModel):

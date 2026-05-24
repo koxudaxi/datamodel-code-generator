@@ -3704,7 +3704,7 @@ def test_main_jsonschema_unevaluated_properties_true(output_file: Path) -> None:
 
 
 def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> None:
-    """Test unevaluatedProperties schema validates extra values."""
+    """Test unevaluatedProperties schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_schema.json",
         output_path=output_file,
@@ -3713,72 +3713,6 @@ def test_main_jsonschema_unevaluated_properties_schema(output_file: Path) -> Non
         expected_file="unevaluated_properties_schema.py",
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="unevaluated_properties_schema",
-        model_name="Resource",
-        valid_json='{"name":"x","extra":"value"}',
-        invalid_json='{"name":"x","extra":1}',
-        expected_error_type="value_error",
-    )
-
-
-def test_main_jsonschema_unevaluated_properties_pattern_properties(output_file: Path) -> None:
-    """Test unevaluatedProperties false allows evaluated patternProperties only."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "unevaluated_properties_pattern_properties.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="unevaluated_properties_pattern_properties.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '{"name":"x","x-count":"1"}',
-        '{"name":"x","other":1}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="unevaluated_properties_pattern_properties",
-            model_name="UnevaluatedPropertiesPatternProperties",
-            valid_json='{"name":"x","x-count":1}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_pattern_properties_declared_properties(output_file: Path) -> None:
-    """Test patternProperties also constrain declared properties that match."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_declared_properties.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="pattern_properties_declared_properties.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"name":"plain","x-code":"abc"}'
-    for invalid_json in [
-        '{"name":"plain","x-code":"a"}',
-        '{"name":"plain","x-code":"abc","x-flag":1}',
-        '{"name":"plain","x-code":"abc","other":"value"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="pattern_properties_declared_properties",
-            model_name="PatternPropertiesDeclaredProperties",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 def test_main_jsonschema_unevaluated_properties_multiple_types(output_file: Path) -> None:
@@ -3800,15 +3734,6 @@ def test_main_jsonschema_nullable_object(output_file: Path) -> None:
         input_file_type="jsonschema",
         assert_func=assert_file_content,
         expected_file="nullable_object.py",
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="nullable_object",
-        model_name="Model",
-        valid_json='{"networks":{"default":{"name":"main","x-note":1}},"x-root":true}',
-        invalid_json='{"networks":{"default":{"name":"main","extra":1}}}',
-        expected_error_type="value_error",
     )
 
 
@@ -4098,211 +4023,6 @@ def test_main_jsonschema_oneof_with_true_schema(output_file: Path) -> None:
     )
 
 
-def test_main_jsonschema_object_oneof_runtime_validators(output_file: Path) -> None:
-    """Test object property oneOf validators enforce exact branch counts at runtime."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_oneof_runtime_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_oneof_runtime_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"anything_except_string":1,"number_not_integer":1.5}'
-    for invalid_json in [
-        '{"anything_except_string":"bad","number_not_integer":1.5}',
-        '{"anything_except_string":1,"number_not_integer":1}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_oneof_runtime_validators",
-            model_name="ObjectOneofRuntimeValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_logical_runtime_validators(output_file: Path) -> None:
-    """Test root oneOf exact-match and not validators run after Pydantic conversion."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_logical_runtime_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_logical_runtime_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '"bad"',
-        "null",
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_logical_runtime_validators",
-            model_name="RootLogicalRuntimeValidators",
-            valid_json="1",
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-@pytest.mark.parametrize(
-    ("schema_file", "expected_file", "module_name", "model_name", "valid_json", "invalid_json_values"),
-    [
-        pytest.param(
-            "root_raw_oneof_object_validators.json",
-            "root_raw_oneof_object_validators.py",
-            "root_raw_oneof_object_validators",
-            "RootRawOneofObjectValidators",
-            '{"a":1}',
-            [
-                '{"a":1,"b":2}',
-                '{"a":true}',
-            ],
-            id="oneof-overlapping-objects",
-        ),
-        pytest.param(
-            "root_raw_anyof_object_validators.json",
-            "root_raw_anyof_object_validators.py",
-            "root_raw_anyof_object_validators",
-            "RootRawAnyofObjectValidators",
-            '{"a":1}',
-            [
-                '{"a":1,"b":2}',
-                '{"a":true}',
-            ],
-            id="anyof-extra-rejected-objects",
-        ),
-        pytest.param(
-            "root_raw_array_item_oneof_validators.json",
-            "root_raw_array_item_oneof_validators.py",
-            "root_raw_array_item_oneof_validators",
-            "RootRawArrayItemOneofValidators",
-            '[{"a":1}]',
-            [
-                '[{"a":1,"b":2}]',
-                '[{"a":true}]',
-            ],
-            id="array-item-oneof-overlapping-objects",
-        ),
-    ],
-)
-def test_main_jsonschema_root_raw_composed_object_validators(
-    output_file: Path,
-    schema_file: str,
-    expected_file: str,
-    module_name: str,
-    model_name: str,
-    valid_json: str,
-    invalid_json_values: list[str],
-) -> None:
-    """Test root composed object validators inspect raw input before union conversion."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / schema_file,
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file=expected_file,
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in invalid_json_values:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name=module_name,
-            model_name=model_name,
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-@pytest.mark.parametrize(
-    ("schema_file", "expected_file", "module_name", "model_name", "valid_json", "invalid_json_values"),
-    [
-        pytest.param(
-            "property_raw_oneof_object_validators.json",
-            "property_raw_oneof_object_validators.py",
-            "property_raw_oneof_object_validators",
-            "PropertyRawOneofObjectValidators",
-            '{"payload":{"a":1}}',
-            [
-                '{"payload":{"a":1,"b":2}}',
-                '{"payload":{"a":true}}',
-            ],
-            id="oneof-overlapping-objects",
-        ),
-        pytest.param(
-            "property_raw_not_object_validators.json",
-            "property_raw_not_object_validators.py",
-            "property_raw_not_object_validators",
-            "PropertyRawNotObjectValidators",
-            '{"payload":{"a":1}}',
-            [
-                '{"payload":{"a":1,"b":2}}',
-                '{"payload":{"a":true}}',
-            ],
-            id="not-extra-object",
-        ),
-        pytest.param(
-            "property_raw_array_item_oneof_validators.json",
-            "property_raw_array_item_oneof_validators.py",
-            "property_raw_array_item_oneof_validators",
-            "PropertyRawArrayItemOneofValidators",
-            '{"items":[{"a":1}]}',
-            [
-                '{"items":[{"a":1,"b":2}]}',
-                '{"items":[{"a":true}]}',
-            ],
-            id="array-item-oneof-overlapping-objects",
-        ),
-    ],
-)
-def test_main_jsonschema_property_raw_object_validators(
-    output_file: Path,
-    schema_file: str,
-    expected_file: str,
-    module_name: str,
-    model_name: str,
-    valid_json: str,
-    invalid_json_values: list[str],
-) -> None:
-    """Test property validators inspect raw input before nested model conversion."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / schema_file,
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file=expected_file,
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in invalid_json_values:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name=module_name,
-            model_name=model_name,
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
 def test_main_jsonschema_allof_with_true_schema(output_file: Path) -> None:
     """Test true schemas inside allOf are accepted as neutral branches."""
     run_main_and_assert(
@@ -4551,8 +4271,6 @@ def test_main_jsonschema_pattern_properties_boolean(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--enum-field-as-literal",
-            "all",
         ],
         force_exec_validation=True,
     )
@@ -4569,133 +4287,9 @@ def test_main_jsonschema_pattern_properties_merge(output_file: Path) -> None:
         extra_args=[
             "--output-model-type",
             "pydantic_v2.BaseModel",
-            "--enum-field-as-literal",
-            "all",
         ],
         force_exec_validation=True,
     )
-
-
-def test_main_jsonschema_pattern_properties_closed_object_validators(output_file: Path) -> None:
-    """Test patternProperties allows matching extras while rejecting unmatched closed-object keys."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "pattern_properties_closed_object_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="pattern_properties_closed_object_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '{"id":"x","other":"value"}',
-        '{"id":"x","s_name":"x"}',
-        '{"id":"x","i_count":0}',
-        '{"id":"x","blocked_flag":"value"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="pattern_properties_closed_object_validators",
-            model_name="PatternPropertiesClosedObjectValidators",
-            valid_json='{"id":"x","s_name":"ok","i_count":1}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_pattern_properties_validators(output_file: Path) -> None:
-    """Test root patternProperties validates every matching pattern and closed unmatched keys."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_pattern_properties_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_pattern_properties_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '{"a":"ok"}',
-        '{"n1":0}',
-        '{"blocked1":"value"}',
-        '{"other":"value"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_pattern_properties_validators",
-            model_name="RootPatternPropertiesValidators",
-            valid_json='{"a":"okay","n1":1}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_pattern_properties_object_validators(output_file: Path) -> None:
-    """Test root patternProperties validators inspect Pydantic-converted object values."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_pattern_properties_object_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_pattern_properties_object_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"item-a":{"id":1,"enabled":true},"item-b":{"id":2,"enabled":false}}'
-    for invalid_json in [
-        '{"item-a":{"id":0,"enabled":true}}',
-        '{"item-a":{"id":1}}',
-        '{"item-a":{"id":1,"enabled":true,"extra":1}}',
-        '{"other":{"id":1,"enabled":true}}',
-        '{"blocked-a":{"id":1,"enabled":true}}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_pattern_properties_object_validators",
-            model_name="RootPatternPropertiesObjectValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_object_context_validators(output_file: Path) -> None:
-    """Test root dict object validators for schemas without declared properties."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_object_context_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_object_context_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"credit":1,"billing":2,"kind":"business","tax_id":"x"}'
-    for invalid_json in [
-        '{"credit":1}',
-        '{"kind":"business"}',
-        '{"forbidden":true}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_object_context_validators",
-            model_name="RootObjectContextValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
@@ -4710,15 +4304,6 @@ def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="pattern_properties_all_false",
-        model_name="Model",
-        valid_json='{"ok":1}',
-        invalid_json='{"x-test":1}',
-        expected_error_type="value_error",
     )
 
 
@@ -4734,15 +4319,6 @@ def test_main_jsonschema_pattern_properties_all_false_closed(output_file: Path) 
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="pattern_properties_all_false_closed",
-        model_name="NoKeys",
-        valid_json="{}",
-        invalid_json='{"ok":1}',
-        expected_error_type="value_error",
     )
 
 
@@ -4908,38 +4484,8 @@ def test_main_jsonschema_property_names_closed_object(output_file: Path) -> None
     )
 
 
-def test_main_jsonschema_property_names_explicit_properties(output_file: Path) -> None:
-    """Test propertyNames validates known properties and extra keys on object models."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "property_names_explicit_properties.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="property_names_explicit_properties.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"good":"ok","x-count":1}'
-    for invalid_json in [
-        '{"bad":"accepted"}',
-        '{"good":"ok","bad":"accepted"}',
-        '{"good":"ok","other":1}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="property_names_explicit_properties",
-            model_name="PropertyNamesExplicitProperties",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
 def test_main_jsonschema_additional_properties_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties schema validates extra values."""
+    """Test additionalProperties schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_schema_with_properties.json",
         output_path=output_file,
@@ -4952,18 +4498,10 @@ def test_main_jsonschema_additional_properties_schema_with_properties(output_fil
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_schema_with_properties",
-        model_name="KnownAndExtra",
-        valid_json='{"name":"x","extra":1}',
-        invalid_json='{"name":"x","extra":"1"}',
-        expected_error_type="value_error",
-    )
 
 
 def test_main_jsonschema_additional_properties_enum_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties enum schema validates extra values."""
+    """Test additionalProperties enum schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_enum_schema_with_properties.json",
         output_path=output_file,
@@ -4976,18 +4514,10 @@ def test_main_jsonschema_additional_properties_enum_schema_with_properties(outpu
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_enum_schema_with_properties",
-        model_name="KnownAndEnumExtra",
-        valid_json='{"name":"x","extra":"red"}',
-        invalid_json='{"name":"x","extra":"green"}',
-        expected_error_type="value_error",
-    )
 
 
 def test_main_jsonschema_additional_properties_const_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties const schema validates extra values."""
+    """Test additionalProperties const schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_const_schema_with_properties.json",
         output_path=output_file,
@@ -5000,18 +4530,10 @@ def test_main_jsonschema_additional_properties_const_schema_with_properties(outp
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_const_schema_with_properties",
-        model_name="KnownAndConstExtra",
-        valid_json='{"name":"x","extra":"red"}',
-        invalid_json='{"name":"x","extra":"blue"}',
-        expected_error_type="value_error",
-    )
 
 
 def test_main_jsonschema_additional_properties_object_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties object schema validates extra values."""
+    """Test additionalProperties object schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_object_schema_with_properties.json",
         output_path=output_file,
@@ -5024,47 +4546,10 @@ def test_main_jsonschema_additional_properties_object_schema_with_properties(out
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_object_schema_with_properties",
-        model_name="KnownAndObjectExtra",
-        valid_json='{"name":"x","extra":{"count":1}}',
-        invalid_json='{"name":"x","extra":{}}',
-        expected_error_type="value_error",
-    )
-
-
-def test_main_jsonschema_additional_properties_unevaluated_object(output_file: Path) -> None:
-    """Test nested unevaluatedProperties constraints inside additionalProperties values."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_unevaluated_object.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="additional_properties_unevaluated_object.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"name":"x","meta":{"id":1}}'
-    for invalid_json in [
-        '{"name":"x","meta":{"id":1,"extra":"bad"}}',
-        '{"name":"x","meta":{"extra":"bad"}}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="additional_properties_unevaluated_object",
-            model_name="AdditionalPropertiesUnevaluatedObject",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 def test_main_jsonschema_additional_properties_array_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties array schema validates extra values."""
+    """Test additionalProperties array schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_array_schema_with_properties.json",
         output_path=output_file,
@@ -5077,18 +4562,10 @@ def test_main_jsonschema_additional_properties_array_schema_with_properties(outp
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_array_schema_with_properties",
-        model_name="KnownAndArrayExtra",
-        valid_json='{"name":"x","extra":["a",1,2]}',
-        invalid_json='{"name":"x","extra":["a","b"]}',
-        expected_error_type="value_error",
-    )
 
 
 def test_main_jsonschema_additional_properties_ref_schema_with_properties(output_file: Path) -> None:
-    """Test additionalProperties ref schema validates extra values."""
+    """Test additionalProperties ref schema allows extra keys without typed runtime validation."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_ref_schema_with_properties.json",
         output_path=output_file,
@@ -5101,46 +4578,6 @@ def test_main_jsonschema_additional_properties_ref_schema_with_properties(output
         ],
         force_exec_validation=True,
     )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="additional_properties_ref_schema_with_properties",
-        model_name="KnownAndRefExtra",
-        valid_json='{"name":"x","extra":{"count":1}}',
-        invalid_json='{"name":"x","extra":{"count":"1"}}',
-        expected_error_type="value_error",
-    )
-
-
-def test_main_jsonschema_additional_properties_type_specific_constraints(output_file: Path) -> None:
-    """Test type-specific constraints on extra values only apply to matching JSON types."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "additional_properties_type_specific_constraints.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="additional_properties_type_specific_constraints.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"name":"x","text":"ABC","count":12,"items":[1,2],"flag":false,"meta":{"a":1}}'
-    for invalid_json in [
-        '{"name":"x","text":"abcd"}',
-        '{"name":"x","text":"ABCD"}',
-        '{"name":"x","count":9}',
-        '{"name":"x","count":11}',
-        '{"name":"x","items":[1,2,3]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="additional_properties_type_specific_constraints",
-            model_name="AdditionalPropertiesTypeSpecificConstraints",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 def test_main_jsonschema_property_names_type_non_string(output_file: Path) -> None:
@@ -5265,897 +4702,6 @@ def test_main_jsonschema_object_impossible_property_count(output_file: Path) -> 
     )
 
 
-def test_main_jsonschema_object_model_validators(output_file: Path) -> None:
-    """Test object-level Pydantic validators for property count and dependentRequired."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_model_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_model_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="object_model_validators",
-        model_name="ObjectModelValidators",
-        valid_json='{"credit-card":1,"billing-address":"x"}',
-        invalid_json='{"credit-card":1,"memo":"x"}',
-        expected_error_type="value_error",
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="object_model_validators",
-        model_name="ObjectModelValidators",
-        valid_json='{"memo":"x","note":"y"}',
-        invalid_json='{"memo":"x"}',
-        expected_error_type="value_error",
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="object_model_validators",
-        model_name="ObjectModelValidators",
-        invalid_json='{"memo":"x","billing-address":"y"}',
-        expected_error_type="value_error",
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="object_model_validators",
-        model_name="ObjectModelValidators",
-        invalid_json='{"note":"x","billing-address":"y"}',
-        expected_error_type="value_error",
-    )
-    assert_generated_model_json_validation(
-        output_file,
-        module_name="object_model_validators",
-        model_name="ObjectModelValidators",
-        valid_json='{"billing-address":"x","memo":"y","note":"z"}',
-        invalid_json='{"credit-card":1,"billing-address":"x","memo":"y","note":"z"}',
-        expected_error_type="value_error",
-    )
-
-
-def test_main_jsonschema_dependent_schema_property_validators(output_file: Path) -> None:
-    """Test schema-valued dependentSchemas/dependencies property constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "dependent_schema_property_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="dependent_schema_property_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for valid_json, invalid_json in [
-        ('{"plan":"pro","quota":5,"region":"us"}', '{"plan":"pro"}'),
-        ('{"plan":"pro","quota":5,"region":"eu"}', '{"plan":"pro","quota":0,"region":"eu"}'),
-        ('{"plan":"pro","quota":5,"region":"eu"}', '{"plan":"pro","quota":11,"region":"eu"}'),
-        ('{"plan":"pro","quota":5,"region":"us"}', '{"plan":"pro","quota":5,"region":"ap"}'),
-        ('{"zone":"a","tags":["x","y"]}', '{"zone":"a","tags":["x"]}'),
-        ('{"zone":"a","tags":["x","y","z"]}', '{"zone":"a","tags":["w","x","y","z"]}'),
-        ('{"legacy":true,"region":"legacy"}', '{"legacy":true}'),
-        ('{"legacy":true,"region":"legacy"}', '{"legacy":true,"region":"new"}'),
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="dependent_schema_property_validators",
-            model_name="DependentSchemaPropertyValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_complex_const_field_validators(output_file: Path) -> None:
-    """Test object validators enforce const values that cannot be represented as Literal fields."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_complex_const_field_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_complex_const_field_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"ratio":1.5,"settings":{"enabled":true,"limit":3},"choices":[1,"two"]}'
-    for invalid_json in [
-        '{"ratio":1.6,"settings":{"enabled":true,"limit":3},"choices":[1,"two"]}',
-        '{"ratio":1.5,"settings":{"enabled":true,"limit":4},"choices":[1,"two"]}',
-        '{"ratio":1.5,"settings":{"enabled":true,"limit":3},"choices":[1,"two","extra"]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_complex_const_field_validators",
-            model_name="ObjectComplexConstFieldValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_complex_enum_field_validators(output_file: Path) -> None:
-    """Test object validators enforce enum values that cannot be represented as Literal fields."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_complex_enum_field_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_complex_enum_field_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-            "--enum-field-as-literal",
-            "all",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"ratio":2.5,"settings":{"enabled":false,"limit":0},"choices":[3,"four"]}'
-    for invalid_json in [
-        '{"ratio":2.5,"settings":{"enabled":true,"limit":4},"choices":[3,"four"]}',
-        '{"ratio":2.5,"settings":{"enabled":false,"limit":0},"choices":[3,"four","extra"]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_complex_enum_field_validators",
-            model_name="ObjectComplexEnumFieldValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_conditional_object_validators(output_file: Path) -> None:
-    """Test object-level Pydantic validators for if/then/else constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "conditional_object_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="conditional_object_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for valid_json, invalid_json in [
-        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","contact":"ops"}'),
-        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":1,"contact":"ops"}'),
-        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":9,"contact":"ops"}'),
-        ('{"kind":"business","seats":4,"contact":"ops"}', '{"kind":"business","seats":4,"contact":"xy"}'),
-        ('{"kind":"personal","reason":"personal","tags":["x"]}', '{"kind":"personal"}'),
-        ('{"kind":"personal","reason":"trial","tags":["x","y"]}', '{"kind":"personal","reason":"other"}'),
-        ('{"reason":"trial"}', "{}"),
-        ('{"reason":"personal","tags":["x"]}', '{"reason":"personal","tags":[]}'),
-        ('{"reason":"personal","tags":["x","y"]}', '{"reason":"personal","tags":["x","y","z"]}'),
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="conditional_object_validators",
-            model_name="ConditionalObjectValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_not_object_validators(output_file: Path) -> None:
-    """Test object-level Pydantic validators for not constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "not_object_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="not_object_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for valid_json, invalid_json in [
-        ('{"status":"closed","archived":true}', '{"status":"closed","archived":false}'),
-        ('{"status":"open","archived":false}', '{"status":"closed","archived":false}'),
-        ('{"status":"closed"}', '{"status":"closed","archived":false}'),
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="not_object_validators",
-            model_name="NotObjectValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_schema_validators(output_file: Path) -> None:
-    """Test dependent, conditional, and not validators honor whole-object schema constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_schema_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_schema_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"mode":"strict","code":"S-1","x-a":1}'
-    for invalid_json in [
-        '{"mode":"strict","x-a":1}',
-        '{"mode":"strict","code":"L-1","x-a":1}',
-        '{"mode":"strict","code":"S-1","x-a":0}',
-        '{"mode":"strict","code":"S-1","other":1}',
-        '{"flag":true,"code":"L-1","x-a":0}',
-        '{"flag":true,"code":"L-1","other":1}',
-        '{"mode":"loose","code":"S-1"}',
-        '{"mode":"loose","code":"L-1","extra":-1}',
-        '{"bad":1}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_schema_validators",
-            model_name="ObjectContextSchemaValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_alias_validators(output_file: Path) -> None:
-    """Test whole-object schema validators evaluate alias property names."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_alias_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_alias_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"credit-card":1,"billing-address":"home","x-count":1}'
-    for invalid_json in [
-        '{"credit-card":1,"x-count":1}',
-        '{"credit-card":1,"billing-address":"hi","x-count":1}',
-        '{"credit-card":1,"billing-address":"home","x-count":0}',
-        '{"credit-card":1,"billing-address":"home","other":1}',
-        '{"mode-type":"strict","x-count":1}',
-        '{"mode-type":"strict","service-code":"L-1","x-count":1}',
-        '{"mode-type":"strict","service-code":"S-1","credit-card":1}',
-        '{"bad-code":true}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_alias_validators",
-            model_name="ObjectContextAliasValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_composed_condition_validators(output_file: Path) -> None:
-    """Test object-context conditions honor composed schema keywords."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_composed_condition_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_composed_condition_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"plan":"pro","quota":5,"mode":"secure","token":"T-1"}'
-    for invalid_json in [
-        '{"plan":"pro"}',
-        '{"plan":"pro","quota":4}',
-        '{"plan":"pro","quota":5,"blocked":true}',
-        '{"mode":"secure"}',
-        '{"mode":"secure","token":"bad"}',
-        '{"mode":"secure","marker":true,"token":"T-1"}',
-        '{"mode":"public","token":"T-1"}',
-        '{"forbidden":true}',
-        '{"region":"blocked"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_composed_condition_validators",
-            model_name="ObjectContextComposedConditionValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_runtime_composed_schema_validators(output_file: Path) -> None:
-    """Test runtime validators honor composed schemas in nested value predicates."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "runtime_composed_schema_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="runtime_composed_schema_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"gate":true,"values":[2,"v-ok"],"x-code":"x-ok","extra-code":"extra-ok","extra-count":100}'
-    for invalid_json in [
-        '{"gate":true,"values":[1],"x-code":"x-ok","extra-code":"extra-ok"}',
-        '{"gate":true,"values":["v-bad"],"x-code":"x-ok","extra-code":"extra-ok"}',
-        '{"gate":true,"values":[false],"x-code":"x-ok","extra-code":"extra-ok"}',
-        '{"gate":true,"values":[2],"x-code":0,"extra-code":"extra-ok"}',
-        '{"gate":true,"values":[2],"x-code":"bad","extra-code":"extra-ok"}',
-        '{"gate":true,"values":[2],"x-code":"x-ok","extra-code":"bad"}',
-        '{"gate":true,"values":[2],"x-code":"x-ok","extra-count":99}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="runtime_composed_schema_validators",
-            model_name="RuntimeComposedSchemaValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_nested_object_context_schema_validators(output_file: Path) -> None:
-    """Test nested runtime object predicates honor dependent and conditional schemas."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "nested_object_context_schema_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="nested_object_context_schema_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = (
-        '{"records":[{"enabled":true,"config":{"level":2},"kind":"secure","token":"abcde"}],"extra":{"kind":"public"}}'
-    )
-    for invalid_json in [
-        '{"extra":{"enabled":true}}',
-        '{"extra":{"config":{"level":1}}}',
-        '{"extra":{"kind":"secure"}}',
-        '{"extra":{"kind":"secure","token":"abcd"}}',
-        '{"extra":{"kind":"public","token":"abcde"}}',
-        '{"records":[{"enabled":true}]}',
-        '{"records":[{"config":{"level":1}}]}',
-        '{"records":[{"kind":"secure"}]}',
-        '{"records":[{"kind":"public","token":"abcde"}]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="nested_object_context_schema_validators",
-            model_name="NestedObjectContextSchemaValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_boolean_context_validators(output_file: Path) -> None:
-    """Test object-context validators honor empty and boolean schemas."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_boolean_context_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_boolean_context_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        "{}",
-        '{"default-config":"xy"}',
-        '{"default-config":"okay","legacy-mode":true}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_boolean_context_validators",
-            model_name="ObjectBooleanContextValidators",
-            valid_json='{"default-config":"okay","activation-code":"A-1"}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_model_value_validators(output_file: Path) -> None:
-    """Test object-context validators inspect Pydantic-converted model field values."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_model_value_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_model_value_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"trigger":true,"profile":{"mode":"secure","quota":2,"token":"abcde"}}'
-    for invalid_json in [
-        '{"trigger":true,"profile":{"mode":"secure","quota":1,"token":"abcde"}}',
-        '{"trigger":true,"profile":{"mode":"secure","quota":2,"token":"abc"}}',
-        '{"profile":{"mode":"public","quota":1,"token":"abcde"}}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_model_value_validators",
-            model_name="ObjectContextModelValueValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_array_model_value_validators(output_file: Path) -> None:
-    """Test object-context validators inspect Pydantic-converted array item models."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_array_model_value_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_array_model_value_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"trigger":true,"records":[{"kind":"hit","score":10},{"kind":"hit","score":11,"flag":true}]}'
-    for invalid_json in [
-        '{"trigger":true}',
-        '{"trigger":true,"records":[]}',
-        '{"trigger":true,"records":[{"kind":"miss","score":10}]}',
-        '{"trigger":true,"records":[{"kind":"hit","score":9}]}',
-        (
-            '{"trigger":true,"records":['
-            '{"kind":"hit","score":10,"flag":true},'
-            '{"kind":"hit","score":11},'
-            '{"kind":"hit","score":12}'
-            "]}"
-        ),
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_array_model_value_validators",
-            model_name="ObjectContextArrayModelValueValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_object_context_nested_alias_model_value_validators(output_file: Path) -> None:
-    """Test object-context validators inspect nested model values with aliases."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "object_context_nested_alias_model_value_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="object_context_nested_alias_model_value_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":5,"optional-flag":true}}'
-    for invalid_json in [
-        '{"trigger":true}',
-        '{"trigger":true,"profile-data":{"service-code":"L-1","quota-limit":5}}',
-        '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":1}}',
-        '{"trigger":true,"profile-data":{"service-code":"S-1","quota-limit":6,"optional-flag":true}}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="object_context_nested_alias_model_value_validators",
-            model_name="ObjectContextNestedAliasModelValueValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_conditional_boolean_branch_validators(output_file: Path) -> None:
-    """Test boolean then/else schemas generate runtime conditional validators."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "conditional_boolean_branch_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="conditional_boolean_branch_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '{"mode":"blocked","fallback-code":"F-1"}',
-        '{"mode":"active"}',
-        '{"mode":"active","fallback-code":"L-1"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="conditional_boolean_branch_validators",
-            model_name="ConditionalBooleanBranchValidators",
-            valid_json='{"mode":"active","fallback-code":"F-1"}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_conditional_else_only_boolean_validator(output_file: Path) -> None:
-    """Test if/else without then emits syntactically valid branch code."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "conditional_else_only_boolean_validator.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="conditional_else_only_boolean_validator.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        "{}",
-        '{"mode":"run"}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="conditional_else_only_boolean_validator",
-            model_name="ConditionalElseOnlyBooleanValidator",
-            valid_json='{"mode":"skip"}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_not_boolean_validator(output_file: Path) -> None:
-    """Test not: true makes a generated object model unsatisfiable."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "not_boolean_validator.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="not_boolean_validator.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    assert_generated_model_json_invalid(
-        output_file,
-        module_name="not_boolean_validator",
-        model_name="NotBooleanValidator",
-        invalid_json='{"value":"x"}',
-        expected_error_type="value_error",
-    )
-
-
-def test_main_jsonschema_array_contains_validators(output_file: Path) -> None:
-    """Test object-level Pydantic validators for schema-valued contains constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "array_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="array_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = (
-        '{"values":["a","b",1],"markers":["primary"],"choices":[1,"x"],"typedChoices":[3,"x"],"nonStrings":[1,"x"]}'
-    )
-    for invalid_json in [
-        '{"values":["a",1],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
-        '{"values":["a","b","c"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["secondary"],"choices":[1],"typedChoices":[3],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1,2],"typedChoices":[3],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[true],"typedChoices":[3],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":["3"],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3,5],"nonStrings":[1]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":["x"]}',
-        '{"values":["a","b"],"markers":["primary"],"choices":[1],"typedChoices":[3],"nonStrings":[1,false]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="array_contains_validators",
-            model_name="ArrayContainsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_contains_runtime_value_predicates(output_file: Path) -> None:
-    """Test contains validators honor nested runtime-only schema predicates."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "contains_runtime_value_predicates.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="contains_runtime_value_predicates.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = (
-        '{"numbers":[2,1],"names":["Alice","Bob"],'
-        '"objects":[{"kind":"ok","values":[1,2]},{"kind":"no","values":[1,2]}]}'
-    )
-    for invalid_json in [
-        '{"numbers":[1,3],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2]}]}',
-        '{"numbers":[2,4],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2]}]}',
-        '{"numbers":[2],"names":["A","Bob"],"objects":[{"kind":"ok","values":[1,2]}]}',
-        '{"numbers":[2],"names":["Alice","Ann"],"objects":[{"kind":"ok","values":[1,2]}]}',
-        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok"}]}',
-        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[0,2]}]}',
-        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2],"extra":1}]}',
-        '{"numbers":[2],"names":["Alice"],"objects":[{"kind":"ok","values":[1,2],"blocked":true}]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="contains_runtime_value_predicates",
-            model_name="ContainsRuntimeValuePredicates",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_nested_array_contains_validators(output_file: Path) -> None:
-    """Test nested runtime array predicates honor contains count constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "nested_array_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="nested_array_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"trigger":true,"matrix":[[5,"hit-a"]],"extra":[{"kind":"hit","score":10},{"kind":"hit","score":20}]}'
-    for invalid_json in [
-        '{"trigger":true,"matrix":[[1]],"extra":[{"kind":"hit","score":10},{"kind":"hit","score":20}]}',
-        '{"trigger":true,"matrix":[[5,6,"hit-a"]],"extra":[{"kind":"hit","score":10},{"kind":"hit","score":20}]}',
-        '{"trigger":true,"matrix":[[false]],"extra":[{"kind":"hit","score":10},{"kind":"hit","score":20}]}',
-        '{"trigger":true,"matrix":[[5]],"extra":[{"kind":"hit","score":10}]}',
-        '{"trigger":true,"matrix":[[5]],"extra":[{"kind":"hit","score":9},{"kind":"hit","score":20}]}',
-        '{"trigger":true,"matrix":[[5]],"extra":[{"kind":"hit","score":10},{"kind":"hit","score":20},{"kind":"hit","score":30}]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="nested_array_contains_validators",
-            model_name="NestedArrayContainsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_array_unevaluated_items_contains_validators(output_file: Path) -> None:
-    """Test contains-evaluated tail items satisfy unevaluatedItems false."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "array_unevaluated_items_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="array_unevaluated_items_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"values":["head",1,2]}'
-    for invalid_json in [
-        '{"values":[1,1]}',
-        '{"values":["head","tail"]}',
-        '{"values":["head",1,"tail"]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="array_unevaluated_items_contains_validators",
-            model_name="ArrayUnevaluatedItemsContainsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_nested_array_unique_items_validators(output_file: Path) -> None:
-    """Test nested runtime array predicates honor uniqueItems."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "nested_array_unique_items_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="nested_array_unique_items_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1,2]],"extra":[true,1,"a",{"id":1}]}'
-    for invalid_json in [
-        '{"trigger":true,"groups":[[{"id":1},{"id":1}]],"direct":[[true,1]],"extra":[true,1,"a"]}',
-        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,true]],"extra":[true,1,"a"]}',
-        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[1,1]],"extra":[true,1,"a"]}',
-        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":["a","a"]}',
-        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":[{"id":1},{"id":1}]}',
-        '{"trigger":true,"groups":[[{"id":1,"x":1}]],"direct":[[true,1]],"extra":["a",1]}',
-        '{"trigger":true,"groups":[[{"id":1},{"id":2}]],"direct":[[true,1]],"extra":[{"id":1,"x":1}]}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="nested_array_unique_items_validators",
-            model_name="NestedArrayUniqueItemsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_array_contains_validators(output_file: Path) -> None:
-    """Test RootModel validators for schema-valued contains constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_array_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_array_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    for invalid_json in [
-        '["x", 1]',
-        '["x", 7, "y"]',
-        '["x", true]',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_array_contains_validators",
-            model_name="RootArrayContainsValidators",
-            valid_json='["x", 7, false]',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_array_unevaluated_items_contains_validators(output_file: Path) -> None:
-    """Test RootModel contains-evaluated tail items satisfy unevaluatedItems false."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_array_unevaluated_items_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_array_unevaluated_items_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '["head",1,2]'
-    for invalid_json in [
-        "[1,1]",
-        '["head","tail"]',
-        '["head",1,"tail"]',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_array_unevaluated_items_contains_validators",
-            model_name="RootArrayUnevaluatedItemsContainsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_array_object_contains_validators(output_file: Path) -> None:
-    """Test RootModel contains validators inspect Pydantic-converted object items."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_array_object_contains_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_array_object_contains_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = '[{"kind":"hit","score":10},{"kind":"miss","score":20},{"kind":"hit","score":12}]'
-    for invalid_json in [
-        '[{"kind":"hit","score":9},{"kind":"miss","score":20},{"kind":"hit","score":12}]',
-        '[{"kind":"hit","score":10},{"kind":"hit","score":11},{"kind":"hit","score":12}]',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_array_object_contains_validators",
-            model_name="RootArrayObjectContainsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
-def test_main_jsonschema_root_array_unique_items_validators(output_file: Path) -> None:
-    """Test RootModel validators for uniqueItems constraints."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "root_array_unique_items_validators.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-        expected_file="root_array_unique_items_validators.py",
-        extra_args=[
-            "--output-model-type",
-            "pydantic_v2.BaseModel",
-        ],
-        force_exec_validation=True,
-    )
-    valid_json = "[true,1,2,false,0]"
-    for invalid_json in [
-        "[true,1,true]",
-        "[true,1,1]",
-        "[true,1,false,0,false]",
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="root_array_unique_items_validators",
-            model_name="RootArrayUniqueItemsValidators",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
-
-
 def test_main_jsonschema_property_names_min_max_length(output_file: Path) -> None:
     """Test propertyNames with minLength/maxLength constraints generates dict with constr key."""
     run_main_and_assert(
@@ -6217,7 +4763,7 @@ def test_main_jsonschema_property_names_enum_integers(output_file: Path) -> None
 
 
 def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
-    """Test root allOf object constraints from a propertyNames $ref."""
+    """Test propertyNames in allOf with $ref."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "property_names_allof_ref.json",
         output_path=output_file,
@@ -6228,21 +4774,7 @@ def test_main_jsonschema_property_names_allof_ref(output_file: Path) -> None:
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
-        force_exec_validation=True,
     )
-    for invalid_json in [
-        "{}",
-        '{"A":"x"}',
-        '{"a":1}',
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="property_names_allof_ref",
-            model_name="Model",
-            valid_json='{"a":"x"}',
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 def test_main_jsonschema_property_names_ref_enum(output_file: Path) -> None:
@@ -6510,16 +5042,6 @@ def test_main_null(output_file: Path) -> None:
     """Test null type handling."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "null.json",
-        output_path=output_file,
-        input_file_type="jsonschema",
-        assert_func=assert_file_content,
-    )
-
-
-def test_main_type_array_only_null(output_file: Path) -> None:
-    """Test a JSON Schema type array containing only null."""
-    run_main_and_assert(
-        input_path=JSON_SCHEMA_DATA_PATH / "type_array_only_null.json",
         output_path=output_file,
         input_file_type="jsonschema",
         assert_func=assert_file_content,
@@ -10591,22 +9113,7 @@ def test_main_allof_root_model_constraints_merge_pydantic_v2(output_file: Path) 
             "--output-model-type",
             "pydantic_v2.BaseModel",
         ],
-        force_exec_validation=True,
     )
-    for valid_json, invalid_json in [
-        ('{"refarr":["x"]}', '{"refarr":[]}'),
-        ('{"refobjnoprops":{"a":1}}', '{"refobjnoprops":{}}'),
-        ('{"refpatternprops":{"S_a":"x"}}', '{"refpatternprops":{}}'),
-        ('{"refpatternprops":{"S_a":"x"}}', '{"refpatternprops":{"S_a":1}}'),
-    ]:
-        assert_generated_model_json_validation(
-            output_file,
-            module_name="allof_root_model_constraints_merge_pydantic_v2",
-            model_name="Model",
-            valid_json=valid_json,
-            invalid_json=invalid_json,
-            expected_error_type="value_error",
-        )
 
 
 @pytest.mark.benchmark

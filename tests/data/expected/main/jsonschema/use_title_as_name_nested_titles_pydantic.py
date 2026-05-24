@@ -4,10 +4,9 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from pydantic import BaseModel, Field, RootModel, constr, model_validator
+from pydantic import BaseModel, Field, RootModel, constr
 
 
 class Model(RootModel[Any]):
@@ -62,41 +61,10 @@ class MyPatternValue(RootModel[str]):
     root: str = Field(..., title='MyPatternValue')
 
 
-class MyPatternObj(
-    RootModel[dict[constr(pattern=r'^S_'), MyPatternValue] | dict[str, Any]]
-):
-    root: dict[constr(pattern=r'^S_'), MyPatternValue] | dict[str, Any] = Field(
+class MyPatternObj(RootModel[dict[constr(pattern=r'^S_'), MyPatternValue]]):
+    root: dict[constr(pattern=r'^S_'), MyPatternValue] = Field(
         ..., title='MyPatternObj'
     )
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        if isinstance(self.root, dict):
-            for extra_key, extra_value in self.root.items():
-                extra_value = json_schema_runtime_value(extra_value)
-                matched_pattern = False
-                if re.search('^S_', extra_key):
-                    matched_pattern = True
-                    if not (isinstance(extra_value, str)):
-                        raise ValueError(
-                            'root property '
-                            + extra_key
-                            + ' does not match pattern schema'
-                        )
-        return self
 
 
 class MyPropValue(RootModel[int]):

@@ -7,7 +7,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, RootModel, conint, model_validator
+from pydantic import BaseModel, RootModel, conint
 
 
 class BaseRef(BaseModel):
@@ -38,141 +38,13 @@ class AllofMaxConstraints(RootModel[conint(le=50)]):
 class AllofUniqueItems(RootModel[list[str]]):
     root: list[str]
 
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_unique_key(value):
-            value = json_schema_runtime_value(value)
-            if isinstance(value, bool) or value is None or isinstance(value, str):
-                return (type(value).__name__, value)
-            if isinstance(value, (int, float)):
-                return ('number', value)
-            if isinstance(value, list):
-                return ('array', tuple(json_schema_unique_key(item) for item in value))
-            if isinstance(value, dict):
-                return (
-                    'object',
-                    tuple(
-                        sorted(
-                            (key, json_schema_unique_key(item))
-                            for key, item in value.items()
-                        )
-                    ),
-                )
-            return (type(value).__name__, value)
-
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        root_value = json_schema_runtime_value(self.root)
-        if not (
-            (isinstance(root_value, list))
-            and (
-                (
-                    not isinstance(root_value, list)
-                    or all(
-                        (lambda extra_item: isinstance(extra_item, str))(extra_item)
-                        for extra_item in root_value
-                    )
-                )
-            )
-            and (
-                (
-                    not isinstance(root_value, list)
-                    or len(root_value)
-                    == len(
-                        {
-                            json_schema_unique_key(unique_item)
-                            for unique_item in root_value
-                        }
-                    )
-                )
-            )
-        ):
-            raise ValueError('root object does not match schema')
-        return self
-
 
 class ObjectWithoutAdditional(BaseModel):
     nested: str | None = None
 
 
-class MultipleAdditionalProps(RootModel[dict[str, Any]]):
-    root: dict[str, Any]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        root_value = json_schema_runtime_value(self.root)
-        if not (
-            (
-                (isinstance(root_value, dict))
-                and (
-                    (
-                        not isinstance(root_value, dict)
-                        or all(
-                            (lambda extra_value: isinstance(extra_value, str))(
-                                extra_value
-                            )
-                            for extra_key, extra_value in root_value.items()
-                            if not ((extra_key in {}))
-                        )
-                    )
-                )
-            )
-            and (
-                (isinstance(root_value, dict))
-                and (
-                    (
-                        not isinstance(root_value, dict)
-                        or all(
-                            (
-                                lambda extra_value: (isinstance(extra_value, dict))
-                                and (
-                                    (
-                                        not isinstance(extra_value, dict)
-                                        or 'id' not in extra_value
-                                        or (
-                                            lambda extra_value_property_0: isinstance(
-                                                extra_value_property_0, int
-                                            )
-                                            and not isinstance(
-                                                extra_value_property_0, bool
-                                            )
-                                        )(extra_value['id'])
-                                    )
-                                )
-                            )(extra_value)
-                            for extra_key, extra_value in root_value.items()
-                            if not ((extra_key in {}))
-                        )
-                    )
-                )
-            )
-        ):
-            raise ValueError('root object does not match schema')
-        return self
+class MultipleAdditionalProps(BaseModel):
+    pass
 
 
 class L3(BaseModel):

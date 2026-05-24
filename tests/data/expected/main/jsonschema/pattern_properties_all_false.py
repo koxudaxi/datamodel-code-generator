@@ -4,42 +4,10 @@
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
-from pydantic import RootModel, model_validator
+from pydantic import RootModel
 
 
 class Model(RootModel[dict[str, Any]]):
     root: dict[str, Any]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        if isinstance(self.root, dict):
-            for extra_key, extra_value in self.root.items():
-                extra_value = json_schema_runtime_value(extra_value)
-                matched_pattern = False
-                if re.search('^x-', extra_key):
-                    matched_pattern = True
-                    raise ValueError(
-                        'root property ' + extra_key + ' matches forbidden pattern'
-                    )
-                if re.search('^internal-', extra_key):
-                    matched_pattern = True
-                    raise ValueError(
-                        'root property ' + extra_key + ' matches forbidden pattern'
-                    )
-        return self

@@ -4,9 +4,7 @@
 
 from __future__ import annotations
 
-from typing import Any
-
-from pydantic import BaseModel, RootModel, confloat, constr, model_validator
+from pydantic import BaseModel, RootModel, confloat, constr
 
 
 class StringConstraint(RootModel[constr(min_length=1)]):
@@ -34,62 +32,8 @@ class Config(BaseConfig, ExtendedConfig):
     pass
 
 
-class Metadata(RootModel[dict[str, Any]]):
-    root: dict[str, Any]
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        def json_schema_runtime_value(value):
-            if hasattr(value, 'model_dump'):
-                return value.model_dump(
-                    mode='python', by_alias=True, exclude_unset=True
-                )
-            if isinstance(value, (list, tuple)):
-                return [json_schema_runtime_value(item) for item in value]
-            if isinstance(value, dict):
-                return {
-                    key: json_schema_runtime_value(item) for key, item in value.items()
-                }
-            return value
-
-        root_value = json_schema_runtime_value(self.root)
-        if not (
-            (
-                (isinstance(root_value, dict))
-                and (
-                    (
-                        not isinstance(root_value, dict)
-                        or all(
-                            (lambda extra_value: isinstance(extra_value, str))(
-                                extra_value
-                            )
-                            for extra_key, extra_value in root_value.items()
-                            if not ((extra_key in {}))
-                        )
-                    )
-                )
-            )
-            and (
-                (isinstance(root_value, dict))
-                and (
-                    (
-                        not isinstance(root_value, dict)
-                        or all(
-                            (
-                                lambda extra_value: (
-                                    not isinstance(extra_value, str)
-                                    or len(extra_value) >= 1
-                                )
-                            )(extra_value)
-                            for extra_key, extra_value in root_value.items()
-                            if not ((extra_key in {}))
-                        )
-                    )
-                )
-            )
-        ):
-            raise ValueError('root object does not match schema')
-        return self
+class Metadata(BaseModel):
+    pass
 
 
 class ProjectedItem(BaseModel):

@@ -98,13 +98,12 @@ DEFAULT_BASE_CLASS: str = "pydantic.BaseModel"
 
 def load_yaml(stream: str | TextIO) -> YamlValue:
     """Load YAML content using ryaml (if available) or PyYAML."""
-    from datamodel_code_generator.util import get_yaml_backend, warn_deprecated_yaml_bool_values  # noqa: PLC0415
+    from datamodel_code_generator.util import get_yaml_backend  # noqa: PLC0415
 
     if get_yaml_backend() == "ryaml":
         import ryaml  # noqa: PLC0415  # ty: ignore[unresolved-import]
 
         text = stream if isinstance(stream, str) else stream.read()
-        warn_deprecated_yaml_bool_values(text)
         return ryaml.loads(text)
 
     import yaml  # noqa: PLC0415

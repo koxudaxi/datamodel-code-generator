@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class OneofProp(BaseModel):
@@ -41,61 +41,3 @@ class ExtrasInOneOf(BaseModel):
         None, json_schema_extra={'x-parent-custom': 'parent_value'}
     )
     anyof_prop: AnyofProp | AnyofProp1 | None = None
-
-    @model_validator(mode='before')
-    @classmethod
-    def validate_json_schema_input_constraints(cls, data):
-        if isinstance(data, dict):
-            if 'oneof_prop' in data:
-                oneof_prop_raw_value = data['oneof_prop']
-                if not (
-                    (
-                        (
-                            not isinstance(oneof_prop_raw_value, dict)
-                            or 'shared_prop' not in oneof_prop_raw_value
-                            or (
-                                lambda oneof_prop_raw_value_property_0: isinstance(
-                                    oneof_prop_raw_value_property_0, str
-                                )
-                            )(oneof_prop_raw_value['shared_prop'])
-                        )
-                    )
-                    and (
-                        sum(
-                            1
-                            for matched in (
-                                (isinstance(oneof_prop_raw_value, dict))
-                                and (
-                                    (
-                                        not isinstance(oneof_prop_raw_value, dict)
-                                        or 'variant_a_prop' not in oneof_prop_raw_value
-                                        or (
-                                            lambda oneof_prop_raw_value_property_0: isinstance(
-                                                oneof_prop_raw_value_property_0, str
-                                            )
-                                        )(oneof_prop_raw_value['variant_a_prop'])
-                                    )
-                                ),
-                                (isinstance(oneof_prop_raw_value, dict))
-                                and (
-                                    (
-                                        not isinstance(oneof_prop_raw_value, dict)
-                                        or 'variant_b_prop' not in oneof_prop_raw_value
-                                        or (
-                                            lambda oneof_prop_raw_value_property_0: isinstance(
-                                                oneof_prop_raw_value_property_0, int
-                                            )
-                                            and not isinstance(
-                                                oneof_prop_raw_value_property_0, bool
-                                            )
-                                        )(oneof_prop_raw_value['variant_b_prop'])
-                                    )
-                                ),
-                            )
-                            if matched
-                        )
-                        == 1
-                    )
-                ):
-                    raise ValueError('oneof_prop' + ' does not match schema')
-        return data

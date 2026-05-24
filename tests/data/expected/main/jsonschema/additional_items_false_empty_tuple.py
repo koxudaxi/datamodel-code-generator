@@ -6,29 +6,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class AdditionalItemsFalseEmptyTuple(BaseModel):
     empty: list[Any] | None = Field(None, max_length=0)
     single: list[str] | None = Field(None, max_length=1)
-
-    @model_validator(mode='after')
-    def validate_json_schema_constraints(self):
-        if self.empty is not None and not (
-            (not isinstance(self.empty, list) or len(self.empty) <= 0)
-        ):
-            raise ValueError('empty' + ' does not match array schema')
-
-        if self.single is not None and not (
-            (
-                (
-                    not isinstance(self.single, list)
-                    or len(self.single) <= 0
-                    or (lambda extra_item: isinstance(extra_item, str))(self.single[0])
-                )
-            )
-            and ((not isinstance(self.single, list) or len(self.single) <= 1))
-        ):
-            raise ValueError('single' + ' does not match array schema')
-        return self

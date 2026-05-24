@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-import re
 from typing import List, Optional, Union
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class Fields(BaseModel):
@@ -16,70 +15,3 @@ class Fields1(BaseModel):
 
 class BadSchema(BaseModel):
     fields: Optional[List[Union[Fields, Fields1]]] = None
-
-    @model_validator(mode='before')
-    @classmethod
-    def validate_json_schema_input_constraints(cls, data):
-        if isinstance(data, dict):
-            if 'fields' in data:
-                fields_raw_value = data['fields']
-                if not (
-                    (isinstance(fields_raw_value, list))
-                    and (
-                        (
-                            not isinstance(fields_raw_value, list)
-                            or all(
-                                (
-                                    lambda extra_item: sum(
-                                        1
-                                        for matched in (
-                                            (isinstance(extra_item, dict))
-                                            and (
-                                                (
-                                                    not isinstance(extra_item, dict)
-                                                    or 'a' not in extra_item
-                                                    or (
-                                                        lambda extra_item_property_0: isinstance(
-                                                            extra_item_property_0, str
-                                                        )
-                                                    )(extra_item['a'])
-                                                )
-                                            ),
-                                            (isinstance(extra_item, dict))
-                                            and (
-                                                (
-                                                    not isinstance(extra_item, dict)
-                                                    or 'b' not in extra_item
-                                                    or (
-                                                        lambda extra_item_property_0: (
-                                                            isinstance(
-                                                                extra_item_property_0,
-                                                                str,
-                                                            )
-                                                        )
-                                                        and (
-                                                            isinstance(
-                                                                extra_item_property_0,
-                                                                str,
-                                                            )
-                                                            and re.search(
-                                                                '^[a-zA-Z_]+$',
-                                                                extra_item_property_0,
-                                                            )
-                                                            is not None
-                                                        )
-                                                    )(extra_item['b'])
-                                                )
-                                            ),
-                                        )
-                                        if matched
-                                    )
-                                    == 1
-                                )(extra_item)
-                                for extra_item in fields_raw_value
-                            )
-                        )
-                    )
-                ):
-                    raise ValueError('fields' + ' does not match schema')
-        return data

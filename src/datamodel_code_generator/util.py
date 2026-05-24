@@ -25,7 +25,6 @@ def load_toml(path: Path) -> dict[str, Any]:
 
 _YAML_1_2_BOOL_PATTERN = re.compile(r"^(?:true|false|True|False|TRUE|FALSE)$")
 _YAML_DEPRECATED_BOOL_VALUES = {"True", "False", "TRUE", "FALSE"}
-_YAML_DEPRECATED_BOOL_TOKEN_PATTERN = re.compile(r"(?<![A-Za-z0-9_])(?:True|False|TRUE|FALSE)(?![A-Za-z0-9_])")
 # Pattern for scientific notation without decimal point (e.g., 1e-5, 1E+10)
 # Standard YAML only matches floats with decimal points, missing patterns like "1e-5"
 _YAML_SCIENTIFIC_NOTATION_PATTERN = re.compile(r"^[-+]?[0-9][0-9_]*[eE][-+]?[0-9]+$")
@@ -82,19 +81,6 @@ def get_safe_loader() -> type:
         ))
 
     return CustomSafeLoader
-
-
-def warn_deprecated_yaml_bool_values(text: str) -> None:
-    """Emit PyYAML-compatible deprecated bool warnings for backends without constructors."""
-    if not _YAML_DEPRECATED_BOOL_TOKEN_PATTERN.search(text):
-        return
-
-    import yaml  # noqa: PLC0415
-
-    try:
-        yaml.load(text, Loader=get_safe_loader())  # noqa: S506
-    except yaml.YAMLError:
-        return
 
 
 YamlBackend = Literal["ryaml", "pyyaml"]
