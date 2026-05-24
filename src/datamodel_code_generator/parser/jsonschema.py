@@ -3518,6 +3518,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 f"and isinstance({variable_name}, (int, float)) "
                 f"and not isinstance({variable_name}, bool)"
             )
+        if isinstance(value, (dict, list)):
+            return f"json_schema_unique_key({variable_name}) == json_schema_unique_key({value!r})"
         return f"{variable_name} == {value!r}"
 
     def _join_contains_predicates(self, predicates: list[str], operator: str) -> str:  # noqa: PLR6301
@@ -4165,6 +4167,32 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if array_unique_items:
             validators["array_unique_items"] = array_unique_items
 
+    def _collect_property_value_validators(
+        self,
+        obj: JsonSchemaObject,
+        fields: list[DataModelFieldBase],
+    ) -> list[dict[str, str]]:
+        if not obj.properties:
+            return []
+
+        field_names = self._field_name_mapping(fields)
+        validators: list[dict[str, str]] = []
+        for property_name, field_schema in obj.properties.items():
+            if not isinstance(field_schema, JsonSchemaObject) or "const" not in field_schema.extras:
+                continue
+            const_value = field_schema.extras["const"]
+            if const_value is None or isinstance(const_value, (bool, int, str)):
+                continue
+            field_name = field_names.get(property_name)
+            if not field_name:
+                continue
+            validators.append({
+                "field": field_name,
+                "value": f"{field_name}_value",
+                "predicate": self._json_value_predicate(const_value, f"{field_name}_value"),
+            })
+        return validators
+
     def _collect_additional_properties_validators(self, obj: JsonSchemaObject) -> list[dict[str, str]]:
         extra_value_schema = obj.additionalProperties
         if not isinstance(extra_value_schema, JsonSchemaObject):
@@ -4408,6 +4436,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 validators["dependent_required"] = mapped_dependent_required
 
         self._set_object_array_validators(validators, obj, fields)
+
+        property_values = self._collect_property_value_validators(obj, fields)
+        if property_values:
+            validators["property_values"] = property_values
 
         dependent_schema_properties = self._collect_dependent_schema_property_validators(obj.extras, fields)
         if dependent_schema_properties:

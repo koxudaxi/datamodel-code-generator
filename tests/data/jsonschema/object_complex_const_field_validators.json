@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "object complex const field validators",
+  "type": "object",
+  "properties": {
+    "ratio": {
+      "const": 1.5
+    },
+    "settings": {
+      "const": {
+        "enabled": true,
+        "limit": 3
+      }
+    },
+    "choices": {
+      "const": [
+        1,
+        "two"
+      ]
+    }
+  },
+  "required": [
+    "ratio",
+    "settings",
+    "choices"
+  ],
+  "additionalProperties": false
+}

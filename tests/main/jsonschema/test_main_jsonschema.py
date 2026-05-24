@@ -4965,6 +4965,36 @@ def test_main_jsonschema_dependent_schema_property_validators(output_file: Path)
         )
 
 
+def test_main_jsonschema_object_complex_const_field_validators(output_file: Path) -> None:
+    """Test object validators enforce const values that cannot be represented as Literal fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "object_complex_const_field_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="object_complex_const_field_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"ratio":1.5,"settings":{"enabled":true,"limit":3},"choices":[1,"two"]}'
+    for invalid_json in [
+        '{"ratio":1.6,"settings":{"enabled":true,"limit":3},"choices":[1,"two"]}',
+        '{"ratio":1.5,"settings":{"enabled":true,"limit":4},"choices":[1,"two"]}',
+        '{"ratio":1.5,"settings":{"enabled":true,"limit":3},"choices":[1,"two","extra"]}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="object_complex_const_field_validators",
+            model_name="ObjectComplexConstFieldValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_conditional_object_validators(output_file: Path) -> None:
     """Test object-level Pydantic validators for if/then/else constraints."""
     run_main_and_assert(
