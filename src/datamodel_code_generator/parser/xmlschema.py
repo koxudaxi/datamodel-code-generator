@@ -405,7 +405,8 @@ class _XMLSchemaConverter:
         return schema
 
     def _apply_occurs(self, element: ET.Element, schema: JsonSchema) -> JsonSchema:  # noqa: PLR6301
-        min_occurs = _safe_int(element.get("minOccurs")) or 0 if element.get("minOccurs") else 1
+        min_occurs_value = element.get("minOccurs")
+        min_occurs = (_safe_int(min_occurs_value) or 0) if min_occurs_value else 1
         max_occurs = element.get("maxOccurs")
         if max_occurs is None or max_occurs == "1":
             return schema
