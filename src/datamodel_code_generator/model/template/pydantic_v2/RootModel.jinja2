@@ -54,8 +54,13 @@ class {{ class_name }}({{ base_class }}{%- if fields -%}[{{get_type_hint(fields,
 {%- if prepared_model_validators %}
 {% for v in prepared_model_validators %}
 
-    @model_validator(mode='after')
+    @model_validator(mode='{{ v.mode | default("after") }}')
+{%- if v.mode == 'before' %}
+    @classmethod
+    def {{ v.method_name }}(cls, data):
+{%- else %}
     def {{ v.method_name }}(self):
+{%- endif %}
 {%- for line in v.lines %}
         {{ line }}
 {%- endfor %}

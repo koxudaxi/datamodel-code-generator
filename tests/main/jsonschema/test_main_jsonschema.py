@@ -4155,6 +4155,68 @@ def test_main_jsonschema_root_logical_runtime_validators(output_file: Path) -> N
         )
 
 
+@pytest.mark.parametrize(
+    ("schema_file", "expected_file", "module_name", "model_name", "valid_json", "invalid_json_values"),
+    [
+        pytest.param(
+            "root_raw_oneof_object_validators.json",
+            "root_raw_oneof_object_validators.py",
+            "root_raw_oneof_object_validators",
+            "RootRawOneofObjectValidators",
+            '{"a":1}',
+            [
+                '{"a":1,"b":2}',
+                '{"a":true}',
+            ],
+            id="oneof-overlapping-objects",
+        ),
+        pytest.param(
+            "root_raw_anyof_object_validators.json",
+            "root_raw_anyof_object_validators.py",
+            "root_raw_anyof_object_validators",
+            "RootRawAnyofObjectValidators",
+            '{"a":1}',
+            [
+                '{"a":1,"b":2}',
+                '{"a":true}',
+            ],
+            id="anyof-extra-rejected-objects",
+        ),
+    ],
+)
+def test_main_jsonschema_root_raw_composed_object_validators(
+    output_file: Path,
+    schema_file: str,
+    expected_file: str,
+    module_name: str,
+    model_name: str,
+    valid_json: str,
+    invalid_json_values: list[str],
+) -> None:
+    """Test root composed object validators inspect raw input before union conversion."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / schema_file,
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file=expected_file,
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    for invalid_json in invalid_json_values:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name=module_name,
+            model_name=model_name,
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_allof_with_true_schema(output_file: Path) -> None:
     """Test true schemas inside allOf are accepted as neutral branches."""
     run_main_and_assert(

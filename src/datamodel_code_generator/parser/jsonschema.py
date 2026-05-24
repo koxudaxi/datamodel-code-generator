@@ -4776,6 +4776,64 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
             validators["root_object"] = {"predicate": predicate}
 
+    def _schema_needs_raw_value_validator(
+        self,
+        schema: JsonSchemaObject | bool,  # noqa: FBT001
+        visited_refs: frozenset[str] = frozenset(),
+    ) -> bool:
+        if not isinstance(schema, JsonSchemaObject):
+            return False
+        if schema.ref:
+            if schema.ref in visited_refs:
+                return False
+            return self._schema_needs_raw_value_validator(
+                self._load_ref_schema_object(schema.ref),
+                visited_refs | {schema.ref},
+            )
+        raw_value_markers = (
+            schema.is_object,
+            schema.properties,
+            schema.required,
+            schema.patternProperties,
+            schema.propertyNames is not None,
+            schema.minProperties is not None,
+            schema.maxProperties is not None,
+            schema.additionalProperties is False,
+            isinstance(schema.additionalProperties, JsonSchemaObject),
+            schema.unevaluatedProperties is False,
+            isinstance(schema.unevaluatedProperties, JsonSchemaObject),
+        )
+        if any(raw_value_markers):
+            return True
+        child_schemas: list[JsonSchemaObject | bool] = [*schema.anyOf, *schema.oneOf, *schema.allOf]
+        for keyword in ("not", "if", "then", "else"):
+            raw_schema = schema.extras.get(keyword)
+            if isinstance(raw_schema, bool):
+                child_schemas.append(raw_schema)
+            elif isinstance(raw_schema, dict):
+                child_schemas.append(self.SCHEMA_OBJECT_TYPE.model_validate(raw_schema))
+        child_schemas.extend(
+            dependent_schema for _, dependent_schema in self._iter_dependent_schema_objects(schema.extras)
+        )
+        return any(self._schema_needs_raw_value_validator(child_schema, visited_refs) for child_schema in child_schemas)
+
+    def _root_raw_value_needs_runtime_validator(self, obj: JsonSchemaObject) -> bool:
+        if self._schema_contains_ref(obj):
+            return False
+        return any(self._schema_needs_raw_value_validator(schema) for schema in [*obj.anyOf, *obj.oneOf, *obj.allOf])
+
+    def _set_root_raw_value_model_validators(self, path: str, obj: JsonSchemaObject) -> None:
+        if not self._supports_root_json_schema_validators() or not self._root_raw_value_needs_runtime_validator(obj):
+            return
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if not predicate or predicate == "True":
+            return
+        if obj.nullable or obj.type_has_null:
+            predicate = f"root_value is None or ({predicate})"
+
+        validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+        validators["root_raw_value"] = {"predicate": predicate}
+
     def _root_value_needs_runtime_validator(self, obj: JsonSchemaObject) -> bool:
         return bool(
             (obj.oneOf and self._one_of_needs_property_value_validator(obj))
@@ -5777,6 +5835,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             self._set_root_array_model_validators(reference.path, obj)
         self._set_root_pattern_properties_model_validators(reference.path, obj)
         self._set_root_allof_array_model_validators(reference.path, obj)
+        self._set_root_raw_value_model_validators(reference.path, obj)
         self._set_root_value_model_validators(reference.path, obj)
         constraints = obj.model_dump(exclude_none=True) if self.field_constraints else {}
         if self._should_skip_root_field_constraints_for_multiple_types(obj):

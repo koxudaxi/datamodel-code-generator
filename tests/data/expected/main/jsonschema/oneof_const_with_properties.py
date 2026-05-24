@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field, RootModel, model_validator
 
 
 class ConstWithProps1(BaseModel):
@@ -15,3 +15,18 @@ class ConstWithProps1(BaseModel):
 
 class ConstWithProps(RootModel[ConstWithProps1 | Literal['value2']]):
     root: ConstWithProps1 | Literal['value2'] = Field(..., title='ConstWithProps')
+
+    @model_validator(mode='before')
+    @classmethod
+    def validate_json_schema_input_constraints(cls, data):
+        root_value = data
+        if not (
+            sum(
+                1
+                for matched in (root_value == 'value1', root_value == 'value2')
+                if matched
+            )
+            == 1
+        ):
+            raise ValueError('root object does not match schema')
+        return data

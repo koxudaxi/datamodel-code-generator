@@ -788,6 +788,19 @@ class BaseModel(BaseModelBase):
         ]
 
     @staticmethod
+    def _get_root_raw_value_validator_lines(validator: Any) -> list[str]:
+        if not isinstance(validator, dict):
+            return []
+        predicate = validator.get("predicate")
+        if not isinstance(predicate, str):
+            return []
+        return [
+            "root_value = data",
+            f"if not ({predicate}):",
+            "    raise ValueError('root object does not match schema')",
+        ]
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -917,6 +930,26 @@ class BaseModel(BaseModelBase):
             lines.append("")
         lines.extend(new_lines)
 
+    @staticmethod
+    def _with_json_schema_helper_lines(lines: list[str]) -> list[str]:
+        if any("json_schema_runtime_value(" in line or "json_schema_unique_key(" in line for line in lines):
+            lines = [*BaseModel._get_json_schema_runtime_value_lines(), "", *lines]
+        if any("json_schema_unique_key(" in line for line in lines):
+            lines = [*BaseModel._get_json_schema_unique_key_lines(), "", *lines]
+        return lines
+
+    def _get_prepared_root_raw_value_validator(self, validators: dict[str, Any]) -> dict[str, Any] | None:
+        lines = self._get_root_raw_value_validator_lines(validators.get("root_raw_value"))
+        if not lines:
+            return None
+        lines = self._with_json_schema_helper_lines(lines)
+        lines.append("return data")
+        return {
+            "method_name": "validate_json_schema_input_constraints",
+            "mode": "before",
+            "lines": lines,
+        }
+
     def _process_json_schema_validators(self) -> None:
         """Process JSON Schema object validators for constraints that need model context."""
         if self.IS_ALIAS:
@@ -926,10 +959,13 @@ class BaseModel(BaseModelBase):
         if not isinstance(validators, dict):
             return
 
+        prepared_model_validators = [
+            validator for validator in [self._get_prepared_root_raw_value_validator(validators)] if validator
+        ]
+
         lines: list[str] = []
         property_count = validators.get("property_count")
-        property_count_lines = self._get_property_count_validator_lines(property_count)
-        lines.extend(property_count_lines)
+        lines.extend(self._get_property_count_validator_lines(property_count))
         property_value_lines = self._get_property_value_validator_lines(validators.get("property_values"))
         dependent_required_lines = self._get_dependent_required_validator_lines(validators.get("dependent_required"))
         dependent_schema_properties_lines = self._get_dependent_schema_property_validator_lines(
@@ -986,22 +1022,31 @@ class BaseModel(BaseModelBase):
         self._extend_validator_lines(lines, self._get_array_value_validators_lines(validators.get("array_values")))
 
         if not lines:
+            if prepared_model_validators:
+                self.extra_template_data["prepared_model_validators"] = prepared_model_validators
+                self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
+                if any("re.search(" in line for validator in prepared_model_validators for line in validator["lines"]):
+                    self._additional_imports.append(Import(import_="re"))
             return
 
-        if any("json_schema_runtime_value(" in line or "json_schema_unique_key(" in line for line in lines):
-            lines = [*self._get_json_schema_runtime_value_lines(), "", *lines]
-        if any("json_schema_unique_key(" in line for line in lines):
-            lines = [*self._get_json_schema_unique_key_lines(), "", *lines]
-
+        lines = self._with_json_schema_helper_lines(lines)
         lines.append("return self")
-        self.extra_template_data["prepared_model_validators"] = [
-            {
-                "method_name": "validate_json_schema_constraints",
-                "lines": lines,
-            }
-        ]
+        prepared_model_validators.append({
+            "method_name": "validate_json_schema_constraints",
+            "mode": "after",
+            "lines": lines,
+        })
+        self.extra_template_data["prepared_model_validators"] = prepared_model_validators
         self._additional_imports.append(IMPORT_MODEL_VALIDATOR)
-        if pattern_properties_lines or root_pattern_properties_lines or any("re.search(" in line for line in lines):
+        if (
+            pattern_properties_lines
+            or root_pattern_properties_lines
+            or any(
+                "re.search(" in line
+                for validator in prepared_model_validators
+                for line in [*validator["lines"], *lines]
+            )
+        ):
             self._additional_imports.append(Import(import_="re"))
 
     def _process_validators(self) -> None:
