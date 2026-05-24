@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableObjectImpossibleBranchNullOnly",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": ["object", "null"],
+      "properties": {
+        "bad": {
+          "type": "string"
+        }
+      },
+      "required": ["bad"],
+      "propertyNames": {
+        "pattern": "^ok$"
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload"]
+}

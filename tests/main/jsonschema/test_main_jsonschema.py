@@ -4310,6 +4310,29 @@ def test_main_jsonschema_nullable_object_dependent_required_intersection(output_
     )
 
 
+def test_main_jsonschema_nullable_object_impossible_branch_null_only(output_file: Path) -> None:
+    """Test impossible nullable object branches collapse to null-only fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_object_impossible_branch_null_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_object_impossible_branch_null_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_object_impossible_branch_null_only",
+        model_name="NullableObjectImpossibleBranchNullOnly",
+        valid_json='{"payload":null}',
+        invalid_json='{"payload":{"bad":"x"}}',
+        expected_error_type="none_required",
+        expected_attribute_path=("payload",),
+        expected_attribute_value=None,
+    )
+
+
 def test_main_jsonschema_dependent_required_property_names_count_conflict(output_file: Path) -> None:
     """Test dependent required keys can make finite propertyNames counts impossible."""
     run_main_and_assert(
@@ -4712,6 +4735,29 @@ def test_main_jsonschema_nullable_object_allof_conditional_required_intersection
         expected_error_type="missing",
         expected_attribute_path=("payload", "code"),
         expected_attribute_value=5,
+    )
+
+
+def test_main_jsonschema_nullable_array_impossible_branch_null_only(output_file: Path) -> None:
+    """Test impossible nullable array branches collapse to null-only fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_array_impossible_branch_null_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_array_impossible_branch_null_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_array_impossible_branch_null_only",
+        model_name="NullableArrayImpossibleBranchNullOnly",
+        valid_json='{"values":null}',
+        invalid_json='{"values":["a","b","c"]}',
+        expected_error_type="none_required",
+        expected_attribute_path=("values",),
+        expected_attribute_value=None,
     )
 
 

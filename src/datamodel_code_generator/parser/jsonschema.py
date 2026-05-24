@@ -3256,11 +3256,31 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for normalizer in normalizers:
                 normalizer(branch_schema)
         except SchemaParseError:
+            if cls._raw_nullable_null_branch_is_unconstrained(schema_dict):
+                cls._collapse_raw_nullable_schema_to_null(schema_dict)
             return
 
         branch_schema["type"] = original_type
         schema_dict.clear()
         schema_dict.update(branch_schema)
+
+    @classmethod
+    def _raw_nullable_null_branch_is_unconstrained(cls, schema_dict: dict[Any, Any]) -> bool:
+        if not cls._json_value_matches_type_constraint(None, schema_dict.get("type")):
+            return False
+        unsupported_null_constraints = {"allOf", "anyOf", "const", "enum", "not", "oneOf"}
+        return not any(key in schema_dict for key in unsupported_null_constraints)
+
+    @classmethod
+    def _collapse_raw_nullable_schema_to_null(cls, schema_dict: dict[Any, Any]) -> None:
+        metadata = {
+            key: value
+            for key, value in schema_dict.items()
+            if key in JsonSchemaObject.__metadata_only_fields__ and key not in {"definitions", "$defs"}
+        }
+        schema_dict.clear()
+        schema_dict.update(metadata)
+        schema_dict["type"] = "null"
 
     @classmethod
     def _drop_raw_properties_rejected_by_property_names(
