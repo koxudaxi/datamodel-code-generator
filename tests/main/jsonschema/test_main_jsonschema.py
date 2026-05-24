@@ -4348,6 +4348,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": "array",
+                "minItems": 1,
+                "allOf": [
+                    {"prefixItems": [{"type": "integer"}]},
+                    {"prefixItems": [{"type": "string"}]},
+                ],
+            },
+            id="allof-prefix-items-index-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
@@ -7433,6 +7445,35 @@ def test_main_jsonschema_allof_schema_boolean_intersection(output_file: Path) ->
         expected_error_type="too_long",
         expected_attribute_path=("root",),
         expected_attribute_value={},
+    )
+
+
+def test_main_jsonschema_allof_prefix_items_intersection(output_file: Path) -> None:
+    """Test allOf prefixItems intersect by array index instead of concatenating."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_prefix_items_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_prefix_items_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_prefix_items_intersection",
+        model_name="AllofPrefixItemsIntersection",
+        valid_json='{"values":[1,"ok"]}',
+        invalid_json='{"values":[0,"ok"]}',
+        expected_error_type="greater_than_equal",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_prefix_items_intersection",
+        model_name="AllofPrefixItemsIntersection",
+        valid_json='{"values":[1,"ok"]}',
+        invalid_json='{"values":[1,"x"]}',
+        expected_error_type="string_too_short",
     )
 
 

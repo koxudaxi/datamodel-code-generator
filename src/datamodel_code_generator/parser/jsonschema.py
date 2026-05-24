@@ -2046,6 +2046,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             and isinstance(value, (bool, dict))
         ):
             result[key] = JsonSchemaParser._merge_raw_schema_intersection(result[key], value)
+        elif key == "prefixItems" and isinstance(result[key], list) and isinstance(value, list):
+            result[key] = JsonSchemaParser._merge_raw_prefix_items_intersection(result[key], value)
         elif isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = self._deep_merge_allof_schema(result[key], value)
         elif isinstance(result[key], list) and isinstance(value, list):
@@ -2065,6 +2067,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             "unevaluatedItems",
             "unevaluatedProperties",
         }
+
+    @classmethod
+    def _merge_raw_prefix_items_intersection(cls, left: list[Any], right: list[Any]) -> list[Any]:
+        merged: list[Any] = []
+        max_length = max(len(left), len(right))
+        for index in range(max_length):
+            if index >= len(left):
+                merged.append(right[index])
+                continue
+            if index >= len(right):
+                merged.append(left[index])
+                continue
+            merged.append(cls._merge_raw_schema_intersection(left[index], right[index]))
+        return merged
 
     def _merge_allof_type_keyword(self, result: dict[Any, Any], value: Any) -> bool:
         left_types = JsonSchemaParser._type_values(result["type"])
@@ -4613,6 +4629,55 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or self._allof_item_is_combined_value_schema(item)
         )
 
+    def _allof_item_is_array_keyword_schema(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        if any((
+            item.ref,
+            item.properties,
+            item.enum,
+            "const" in item.extras,
+            item.format,
+            item.anyOf,
+            item.oneOf,
+            item.allOf,
+        )):
+            return False
+        if any(
+            value is not None
+            for value in (
+                item.additionalProperties,
+                item.unevaluatedProperties,
+                item.patternProperties,
+                item.propertyNames,
+            )
+        ):
+            return False
+
+        type_values = JsonSchemaParser._type_values(item.type)
+        if type_values is not None and not type_values <= {"array", "null"}:
+            return False
+
+        item_dict = item.model_dump(exclude_unset=True, by_alias=True)
+        return bool(
+            set(item_dict)
+            & {
+                "additionalItems",
+                "contains",
+                "items",
+                "maxContains",
+                "maxItems",
+                "minContains",
+                "minItems",
+                "prefixItems",
+                "type",
+                "unevaluatedItems",
+                "uniqueItems",
+            }
+        )
+
+    def _allof_is_array_keyword_schema(self, obj: JsonSchemaObject) -> bool:
+        effective_items = [item for item in obj.allOf if isinstance(item, JsonSchemaObject)]
+        return bool(effective_items) and all(self._allof_item_is_array_keyword_schema(item) for item in effective_items)
+
     def _allof_item_is_constraint_only(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
         return bool(
             not item.ref
@@ -4748,6 +4813,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 merged_schema = self._deep_merge_allof_schema(
                     merged_schema,
                     resolved_item.model_dump(exclude_unset=True, by_alias=True),
+                )
+            merged_schema.pop("allOf", None)
+            return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
+
+        if all(self._allof_item_is_array_keyword_schema(item) for item in effective_items):
+            merged_schema = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
+            for item in effective_items:
+                merged_schema = self._deep_merge_allof_schema(
+                    merged_schema,
+                    item.model_dump(exclude_unset=True, by_alias=True),
                 )
             merged_schema.pop("allOf", None)
             return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
@@ -5896,7 +5971,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if item is not False
         ]
 
-    def parse_array_fields(  # noqa: PLR0912, PLR0915
+    def parse_array_fields(  # noqa: PLR0912, PLR0914, PLR0915
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -5976,16 +6051,22 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if not is_tuple:
             container_flags = python_type_flags or {"is_list": True}
 
+        array_data_type = self.data_type(
+            data_types=item_data_types,
+            is_tuple=is_tuple,
+            **container_flags,
+        )
         data_types: list[DataType] = [
-            self.data_type(
-                data_types=item_data_types,
-                is_tuple=is_tuple,
-                **container_flags,
-            )
+            array_data_type,
         ]
-        # TODO: decide special path word for a combined data model.
+        # allOf is an intersection, so an array allOf result replaces the unconstrained base array type.
         if obj.allOf:
-            data_types.append(self.parse_all_of(name, obj, get_special_path("allOf", path)))
+            allof_data_type = self.parse_all_of(name, obj, get_special_path("allOf", path))
+            if allof_data_type is not None:
+                if self._allof_is_array_keyword_schema(obj):
+                    data_types = [allof_data_type]
+                else:
+                    data_types.append(allof_data_type)
         elif obj.is_object:
             data_types.append(self.parse_object(name, obj, get_special_path("object", path)))
         if obj.enum and not self.ignore_enum_constraints:
