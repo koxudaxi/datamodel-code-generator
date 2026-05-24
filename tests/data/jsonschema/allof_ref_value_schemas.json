@@ -77,6 +77,22 @@
         }
       ]
     },
+    "strictMetadata": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/PrefixedMap"
+        },
+        {
+          "propertyNames": {
+            "minLength": 4
+          },
+          "additionalProperties": {
+            "minimum": 1
+          },
+          "maxProperties": 2
+        }
+      ]
+    },
     "code": {
       "allOf": [
         {

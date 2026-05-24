@@ -6028,6 +6028,7 @@ def test_allof_inherited_required_use_default(output_file: Path) -> None:
         ("allof_root_primitive_values.json", "allof_root_primitive_values.py"),
         ("allof_root_array_values.json", "allof_root_array_values.py"),
         ("allof_root_map_values.json", "allof_root_map_values.py"),
+        ("allof_root_map_constraint_intersection.json", "allof_root_map_constraint_intersection.py"),
         ("allof_property_value_schemas.json", "allof_property_value_schemas.py"),
         ("allof_ref_value_schemas.json", "allof_ref_value_schemas.py"),
         ("allof_nested_value_schemas.json", "allof_nested_value_schemas.py"),
@@ -6047,6 +6048,49 @@ def test_main_jsonschema_allof_value_schemas(
         expected_file=expected_file,
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
         force_exec_validation=True,
+    )
+
+
+def test_main_jsonschema_allof_map_constraint_intersection(output_file: Path) -> None:
+    """Test direct allOf map schemas intersect property and value constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_root_map_constraint_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="allof_root_map_constraint_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_root_map_constraint_intersection",
+        model_name="AllofRootMapConstraintIntersection",
+        valid_json='{"a":1}',
+        invalid_json="{}",
+        expected_error_type="too_short",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_root_map_constraint_intersection",
+        model_name="AllofRootMapConstraintIntersection",
+        valid_json='{"a":1}',
+        invalid_json='{"a":1,"b":2,"c":3}',
+        expected_error_type="too_long",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"a": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_root_map_constraint_intersection",
+        model_name="AllofRootMapConstraintIntersection",
+        valid_json='{"a":1}',
+        invalid_json='{"a":0}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("root",),
+        expected_attribute_value={"a": 1},
     )
 
 
@@ -6168,6 +6212,60 @@ def test_main_jsonschema_allof_ref_value_schema_container_constraints(output_fil
         expected_error_type="too_long",
         expected_attribute_path=("limitedMetadata", "root"),
         expected_attribute_value={"x_a": 1, "x_b": 2},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x_ab":1},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x":1},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="string_too_short",
+        expected_attribute_path=("strictMetadata", "root"),
+        expected_attribute_value={"x_ab": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x_ab":1},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x_ab":0},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("strictMetadata", "root"),
+        expected_attribute_value={"x_ab": 1},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="allof_ref_value_schemas",
+        model_name="AllofRefValueSchemas",
+        valid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x_ab":1},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        invalid_json=(
+            '{"tags":["a"],"limitedTags":["a","b"],"metadata":{"x_a":1},'
+            '"limitedMetadata":{"x_a":1,"x_b":2},"strictMetadata":{"x_ab":1,"x_bc":2,"x_cd":3},'
+            '"code":"ab","inlineCode":"ab"}'
+        ),
+        expected_error_type="too_long",
+        expected_attribute_path=("strictMetadata", "root"),
+        expected_attribute_value={"x_ab": 1},
     )
 
 

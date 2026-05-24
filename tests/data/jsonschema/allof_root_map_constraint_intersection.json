@@ -1,0 +1,20 @@
+{
+  "title": "AllofRootMapConstraintIntersection",
+  "allOf": [
+    {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "maxProperties": 2
+    },
+    {
+      "type": "object",
+      "additionalProperties": {
+        "minimum": 1
+      },
+      "minProperties": 1,
+      "maxProperties": 5
+    }
+  ]
+}

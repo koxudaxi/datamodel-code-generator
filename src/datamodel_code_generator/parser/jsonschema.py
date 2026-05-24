@@ -1952,6 +1952,27 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             result[key] = value
         return result
 
+    def _deep_merge_allof_schema(self, dict1: dict[Any, Any], dict2: dict[Any, Any]) -> dict[Any, Any]:
+        """Deep merge allOf schemas while intersecting shared constraints."""
+        result = dict1.copy()
+        for key, value in dict2.items():
+            if key in result:
+                allof_constraint_fields = JsonSchemaObject.__constraint_fields__ | {
+                    "minProperties",
+                    "maxProperties",
+                }
+                if key in allof_constraint_fields and result[key] is not None and value is not None:
+                    result[key] = JsonSchemaParser._intersect_constraint(key, result[key], value)
+                    continue
+                if isinstance(result[key], dict) and isinstance(value, dict):
+                    result[key] = self._deep_merge_allof_schema(result[key], value)
+                    continue
+                if isinstance(result[key], list) and isinstance(value, list):
+                    result[key] = result[key] + value  # noqa: PLR6104
+                    continue
+            result[key] = value
+        return result
+
     def _load_ref_schema_object(self, ref: str) -> JsonSchemaObject:
         """Load a JsonSchemaObject from a $ref using standard resolve/load pipeline."""
         resolved_ref = self.model_resolver.resolve_ref(ref)
@@ -2199,11 +2220,11 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             v1 = float(val1) if val1 is not None else None
             v2 = float(val2) if val2 is not None else None
 
-        if field in {"minLength", "minimum", "exclusiveMinimum", "minItems"}:
+        if field in {"minLength", "minimum", "exclusiveMinimum", "minItems", "minProperties"}:
             if v1 is not None and v2 is not None:
                 return val1 if v1 >= v2 else val2
             return val1  # pragma: no cover
-        if field in {"maxLength", "maximum", "exclusiveMaximum", "maxItems"}:
+        if field in {"maxLength", "maximum", "exclusiveMaximum", "maxItems", "maxProperties"}:
             if v1 is not None and v2 is not None:
                 return val1 if v1 <= v2 else val2
             return val1  # pragma: no cover
@@ -2919,6 +2940,26 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             or item.propertyNames is not None
         )
 
+    def _allof_item_is_map_keyword_constraint(self, item: JsonSchemaObject) -> bool:  # noqa: PLR6301
+        if item.ref or item.properties or item.required or item.items or item.prefixItems:
+            return False
+        has_combined_schema = bool(item.anyOf or item.oneOf or item.allOf)
+        has_literal_constraint = bool(item.enum or "const" in item.extras)
+        if item.is_array or has_combined_schema or has_literal_constraint:
+            return False
+        if item.type and not (
+            item.type == "object" or (isinstance(item.type, list) and set(item.type) <= {"object", "null"})
+        ):
+            return False
+        return bool(
+            item.propertyNames is not None
+            or item.patternProperties is not None
+            or item.additionalProperties is not None
+            or item.unevaluatedProperties is not None
+            or item.minProperties is not None
+            or item.maxProperties is not None
+        )
+
     def _allof_item_affects_ref_value_schema(self, item: JsonSchemaObject) -> bool:
         return bool(
             self._allof_item_blocks_ref_value_schema_merge(item)
@@ -3007,12 +3048,6 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if len(ref_items) != 1:
             return None
 
-        constraint_items = [
-            item for item in effective_items if not item.ref and self._allof_item_affects_ref_value_schema(item)
-        ]
-        if any(self._allof_item_blocks_ref_value_schema_merge(item) for item in constraint_items):
-            return None
-
         ref_item = ref_items[0]
         if ref_item.has_ref_with_schema_keywords and not ref_item.is_ref_with_nullable_only:
             ref_schema = self._merge_ref_with_schema(ref_item)
@@ -3022,6 +3057,16 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
         if ref_schema.allOf and any(isinstance(item, JsonSchemaObject) and item.ref for item in ref_schema.allOf):
             return None
+
+        constraint_items = [
+            item for item in effective_items if not item.ref and self._allof_item_affects_ref_value_schema(item)
+        ]
+        blocked_items = [item for item in constraint_items if self._allof_item_blocks_ref_value_schema_merge(item)]
+        if blocked_items and not (
+            self._allof_item_is_map_root_schema(ref_schema)
+            and all(self._allof_item_is_map_keyword_constraint(item) for item in blocked_items)
+        ):
+            return None
         if any(self._allof_item_conflicts_with_ref_value_schema(ref_schema, item) for item in constraint_items):
             return None
 
@@ -3030,10 +3075,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         merged_schema: dict[str, Any] = ref_schema.model_dump(exclude_unset=True, by_alias=True)
         for item in constraint_items:
-            merged_schema = self._deep_merge(merged_schema, item.model_dump(exclude_unset=True, by_alias=True))
+            merged_schema = self._deep_merge_allof_schema(
+                merged_schema, item.model_dump(exclude_unset=True, by_alias=True)
+            )
 
         obj_schema = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
-        merged_schema = self._deep_merge(merged_schema, obj_schema)
+        merged_schema = self._deep_merge_allof_schema(merged_schema, obj_schema)
         merged_schema.pop("$ref", None)
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
@@ -3055,12 +3102,14 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return None
 
         merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
-        merged_schema = self._deep_merge(
+        merged_schema = self._deep_merge_allof_schema(
             merged_schema,
             value_items[0].model_dump(exclude_unset=True, by_alias=True),
         )
         for item in constraint_items:
-            merged_schema = self._deep_merge(merged_schema, item.model_dump(exclude_unset=True, by_alias=True))
+            merged_schema = self._deep_merge_allof_schema(
+                merged_schema, item.model_dump(exclude_unset=True, by_alias=True)
+            )
         return self.SCHEMA_OBJECT_TYPE.model_validate(merged_schema)
 
     def _get_allof_root_value_schema(self, obj: JsonSchemaObject) -> JsonSchemaObject | None:  # noqa: PLR0911
@@ -3083,7 +3132,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             merged_schema: dict[str, Any] = obj.model_dump(exclude={"allOf"}, exclude_unset=True, by_alias=True)
             for item in effective_items:
                 resolved_item = self._load_ref_schema_object(item.ref) if item.ref else item
-                merged_schema = self._deep_merge(
+                merged_schema = self._deep_merge_allof_schema(
                     merged_schema,
                     resolved_item.model_dump(exclude_unset=True, by_alias=True),
                 )

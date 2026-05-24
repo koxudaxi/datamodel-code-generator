@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, RootModel, constr
+from pydantic import BaseModel, Field, RootModel, conint, constr
 
 
 class Tags(RootModel[list[str]]):
@@ -27,6 +27,14 @@ class LimitedMetadata(RootModel[dict[constr(pattern=r'^x_'), int]]):
     root: dict[constr(pattern=r'^x_'), int] = Field(..., max_length=2)
 
 
+class StrictMetadata(
+    RootModel[dict[constr(pattern=r'^x_', min_length=4), conint(ge=1)]]
+):
+    root: dict[constr(pattern=r'^x_', min_length=4), conint(ge=1)] = Field(
+        ..., max_length=2
+    )
+
+
 class Code(RootModel[constr(min_length=2, max_length=8)]):
     root: constr(min_length=2, max_length=8)
 
@@ -37,6 +45,7 @@ class AllofRefValueSchemas(BaseModel):
     inlineCode: InlineCode | None = None
     metadata: Metadata | None = None
     limitedMetadata: LimitedMetadata | None = None
+    strictMetadata: StrictMetadata | None = None
     code: Code | None = None
 
 
