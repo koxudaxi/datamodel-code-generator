@@ -4119,6 +4119,17 @@ def test_main_jsonschema_dependent_required_intersection(output_file: Path) -> N
     )
 
 
+def test_main_jsonschema_dependent_required_property_names_count_conflict(output_file: Path) -> None:
+    """Test dependent required keys can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "dependent_required_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> None:
     """Test statically active dependent schemas intersect generated property constraints."""
     run_main_and_assert(
@@ -5108,6 +5119,16 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "minProperties": 2,
             },
             id="object-property-names-enum-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger"]},
+                "minProperties": 1,
+                "dependentRequired": {"trigger": ["dependent"]},
+            },
+            id="object-property-names-dependent-required-min-properties",
         ),
         pytest.param(
             {

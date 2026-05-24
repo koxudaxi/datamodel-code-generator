@@ -3696,7 +3696,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return 0
         property_name_values = cls._raw_finite_property_name_values(property_names)
         if property_name_values is not None:
-            return len(property_name_values)
+            return len(cls._raw_dependency_pruned_property_name_values(schema_dict, property_name_values))
         if property_names is False:
             return 0
         if schema_dict.get("additionalProperties") is not False:
@@ -3707,6 +3707,57 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if isinstance(pattern_properties, dict) and any(value is not False for value in pattern_properties.values()):
             return None
         return len(properties) if isinstance(properties, dict) else 0
+
+    @classmethod
+    def _raw_dependency_pruned_property_name_values(
+        cls,
+        schema_dict: dict[Any, Any],
+        property_name_values: set[str],
+    ) -> set[str]:
+        remaining_names = set(property_name_values)
+        while True:
+            removed_names = {
+                name
+                for name in remaining_names
+                if any(
+                    cls._raw_dependency_excludes_property_name(dependency, name, remaining_names)
+                    for dependency_name, dependency in cls._iter_raw_dependencies(schema_dict)
+                    if dependency_name == name
+                )
+            }
+            if not removed_names:
+                return remaining_names
+            remaining_names -= removed_names
+
+    @classmethod
+    def _raw_dependency_excludes_property_name(
+        cls,
+        dependency: Any,
+        name: str,
+        allowed_names: set[str],
+    ) -> bool:
+        if dependency is False:
+            return True
+        if isinstance(dependency, dict):
+            dependency_type = dependency.get("type")
+            if dependency_type is not None and not cls._raw_type_accepts_object(dependency_type):
+                return True
+            if not cls._raw_property_name_accepts_name(dependency.get("propertyNames"), name):
+                return True
+            dependency_properties = dependency.get("properties")
+            if isinstance(dependency_properties, dict) and dependency_properties.get(name) is False:
+                return True
+            dependency_pattern_properties = dependency.get("patternProperties")
+            if dependency.get("additionalProperties") is False:
+                declared_names = set(dependency_properties) if isinstance(dependency_properties, dict) else set()
+                if name not in declared_names and not cls._raw_required_name_allowed_by_pattern_properties(
+                    name,
+                    dependency_pattern_properties,
+                ):
+                    return True
+        return any(
+            required_name not in allowed_names for required_name in cls._raw_dependency_required_names(dependency)
+        )
 
     @classmethod
     def _raw_finite_property_name_values(cls, property_names: Any) -> set[str] | None:
