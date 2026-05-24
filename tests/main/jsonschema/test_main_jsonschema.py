@@ -5035,6 +5035,73 @@ def test_main_nullable_any_of_use_union_operator(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_combined_common_constraints(output_file: Path) -> None:
+    """Test common constraints are intersected into anyOf and oneOf branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "combined_common_constraints.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="combined_common_constraints.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"arrayChoice":["a"],"mapChoice":{"a":"x"},"textChoice":"ab",'
+        '"oneOfMapChoice":{"a":true},"oneOfTextChoice":"ab"}'
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_common_constraints",
+        model_name="CombinedCommonConstraints",
+        valid_json=valid_json,
+        invalid_json='{"arrayChoice":["a","b","c"]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("arrayChoice", "root"),
+        expected_attribute_value=["a"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_common_constraints",
+        model_name="CombinedCommonConstraints",
+        valid_json=valid_json,
+        invalid_json='{"mapChoice":{}}',
+        expected_error_type="too_short",
+        expected_attribute_path=("mapChoice",),
+        expected_attribute_value={"a": "x"},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_common_constraints",
+        model_name="CombinedCommonConstraints",
+        valid_json=valid_json,
+        invalid_json='{"textChoice":"abcde"}',
+        expected_error_type="string_too_long",
+        expected_attribute_path=("textChoice", "root"),
+        expected_attribute_value="ab",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_common_constraints",
+        model_name="CombinedCommonConstraints",
+        valid_json=valid_json,
+        invalid_json='{"oneOfMapChoice":{"a":true,"b":false,"c":true}}',
+        expected_error_type="too_long",
+        expected_attribute_path=("oneOfMapChoice",),
+        expected_attribute_value={"a": True},
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="combined_common_constraints",
+        model_name="CombinedCommonConstraints",
+        valid_json=valid_json,
+        invalid_json='{"oneOfTextChoice":"a"}',
+        expected_error_type="string_too_short",
+        expected_attribute_path=("oneOfTextChoice", "root"),
+        expected_attribute_value="ab",
+    )
+
+
 def test_main_nested_all_of(output_file: Path) -> None:
     """Test nested allOf schemas."""
     run_main_and_assert(

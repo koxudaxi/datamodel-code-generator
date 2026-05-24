@@ -1,0 +1,96 @@
+{
+  "title": "CombinedCommonConstraints",
+  "type": "object",
+  "properties": {
+    "arrayChoice": {
+      "minItems": 1,
+      "maxItems": 2,
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minItems": 0
+        }
+      ]
+    },
+    "mapChoice": {
+      "minProperties": 1,
+      "maxProperties": 2,
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 5
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "minProperties": 0
+        }
+      ]
+    },
+    "textChoice": {
+      "minLength": 2,
+      "maxLength": 4,
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 8
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "oneOfMapChoice": {
+      "minProperties": 1,
+      "maxProperties": 2,
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "maxProperties": 9
+        },
+        {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          },
+          "minProperties": 0
+        }
+      ]
+    },
+    "oneOfTextChoice": {
+      "minLength": 2,
+      "maxLength": 4,
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 9
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    }
+  }
+}

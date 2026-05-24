@@ -1494,7 +1494,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 constraints.pop(key, None)
         if constraints is not None and self.field_constraints and field.format == "hostname":
             constraints["pattern"] = self.data_type_manager.HOSTNAME_REGEX
-        if field_type.is_dict or field_type.is_mapping:
+        container_type = field_type
+        if (
+            not (container_type.is_dict or container_type.is_mapping or container_type.is_list)
+            and len(container_type.data_types) == 1
+        ):
+            container_type = container_type.data_types[0]
+        container_is_dict = bool(
+            container_type.is_dict
+            or container_type.is_mapping
+            or (
+                container_type.data_types
+                and all(data_type.is_dict or data_type.is_mapping for data_type in container_type.data_types)
+            )
+        )
+        if container_is_dict:
             property_count_constraints = self._get_property_count_constraints(field)
             if property_count_constraints:
                 constraints = constraints or {}
@@ -3215,7 +3229,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     else:
                         combined_schemas.append(
                             self.SCHEMA_OBJECT_TYPE.model_validate(
-                                self._deep_merge(
+                                self._deep_merge_allof_schema(
                                     base_object, merged_attr.model_dump(exclude_unset=True, by_alias=True)
                                 ),
                             )
@@ -3226,7 +3240,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             else:
                 combined_schemas.append(
                     self.SCHEMA_OBJECT_TYPE.model_validate(
-                        self._deep_merge(
+                        self._deep_merge_allof_schema(
                             base_object,
                             target_attribute.model_dump(exclude_unset=True, by_alias=True),
                         ),
