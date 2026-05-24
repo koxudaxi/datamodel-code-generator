@@ -1006,6 +1006,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _should_parse_empty_object_as_dict(self, obj: JsonSchemaObject) -> bool:  # noqa: PLR6301
         return bool(obj.minProperties is not None or obj.maxProperties is not None or obj.propertyNames is not None)
 
+    def _object_needs_root_runtime_validator(self, obj: JsonSchemaObject) -> bool:
+        return bool(
+            self._collect_dependent_required(obj.extras)
+            or any(self._iter_dependent_schema_objects(obj.extras))
+            or self._collect_conditional_validators(obj.extras)
+            or self._collect_not_validators(obj.extras)
+        )
+
+    def _should_parse_object_as_dict_root(self, obj: JsonSchemaObject, *, has_declared_fields: bool) -> bool:
+        if has_declared_fields:
+            return False
+        return (
+            isinstance(obj.additionalProperties, JsonSchemaObject)
+            or self._should_parse_empty_object_as_dict(obj)
+            or self._object_needs_root_runtime_validator(obj)
+        )
+
     @staticmethod
     def _property_names_forbids_all_keys(property_names: JsonSchemaObject | bool | None) -> bool:  # noqa: FBT001
         """Return whether a propertyNames schema rejects every JSON object key."""
@@ -4563,6 +4580,18 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
             validators["root_pattern_properties"] = pattern_properties
 
+    def _set_root_object_model_validators(self, path: str, obj: JsonSchemaObject, *, enabled: bool = True) -> None:
+        if (
+            not enabled
+            or not self._supports_root_json_schema_validators()
+            or not self._object_needs_root_runtime_validator(obj)
+        ):
+            return
+        predicate = self._schema_runtime_value_predicate(obj, "root_value")
+        if predicate and predicate != "True":
+            validators = self.extra_template_data[path].setdefault("json_schema_validators", {})
+            validators["root_object"] = {"predicate": predicate}
+
     def _iter_dependent_schema_objects(
         self,
         extras: dict[str, Any],
@@ -4781,9 +4810,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         has_declared_fields = bool(fields)
         if has_declared_fields:
             self._set_object_model_validators(reference.path, obj, fields)
-        should_parse_dict_root = not has_declared_fields and (
-            isinstance(obj.additionalProperties, JsonSchemaObject) or self._should_parse_empty_object_as_dict(obj)
-        )
+        should_parse_dict_root = self._should_parse_object_as_dict_root(obj, has_declared_fields=has_declared_fields)
         if not should_parse_dict_root:
             data_model_type_class = self.data_model_type
         else:
@@ -4834,6 +4861,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         self._set_schema_metadata(reference.path, obj)
         self._set_root_pattern_properties_model_validators(reference.path, obj)
+        self._set_root_object_model_validators(reference.path, obj, enabled=should_parse_dict_root)
         self._set_pattern_properties_extra_allowance(reference.path, obj)
         self.set_schema_extensions(reference.path, obj)
 

@@ -4492,6 +4492,36 @@ def test_main_jsonschema_root_pattern_properties_object_validators(output_file: 
         )
 
 
+def test_main_jsonschema_root_object_context_validators(output_file: Path) -> None:
+    """Test root dict object validators for schemas without declared properties."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "root_object_context_validators.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="root_object_context_validators.py",
+        extra_args=[
+            "--output-model-type",
+            "pydantic_v2.BaseModel",
+        ],
+        force_exec_validation=True,
+    )
+    valid_json = '{"credit":1,"billing":2,"kind":"business","tax_id":"x"}'
+    for invalid_json in [
+        '{"credit":1}',
+        '{"kind":"business"}',
+        '{"forbidden":true}',
+    ]:
+        assert_generated_model_json_validation(
+            output_file,
+            module_name="root_object_context_validators",
+            model_name="RootObjectContextValidators",
+            valid_json=valid_json,
+            invalid_json=invalid_json,
+            expected_error_type="value_error",
+        )
+
+
 def test_main_jsonschema_pattern_properties_all_false(output_file: Path) -> None:
     """Test patternProperties with all false values fall back to object type."""
     run_main_and_assert(

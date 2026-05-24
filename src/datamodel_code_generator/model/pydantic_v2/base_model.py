@@ -775,6 +775,19 @@ class BaseModel(BaseModelBase):
         return lines
 
     @staticmethod
+    def _get_root_object_validator_lines(validator: Any) -> list[str]:
+        if not isinstance(validator, dict):
+            return []
+        predicate = validator.get("predicate")
+        if not isinstance(predicate, str):
+            return []
+        return [
+            "root_value = json_schema_runtime_value(self.root)",
+            f"if not ({predicate}):",
+            "    raise ValueError('root object does not match schema')",
+        ]
+
+    @staticmethod
     def _get_array_contains_validator_lines(validator: dict[str, Any]) -> list[str]:
         field_name = validator.get("field")
         predicate = validator.get("predicate")
@@ -965,6 +978,7 @@ class BaseModel(BaseModelBase):
         for validator_lines in extra_value_lines:
             self._extend_validator_lines(lines, validator_lines)
         self._extend_validator_lines(lines, root_pattern_properties_lines)
+        self._extend_validator_lines(lines, self._get_root_object_validator_lines(validators.get("root_object")))
         self._extend_validator_lines(lines, self._get_array_contains_validators_lines(validators.get("array_contains")))
         self._extend_validator_lines(
             lines, self._get_array_unique_items_validators_lines(validators.get("array_unique_items"))

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "root object context validators",
+  "type": "object",
+  "dependentRequired": {
+    "credit": [
+      "billing"
+    ]
+  },
+  "if": {
+    "required": [
+      "kind"
+    ],
+    "properties": {
+      "kind": {
+        "const": "business"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "tax_id"
+    ]
+  },
+  "not": {
+    "required": [
+      "forbidden"
+    ]
+  }
+}
