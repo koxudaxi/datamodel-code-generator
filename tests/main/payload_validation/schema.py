@@ -635,6 +635,33 @@ def _finite_property_name_values(property_names: Any) -> set[str] | None:
     )
 
 
+def _iter_allof_object_schemas(schema: dict[str, Any]) -> Iterator[dict[str, Any]]:
+    yield schema
+    all_of = schema.get("allOf")
+    if not isinstance(all_of, list):
+        return
+    for item in all_of:
+        if isinstance(item, dict):
+            yield from _iter_allof_object_schemas(item)
+
+
+def _finite_allof_property_name_values(schema: dict[str, Any]) -> set[str] | None:
+    object_schemas = list(_iter_allof_object_schemas(schema))
+    finite_values = [
+        values
+        for item in object_schemas
+        if (values := _finite_property_name_values(item.get("propertyNames"))) is not None
+    ]
+    if not finite_values:
+        return None
+    candidate_names = set.intersection(*finite_values) if len(finite_values) > 1 else set(finite_values[0])
+    return {
+        name
+        for name in candidate_names
+        if all(_property_name_accepts_name(item.get("propertyNames"), name) for item in object_schemas)
+    }
+
+
 def _dependency_required_names(dependency: Any) -> list[str]:
     if isinstance(dependency, list):
         return [name for name in dependency if isinstance(name, str)]
@@ -675,6 +702,9 @@ def _dependency_excludes_property_name(dependency: Any, name: str, allowed_names
 
 
 def _dependency_pruned_property_name_values(schema: dict[str, Any], property_name_values: set[str]) -> set[str]:
+    dependencies = [
+        dependency for item in _iter_allof_object_schemas(schema) for dependency in _iter_dependencies(item)
+    ]
     remaining_names = set(property_name_values)
     while True:
         removed_names = {
@@ -682,7 +712,7 @@ def _dependency_pruned_property_name_values(schema: dict[str, Any], property_nam
             for name in remaining_names
             if any(
                 _dependency_excludes_property_name(dependency, name, remaining_names)
-                for dependency_name, dependency in _iter_dependencies(schema)
+                for dependency_name, dependency in dependencies
                 if dependency_name == name
             )
         }
@@ -697,9 +727,10 @@ def _has_unsatisfiable_property_count(value: Any) -> bool:
         property_count = len(properties) if isinstance(properties, dict) else 0
         min_properties = schema.get("minProperties")
         max_properties = schema.get("maxProperties")
-        if _property_names_forbids_all_names(schema.get("propertyNames")):
+        object_schemas = list(_iter_allof_object_schemas(schema))
+        if any(_property_names_forbids_all_names(item.get("propertyNames")) for item in object_schemas):
             return isinstance(min_properties, int) and min_properties > 0
-        property_name_values = _finite_property_name_values(schema.get("propertyNames"))
+        property_name_values = _finite_allof_property_name_values(schema)
         if property_name_values is not None:
             max_possible_properties = len(_dependency_pruned_property_name_values(schema, property_name_values))
             if isinstance(min_properties, int) and min_properties > max_possible_properties:

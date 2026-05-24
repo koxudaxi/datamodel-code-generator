@@ -4626,6 +4626,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "minProperties": 1,
+                "allOf": [
+                    {"propertyNames": {"enum": ["trigger"]}},
+                    {"dependentRequired": {"trigger": ["dependent"]}},
+                ],
+            },
+            id="allof-property-names-dependent-required-min-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "allOf": [
                     {"properties": {"kind": {"type": "string"}}, "required": ["kind"]},
                     {"dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}}},
@@ -8060,6 +8072,17 @@ def test_main_jsonschema_allof_dependent_schema_intersection(output_file: Path) 
         expected_error_type="missing",
         expected_attribute_path=("requiredDependency", "code"),
         expected_attribute_value=1,
+    )
+
+
+def test_main_jsonschema_allof_dependent_required_property_names_count_conflict(output_file: Path) -> None:
+    """Test allOf sibling propertyNames and dependentRequired can make counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_required_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
     )
 
 

@@ -3691,12 +3691,13 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     @classmethod
     def _raw_max_possible_property_count(cls, schema_dict: dict[Any, Any]) -> int | None:
-        property_names = schema_dict.get("propertyNames")
-        if cls._raw_property_names_forbids_all_names(property_names):
+        object_schemas = list(cls._iter_raw_allof_object_schemas(schema_dict))
+        if any(cls._raw_property_names_forbids_all_names(item.get("propertyNames")) for item in object_schemas):
             return 0
-        property_name_values = cls._raw_finite_property_name_values(property_names)
+        property_name_values = cls._raw_finite_allof_property_name_values(object_schemas)
         if property_name_values is not None:
             return len(cls._raw_dependency_pruned_property_name_values(schema_dict, property_name_values))
+        property_names = schema_dict.get("propertyNames")
         if property_names is False:
             return 0
         if schema_dict.get("additionalProperties") is not False:
@@ -3709,11 +3710,35 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return len(properties) if isinstance(properties, dict) else 0
 
     @classmethod
+    def _raw_finite_allof_property_name_values(
+        cls,
+        object_schemas: Iterable[dict[Any, Any]],
+    ) -> set[str] | None:
+        finite_values = [
+            values
+            for item in object_schemas
+            if (values := cls._raw_finite_property_name_values(item.get("propertyNames"))) is not None
+        ]
+        if not finite_values:
+            return None
+        candidate_names = set.intersection(*finite_values) if len(finite_values) > 1 else set(finite_values[0])
+        return {
+            name
+            for name in candidate_names
+            if all(cls._raw_property_name_accepts_name(item.get("propertyNames"), name) for item in object_schemas)
+        }
+
+    @classmethod
     def _raw_dependency_pruned_property_name_values(
         cls,
         schema_dict: dict[Any, Any],
         property_name_values: set[str],
     ) -> set[str]:
+        dependencies = [
+            dependency
+            for item in cls._iter_raw_allof_object_schemas(schema_dict)
+            for dependency in cls._iter_raw_dependencies(item)
+        ]
         remaining_names = set(property_name_values)
         while True:
             removed_names = {
@@ -3721,7 +3746,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 for name in remaining_names
                 if any(
                     cls._raw_dependency_excludes_property_name(dependency, name, remaining_names)
-                    for dependency_name, dependency in cls._iter_raw_dependencies(schema_dict)
+                    for dependency_name, dependency in dependencies
                     if dependency_name == name
                 )
             }
