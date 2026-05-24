@@ -2262,6 +2262,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
             cls._normalize_raw_known_property_constraints(normalized)
+            cls._normalize_raw_contains_item_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
             cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
@@ -2555,6 +2556,56 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             schema_dict[key] = cls._intersect_constraint(key, schema_dict[key], value)
         elif value is not None:
             schema_dict[key] = value
+
+    @classmethod
+    def _normalize_raw_contains_item_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "array" or "contains" not in schema_dict:
+            return
+
+        contains_schema = schema_dict.get("contains")
+        items_schema = schema_dict.get("items")
+        if items_schema is False:
+            if cls._raw_contains_requires_match(schema_dict):
+                cls._raise_object_constraint_conflict()
+            return
+
+        if contains_schema is True or contains_schema == {}:
+            cls._merge_raw_contains_count_constraints(schema_dict)
+            return
+        if not isinstance(contains_schema, dict):
+            return
+
+        if not isinstance(items_schema, dict) or not cls._raw_schema_is_supported_literal_filter(contains_schema):
+            return
+
+        if cls._raw_schema_implies_supported_filter(items_schema, contains_schema):
+            cls._merge_raw_contains_count_constraints(schema_dict)
+        elif cls._raw_schema_is_disjoint_from_supported_filter(
+            items_schema, contains_schema
+        ) and cls._raw_contains_requires_match(schema_dict):
+            cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _merge_raw_contains_count_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        min_contains = cls._raw_min_contains_value(schema_dict)
+        max_contains = schema_dict.get("maxContains")
+        if min_contains is not None and min_contains > 0:
+            cls._merge_raw_object_keyword(schema_dict, "minItems", min_contains)
+        if isinstance(max_contains, int) and not isinstance(max_contains, bool):
+            cls._merge_raw_object_keyword(schema_dict, "maxItems", max_contains)
+        cls._validate_allof_intersected_constraints(schema_dict)
+
+    @staticmethod
+    def _raw_min_contains_value(schema_dict: dict[Any, Any]) -> int | None:
+        if "minContains" not in schema_dict:
+            return 1
+        min_contains = schema_dict["minContains"]
+        return min_contains if isinstance(min_contains, int) and not isinstance(min_contains, bool) else None
+
+    @classmethod
+    def _raw_contains_requires_match(cls, schema_dict: dict[Any, Any]) -> bool:
+        min_contains = cls._raw_min_contains_value(schema_dict)
+        return min_contains is not None and min_contains > 0
 
     @classmethod
     def _normalize_raw_known_property_constraints(cls, schema_dict: dict[Any, Any]) -> None:

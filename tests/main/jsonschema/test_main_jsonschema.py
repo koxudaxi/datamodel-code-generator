@@ -4195,6 +4195,28 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": "array",
+                "items": {"type": "string", "enum": ["no"]},
+                "contains": {"const": "ok"},
+            },
+            id="contains-items-const-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "items": {"type": "integer"},
+                "contains": {"type": "string"},
+            },
+            id="contains-items-type-disjoint",
+        ),
+        pytest.param(
+            {"title": "Payload", "type": "array", "items": False, "contains": {}},
+            id="contains-items-false-default",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "properties": {"credit_card": {"type": "string"}},
                 "required": ["credit_card"],
@@ -9413,6 +9435,39 @@ def test_main_jsonschema_contains_empty_schema_count_constraints(output_file: Pa
         expected_error_type="too_long",
         expected_attribute_path=("values",),
         expected_attribute_value=[1, 2, 3],
+    )
+
+
+def test_main_jsonschema_contains_items_intersection(output_file: Path) -> None:
+    """Test contains constraints intersect homogeneous item schemas when every item matches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "contains_items_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="contains_items_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel", "--enum-field-as-literal", "all"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_items_intersection",
+        model_name="ContainsItemsIntersection",
+        valid_json='{"literalValues":["ok","ok"],"boundedValues":[2]}',
+        invalid_json='{"literalValues":["ok"],"boundedValues":[2]}',
+        expected_error_type="too_short",
+        expected_attribute_path=("literalValues",),
+        expected_attribute_value=["ok", "ok"],
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="contains_items_intersection",
+        model_name="ContainsItemsIntersection",
+        valid_json='{"literalValues":["ok","ok","ok"],"boundedValues":[2]}',
+        invalid_json='{"literalValues":["ok","ok","ok","ok"],"boundedValues":[2]}',
+        expected_error_type="too_long",
+        expected_attribute_path=("literalValues",),
+        expected_attribute_value=["ok", "ok", "ok"],
     )
 
 

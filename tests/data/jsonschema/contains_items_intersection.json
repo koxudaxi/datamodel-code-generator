@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContainsItemsIntersection",
+  "type": "object",
+  "properties": {
+    "literalValues": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["ok"]
+      },
+      "contains": {
+        "const": "ok"
+      },
+      "minContains": 2,
+      "maxContains": 3
+    },
+    "boundedValues": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 2,
+        "maximum": 5
+      },
+      "contains": {
+        "type": "integer",
+        "minimum": 2
+      },
+      "minContains": 1
+    }
+  },
+  "required": ["literalValues", "boundedValues"]
+}
