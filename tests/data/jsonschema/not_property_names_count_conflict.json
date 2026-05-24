@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NotPropertyNamesCountConflict",
+  "type": "object",
+  "propertyNames": {
+    "enum": ["blocked"]
+  },
+  "minProperties": 1,
+  "not": {
+    "required": ["blocked"]
+  },
+  "additionalProperties": {
+    "type": "string"
+  }
+}

@@ -3823,10 +3823,12 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for item in cls._iter_raw_allof_object_schemas(schema_dict)
             if "if" in item
         ]
+        not_schemas = [item["not"] for item in cls._iter_raw_allof_object_schemas(schema_dict) if "not" in item]
         for count in range(len(names), -1, -1):
             if any(
                 cls._raw_property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
                 and cls._raw_property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
+                and cls._raw_property_name_set_satisfies_not_schemas(set(candidate_names), not_schemas)
                 for candidate_names in combinations(names, count)
             ):
                 return count
@@ -3918,6 +3920,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         declared_names = set(properties) if isinstance(properties, dict) else set()
         return name in declared_names or cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
+
+    @classmethod
+    def _raw_property_name_set_satisfies_not_schemas(cls, selected_names: set[str], not_schemas: list[Any]) -> bool:
+        for not_schema in not_schemas:
+            if not_schema is False:
+                continue
+            if not_schema is True or not_schema == {}:
+                return False
+            if not isinstance(not_schema, dict):
+                continue
+            if cls._raw_property_name_set_not_schema_is_key_only(
+                not_schema
+            ) and cls._raw_property_name_set_satisfies_object_schema(selected_names, not_schema):
+                return False
+        return True
+
+    @classmethod
+    def _raw_property_name_set_not_schema_is_key_only(cls, schema: dict[Any, Any]) -> bool:
+        metadata_keys = {
+            "$comment",
+            "$id",
+            "$schema",
+            "description",
+            "examples",
+            "title",
+        }
+        key_only_keys = {
+            "additionalProperties",
+            "maxProperties",
+            "minProperties",
+            "propertyNames",
+            "required",
+            "type",
+        }
+        return set(schema) <= metadata_keys | key_only_keys
 
     @classmethod
     def _raw_dependency_allowed_property_name_values(

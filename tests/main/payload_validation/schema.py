@@ -836,6 +836,42 @@ def _property_name_set_satisfies_conditionals(
     return True
 
 
+def _property_name_set_not_schema_is_key_only(schema: dict[str, Any]) -> bool:
+    metadata_keys = {
+        "$comment",
+        "$id",
+        "$schema",
+        "description",
+        "examples",
+        "title",
+    }
+    key_only_keys = {
+        "additionalProperties",
+        "maxProperties",
+        "minProperties",
+        "propertyNames",
+        "required",
+        "type",
+    }
+    return set(schema) <= metadata_keys | key_only_keys
+
+
+def _property_name_set_satisfies_not_schemas(selected_names: set[str], not_schemas: list[Any]) -> bool:
+    for not_schema in not_schemas:
+        if not_schema is False:
+            continue
+        if not_schema is True or not_schema == {}:
+            return False
+        if not isinstance(not_schema, dict):
+            continue
+        if _property_name_set_not_schema_is_key_only(not_schema) and _property_name_set_satisfies_object_schema(
+            selected_names,
+            not_schema,
+        ):
+            return False
+    return True
+
+
 def _max_dependency_satisfiable_property_count(
     schema: dict[str, Any],
     property_name_values: set[str],
@@ -852,10 +888,12 @@ def _max_dependency_satisfiable_property_count(
         for item in _iter_allof_object_schemas(schema)
         if "if" in item
     ]
+    not_schemas = [item["not"] for item in _iter_allof_object_schemas(schema) if "not" in item]
     for count in range(len(names), -1, -1):
         if any(
             _property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
             and _property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
+            and _property_name_set_satisfies_not_schemas(set(candidate_names), not_schemas)
             for candidate_names in combinations(names, count)
         ):
             return count
