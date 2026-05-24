@@ -5166,6 +5166,40 @@ def test_main_jsonschema_ref_sibling_constraint_intersection(output_file: Path) 
     )
 
 
+def test_main_jsonschema_draft7_ref_sibling_ignored(output_file: Path) -> None:
+    """Test Draft 7 ignores $ref sibling schema keywords."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "draft7_ref_sibling_ignored.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="draft7_ref_sibling_ignored.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = '{"code":"ab","items":{"x_a":1,"x_b":2}}'
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="draft7_ref_sibling_ignored",
+        model_name="Draft7RefSiblingIgnored",
+        valid_json=valid_json,
+        invalid_json='{"code":"abcde"}',
+        expected_error_type="string_too_long",
+        expected_attribute_path=("code",),
+        expected_attribute_value="ab",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="draft7_ref_sibling_ignored",
+        model_name="Draft7RefSiblingIgnored",
+        valid_json=valid_json,
+        invalid_json='{"items":{"x_a":0}}',
+        expected_error_type="greater_than_equal",
+        expected_attribute_path=("items",),
+        expected_attribute_value={"x_a": 1, "x_b": 2},
+    )
+
+
 def test_main_nested_all_of(output_file: Path) -> None:
     """Test nested allOf schemas."""
     run_main_and_assert(

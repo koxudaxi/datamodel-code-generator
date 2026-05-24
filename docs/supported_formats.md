@@ -125,6 +125,7 @@ The following features are tracked in the codebase with their implementation sta
 | `dependentSchemas` | 2019-09 | ❌ Not Supported | Conditional schema application based on property presence |
 | `$recursiveRef/$recursiveAnchor` | 2019-09 | ✅ Supported | Recursive reference resolution via anchors |
 | `$dynamicRef/$dynamicAnchor` | 2020-12 | ✅ Supported | Dynamic reference resolution across schemas |
+| `$ref with sibling keywords` | 2019-09 | ✅ Supported | $ref can coexist with adjacent schema keywords |
 
 #### OpenAPI-Specific Features
 
@@ -133,7 +134,6 @@ The following features are tracked in the codebase with their implementation sta
 | `nullable` | OAS 3.0 | ✅ Supported | Uses `nullable: true` for nullable types (deprecated in 3.1) |
 | `discriminator` | OAS 3.0 | ✅ Supported | Polymorphism support via `discriminator` keyword |
 | `webhooks` | OAS 3.1 | ✅ Supported | Top-level webhooks object for incoming events |
-| `$ref with sibling keywords` | OAS 3.1 | ⚠️ Partial | $ref can coexist with description, summary (no allOf workaround) |
 | `xml` | OAS 3.0 | ⚠️ Partial | XML serialization metadata (name, namespace, prefix) |
 | `externalDocs` | OAS 3.0 | ⚠️ Partial | Reference to external documentation |
 | `links` | OAS 3.0 | ❌ Not Supported | Links between operations |

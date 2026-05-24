@@ -258,6 +258,15 @@ class JsonSchemaFeatures:
             status="supported",
         ),
     )
+    ref_sibling_keywords: bool = field(
+        default=False,
+        metadata=FeatureMetadata(
+            introduced="2019-09",
+            doc_name="$ref with sibling keywords",
+            description="$ref can coexist with adjacent schema keywords",
+            status="supported",
+        ),
+    )
 
     @classmethod
     def from_version(cls, version: JsonSchemaVersion) -> JsonSchemaFeatures:
@@ -309,6 +318,7 @@ class JsonSchemaFeatures:
                     exclusive_as_number=True,
                     read_only_write_only=True,
                     recursive_ref=True,
+                    ref_sibling_keywords=True,
                 )
             case _:
                 return cls(
@@ -322,6 +332,7 @@ class JsonSchemaFeatures:
                     read_only_write_only=True,
                     recursive_ref=True,
                     dynamic_ref=True,
+                    ref_sibling_keywords=True,
                 )
 
 
@@ -360,16 +371,6 @@ class OpenAPISchemaFeatures(JsonSchemaFeatures):
             doc_name="webhooks",
             description="Top-level webhooks object for incoming events",
             status="supported",
-        ),
-    )
-    # --- Partially supported features ---
-    ref_sibling_keywords: bool = field(
-        default=False,
-        metadata=FeatureMetadata(
-            introduced="OAS 3.1",
-            doc_name="$ref with sibling keywords",
-            description="$ref can coexist with description, summary (no allOf workaround)",
-            status="partial",
         ),
     )
     # --- Unsupported features ---

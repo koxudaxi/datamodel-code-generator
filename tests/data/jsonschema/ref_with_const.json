@@ -1,6 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "definitions": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "$defs": {
     "Status": {
       "type": "string",
       "enum": ["active", "inactive"]
@@ -9,11 +9,11 @@
   "type": "object",
   "properties": {
     "status": {
-      "$ref": "#/definitions/Status",
+      "$ref": "#/$defs/Status",
       "const": "active"
     },
     "nullable_status": {
-      "$ref": "#/definitions/Status",
+      "$ref": "#/$defs/Status",
       "nullable": true,
       "const": "active"
     }

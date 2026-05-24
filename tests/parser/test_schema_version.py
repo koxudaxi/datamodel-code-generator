@@ -120,6 +120,7 @@ def test_jsonschema_features_draft4() -> None:
             read_only_write_only=False,
             recursive_ref=False,
             dynamic_ref=False,
+            ref_sibling_keywords=False,
         )
     )
 
@@ -138,6 +139,7 @@ def test_jsonschema_features_draft6() -> None:
             read_only_write_only=False,
             recursive_ref=False,
             dynamic_ref=False,
+            ref_sibling_keywords=False,
         )
     )
 
@@ -156,6 +158,7 @@ def test_jsonschema_features_draft7() -> None:
             read_only_write_only=True,
             recursive_ref=False,
             dynamic_ref=False,
+            ref_sibling_keywords=False,
         )
     )
 
@@ -174,6 +177,7 @@ def test_jsonschema_features_2019_09() -> None:
             read_only_write_only=True,
             recursive_ref=True,
             dynamic_ref=False,
+            ref_sibling_keywords=True,
         )
     )
 
@@ -192,6 +196,7 @@ def test_jsonschema_features_2020_12() -> None:
             read_only_write_only=True,
             recursive_ref=True,
             dynamic_ref=True,
+            ref_sibling_keywords=True,
         )
     )
 
@@ -210,6 +215,7 @@ def test_jsonschema_features_auto() -> None:
             read_only_write_only=True,
             recursive_ref=True,
             dynamic_ref=True,
+            ref_sibling_keywords=True,
         )
     )
 
@@ -235,6 +241,7 @@ def test_openapi_features_v30() -> None:
             read_only_write_only=True,
             recursive_ref=False,
             dynamic_ref=False,
+            ref_sibling_keywords=False,
             nullable_keyword=True,
             discriminator_support=True,
         )

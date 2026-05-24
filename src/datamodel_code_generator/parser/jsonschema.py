@@ -2098,7 +2098,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
     def _merge_ref_schema_dicts(self, ref_dict: dict[Any, Any], current_dict: dict[Any, Any]) -> dict[Any, Any]:
         """Merge a referenced schema with adjacent schema keywords."""
-        return self._deep_merge_allof_schema(ref_dict, current_dict)
+        if self.schema_features.ref_sibling_keywords:
+            return self._deep_merge_allof_schema(ref_dict, current_dict)
+        return ref_dict
 
     def _is_ref_circular(self, resolved_ref: str) -> bool:
         """Check if a resolved $ref target contains a circular reference (cached)."""

@@ -172,5 +172,6 @@ def test_graphql_schema_features() -> None:
             read_only_write_only=True,
             recursive_ref=True,
             dynamic_ref=True,
+            ref_sibling_keywords=True,
         )
     )

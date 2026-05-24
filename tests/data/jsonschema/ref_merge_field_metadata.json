@@ -1,6 +1,6 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "definitions": {
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+  "$defs": {
     "ReadOnlyString": {
       "type": "string",
       "readOnly": true
@@ -22,7 +22,7 @@
   "type": "object",
   "properties": {
     "readonly_via_ref": {
-      "$ref": "#/definitions/ReadOnlyString",
+      "$ref": "#/$defs/ReadOnlyString",
       "const": "fixed_readonly"
     },
     "readonly_direct": {
@@ -31,7 +31,7 @@
       "const": "fixed_readonly"
     },
     "constrained_via_ref": {
-      "$ref": "#/definitions/ConstrainedString",
+      "$ref": "#/$defs/ConstrainedString",
       "const": "constrained_value"
     },
     "constrained_direct": {
@@ -41,7 +41,7 @@
       "const": "constrained_value"
     },
     "default_via_ref": {
-      "$ref": "#/definitions/DefaultString",
+      "$ref": "#/$defs/DefaultString",
       "const": "default_value"
     },
     "default_direct": {
@@ -50,7 +50,7 @@
       "const": "default_value"
     },
     "nullable_via_ref": {
-      "$ref": "#/definitions/NullableString",
+      "$ref": "#/$defs/NullableString",
       "const": "nullable_value"
     },
     "nullable_direct": {

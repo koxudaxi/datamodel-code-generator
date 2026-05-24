@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-from enum import Enum
-
 from pydantic import BaseModel, Field
 
 from . import URI, ContactPoint
@@ -14,13 +12,9 @@ from . import name as name_1
 from . import sameAs as sameAs_1
 
 
-class Type(Enum):
-    Organization = 'Organization'
-
-
 class Organization(BaseModel):
     id: id_1.Schema | None = None
-    type: Type = Field(..., description='Type of this object.', title='type')
+    type: str = Field(..., description='Type of this object.', title='type')
     name: name_1.Schema
     contactPoint: ContactPoint.Schema | None = None
     sameAs: sameAs_1.Schema | None = None

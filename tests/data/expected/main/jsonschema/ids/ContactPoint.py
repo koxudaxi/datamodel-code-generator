@@ -4,17 +4,11 @@
 
 from __future__ import annotations
 
-from enum import Enum
-
 from pydantic import BaseModel, EmailStr, Field
 
 
-class Type(Enum):
-    ContactPoint = 'ContactPoint'
-
-
 class Schema(BaseModel):
-    type: Type = Field(..., description='Type of this object.', title='type')
+    type: str = Field(..., description='Type of this object.', title='type')
     contactType: str | None = None
     email: EmailStr
     telephone: str | None = None

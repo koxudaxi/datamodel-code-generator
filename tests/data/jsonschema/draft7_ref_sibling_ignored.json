@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Draft7RefSiblingIgnored",
+  "definitions": {
+    "ShortCode": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 4
+    },
+    "PositiveMap": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^x_"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minProperties": 1,
+      "maxProperties": 2
+    }
+  },
+  "type": "object",
+  "properties": {
+    "code": {
+      "$ref": "#/definitions/ShortCode",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "items": {
+      "$ref": "#/definitions/PositiveMap",
+      "additionalProperties": {
+        "minimum": 2
+      },
+      "maxProperties": 1
+    }
+  }
+}
