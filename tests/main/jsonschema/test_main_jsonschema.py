@@ -4152,6 +4152,17 @@ def test_main_jsonschema_dependent_schema_max_properties_count_conflict(output_f
     )
 
 
+def test_main_jsonschema_conditional_property_names_count_conflict(output_file: Path) -> None:
+    """Test conditional maxProperties can make finite propertyNames counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "conditional_property_names_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_dependent_schema_intersection(output_file: Path) -> None:
     """Test statically active dependent schemas intersect generated property constraints."""
     run_main_and_assert(
@@ -4684,6 +4695,18 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
             {
                 "title": "Payload",
                 "type": "object",
+                "minProperties": 2,
+                "allOf": [
+                    {"propertyNames": {"enum": ["trigger", "other"]}},
+                    {"if": {"required": ["trigger"]}, "then": {"maxProperties": 1}},
+                ],
+            },
+            id="allof-property-names-conditional-max-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
                 "allOf": [
                     {"properties": {"kind": {"type": "string"}}, "required": ["kind"]},
                     {"dependentSchemas": {"kind": {"propertyNames": {"enum": ["kind"]}, "minProperties": 2}}},
@@ -5207,6 +5230,17 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "dependentSchemas": {"trigger": {"maxProperties": 1}},
             },
             id="object-property-names-dependent-schema-max-properties",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "propertyNames": {"enum": ["trigger", "other"]},
+                "minProperties": 2,
+                "if": {"required": ["trigger"]},
+                "then": {"maxProperties": 1},
+            },
+            id="object-property-names-conditional-max-properties",
         ),
         pytest.param(
             {
@@ -8167,6 +8201,17 @@ def test_main_jsonschema_allof_dependent_schema_max_properties_count_conflict(ou
     """Test allOf sibling dependent schema maxProperties can make counts impossible."""
     run_main_and_assert(
         input_path=JSON_SCHEMA_DATA_PATH / "allof_dependent_schema_max_properties_count_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
+def test_main_jsonschema_allof_conditional_property_names_count_conflict(output_file: Path) -> None:
+    """Test allOf sibling conditional maxProperties can make counts impossible."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "allof_conditional_property_names_count_conflict.json",
         output_path=output_file,
         input_file_type="jsonschema",
         extra_args=["--output-model-type", "pydantic_v2.BaseModel"],

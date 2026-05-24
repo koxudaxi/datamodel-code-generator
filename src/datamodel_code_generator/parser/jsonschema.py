@@ -3818,9 +3818,15 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             for item in cls._iter_raw_allof_object_schemas(schema_dict)
             for dependency in cls._iter_raw_dependencies(item)
         ]
+        conditionals = [
+            (item.get("if"), item.get("then", True), item.get("else", True))
+            for item in cls._iter_raw_allof_object_schemas(schema_dict)
+            if "if" in item
+        ]
         for count in range(len(names), -1, -1):
             if any(
                 cls._raw_property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
+                and cls._raw_property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
                 for candidate_names in combinations(names, count)
             ):
                 return count
@@ -3846,6 +3852,72 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return True
         max_properties = cls._number_constraint_value(dependency.get("maxProperties"))
         return max_properties is None or property_count <= max_properties
+
+    @classmethod
+    def _raw_property_name_set_satisfies_conditionals(
+        cls,
+        selected_names: set[str],
+        conditionals: list[tuple[Any, Any, Any]],
+    ) -> bool:
+        for condition_schema, then_schema, else_schema in conditionals:
+            condition_result = cls._raw_property_name_set_conditional_result(selected_names, condition_schema)
+            if condition_result is None:
+                continue
+            active_schema = then_schema if condition_result else else_schema
+            if not cls._raw_property_name_set_satisfies_object_schema(selected_names, active_schema):
+                return False
+        return True
+
+    @classmethod
+    def _raw_property_name_set_conditional_result(cls, selected_names: set[str], condition_schema: Any) -> bool | None:
+        if condition_schema is True or condition_schema == {}:
+            return True
+        if condition_schema is False:
+            return False
+        if not isinstance(condition_schema, dict):
+            return None
+        if set(condition_schema) - {"required", "type"}:
+            return None
+        condition_type = condition_schema.get("type")
+        if condition_type is not None and not cls._raw_type_accepts_object(condition_type):
+            return False
+        return cls._raw_required_names(condition_schema.get("required")) <= selected_names
+
+    @classmethod
+    def _raw_property_name_set_satisfies_object_schema(  # noqa: PLR0911
+        cls, selected_names: set[str], schema: Any
+    ) -> bool:
+        if schema is True or schema == {}:
+            return True
+        if schema is False:
+            return False
+        if not isinstance(schema, dict):
+            return True
+        schema_type = schema.get("type")
+        if schema_type is not None and not cls._raw_type_accepts_object(schema_type):
+            return False
+        min_properties = cls._number_constraint_value(schema.get("minProperties"))
+        if min_properties is not None and len(selected_names) < min_properties:
+            return False
+        max_properties = cls._number_constraint_value(schema.get("maxProperties"))
+        if max_properties is not None and len(selected_names) > max_properties:
+            return False
+        if not cls._raw_required_names(schema.get("required")) <= selected_names:
+            return False
+        return all(cls._raw_property_name_set_accepts_name(schema, name) for name in selected_names)
+
+    @classmethod
+    def _raw_property_name_set_accepts_name(cls, schema: dict[Any, Any], name: str) -> bool:
+        if not cls._raw_property_name_accepts_name(schema.get("propertyNames"), name):
+            return False
+        properties = schema.get("properties")
+        if isinstance(properties, dict) and properties.get(name) is False:
+            return False
+        pattern_properties = schema.get("patternProperties")
+        if schema.get("additionalProperties") is not False:
+            return True
+        declared_names = set(properties) if isinstance(properties, dict) else set()
+        return name in declared_names or cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
 
     @classmethod
     def _raw_dependency_allowed_property_name_values(

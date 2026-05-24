@@ -766,6 +766,76 @@ def _property_name_set_satisfies_dependencies(
     )
 
 
+def _property_name_set_conditional_result(selected_names: set[str], condition_schema: Any) -> bool | None:
+    if condition_schema is True or condition_schema == {}:
+        return True
+    if condition_schema is False:
+        return False
+    if not isinstance(condition_schema, dict):
+        return None
+    if set(condition_schema) - {"required", "type"}:
+        return None
+    condition_types = _type_values(condition_schema.get("type"))
+    if condition_types is not None and "object" not in condition_types:
+        return False
+    return set(condition_schema.get("required", [])) <= selected_names
+
+
+def _property_name_set_accepts_name(schema: dict[str, Any], name: str) -> bool:
+    if not _property_name_accepts_name(schema.get("propertyNames"), name):
+        return False
+    properties = schema.get("properties")
+    if isinstance(properties, dict) and properties.get(name) is False:
+        return False
+    if schema.get("additionalProperties") is not False:
+        return True
+    declared_names = set(properties) if isinstance(properties, dict) else set()
+    return name in declared_names
+
+
+def _property_name_set_satisfies_object_schema(selected_names: set[str], schema: Any) -> bool:  # noqa: PLR0911
+    if schema is True or schema == {}:
+        return True
+    if schema is False:
+        return False
+    if not isinstance(schema, dict):
+        return True
+    schema_types = _type_values(schema.get("type"))
+    if schema_types is not None and "object" not in schema_types:
+        return False
+    min_properties = schema.get("minProperties")
+    if (
+        isinstance(min_properties, int)
+        and not isinstance(min_properties, bool)
+        and len(selected_names) < min_properties
+    ):
+        return False
+    max_properties = schema.get("maxProperties")
+    if (
+        isinstance(max_properties, int)
+        and not isinstance(max_properties, bool)
+        and len(selected_names) > max_properties
+    ):
+        return False
+    if not set(schema.get("required", [])) <= selected_names:
+        return False
+    return all(_property_name_set_accepts_name(schema, name) for name in selected_names)
+
+
+def _property_name_set_satisfies_conditionals(
+    selected_names: set[str],
+    conditionals: list[tuple[Any, Any, Any]],
+) -> bool:
+    for condition_schema, then_schema, else_schema in conditionals:
+        condition_result = _property_name_set_conditional_result(selected_names, condition_schema)
+        if condition_result is None:
+            continue
+        active_schema = then_schema if condition_result else else_schema
+        if not _property_name_set_satisfies_object_schema(selected_names, active_schema):
+            return False
+    return True
+
+
 def _max_dependency_satisfiable_property_count(
     schema: dict[str, Any],
     property_name_values: set[str],
@@ -777,9 +847,15 @@ def _max_dependency_satisfiable_property_count(
     dependencies = [
         dependency for item in _iter_allof_object_schemas(schema) for dependency in _iter_dependencies(item)
     ]
+    conditionals = [
+        (item.get("if"), item.get("then", True), item.get("else", True))
+        for item in _iter_allof_object_schemas(schema)
+        if "if" in item
+    ]
     for count in range(len(names), -1, -1):
         if any(
             _property_name_set_satisfies_dependencies(set(candidate_names), dependencies)
+            and _property_name_set_satisfies_conditionals(set(candidate_names), conditionals)
             for candidate_names in combinations(names, count)
         ):
             return count
