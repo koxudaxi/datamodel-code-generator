@@ -3961,6 +3961,29 @@ def test_main_jsonschema_anyof_not_intersection(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_not_bound_intersection(output_file: Path) -> None:
+    """Test not constraints over single bounds are generated as complementary constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "not_bound_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="not_bound_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="not_bound_intersection",
+        model_name="NotBoundIntersection",
+        valid_json='{"smallNumber":4,"largeNumber":6,"code":"abcd","tags":["a","b"],"metadata":{"a":1,"b":2}}',
+        invalid_json='{"smallNumber":5,"largeNumber":6,"code":"abcd","tags":["a","b"],"metadata":{"a":1,"b":2}}',
+        expected_error_type="less_than",
+        expected_attribute_path=("smallNumber",),
+        expected_attribute_value=4,
+    )
+
+
 def test_main_jsonschema_dependent_required_intersection(output_file: Path) -> None:
     """Test statically active dependent required constraints are generated as required fields."""
     run_main_and_assert(
@@ -4111,6 +4134,17 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {"title": "Payload", "type": ["integer", "string"], "not": {"type": ["integer", "string"]}},
             id="type-not-same-types",
+        ),
+        pytest.param({"title": "Payload", "type": "integer", "minimum": 0, "not": {"minimum": 0}}, id="not-minimum"),
+        pytest.param({"title": "Payload", "type": "string", "not": {"minLength": 0}}, id="not-min-length"),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "maxProperties": 2,
+                "not": {"maxProperties": 2},
+            },
+            id="not-max-properties",
         ),
         pytest.param(
             {

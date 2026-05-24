@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NotBoundIntersection",
+  "type": "object",
+  "properties": {
+    "smallNumber": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 10,
+      "not": {
+        "minimum": 5
+      }
+    },
+    "largeNumber": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10,
+      "not": {
+        "maximum": 5
+      }
+    },
+    "code": {
+      "type": "string",
+      "maxLength": 10,
+      "not": {
+        "maxLength": 3
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 5,
+      "not": {
+        "maxItems": 1
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "maxProperties": 4,
+      "not": {
+        "maxProperties": 1
+      }
+    }
+  },
+  "required": ["smallNumber", "largeNumber", "code", "tags", "metadata"]
+}

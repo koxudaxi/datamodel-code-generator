@@ -2656,6 +2656,118 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 schema_dict["enum"] = filtered_enum
                 cls._drop_enum_metadata(schema_dict)
 
+        cls._normalize_raw_not_bound_constraints(schema_dict, not_schema)
+
+    @classmethod
+    def _normalize_raw_not_bound_constraints(cls, schema_dict: dict[Any, Any], not_schema: dict[Any, Any]) -> None:
+        negated_constraint = cls._raw_negated_single_bound_constraint(schema_dict, not_schema)
+        if negated_constraint is None:
+            return
+
+        key, value = negated_constraint
+        if key in schema_dict and schema_dict[key] is not None:
+            schema_dict[key] = cls._intersect_constraint(key, schema_dict[key], value)
+        else:
+            schema_dict[key] = value
+        schema_dict.pop("not", None)
+        cls._normalize_literal_constraints(schema_dict)
+        cls._validate_allof_intersected_constraints(schema_dict)
+
+    @classmethod
+    def _raw_negated_single_bound_constraint(  # noqa: PLR0911
+        cls,
+        schema_dict: dict[Any, Any],
+        not_schema: dict[Any, Any],
+    ) -> tuple[str, int | float] | None:
+        keywords = [key for key in cls._raw_negatable_bound_keywords() if key in not_schema]
+        if len(keywords) != 1 or set(not_schema) - cls._raw_negatable_bound_schema_keys():
+            return None
+
+        keyword = keywords[0]
+        value = cls._number_constraint_value(not_schema[keyword])
+        if value is None or not cls._raw_not_bound_applies_to_parent_type(schema_dict, not_schema, keyword):
+            return None
+
+        if keyword == "minimum":
+            return "exclusiveMaximum", value
+        if keyword == "exclusiveMinimum":
+            return "maximum", value
+        if keyword == "maximum":
+            return "exclusiveMinimum", value
+        if keyword == "exclusiveMaximum":
+            return "minimum", value
+
+        count_value = cls._raw_count_constraint_value(not_schema[keyword])
+        if count_value is None:
+            return None
+        if keyword.startswith("min"):
+            if count_value == 0:
+                cls._raise_not_constraint_conflict()
+            return keyword.replace("min", "max", 1), count_value - 1
+        return keyword.replace("max", "min", 1), count_value + 1
+
+    @staticmethod
+    def _raw_negatable_bound_keywords() -> set[str]:
+        return {
+            "exclusiveMaximum",
+            "exclusiveMinimum",
+            "maximum",
+            "maxItems",
+            "maxLength",
+            "maxProperties",
+            "minimum",
+            "minItems",
+            "minLength",
+            "minProperties",
+        }
+
+    @staticmethod
+    def _raw_negatable_bound_schema_keys() -> set[str]:
+        return JsonSchemaParser._raw_negatable_bound_keywords() | {
+            "$comment",
+            "$id",
+            "$schema",
+            "description",
+            "examples",
+            "title",
+            "type",
+        }
+
+    @classmethod
+    def _raw_not_bound_applies_to_parent_type(
+        cls,
+        schema_dict: dict[Any, Any],
+        not_schema: dict[Any, Any],
+        keyword: str,
+    ) -> bool:
+        if keyword in {"exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum"}:
+            expected_types = {"integer", "number"}
+        elif keyword.endswith("Length"):
+            expected_types = {"string"}
+        elif keyword.endswith("Items"):
+            expected_types = {"array"}
+        else:
+            expected_types = {"object"}
+
+        parent_types = cls._type_values(schema_dict.get("type"))
+        if parent_types is None or not parent_types <= expected_types:
+            return False
+
+        not_types = cls._type_values(not_schema.get("type"))
+        if not_types is None:
+            return True
+        return parent_types <= not_types or (parent_types == {"integer"} and "number" in not_types)
+
+    @staticmethod
+    def _raw_count_constraint_value(value: Any) -> int | None:
+        if value is None or isinstance(value, bool):
+            return None
+        with suppress(TypeError, ValueError):
+            count_value = int(value)
+        if count_value != value:
+            return None
+        return count_value
+
     @classmethod
     def _raw_schema_is_supported_literal_filter(cls, schema_dict: dict[Any, Any]) -> bool:
         metadata_keys = {
