@@ -4312,6 +4312,48 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
         pytest.param(
             {
                 "title": "Payload",
+                "type": "array",
+                "contains": {"type": "string"},
+                "maxContains": 0,
+            },
+            id="array-contains-schema-default-min-max-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "array",
+                "contains": {"type": "string"},
+                "minContains": 2,
+                "maxContains": 1,
+            },
+            id="array-contains-schema-min-max-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "$schema": "https://json-schema.org/draft-07/schema",
+                "title": "Payload",
+                "type": "array",
+                "items": [{"const": "a"}, {"const": "b"}],
+                "additionalItems": False,
+                "contains": {"const": "c"},
+            },
+            id="array-closed-tuple-contains-disjoint",
+        ),
+        pytest.param(
+            {
+                "$schema": "https://json-schema.org/draft-07/schema",
+                "title": "Payload",
+                "type": "array",
+                "items": [{"const": "a"}, {"const": "b"}],
+                "additionalItems": False,
+                "contains": {"const": "a"},
+                "minContains": 2,
+            },
+            id="array-closed-tuple-contains-min-count-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
                 "type": "object",
                 "minProperties": 1,
                 "allOf": [

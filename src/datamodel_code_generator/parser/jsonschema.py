@@ -2697,6 +2697,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         contains_schema = schema_dict.get("contains")
         items_schema = schema_dict.get("items")
         if items_schema is False:
+            if isinstance(schema_dict.get("prefixItems"), list) and isinstance(contains_schema, dict):
+                cls._validate_raw_closed_tuple_contains_constraints(schema_dict, contains_schema)
+                return
             if cls._raw_contains_requires_match(schema_dict):
                 cls._raise_object_constraint_conflict()
             return
@@ -2708,6 +2711,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return
 
         if not isinstance(items_schema, dict) or not cls._raw_schema_is_supported_literal_filter(contains_schema):
+            cls._validate_raw_closed_tuple_contains_constraints(schema_dict, contains_schema)
             return
 
         if cls._raw_schema_implies_supported_filter(items_schema, contains_schema):
@@ -2716,6 +2720,47 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             items_schema, contains_schema
         ) and cls._raw_contains_requires_match(schema_dict):
             cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _validate_raw_closed_tuple_contains_constraints(
+        cls,
+        schema_dict: dict[Any, Any],
+        contains_schema: dict[Any, Any],
+    ) -> None:
+        if not cls._raw_schema_is_supported_literal_filter(contains_schema):
+            return
+
+        tuple_items = cls._raw_closed_tuple_items(schema_dict)
+        if tuple_items is None:
+            return
+
+        min_contains = cls._raw_min_contains_value(schema_dict)
+        if min_contains is None or min_contains <= 0:
+            return
+
+        possible_matches = sum(
+            not cls._raw_schema_is_disjoint_from_supported_filter(item, contains_schema) for item in tuple_items
+        )
+        if possible_matches < min_contains:
+            cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _raw_closed_tuple_items(cls, schema_dict: dict[Any, Any]) -> list[Any] | None:
+        prefix_items = schema_dict.get("prefixItems")
+        if isinstance(prefix_items, list):
+            false_prefix_index = cls._raw_first_false_schema_index(prefix_items)
+            if false_prefix_index is not None:
+                return prefix_items[:false_prefix_index]
+            return prefix_items if schema_dict.get("items") is False else None
+
+        items = schema_dict.get("items")
+        if not isinstance(items, list):
+            return None
+
+        false_item_index = cls._raw_first_false_schema_index(items)
+        if false_item_index is not None:
+            return items[:false_item_index]
+        return items if schema_dict.get("additionalItems") is False else None
 
     @classmethod
     def _merge_raw_contains_count_constraints(cls, schema_dict: dict[Any, Any]) -> None:
@@ -2744,6 +2789,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if schema_dict.get("type") != "array":
             return
 
+        cls._validate_raw_contains_count_constraints(schema_dict)
         min_items = cls._number_constraint_value(schema_dict.get("minItems"))
         max_item_counts = cls._raw_array_max_item_counts(schema_dict)
         min_contains, max_contains = cls._raw_contains_array_item_bounds(schema_dict)
@@ -2758,6 +2804,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if max_item_counts:
             max_items = min(max_item_counts)
         if min_items is not None and max_items is not None and min_items > max_items:
+            cls._raise_array_constraint_conflict()
+
+    @classmethod
+    def _validate_raw_contains_count_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if "contains" not in schema_dict:
+            return
+
+        min_contains = cls._raw_min_contains_value(schema_dict)
+        max_contains = schema_dict.get("maxContains")
+        if (
+            min_contains is not None
+            and isinstance(max_contains, int)
+            and not isinstance(max_contains, bool)
+            and min_contains > max_contains
+        ):
             cls._raise_array_constraint_conflict()
 
     @classmethod
