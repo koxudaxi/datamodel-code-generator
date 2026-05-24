@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AdditionalRequiredIntersection",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string"
+    }
+  },
+  "required": ["id", "score"],
+  "additionalProperties": {
+    "type": "integer",
+    "minimum": 1,
+    "maximum": 5
+  }
+}

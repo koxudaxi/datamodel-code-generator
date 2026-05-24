@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PatternRequiredIntersection",
+  "type": "object",
+  "properties": {
+    "x_code": {
+      "type": "string",
+      "minLength": 2
+    }
+  },
+  "patternProperties": {
+    "^x_": {
+      "maxLength": 4
+    },
+    "^count$": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": ["x_code", "count"],
+  "additionalProperties": false
+}

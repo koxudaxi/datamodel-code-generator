@@ -3984,6 +3984,52 @@ def test_main_jsonschema_not_bound_intersection(output_file: Path) -> None:
     )
 
 
+def test_main_jsonschema_pattern_required_intersection(output_file: Path) -> None:
+    """Test required names covered by patternProperties are generated with intersected constraints."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "pattern_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="pattern_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="pattern_required_intersection",
+        model_name="PatternRequiredIntersection",
+        valid_json='{"x_code":"abcd","count":1}',
+        invalid_json='{"x_code":"abcde","count":1}',
+        expected_error_type="string_too_long",
+        expected_attribute_path=("x_code",),
+        expected_attribute_value="abcd",
+    )
+
+
+def test_main_jsonschema_additional_required_intersection(output_file: Path) -> None:
+    """Test required names covered by additionalProperties schemas are generated as fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "additional_required_intersection.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="additional_required_intersection.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="additional_required_intersection",
+        model_name="AdditionalRequiredIntersection",
+        valid_json='{"id":"a","score":5}',
+        invalid_json='{"id":"a","score":6}',
+        expected_error_type="less_than_equal",
+        expected_attribute_path=("score",),
+        expected_attribute_value=5,
+    )
+
+
 def test_main_jsonschema_dependent_required_intersection(output_file: Path) -> None:
     """Test statically active dependent required constraints are generated as required fields."""
     run_main_and_assert(
@@ -4538,6 +4584,36 @@ def test_main_jsonschema_oneof_with_false_schema(output_file: Path) -> None:
                 "additionalProperties": {"type": "string"},
             },
             id="object-required-property-names-enum-disjoint",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "patternProperties": {"^allowed$": {"type": "string"}},
+                "required": ["blocked"],
+                "additionalProperties": False,
+            },
+            id="object-required-pattern-properties-no-match",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "patternProperties": {"^blocked$": False},
+                "required": ["blocked"],
+                "additionalProperties": False,
+            },
+            id="object-required-pattern-properties-false-match",
+        ),
+        pytest.param(
+            {
+                "title": "Payload",
+                "type": "object",
+                "properties": {"code": {"type": "string", "const": "a"}},
+                "patternProperties": {"^code$": {"const": "b"}},
+                "required": ["code"],
+            },
+            id="object-required-property-pattern-const-disjoint",
         ),
         pytest.param(
             {

@@ -2261,6 +2261,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         try:
             cls._normalize_raw_dependent_constraints(normalized)
             cls._normalize_raw_conditional_constraints(normalized)
+            cls._normalize_raw_known_property_constraints(normalized)
             cls._validate_raw_object_constraints(normalized)
             cls._normalize_raw_not_constraints(normalized)
         except SchemaParseError:
@@ -2556,6 +2557,77 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             schema_dict[key] = value
 
     @classmethod
+    def _normalize_raw_known_property_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        if schema_dict.get("type") != "object":
+            return
+
+        required_names = cls._raw_required_names(schema_dict.get("required"))
+        pattern_properties = schema_dict.get("patternProperties")
+        if not required_names and not isinstance(pattern_properties, dict):
+            return
+
+        properties = schema_dict.get("properties")
+        if not isinstance(properties, dict):
+            properties = {}
+            schema_dict["properties"] = properties
+
+        known_names = [name for name in properties if isinstance(name, str)]
+        known_names.extend(name for name in required_names if name not in properties)
+        additional_properties = schema_dict.get("additionalProperties")
+
+        for property_name in known_names:
+            pattern_schema = (
+                cls._merge_raw_matching_pattern_properties(property_name, pattern_properties)
+                if isinstance(pattern_properties, dict)
+                else None
+            )
+            if pattern_schema is None:
+                if property_name in properties:
+                    continue
+                if additional_properties is False:
+                    cls._raise_object_constraint_conflict()
+                if isinstance(additional_properties, dict):
+                    properties[property_name] = additional_properties
+                continue
+
+            merged_schema = cls._merge_raw_schema_intersection(properties.get(property_name, True), pattern_schema)
+            if merged_schema is False:
+                if property_name in required_names:
+                    cls._raise_object_constraint_conflict()
+                continue
+            properties[property_name] = merged_schema
+
+    @classmethod
+    def _merge_raw_matching_pattern_properties(
+        cls,
+        property_name: str,
+        pattern_properties: dict[Any, Any],
+    ) -> Any:
+        merged_schema: Any = None
+        matched = False
+        for pattern, property_schema in pattern_properties.items():
+            if not isinstance(pattern, str) or not cls._raw_property_name_matches_pattern(property_name, pattern):
+                continue
+            matched = True
+            if property_schema is False:
+                return False
+            if property_schema is True:
+                continue
+            if isinstance(property_schema, dict):
+                merged_schema = (
+                    property_schema
+                    if merged_schema is None
+                    else cls._merge_raw_schema_intersection(merged_schema, property_schema)
+                )
+        return True if matched and merged_schema is None else merged_schema
+
+    @staticmethod
+    def _raw_property_name_matches_pattern(property_name: str, pattern: str) -> bool:
+        with suppress(re.error):
+            return re.search(pattern, property_name) is not None
+        return False
+
+    @classmethod
     def _merge_raw_schema_intersection(cls, left: Any, right: Any) -> Any:
         if left is True:
             return right
@@ -2839,15 +2911,23 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         additional_properties = schema_dict.get("additionalProperties")
         pattern_properties = schema_dict.get("patternProperties")
-        if (
-            additional_properties is False
-            and not required_names <= declared_names
-            and (
-                not isinstance(pattern_properties, dict)
-                or all(pattern_schema is False for pattern_schema in pattern_properties.values())
-            )
+        if additional_properties is False and any(
+            name not in declared_names
+            and not cls._raw_required_name_allowed_by_pattern_properties(name, pattern_properties)
+            for name in required_names
         ):
             cls._raise_object_constraint_conflict()
+
+    @classmethod
+    def _raw_required_name_allowed_by_pattern_properties(cls, name: str, pattern_properties: Any) -> bool:
+        if not isinstance(pattern_properties, dict):
+            return False
+        return any(
+            pattern_schema is not False
+            and isinstance(pattern, str)
+            and cls._raw_property_name_matches_pattern(name, pattern)
+            for pattern, pattern_schema in pattern_properties.items()
+        )
 
     @classmethod
     def _raw_property_names_forbids_all_names(cls, property_names: Any) -> bool:
