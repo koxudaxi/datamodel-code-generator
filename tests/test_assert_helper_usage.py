@@ -28,6 +28,7 @@ E2E_TEST_PATHS = (
     Path("main/graphql/test_main_graphql.py"),
     Path("main/jsonschema/test_main_jsonschema.py"),
     Path("main/openapi/test_main_openapi.py"),
+    Path("main/protobuf/test_main_protobuf.py"),
     Path("main/test_main_csv.py"),
     Path("main/test_exec_validation.py"),
     Path("main/test_main_general.py"),

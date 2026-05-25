@@ -2,18 +2,22 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
-import warnings
 from typing import TYPE_CHECKING
 
+import black
 import pytest
-from pydantic import ValidationError
 
-from datamodel_code_generator import DataModelType, Error, InputFileType, generate, infer_input_type
+from datamodel_code_generator import Error, InputFileType, generate, infer_input_type
 from datamodel_code_generator.__main__ import Exit
-from tests.main.conftest import PROTOBUF_DATA_PATH, run_generate_file_and_assert, run_main_and_assert
-from tests.main.protobuf.conftest import assert_protobuf_snippets
+from tests.conftest import assert_output
+from tests.main.conftest import (
+    EXPECTED_PROTOBUF_PATH,
+    PROTOBUF_DATA_PATH,
+    assert_input_file_type,
+    run_generate_file_and_assert,
+    run_main_and_assert,
+)
+from tests.main.protobuf.conftest import assert_file_content
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,19 +30,11 @@ def test_main_protobuf_complex_proto3(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="protobuf",
         extra_args=["--use-field-description"],
-        assert_func=assert_protobuf_snippets,
+        assert_func=assert_file_content,
         expected_file="complex_proto3.py",
+        importable_module_name="generated_protobuf",
+        importable_module_attribute="ExampleShopV1Order",
     )
-    spec = importlib.util.spec_from_file_location("generated_protobuf_oneof", output_file)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
-
-    module.ExampleShopV1Order(email="user@example.com")
-    with pytest.raises(ValidationError, match="Only one of"):
-        module.ExampleShopV1Order(email="user@example.com", phone="+12025550123")
 
 
 def test_main_protobuf_infer_input_file_type(output_file: Path) -> None:
@@ -46,7 +42,7 @@ def test_main_protobuf_infer_input_file_type(output_file: Path) -> None:
     run_main_and_assert(
         input_path=PROTOBUF_DATA_PATH / "proto3_optional.proto",
         output_path=output_file,
-        assert_func=assert_protobuf_snippets,
+        assert_func=assert_file_content,
         expected_file="proto3_optional.py",
     )
 
@@ -58,7 +54,7 @@ def test_main_protobuf_proto2_schema_version(output_file: Path) -> None:
         output_path=output_file,
         input_file_type="protobuf",
         extra_args=["--schema-version", "proto2"],
-        assert_func=assert_protobuf_snippets,
+        assert_func=assert_file_content,
         expected_file="proto2.py",
     )
 
@@ -70,8 +66,19 @@ def test_main_protobuf_proto3_optional_schema_version(output_file: Path) -> None
         output_path=output_file,
         input_file_type="protobuf",
         extra_args=["--schema-version", "proto3"],
-        assert_func=assert_protobuf_snippets,
+        assert_func=assert_file_content,
         expected_file="proto3_optional.py",
+    )
+
+
+def test_main_protobuf_well_known_wrappers(output_file: Path) -> None:
+    """Generate models for all wrapper well-known types and Empty."""
+    run_main_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "well_known_wrappers.proto",
+        output_path=output_file,
+        input_file_type="protobuf",
+        assert_func=assert_file_content,
+        expected_file="well_known_wrappers.py",
     )
 
 
@@ -81,8 +88,8 @@ def test_generate_api_protobuf(output_file: Path) -> None:
         input_path=PROTOBUF_DATA_PATH / "complex_proto3.proto",
         output_path=output_file,
         input_file_type=InputFileType.Protobuf,
-        assert_func=assert_protobuf_snippets,
-        expected_file="complex_proto3.py",
+        assert_func=assert_file_content,
+        expected_file="complex_proto3_generate.py",
     )
 
 
@@ -94,8 +101,7 @@ def test_generate_api_protobuf_returns_code() -> None:
         disable_timestamp=True,
     )
 
-    assert isinstance(result, str)
-    assert "class ExamplePresencePresence(BaseModel):" in result
+    assert_output(result, EXPECTED_PROTOBUF_PATH / "generate_returns_code.py")
 
 
 def test_generate_api_protobuf_from_text() -> None:
@@ -106,22 +112,7 @@ def test_generate_api_protobuf_from_text() -> None:
         disable_timestamp=True,
     )
 
-    assert isinstance(result, str)
-    assert "class TextInputTextInput(BaseModel):" in result
-
-
-def test_generate_api_protobuf_dataclass_skips_oneof_validator() -> None:
-    """Generate non-Pydantic v2 models without injecting Pydantic oneof validators."""
-    result = generate(
-        PROTOBUF_DATA_PATH / "complex_proto3.proto",
-        input_file_type=InputFileType.Protobuf,
-        output_model_type=DataModelType.DataclassesDataclass,
-        disable_timestamp=True,
-    )
-
-    assert isinstance(result, str)
-    assert "class ExampleShopV1Order:" in result
-    assert "model_validator" not in result
+    assert_output(result, EXPECTED_PROTOBUF_PATH / "text_input.py")
 
 
 def test_generate_api_protobuf_definition_key_collision() -> None:
@@ -132,9 +123,7 @@ def test_generate_api_protobuf_definition_key_collision() -> None:
         disable_timestamp=True,
     )
 
-    assert isinstance(result, str)
-    assert "left: str | None = ''" in result
-    assert "right: str | None = ''" in result
+    assert_output(result, EXPECTED_PROTOBUF_PATH / "collision.py")
 
 
 def test_generate_api_protobuf_rejects_dict_input() -> None:
@@ -145,26 +134,26 @@ def test_generate_api_protobuf_rejects_dict_input() -> None:
 
 def test_infer_input_file_type_from_message_declaration() -> None:
     """Infer Protocol Buffers from a schema body without an explicit syntax declaration."""
-    assert infer_input_type("message WithoutSyntax { string id = 1; }\n") == InputFileType.Protobuf
+    assert_input_file_type(infer_input_type("message WithoutSyntax { string id = 1; }\n"), InputFileType.Protobuf)
 
 
 def test_main_protobuf_directory_output_importable(output_dir: Path) -> None:
     """Generate a package from imported .proto files and import the result."""
+    expected_directory = (
+        EXPECTED_PROTOBUF_PATH / "directory_black_lt_24"
+        if int(black.__version__.split(".")[0]) < 24
+        else EXPECTED_PROTOBUF_PATH / "directory"
+    )
     run_main_and_assert(
         input_path=PROTOBUF_DATA_PATH,
         output_path=output_dir,
         input_file_type="protobuf",
         extra_args=["--module-split-mode", "single"],
+        expected_directory=expected_directory,
         force_exec_validation=True,
+        importable_module_name="generated_protobuf",
+        importable_module_file="__init__.py",
     )
-
-    content = (output_dir / "example_shop_v1_order.py").read_text(encoding="utf-8")
-    assert "class ExampleShopV1Order(BaseModel):" in content
-    spec = importlib.util.spec_from_file_location("generated_protobuf", output_dir / "__init__.py")
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
 
 
 def test_main_protobuf_parse_error(capsys: pytest.CaptureFixture[str], tmp_path: Path, output_file: Path) -> None:
@@ -179,9 +168,8 @@ def test_main_protobuf_parse_error(capsys: pytest.CaptureFixture[str], tmp_path:
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid Protocol Buffers schema",
-        file_should_not_exist=output_file,
+        output_should_not_exist=True,
     )
-    assert not output_file.exists()
 
 
 def test_main_protobuf_invalid_schema_version(capsys: pytest.CaptureFixture[str], output_file: Path) -> None:
@@ -194,9 +182,8 @@ def test_main_protobuf_invalid_schema_version(capsys: pytest.CaptureFixture[str]
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="Invalid Protobuf version",
-        file_should_not_exist=output_file,
+        output_should_not_exist=True,
     )
-    assert not output_file.exists()
 
 
 def test_main_protobuf_non_string_map_key_error(
@@ -216,24 +203,22 @@ def test_main_protobuf_non_string_map_key_error(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="unsupported non-string key type",
-        file_should_not_exist=output_file,
+        output_should_not_exist=True,
     )
-    assert not output_file.exists()
 
 
 def test_generate_api_protobuf_strict_schema_version_warning(output_file: Path) -> None:
     """Warn when explicit Protocol Buffers schema version conflicts with file syntax in strict mode."""
-    with warnings.catch_warnings(record=True) as records:
-        warnings.simplefilter("always")
-        generate(
-            PROTOBUF_DATA_PATH / "proto3_optional.proto",
-            input_file_type=InputFileType.Protobuf,
-            output=output_file,
-            schema_version="proto2",
-            schema_version_mode="strict",
-        )
-
-    assert any("declares proto3" in str(record.message) for record in records)
+    run_generate_file_and_assert(
+        input_path=PROTOBUF_DATA_PATH / "proto3_optional.proto",
+        output_path=output_file,
+        input_file_type=InputFileType.Protobuf,
+        assert_func=assert_file_content,
+        expected_file="proto3_optional_strict_proto2.py",
+        schema_version="proto2",
+        schema_version_mode="strict",
+        expected_warnings=["declares proto3"],
+    )
 
 
 def test_main_protobuf_empty_directory_error(
@@ -250,6 +235,5 @@ def test_main_protobuf_empty_directory_error(
         expected_exit=Exit.ERROR,
         capsys=capsys,
         expected_stderr_contains="No .proto files found in input",
-        file_should_not_exist=output_file,
+        output_should_not_exist=True,
     )
-    assert not output_file.exists()

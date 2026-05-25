@@ -217,7 +217,7 @@ The `--input-file-type` flag explicitly sets the input format.
 
 **Important distinction:**
 
-- Use `jsonschema`, `openapi`, `xmlschema`, `protobuf`, or `graphql` for **schema definition files**
+- Use `jsonschema`, `openapi`, `xmlschema`, `protobuf`, `avro`, or `graphql` for **schema definition files**
 - Use `json`, `yaml`, or `csv` for **raw sample data** to automatically infer a schema
 
 For example, if you have a JSON Schema written in YAML format, use `--input-file-type jsonschema`,

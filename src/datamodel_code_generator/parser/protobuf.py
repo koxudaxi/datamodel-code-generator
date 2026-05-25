@@ -225,23 +225,7 @@ def _add_math_default_imports(body: str) -> str:
 
 
 def _add_generated_imports(body: str) -> str:
-    body = _add_math_default_imports(body)
-    return _add_pydantic_import(body, "model_validator")
-
-
-def _add_pydantic_import(body: str, name: str) -> str:
-    if name not in body:
-        return body
-    old_import = "from pydantic import "
-    lines = body.splitlines()
-    for index, line in enumerate(lines):
-        if not line.startswith(old_import) or name in line:
-            continue
-        imports = [item.strip() for item in line.removeprefix(old_import).split(",")]
-        imports.append(name)
-        lines[index] = f"{old_import}{', '.join(sorted(imports))}"
-        return "\n".join(lines)
-    return body  # pragma: no cover
+    return _add_math_default_imports(body)
 
 
 def _extract_default_option(options: str) -> str | None:
@@ -364,7 +348,6 @@ class _ProtobufDescriptorConverter:
         self.map_entries: dict[str, Any] = {}
         self.definition_keys: dict[str, str] = {}
         self.used_definition_keys: dict[str, str] = {}
-        self.oneof_groups: dict[str, list[tuple[str, ...]]] = {}
 
     def convert(self, file_descriptor_set: Any) -> dict[str, Any]:
         for file_descriptor in file_descriptor_set.file:
@@ -532,7 +515,6 @@ class _ProtobufDescriptorConverter:
         oneof_groups = [tuple(fields) for fields in real_oneof_fields.values() if len(fields) > 1]
         if oneof_groups:
             schema["x-protobuf-oneof"] = [list(fields) for fields in oneof_groups]
-            self.oneof_groups[self._definition_key(full_name)] = oneof_groups
         self.definitions[self._definition_key(full_name)] = schema
 
     def _field_schema(self, field: Any, syntax: ProtobufVersion) -> dict[str, Any]:
@@ -647,23 +629,6 @@ class ProtobufParser(JsonSchemaParser):
             item.body = _add_generated_imports(item.body)
         return result
 
-    def _apply_oneof_validators(self, oneof_groups: dict[str, list[tuple[str, ...]]]) -> None:
-        if not self.data_model_type.__module__.endswith("pydantic_v2.base_model"):
-            return
-        for definition_key, groups in oneof_groups.items():
-            lines = self.extra_template_data[f"#/definitions/{definition_key}"].setdefault("class_body_lines", [])
-            for index, fields in enumerate(groups):
-                method_fields = ", ".join(repr(field) for field in fields)
-                method_name = f"validate_{definition_key}_{index}_oneof"
-                lines.extend([
-                    "@model_validator(mode='after')",
-                    f"def {method_name}(self):",
-                    f"    fields = ({method_fields})",
-                    "    if sum(getattr(self, field) is not None for field in fields) > 1:",
-                    f'        raise ValueError("Only one of ({method_fields}) may be set")',
-                    "    return self",
-                ])
-
     def _compile_descriptor_set(self) -> Any:
         protoc, well_known_include = _load_grpc_tools()
         descriptor_pb2 = _load_descriptor_pb2()
@@ -708,7 +673,6 @@ class ProtobufParser(JsonSchemaParser):
         source = next(self.iter_source)
         source.raw_data = raw_obj
         self.raw_obj = raw_obj
-        self._apply_oneof_validators(converter.oneof_groups)
         self._parse_file(raw_obj, "Model", [])
         self._resolve_unparsed_json_pointer()
         self._generate_forced_base_models()

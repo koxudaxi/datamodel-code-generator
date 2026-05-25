@@ -642,7 +642,7 @@ def create_assert_file_content(
 
 
 def assert_output(
-    output: str,
+    output: object,
     expected_path: Path,
 ) -> None:
     """Assert that output string matches expected external file.
@@ -656,6 +656,8 @@ def assert_output(
         assert_output(parser.parse(), EXPECTED_PATH / "output.py")
     """
     __tracebackhide__ = True
+    if not isinstance(output, str):  # pragma: no cover
+        pytest.fail(f"Expected generated output to be str, got {type(output).__name__}")
     _assert_with_external_file(output, expected_path)
 
 

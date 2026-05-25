@@ -1016,6 +1016,89 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         return items
 
     @classmethod
+    def _get_schemas_before_false(
+        cls, items: Sequence[JsonSchemaObject | bool] | None
+    ) -> tuple[list[JsonSchemaObject | bool], bool]:
+        """Return schemas before the first false schema and whether one was found."""
+        schema_items = [*(items or [])]
+        if (false_index := cls._get_first_false_schema_index(schema_items)) is not None:
+            return schema_items[:false_index], True
+        return schema_items, False
+
+    @staticmethod
+    def _tail_schema(
+        *tail_candidates: JsonSchemaObject | bool | list[JsonSchemaObject | bool] | None,
+        include_true_schema: bool = False,
+    ) -> JsonSchemaObject | bool | None:
+        for tail_candidate in tail_candidates:
+            match tail_candidate:
+                case JsonSchemaObject() as tail_schema:
+                    return tail_schema
+                case True if include_true_schema:
+                    return True
+        return None
+
+    def _get_array_item_schemas(  # noqa: PLR0911
+        self,
+        obj: JsonSchemaObject,
+        *,
+        include_true_tail_schema: bool = False,
+        force_prefix_items: bool = False,
+    ) -> tuple[list[JsonSchemaObject | bool], bool, bool]:
+        """Return item schemas plus tuple/constraint flags for array-like schemas."""
+        if (
+            obj.prefixItems is not None
+            and obj.minItems is not None
+            and obj.minItems == obj.maxItems
+            and (fixed_items := self._get_fixed_length_prefix_tuple_items(obj)) is not None
+        ):
+            return fixed_items, True, True
+
+        if obj.prefixItems is not None and (force_prefix_items or self._has_prefix_items_tail_schema_or_boolean(obj)):
+            items, has_false_schema = self._get_schemas_before_false(obj.prefixItems)
+            if (
+                not has_false_schema
+                and (
+                    tail_schema := self._tail_schema(
+                        obj.items,
+                        obj.unevaluatedItems,
+                        include_true_schema=include_true_tail_schema,
+                    )
+                )
+                is not None
+            ):
+                items.append(tail_schema)
+            return items, False, False
+
+        match obj.items:
+            case JsonSchemaObject() as item_schema:
+                return [item_schema], False, False
+            case list() as item_schemas:
+                items, has_false_schema = self._get_schemas_before_false(item_schemas)
+                if self._is_fixed_length_tuple(obj):
+                    return items, True, True
+                if (
+                    not has_false_schema
+                    and (
+                        tail_schema := self._tail_schema(
+                            obj.additionalItems,
+                            include_true_schema=include_true_tail_schema,
+                        )
+                    )
+                    is not None
+                ):
+                    items.append(tail_schema)
+                return items, False, False
+
+        match obj.unevaluatedItems:
+            case JsonSchemaObject() as item_schema:
+                return [item_schema], False, False
+            case True if include_true_tail_schema:
+                return [True], False, False
+
+        return [], False, False
+
+    @classmethod
     def _get_property_count_constraints(cls, obj: JsonSchemaObject) -> dict[str, int]:
         """Return dict length constraints derived from object property-count keywords."""
         constraints: dict[str, int] = {}
@@ -1153,6 +1236,40 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 or any(isinstance(item, bool) for item in obj.prefixItems)
             )
         )
+
+    def _suppress_array_length_constraints(self, constraints: dict[str, Any] | None, obj: JsonSchemaObject) -> None:
+        if not constraints:
+            return
+        fixed_prefix_tuple_items = (
+            self._get_fixed_length_prefix_tuple_items(obj)
+            if obj.prefixItems is not None and obj.minItems is not None and obj.minItems == obj.maxItems
+            else None
+        )
+        if self._is_fixed_length_tuple(obj) or fixed_prefix_tuple_items is not None:
+            constraints.pop("minItems", None)
+            constraints.pop("maxItems", None)
+
+    def _resolve_array_field_required_nullable(self, obj: JsonSchemaObject) -> tuple[bool, bool | None]:
+        if self.force_optional_for_required_fields:
+            return False, None
+
+        required = not obj.has_default
+        if self.strict_nullable:
+            return required, obj.nullable if obj.has_default or required else True
+
+        required = not obj.nullable and required
+        if obj.nullable:
+            return required, True
+        if obj.has_default:
+            return required, False
+        return required, None
+
+    def _fallback_array_item_data_types(self) -> list[DataType]:
+        return [
+            self.data_type_manager.data_type(type="object")
+            if self.data_type_manager.use_object_type
+            else self.data_type_manager.get_data_type(Types.any)
+        ]
 
     def _get_scalar_data_type_from_json_value(self, value: object) -> DataType | None:
         """Infer a normal Python type from a scalar JSON value."""
@@ -1501,23 +1618,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if array_items_constraints:
             constraints = constraints or {}
             constraints.update(array_items_constraints)
-        if constraints:
-            fixed_prefix_tuple_items = (
-                self._get_fixed_length_prefix_tuple_items(field)
-                if field.prefixItems is not None and field.minItems is not None and field.minItems == field.maxItems
-                else None
-            )
-            # Suppress minItems/maxItems for fixed-length tuples
-            if self._is_fixed_length_tuple(field) or fixed_prefix_tuple_items is not None:
-                constraints.pop("minItems", None)
-                constraints.pop("maxItems", None)
-        # Handle multiple aliases (Pydantic v2 AliasChoices)
-        single_alias: str | None = None
-        validation_aliases: list[str] | None = None
-        if isinstance(alias, list):
-            validation_aliases = alias
-        else:
-            single_alias = alias
+        self._suppress_array_length_constraints(constraints, field)
+        single_alias, validation_aliases = self._split_alias(alias)
         serialization_alias = (
             self.get_serialization_alias(original_field_name, field_name, class_name)
             if original_field_name and field_name
@@ -2130,22 +2232,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if len(items) == 1:
             return items[0]
 
-        base_dict: dict[str, Any] = {}
-        for item in items:  # pragma: no branch
-            if item.type:  # pragma: no branch
-                base_dict = item.model_dump(exclude_unset=True, by_alias=True)
-                break
-
-        for item in items:
-            for field in JsonSchemaObject.__constraint_fields__:
-                value = getattr(item, field, None)
-                if value is None:
-                    value = item.extras.get(field)
-                if value is not None:
-                    if field not in base_dict or base_dict[field] is None:
-                        base_dict[field] = value
-                    else:
-                        base_dict[field] = JsonSchemaParser._intersect_constraint(field, base_dict[field], value)
+        base_dict = JsonSchemaParser._first_typed_schema_dict(items)
+        self._merge_schema_constraints(base_dict, items, intersect=True)
 
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
 
@@ -2167,24 +2255,41 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 merged_dict["format"] = merged_format
             return self.SCHEMA_OBJECT_TYPE.model_validate(merged_dict)
 
-        base_dict: dict[str, Any] = {}
-        for item in items:
-            if item.type:
-                base_dict = item.model_dump(exclude_unset=True, by_alias=True)
-                break
-
-        for item in items:
-            for constraint_field in JsonSchemaObject.__constraint_fields__:
-                value = getattr(item, constraint_field, None)
-                if value is None:
-                    value = item.extras.get(constraint_field)
-                if value is not None:
-                    base_dict[constraint_field] = value
+        base_dict = JsonSchemaParser._first_typed_schema_dict(items)
+        self._merge_schema_constraints(base_dict, items, intersect=False)
 
         if merged_format:
             base_dict["format"] = merged_format
 
         return self.SCHEMA_OBJECT_TYPE.model_validate(base_dict)
+
+    @staticmethod
+    def _first_typed_schema_dict(items: list[JsonSchemaObject]) -> dict[str, Any]:
+        return next(
+            (item.model_dump(exclude_unset=True, by_alias=True) for item in items if item.type),
+            {},
+        )
+
+    @staticmethod
+    def _schema_constraint_value(item: JsonSchemaObject, field: str) -> Any:
+        return value if (value := getattr(item, field, None)) is not None else item.extras.get(field)
+
+    @classmethod
+    def _merge_schema_constraints(
+        cls,
+        base_dict: dict[str, Any],
+        items: list[JsonSchemaObject],
+        *,
+        intersect: bool,
+    ) -> None:
+        for item in items:
+            for field in JsonSchemaObject.__constraint_fields__:
+                if (value := cls._schema_constraint_value(item, field)) is None:
+                    continue
+                if intersect and field in base_dict and base_dict[field] is not None:
+                    base_dict[field] = cls._intersect_constraint(field, base_dict[field], value)
+                else:
+                    base_dict[field] = value
 
     @staticmethod
     def _intersect_multiple_of(val1: object, val2: object) -> object:
@@ -2208,20 +2313,21 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             v1 = float(val1) if val1 is not None else None
             v2 = float(val2) if val2 is not None else None
 
-        if field in {"minLength", "minimum", "exclusiveMinimum", "minItems"}:
-            if v1 is not None and v2 is not None:
-                return val1 if v1 >= v2 else val2
-            return val1  # pragma: no cover
-        if field in {"maxLength", "maximum", "exclusiveMaximum", "maxItems"}:
-            if v1 is not None and v2 is not None:
-                return val1 if v1 <= v2 else val2
-            return val1  # pragma: no cover
-        if field == "pattern":
-            return f"(?={val1})(?={val2})" if val1 != val2 else val1
-        if field == "uniqueItems":
-            return val1 or val2
-        if field == "multipleOf":
-            return JsonSchemaParser._intersect_multiple_of(val1, val2)
+        match field:
+            case "minLength" | "minimum" | "exclusiveMinimum" | "minItems":
+                if v1 is not None and v2 is not None:
+                    return val1 if v1 >= v2 else val2
+                return val1  # pragma: no cover
+            case "maxLength" | "maximum" | "exclusiveMaximum" | "maxItems":
+                if v1 is not None and v2 is not None:
+                    return val1 if v1 <= v2 else val2
+                return val1  # pragma: no cover
+            case "pattern":
+                return f"(?={val1})(?={val2})" if val1 != val2 else val1
+            case "uniqueItems":
+                return val1 or val2
+            case "multipleOf":
+                return JsonSchemaParser._intersect_multiple_of(val1, val2)
         return val1  # pragma: no cover
 
     def _build_allof_type(  # noqa: PLR0911, PLR0912, PLR0913, PLR0915, PLR0917
@@ -2323,7 +2429,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
 
         return None
 
-    def _build_lightweight_array_type(  # noqa: PLR0912
+    def _build_lightweight_array_type(
         self,
         schema: JsonSchemaObject,
         depth: int,
@@ -2332,49 +2438,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         max_union_elements: int,
     ) -> DataType:
         """Build a lightweight list type from array item schemas."""
-        item_schemas: list[JsonSchemaObject | bool] = []
-        if schema.prefixItems is not None:
-            false_prefix_index = self._get_first_false_schema_index(schema.prefixItems)
-            item_schemas = (
-                schema.prefixItems[:false_prefix_index] if false_prefix_index is not None else [*schema.prefixItems]
-            )
-            if false_prefix_index is None:
-                if isinstance(schema.items, JsonSchemaObject):
-                    item_schemas.append(schema.items)
-                elif schema.items is True:
-                    item_schemas.append(True)
-                elif isinstance(schema.unevaluatedItems, JsonSchemaObject):
-                    item_schemas.append(schema.unevaluatedItems)
-                elif schema.unevaluatedItems is True:
-                    item_schemas.append(True)
-        elif isinstance(schema.items, JsonSchemaObject):
-            item_schemas = [schema.items]
-        elif isinstance(schema.items, list):
-            false_item_index = self._get_first_false_schema_index(schema.items)
-            item_schemas = schema.items[:false_item_index] if false_item_index is not None else [*schema.items]
-            if false_item_index is None and isinstance(schema.additionalItems, JsonSchemaObject):
-                item_schemas.append(schema.additionalItems)
-        elif isinstance(schema.unevaluatedItems, JsonSchemaObject):
-            item_schemas = [schema.unevaluatedItems]
-        elif schema.unevaluatedItems is True:
-            item_schemas = [True]
-
-        item_types: list[DataType | None] = []
-        for item_schema in item_schemas:
-            if item_schema is False:  # pragma: no cover
-                continue
-            if item_schema is True:
-                item_types.append(DataType(type=ANY, import_=IMPORT_ANY))
-            elif item_schema.ref:
-                item_types.append(self.get_ref_data_type(item_schema.ref))
-            else:
-                item_types.append(
-                    self._build_lightweight_type(item_schema, depth + 1, visited, max_depth, max_union_elements)
+        item_schemas, _, _ = self._get_array_item_schemas(
+            schema,
+            include_true_tail_schema=True,
+            force_prefix_items=True,
+        )
+        item_types = [
+            item_type
+            for item_schema in item_schemas
+            if (
+                item_type := self._build_lightweight_item_type(
+                    item_schema, depth, visited, max_depth, max_union_elements
                 )
+            )
+            is not None
+        ]
         return self.data_type(
-            data_types=[item_type or DataType(type=ANY, import_=IMPORT_ANY) for item_type in item_types]
-            or [DataType(type=ANY, import_=IMPORT_ANY)],
+            data_types=item_types or [DataType(type=ANY, import_=IMPORT_ANY)],
             is_list=True,
+        )
+
+    def _build_lightweight_item_type(
+        self,
+        item_schema: JsonSchemaObject | bool,  # noqa: FBT001
+        depth: int,
+        visited: frozenset[int],
+        max_depth: int,
+        max_union_elements: int,
+    ) -> DataType | None:
+        if item_schema is False:
+            return None  # pragma: no cover
+        if item_schema is True:
+            return DataType(type=ANY, import_=IMPORT_ANY)
+        if item_schema.ref:
+            return self.get_ref_data_type(item_schema.ref)
+        return self._build_lightweight_type(item_schema, depth + 1, visited, max_depth, max_union_elements) or DataType(
+            type=ANY, import_=IMPORT_ANY
         )
 
     def _is_false_schema_item(self, item: JsonSchemaObject | bool) -> bool:  # noqa: FBT001, PLR6301
@@ -3449,13 +3548,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             exclude_field_names.add(field_name)
 
             if isinstance(field, bool):
-                # Handle multiple aliases (Pydantic v2 AliasChoices)
-                single_alias: str | None = None
-                validation_aliases: list[str] | None = None
-                if isinstance(alias, list):
-                    validation_aliases = alias
-                else:
-                    single_alias = alias
+                single_alias, validation_aliases = self._split_alias(alias)
                 fields.append(
                     self.data_model_field_type(
                         name=field_name,
@@ -4006,7 +4099,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             if item is not False
         ]
 
-    def parse_array_fields(  # noqa: PLR0912, PLR0915
+    def parse_array_fields(
         self,
         name: str,
         obj: JsonSchemaObject,
@@ -4017,54 +4110,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         # Strict mode: check for version-specific array features
         self._check_array_version_features(obj, path)
 
-        if self.force_optional_for_required_fields:
-            required: bool = False
-            nullable: Optional[bool] = None  # noqa: UP045
-        else:
-            required = not obj.has_default
-            if self.strict_nullable:
-                nullable = obj.nullable if obj.has_default or required else True
-            else:
-                required = not obj.nullable and required
-                if obj.nullable:
-                    nullable = True
-                elif obj.has_default:
-                    nullable = False
-                else:
-                    nullable = None
-        is_tuple = False
-        suppress_item_constraints = False
-        fixed_prefix_tuple_items = (
-            self._get_fixed_length_prefix_tuple_items(obj)
-            if obj.prefixItems is not None and obj.minItems is not None and obj.minItems == obj.maxItems
-            else None
-        )
-        if fixed_prefix_tuple_items is not None:
-            suppress_item_constraints = True
-            items = fixed_prefix_tuple_items
-            is_tuple = True
-        elif self._has_prefix_items_tail_schema_or_boolean(obj):
-            prefix_items = obj.prefixItems or []
-            false_prefix_index = self._get_first_false_schema_index(obj.prefixItems)
-            items = prefix_items[:false_prefix_index] if false_prefix_index is not None else [*prefix_items]
-            if false_prefix_index is None and isinstance(obj.items, JsonSchemaObject):
-                items = [*items, obj.items]
-            elif false_prefix_index is None and isinstance(obj.unevaluatedItems, JsonSchemaObject):
-                items = [*items, obj.unevaluatedItems]
-        elif isinstance(obj.items, JsonSchemaObject):
-            items = [obj.items]
-        elif isinstance(obj.items, list):
-            false_item_index = self._get_first_false_schema_index(obj.items)
-            items = obj.items[:false_item_index] if false_item_index is not None else obj.items
-            if self._is_fixed_length_tuple(obj):
-                is_tuple = True
-                suppress_item_constraints = True
-            elif false_item_index is None and isinstance(obj.additionalItems, JsonSchemaObject):
-                items = [*items, obj.additionalItems]
-        elif isinstance(obj.unevaluatedItems, JsonSchemaObject):
-            items = [obj.unevaluatedItems]
-        else:
-            items = []
+        required, nullable = self._resolve_array_field_required_nullable(obj)
+        items, is_tuple, suppress_item_constraints = self._get_array_item_schemas(obj)
 
         if items:
             item_data_types = self.parse_list_item(
@@ -4075,11 +4122,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                 singular_name=singular_name,
             )
         else:
-            item_data_types = [
-                self.data_type_manager.data_type(type="object")
-                if self.data_type_manager.use_object_type
-                else self.data_type_manager.get_data_type(Types.any)
-            ]
+            item_data_types = self._fallback_array_item_data_types()
 
         python_type_flags = self._get_python_type_flags(obj)
         container_flags: dict[str, bool] = {}
@@ -4103,8 +4146,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         constraints = obj.model_dump(exclude_none=True)
         constraints.update(self._get_array_items_constraints(obj))
         if suppress_item_constraints:
-            constraints.pop("minItems", None)
-            constraints.pop("maxItems", None)
+            self._suppress_array_length_constraints(constraints, obj)
         return self.data_model_field_type(
             data_type=self.data_type(data_types=data_types),
             default=obj.default,

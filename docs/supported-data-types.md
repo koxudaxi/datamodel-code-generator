@@ -4,8 +4,9 @@ This code generator supports the following input formats:
 
 - OpenAPI 3 (YAML/JSON, [OpenAPI Data Type](https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.2.md#data-types));
 - JSON Schema ([JSON Schema Core](http://json-schema.org/draft/2019-09/json-schema-validation.html) /[JSON Schema Validation](http://json-schema.org/draft/2019-09/json-schema-validation.html));
+- Apache Avro schema (`.avsc`, [Apache Avro](avro.md));
 - XML Schema (XSD);
-- Protocol Buffers / gRPC (`.proto`);
+- Protocol Buffers / gRPC (`.proto`, [Protocol Buffers / gRPC](protobuf.md));
 - JSON/YAML Data (it will be converted to JSON Schema);
 - Python dictionary (it will be converted to JSON Schema);
 - GraphQL schema ([GraphQL Schemas and Types](https://graphql.org/learn/schema/));
