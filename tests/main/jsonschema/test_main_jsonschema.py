@@ -4761,6 +4761,86 @@ def test_main_jsonschema_nullable_array_impossible_branch_null_only(output_file:
     )
 
 
+def test_main_jsonschema_nullable_integer_impossible_branch_null_only(output_file: Path) -> None:
+    """Test impossible nullable integer branches collapse to null-only fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_integer_impossible_branch_null_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_integer_impossible_branch_null_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_integer_impossible_branch_null_only",
+        model_name="NullableIntegerImpossibleBranchNullOnly",
+        valid_json='{"score":null}',
+        invalid_json='{"score":2}',
+        expected_error_type="none_required",
+        expected_attribute_path=("score",),
+        expected_attribute_value=None,
+    )
+
+
+def test_main_jsonschema_nullable_number_impossible_branch_null_only(output_file: Path) -> None:
+    """Test impossible nullable number branches collapse to null-only fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_number_impossible_branch_null_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_number_impossible_branch_null_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_number_impossible_branch_null_only",
+        model_name="NullableNumberImpossibleBranchNullOnly",
+        valid_json='{"score":null}',
+        invalid_json='{"score":5}',
+        expected_error_type="none_required",
+        expected_attribute_path=("score",),
+        expected_attribute_value=None,
+    )
+
+
+def test_main_jsonschema_nullable_string_impossible_branch_null_only(output_file: Path) -> None:
+    """Test impossible nullable string branches collapse to null-only fields."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "nullable_string_impossible_branch_null_only.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="nullable_string_impossible_branch_null_only.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="nullable_string_impossible_branch_null_only",
+        model_name="NullableStringImpossibleBranchNullOnly",
+        valid_json='{"text":null}',
+        invalid_json='{"text":"abc"}',
+        expected_error_type="none_required",
+        expected_attribute_path=("text",),
+        expected_attribute_value=None,
+    )
+
+
+def test_main_jsonschema_integer_open_interval_conflict(output_file: Path) -> None:
+    """Test integer open intervals with no integer candidates are rejected."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "integer_open_interval_conflict.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        expected_exit=Exit.ERROR,
+    )
+
+
 def test_main_jsonschema_conditional_required_conflict(output_file: Path) -> None:
     """Test required-only object conditions with false then are rejected."""
     run_main_and_assert(

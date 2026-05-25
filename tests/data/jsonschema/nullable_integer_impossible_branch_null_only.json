@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableIntegerImpossibleBranchNullOnly",
+  "type": "object",
+  "properties": {
+    "score": {
+      "type": ["integer", "null"],
+      "exclusiveMinimum": 1,
+      "exclusiveMaximum": 2
+    }
+  },
+  "required": ["score"]
+}

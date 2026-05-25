@@ -324,32 +324,64 @@ def _effective_numeric_bound(
 
 def _has_unsatisfiable_numeric_multiple_bounds(value: Any) -> bool:
     def has_unsatisfiable_numeric_multiple_bounds(schema: dict[str, Any]) -> bool:
-        multiple = _fraction_value(schema.get("multipleOf"))
-        if multiple is None or multiple <= 0:
-            return False
-        type_values = _type_values(schema.get("type"))
-        if type_values is None or not type_values <= {"integer", "number"}:
-            return False
-        lower_bound = _effective_numeric_bound(schema, "minimum", "exclusiveMinimum", lower=True)
-        upper_bound = _effective_numeric_bound(schema, "maximum", "exclusiveMaximum", lower=False)
-        if lower_bound is None or upper_bound is None:
-            return False
-
-        step = multiple if "number" in type_values else Fraction(abs(multiple.numerator), 1)
-        lower_value, lower_exclusive = lower_bound
-        upper_value, upper_exclusive = upper_bound
-
-        min_factor = math.ceil(lower_value / step)
-        if lower_exclusive and min_factor * step == lower_value:
-            min_factor += 1
-
-        max_factor = math.floor(upper_value / step)
-        if upper_exclusive and max_factor * step == upper_value:
-            max_factor -= 1
-
-        return min_factor > max_factor
+        return _numeric_multiple_bounds_are_unsatisfiable(schema)
 
     return _any_schema_node(value, has_unsatisfiable_numeric_multiple_bounds)
+
+
+def _numeric_multiple_bounds_are_unsatisfiable(schema: dict[str, Any]) -> bool:
+    multiple = _fraction_value(schema.get("multipleOf"))
+    if multiple is None or multiple <= 0:
+        return False
+    type_values = _type_values(schema.get("type"))
+    if type_values is None or not type_values <= {"integer", "number"}:
+        return False
+    lower_bound = _effective_numeric_bound(schema, "minimum", "exclusiveMinimum", lower=True)
+    upper_bound = _effective_numeric_bound(schema, "maximum", "exclusiveMaximum", lower=False)
+    if lower_bound is None or upper_bound is None:
+        return False
+
+    step = multiple if "number" in type_values else Fraction(abs(multiple.numerator), 1)
+    lower_value, lower_exclusive = lower_bound
+    upper_value, upper_exclusive = upper_bound
+
+    min_factor = math.ceil(lower_value / step)
+    if lower_exclusive and min_factor * step == lower_value:
+        min_factor += 1
+
+    max_factor = math.floor(upper_value / step)
+    if upper_exclusive and max_factor * step == upper_value:
+        max_factor -= 1
+
+    return min_factor > max_factor
+
+
+def _has_unsatisfiable_integer_bounds(value: Any) -> bool:
+    def has_unsatisfiable_integer_bounds(schema: dict[str, Any]) -> bool:
+        return _integer_bounds_are_unsatisfiable(schema)
+
+    return _any_schema_node(value, has_unsatisfiable_integer_bounds)
+
+
+def _integer_bounds_are_unsatisfiable(schema: dict[str, Any]) -> bool:
+    if _type_values(schema.get("type")) != {"integer"}:
+        return False
+    lower_bound = _effective_numeric_bound(schema, "minimum", "exclusiveMinimum", lower=True)
+    upper_bound = _effective_numeric_bound(schema, "maximum", "exclusiveMaximum", lower=False)
+    if lower_bound is None or upper_bound is None:
+        return False
+
+    lower_value, lower_exclusive = lower_bound
+    upper_value, upper_exclusive = upper_bound
+    min_integer = math.ceil(lower_value)
+    if lower_exclusive and min_integer == lower_value:
+        min_integer += 1
+
+    max_integer = math.floor(upper_value)
+    if upper_exclusive and max_integer == upper_value:
+        max_integer -= 1
+
+    return min_integer > max_integer
 
 
 def _literal_schema_values(schema: dict[str, Any]) -> Iterator[Any]:
@@ -1194,6 +1226,8 @@ def _schema_exclusion_reason(schema: dict[str, Any], *, is_openapi: bool = False
         return "contains minContains/maxContains bounds have no valid array payloads"
     if _has_unsatisfiable_closed_tuple_contains_max(schema):
         return "closed tuple contains maxContains bounds have no valid array payloads"
+    if _has_unsatisfiable_integer_bounds(schema):
+        return "integer bounds have no valid payloads"
     if _has_unsatisfiable_numeric_multiple_bounds(schema):
         return "numeric multipleOf bounds have no valid payloads"
     if _has_unsatisfiable_anyof_literal_constraints(schema):
@@ -1547,6 +1581,7 @@ def _schema_for_payload_generation(value: Any) -> Any:
         case dict():
             schema = {key: _schema_for_payload_generation(child) for key, child in value.items()}
             schema = _merge_simple_allof_for_payload_generation(schema)
+            _collapse_nullable_impossible_branch_for_payload_generation(schema)
             if schema.get("$schema") == "https://json-schema.org/draft/2020-12/schema":
                 schema["$schema"] = "http://json-schema.org/draft-07/schema#"
             _rewrite_prefix_items(schema)
@@ -1556,3 +1591,42 @@ def _schema_for_payload_generation(value: Any) -> Any:
         case list():
             payload_schema = [_schema_for_payload_generation(child) for child in value]
     return payload_schema
+
+
+def _collapse_nullable_impossible_branch_for_payload_generation(schema: dict[str, Any]) -> None:
+    type_values = _type_values(schema.get("type"))
+    if type_values is None:
+        return
+    type_values = _simplify_types(type_values)
+    if "null" not in type_values or len(type_values) != 2:
+        return
+    if any(key in schema for key in ("allOf", "anyOf", "const", "enum", "not", "oneOf")):
+        return
+
+    branch_type = next(type_value for type_value in type_values if type_value != "null")
+    branch_schema = {**schema, "type": branch_type}
+    if branch_type == "string":
+        branch_unsatisfiable = _count_bounds_are_unsatisfiable(branch_schema, "minLength", "maxLength")
+    elif branch_type == "integer":
+        branch_unsatisfiable = _integer_bounds_are_unsatisfiable(
+            branch_schema
+        ) or _numeric_multiple_bounds_are_unsatisfiable(branch_schema)
+    elif branch_type == "number":
+        branch_unsatisfiable = _numeric_multiple_bounds_are_unsatisfiable(branch_schema)
+    else:
+        return
+
+    if not branch_unsatisfiable:
+        return
+
+    metadata_keys = {"$comment", "$id", "$schema", "description", "examples", "id", "title"}
+    metadata = {key: value for key, value in schema.items() if key in metadata_keys}
+    schema.clear()
+    schema.update(metadata)
+    schema["type"] = "null"
+
+
+def _count_bounds_are_unsatisfiable(schema: dict[str, Any], min_key: str, max_key: str) -> bool:
+    min_value = schema.get(min_key)
+    max_value = schema.get(max_key)
+    return isinstance(min_value, int) and isinstance(max_value, int) and min_value > max_value

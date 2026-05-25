@@ -3217,6 +3217,8 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _normalize_raw_nullable_type_constraints(cls, schema_dict: dict[Any, Any]) -> None:
         type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is not None:
+            type_values = cls._simplify_type_values(type_values)
         if type_values == {"object", "null"}:
             cls._normalize_raw_nullable_branch_constraints(
                 schema_dict,
@@ -3239,6 +3241,19 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
                     cls._normalize_raw_contains_item_constraints,
                     cls._validate_raw_array_constraints,
                 ),
+            )
+        elif type_values in ({"integer", "null"}, {"number", "null"}):
+            branch_type = "number" if "number" in type_values else "integer"
+            cls._normalize_raw_nullable_branch_constraints(
+                schema_dict,
+                branch_type,
+                (cls._validate_raw_numeric_constraints,),
+            )
+        elif type_values == {"string", "null"}:
+            cls._normalize_raw_nullable_branch_constraints(
+                schema_dict,
+                "string",
+                (cls._validate_raw_string_constraints,),
             )
 
     @classmethod
@@ -4576,7 +4591,42 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     @classmethod
     def _validate_raw_numeric_constraints(cls, schema_dict: dict[Any, Any]) -> None:
         cls._validate_allof_numeric_bounds(schema_dict)
+        cls._validate_integer_bounds_have_candidate(schema_dict)
         cls._validate_numeric_multiple_of_bounds(schema_dict)
+
+    @classmethod
+    def _validate_integer_bounds_have_candidate(cls, schema_dict: dict[Any, Any]) -> None:
+        type_values = cls._type_values(schema_dict.get("type"))
+        if type_values is None or cls._simplify_type_values(type_values) != {"integer"}:
+            return
+
+        lower_bound = cls._get_effective_numeric_fraction_bound(
+            schema_dict,
+            "minimum",
+            "exclusiveMinimum",
+            lower=True,
+        )
+        upper_bound = cls._get_effective_numeric_fraction_bound(
+            schema_dict,
+            "maximum",
+            "exclusiveMaximum",
+            lower=False,
+        )
+        if lower_bound is None or upper_bound is None:
+            return
+
+        lower_value, lower_exclusive = lower_bound
+        upper_value, upper_exclusive = upper_bound
+        min_integer = cls._ceil_fraction(lower_value)
+        if lower_exclusive and min_integer == lower_value:
+            min_integer += 1
+
+        max_integer = cls._floor_fraction(upper_value)
+        if upper_exclusive and max_integer == upper_value:
+            max_integer -= 1
+
+        if min_integer > max_integer:
+            cls._raise_allof_constraint_conflict()
 
     @classmethod
     def _validate_numeric_multiple_of_bounds(cls, schema_dict: dict[Any, Any]) -> None:
@@ -4654,6 +4704,10 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         max_value = cls._number_constraint_value(schema_dict.get(max_key))
         if min_value is not None and max_value is not None and min_value > max_value:
             cls._raise_allof_constraint_conflict()
+
+    @classmethod
+    def _validate_raw_string_constraints(cls, schema_dict: dict[Any, Any]) -> None:
+        cls._validate_allof_count_bounds(schema_dict, "minLength", "maxLength")
 
     @classmethod
     def _validate_allof_intersected_constraints(cls, schema_dict: dict[Any, Any]) -> None:

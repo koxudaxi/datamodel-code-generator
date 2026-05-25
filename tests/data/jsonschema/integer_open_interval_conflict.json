@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IntegerOpenIntervalConflict",
+  "type": "object",
+  "properties": {
+    "score": {
+      "type": "integer",
+      "exclusiveMinimum": 1,
+      "exclusiveMaximum": 2
+    }
+  },
+  "required": ["score"]
+}

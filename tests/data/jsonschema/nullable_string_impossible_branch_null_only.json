@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NullableStringImpossibleBranchNullOnly",
+  "type": "object",
+  "properties": {
+    "text": {
+      "type": ["string", "null"],
+      "minLength": 3,
+      "maxLength": 1
+    }
+  },
+  "required": ["text"]
+}
