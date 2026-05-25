@@ -2247,6 +2247,9 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
     def _filter_literal_constraints_for_type(cls, schema_dict: dict[Any, Any]) -> None:
         type_value = schema_dict.get("type")
         type_constraint = [type_value, "null"] if schema_dict.get("nullable") is True and type_value else type_value
+        type_values = cls._type_values(type_constraint)
+        if type_values is not None and not type_values <= {"boolean", "integer", "null", "number", "string"}:
+            return
         if (
             type_constraint is not None
             and "const" in schema_dict
@@ -2973,6 +2976,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             numeric_types = {"number"}
         else:
             return
+        parent_types = parent_types or set()
         if any(key in schema_dict for key in ("exclusiveMaximum", "exclusiveMinimum", "maximum", "minimum")):
             return
         null_allowed = "null" in parent_types
@@ -4066,7 +4070,7 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
         if max_contains is not None:
             max_item_counts.append(max_contains)
 
-        max_items = cls._number_constraint_value(schema_dict.get("maxItems"))
+        max_items = cls._raw_count_constraint_value(schema_dict.get("maxItems"))
         if max_items is not None:
             max_item_counts.append(max_items)
         if max_item_counts:
