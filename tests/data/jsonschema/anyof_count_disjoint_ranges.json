@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AnyOfCountDisjointRanges",
+  "type": "object",
+  "properties": {
+    "arrayValue": {
+      "type": "array",
+      "anyOf": [
+        {
+          "maxItems": 0
+        },
+        {
+          "minItems": 3
+        }
+      ]
+    },
+    "objectValue": {
+      "type": "object",
+      "anyOf": [
+        {
+          "maxProperties": 0
+        },
+        {
+          "minProperties": 3
+        }
+      ]
+    },
+    "nullableArrayValue": {
+      "type": ["array", "null"],
+      "anyOf": [
+        {
+          "maxItems": 0
+        },
+        {
+          "minItems": 3
+        }
+      ]
+    },
+    "nullableObjectValue": {
+      "type": ["object", "null"],
+      "anyOf": [
+        {
+          "maxProperties": 0
+        },
+        {
+          "minProperties": 3
+        }
+      ]
+    }
+  },
+  "required": ["arrayValue", "objectValue", "nullableArrayValue", "nullableObjectValue"]
+}

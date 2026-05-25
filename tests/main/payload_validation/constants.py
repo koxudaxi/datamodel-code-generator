@@ -84,6 +84,9 @@ EXCLUDED_FILES: dict[str, str] = {
 }
 EXCLUDED_CASES: dict[str, str] = {
     "jsonschema/all_of_any_of_base_class_ref.json": "hypothesis-jsonschema cannot satisfy the allOf/anyOf constraints",
+    "jsonschema/anyof_count_disjoint_ranges.json": (
+        "hypothesis-jsonschema cannot satisfy several required disjoint anyOf count constraints together"
+    ),
     "jsonschema/nullable_oneof_primitive_constraints.json": (
         "hypothesis-jsonschema cannot satisfy several required overlapping oneOf primitive constraints together"
     ),

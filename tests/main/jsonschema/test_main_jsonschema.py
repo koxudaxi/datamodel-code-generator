@@ -4233,6 +4233,57 @@ def test_main_jsonschema_oneof_count_exclusive_ranges(output_file: Path) -> None
     )
 
 
+def test_main_jsonschema_anyof_count_disjoint_ranges(output_file: Path) -> None:
+    """Test anyOf array/object disjoint count ranges keep both constrained branches."""
+    run_main_and_assert(
+        input_path=JSON_SCHEMA_DATA_PATH / "anyof_count_disjoint_ranges.json",
+        output_path=output_file,
+        input_file_type="jsonschema",
+        assert_func=assert_file_content,
+        expected_file="anyof_count_disjoint_ranges.py",
+        extra_args=["--output-model-type", "pydantic_v2.BaseModel"],
+        force_exec_validation=True,
+    )
+    valid_json = (
+        '{"arrayValue":[],"objectValue":{},"nullableArrayValue":null,"nullableObjectValue":{"a":1,"b":2,"c":3}}'
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_count_disjoint_ranges",
+        model_name="AnyOfCountDisjointRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayValue":[1],"objectValue":{},'
+        '"nullableArrayValue":null,"nullableObjectValue":{"a":1,"b":2,"c":3}}',
+        expected_error_type="too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_count_disjoint_ranges",
+        model_name="AnyOfCountDisjointRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayValue":[],"objectValue":{"a":1},'
+        '"nullableArrayValue":null,"nullableObjectValue":{"a":1,"b":2,"c":3}}',
+        expected_error_type="too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_count_disjoint_ranges",
+        model_name="AnyOfCountDisjointRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayValue":[],"objectValue":{},'
+        '"nullableArrayValue":[1,2],"nullableObjectValue":{"a":1,"b":2,"c":3}}',
+        expected_error_type="too_long",
+    )
+    assert_generated_model_json_validation(
+        output_file,
+        module_name="anyof_count_disjoint_ranges",
+        model_name="AnyOfCountDisjointRanges",
+        valid_json=valid_json,
+        invalid_json='{"arrayValue":[],"objectValue":{},"nullableArrayValue":null,"nullableObjectValue":{"a":1,"b":2}}',
+        expected_error_type="too_long",
+    )
+
+
 def test_main_jsonschema_oneof_const_enum_literal(output_file: Path) -> None:
     """Test oneOf with const values as Literal type."""
     run_main_and_assert(

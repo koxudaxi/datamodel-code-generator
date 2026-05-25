@@ -2613,11 +2613,20 @@ class JsonSchemaParser(Parser["JSONSchemaParserConfig", "JsonSchemaFeatures"]):
             return False
 
         merged_intervals = cls._merge_raw_count_intervals(intervals)  # type: ignore[arg-type]
-        if len(merged_intervals) != 1:
-            return False
 
         schema_dict.pop("anyOf", None)
-        schema_dict.update(cls._raw_count_schema_from_interval(merged_intervals[0], min_key, max_key))
+        if len(merged_intervals) == 1:
+            schema_dict.update(cls._raw_count_schema_from_interval(merged_intervals[0], min_key, max_key))
+        else:
+            disjoint_schemas = [
+                cls._raw_count_branch_schema_from_interval(interval, branch_type, min_key, max_key)
+                for interval in merged_intervals
+            ]
+            if "null" in (cls._type_values(schema_dict.get("type")) or set()) and any(
+                cls._raw_value_matches_schema(None, branch) for branch in any_of
+            ):
+                disjoint_schemas.append({"type": "null"})
+            schema_dict["anyOf"] = disjoint_schemas
         return True
 
     @classmethod
